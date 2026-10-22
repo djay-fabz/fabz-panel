@@ -142,6 +142,13 @@ select.felt{appearance:none;-webkit-appearance:none;cursor:pointer}
 .bar .indre{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:10px}
 .bar .svar{margin:0;flex:1}
 
+.beskeder{position:fixed;right:20px;top:68px;z-index:20;display:flex;flex-direction:column;gap:8px;width:340px;max-width:calc(100vw - 40px)}
+.besked{background:var(--flade);border:1px solid var(--linje);border-radius:12px;padding:10px 12px;box-shadow:0 8px 28px rgba(0,0,0,.18);font-size:13px}
+.besked.ok{border-color:var(--ok)}.besked.adv{border-color:var(--adv)}.besked.fejl{border-color:var(--fejl)}
+.besked .bt{display:flex;align-items:center;gap:8px}.besked .bt b{flex:1;font-weight:600}
+.besked ul{margin:4px 0 0;padding-left:18px;color:var(--svag)}
+.spin{flex:none;width:12px;height:12px;border:2px solid var(--linje);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 .opsaet{max-width:520px;margin:60px auto;background:var(--flade);border:1px solid var(--linje);border-radius:14px;padding:24px}
 .opsaet h2{margin-top:0}
 .fejltekst{color:var(--fejl)}
@@ -267,11 +274,70 @@ async function anmod(præfiks, krav, besked) {
   await skrivFil(`inbox/${id}.json`, krav, besked);
   const start = Date.now();
   while (Date.now() - start < 240000) {
-    await sleep(3000);
+    await sleep(1500);
     const r = await laesFil(`inbox/svar/${id}.json`);
     if (r) return r.json();
   }
   return null;
+}
+
+// ---------- baggrund og beskeder ----------
+// Siden opdateres med det samme. Anmodningen afleveres til GitHub (1-2 sek), og svaret følges i baggrunden.
+// Fejler den, kaldes fejl() som sætter siden tilbage, og der vises en besked.
+let sender = 0;          // anmodninger der ikke er afleveret endnu (så må fanen ikke lukkes)
+const beskeder = [];
+function tegnBeskeder() {
+  let el = $("beskeder");
+  if (!el) { el = h("div", {id: "beskeder", class: "beskeder"}); document.body.append(el); }
+  el.replaceChildren(...beskeder.map(b => h("div", {class: "besked " + b.klasse},
+    h("div", {class: "bt"}, b.klasse === "kø" ? h("span", {class: "spin"}) : null, h("b", {}, b.titel),
+      h("button", {class: "x", type: "button", title: "Luk", onclick: () => fjernBesked(b)}, "×")),
+    b.punkter?.length ? h("ul", {}, b.punkter.map(p => h("li", {}, p))) : null)));
+}
+function besked(b) {
+  const i = beskeder.findIndex(x => x.id === b.id);
+  if (i >= 0) beskeder[i] = b; else beskeder.push(b);
+  tegnBeskeder();
+  if (b.klasse === "ok") setTimeout(() => fjernBesked(b), 6000);
+}
+function fjernBesked(b) {
+  const i = beskeder.indexOf(b);
+  if (i >= 0) { beskeder.splice(i, 1); tegnBeskeder(); }
+}
+async function iBaggrunden(præfiks, krav, commit, {tekst, ok, fejl}) {
+  const id = nytId(præfiks);
+  sender++;
+  try { await skrivFil(`inbox/${id}.json`, krav, commit); } finally { sender--; }
+  besked({id, klasse: "kø", titel: tekst + " …"});
+  (async () => {
+    let sv = null;
+    try {
+      const start = Date.now();
+      while (!sv && Date.now() - start < 240000) {
+        await sleep(1500);
+        const r = await laesFil(`inbox/svar/${id}.json`);
+        if (r) sv = await r.json();
+      }
+    } catch (e) { sv = {status: "FEJL", fejl: e.message}; }
+    if (!sv) sv = {status: "FEJL", fejl: "Intet svar efter 4 minutter. Tjek Actions i fabz-data."};
+    if (sv.status === "FEJL") {
+      try { await fejl(sv); } catch {}
+      besked({id, klasse: "fejl", titel: tekst + ": ikke gemt", punkter: [sv.fejl, "Siden er sat tilbage."]});
+    } else {
+      try { await ok(sv); } catch {}
+      besked({id, klasse: sv.status === "ADVARSEL" ? "adv" : "ok", titel: tekst + (sv.status === "ADVARSEL" ? ": gemt, tjek advarslerne" : ": gemt"),
+        punkter: [...sv.advarsler.map(a => "Advarsel: " + a), ...sv.info]});
+    }
+  })();
+}
+function sendFejl(tekst, e) {
+  besked({id: nytId("x"), klasse: "fejl", titel: tekst + ": ikke sendt", punkter: [e.message, "Siden er sat tilbage."]});
+}
+// tegn det der vises, uden at forstyrre en åben editor eller ugemte lagerændringer
+function opfrisk() {
+  if (fane === "lager") { if (L && !ændringer().length && !L.ny.length) { const q = L.q, u = L.udgaaede; nulstilLager(); L.q = q; L.udgaaede = u; visLager(); } }
+  else if (!S) visJobs();
+  else tegnListe();
 }
 
 // ---------- jobs ----------
@@ -554,37 +620,37 @@ function godkendBlok(linjer) {
 }
 async function godkend(ja) {
   if (!ja && !confirm("Genåbn listen? Den bliver liggende, men jobbet står som ikke godkendt (gul), indtil du godkender igen.")) return;
+  const job = S.job, mig = S, noegle = jobNøgle(job);
   const linjer = Object.values(S.l).filter(l => l.antal > 0)
     .map(l => ({udstyr: l.udstyr, antal: l.antal, ...(l.note?.trim() ? {note: l.note.trim()} : {})}));
-  const krav = ja ? {type: "godkend", job: S.job.navn, dato: S.job.dato, transport: S.transport, linjer, udgangspunkt: S.base?.navn || null, godkendt: true}
-                  : {type: "godkend", job: S.job.navn, dato: S.job.dato, godkendt: false};
-  const mig = S;
-  optaget = true;
+  const krav = ja ? {type: "godkend", job: job.navn, dato: job.dato, transport: S.transport, linjer, udgangspunkt: S.base?.navn || null, godkendt: true}
+                  : {type: "godkend", job: job.navn, dato: job.dato, godkendt: false};
+  const før = (D.jobpl || []).map(r => ({...r})), førS = {godk: S.godk, snap: S.snap, rørt: S.rørt};
+  // med det samme
+  const r = D.jobpl.find(x => x.job_noegle === noegle);
+  if (ja) {
+    const ny = {job_noegle: noegle, job: job.navn, dato: job.dato, transport: S.transport, linjer, godkendt: iDag()};
+    if (r) Object.assign(r, ny); else D.jobpl.push(ny);
+  } else if (r) r.godkendt = null;
+  S.godk = ja ? iDag() : null;
+  if (ja) S.snap = signatur(linjer);
+  S.rørt = false;
+  S.svar = null;
   tegnListe();
+  const tekst = `${ja ? "Godkendelse" : "Genåbning"}: ${job.navn} ${kortDato(job.dato)}`;
+  const tilbage = () => { D.jobpl = før; if (S === mig) Object.assign(S, førS); opfrisk(); };
   try {
-    sætSvar("", (ja ? "Godkender" : "Genåbner listen") + " … det tager typisk under et minut.");
-    const sv = await anmod("godkend", krav, `Panel: ${ja ? "godkend" : "genåbn"} ${S.job.navn}`);
-    if (S !== mig) return;
-    if (!sv) sætSvar("fejl", "Intet svar efter 4 minutter.", ["Tjek kørslen under Actions i fabz-data."]);
-    else if (sv.status === "FEJL") sætSvar("fejl", "Fejl, intet er gemt.", [sv.fejl]);
-    else {
-      [D.jobpl, D.opgaver] = await Promise.all([laesJobpl(), laesJson("data/opgaver.json")]);
-      const jp = jobplTilJob(S.job);
-      S.godk = jp?.godkendt || null;
-      S.snap = jp ? signatur(jp.linjer) : null;
-      S.rørt = false;
-      sætSvar(sv.status === "ADVARSEL" ? "adv" : "ok", ja ? (sv.status === "ADVARSEL" ? "Godkendt, men tjek advarslerne" : "Pakkelisten er godkendt") : "Listen er genåbnet",
-        [...sv.advarsler.map(a => "Advarsel: " + a), ...sv.info]);
-    }
-  } catch (e) {
-    if (S === mig) sætSvar("fejl", "Det gik galt.", [e.message]);
-  } finally {
-    optaget = false;
-    if (S === mig) tegnListe();
-  }
+    await iBaggrunden("godkend", krav, `Panel: ${ja ? "godkend" : "genåbn"} ${job.navn}`, {tekst,
+      ok: async () => {
+        [D.jobpl, D.opgaver] = await Promise.all([laesJobpl(), laesJson("data/opgaver.json")]);
+        if (S === mig) S.godk = jobplTilJob(job)?.godkendt || null;
+        opfrisk();
+      },
+      fejl: tilbage});
+  } catch (e) { tilbage(); sendFejl(tekst, e); }
 }
-function sætSvar(klasse, titel, punkter, link) {
-  if (S) S.svar = {klasse, titel, punkter, link};
+function sætSvar(klasse, titel, punkter, link, filnavn) {
+  if (S) S.svar = {klasse, titel, punkter, link, filnavn};
   tegnSvar();
 }
 function tegnSvar() {
@@ -593,45 +659,34 @@ function tegnSvar() {
   const s = S.svar;
   el.replaceChildren(s ? h("div", {class: "svar " + s.klasse}, h("b", {}, s.titel),
     s.punkter?.length ? h("ul", {}, s.punkter.map(p => h("li", {}, p))) : null,
-    s.link ? h("a", {class: "btn primaer", href: s.link, target: "_blank", rel: "noopener"}, "Åbn PDF og print") : null) : "");
+    s.link ? h("div", {style: "display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"},
+      h("a", {class: "btn primaer", href: s.link, target: "_blank", rel: "noopener", style: "margin:0"}, "Åbn PDF og print"),
+      h("a", {class: "btn", href: s.link, download: s.filnavn || "Pakkeliste.pdf", style: "margin:0"}, "Hent PDF")) : null) : "");
 }
 async function send(hvad) {   // "pdf": lav PDF (gemmer intet), "gem": gem som liste til andre jobs
-  const medPdf = hvad === "pdf";
+  if (hvad === "gem") return gemSomListe();
   const navn = (S.jobNavn || "").trim();
   if (!navn) { alert("Skriv et navn til PDF'en."); return; }
-  const gemNavn = (S.gemNavn || "").trim();
-  if (!medPdf && !gemNavn) { alert("Skriv et navn til listen."); return; }
-  const findes = D.lister.find(p => nøgle(p.navn) === nøgle(gemNavn));
   const linjer = Object.values(S.l).filter(l => l.antal > 0)
     .map(l => ({udstyr: l.udstyr, antal: l.antal, ...(l.note?.trim() ? {note: l.note.trim()} : {})}));
-  const krav = {type: "pakkeliste", job: navn, dato: S.job?.dato || null, transport: S.transport, linjer, pdf: medPdf,
-    udgangspunkt: S.base?.navn || null,
-    ...(medPdf ? {gem: "kun_job"} : findes ? {gem: "opdater", liste: findes.navn} : {gem: "ny", ny_navn: gemNavn, ny_type: "Skabelon"})};
+  const krav = {type: "pakkeliste", job: navn, dato: S.job?.dato || null, transport: S.transport, linjer, pdf: true,
+    udgangspunkt: S.base?.navn || null, gem: "kun_job"};
   const mig = S;
   optaget = true;
   tegnListe();
   try {
-    sætSvar("", (medPdf ? "Laver pakkelisten" : "Gemmer listen") + " … det tager typisk under et minut.");
+    sætSvar("", "Laver pakkelisten … det tager typisk 15-30 sekunder.");
     const sv = await anmod("pakkeliste", krav, `Panel: pakkeliste ${navn}`);
     if (S !== mig) return;
     if (!sv) sætSvar("fejl", "Intet svar efter 4 minutter.", ["Tjek kørslen under Actions i fabz-data. Anmodningen ligger stadig i inbox/."]);
-    else if (sv.status === "FEJL") sætSvar("fejl", "Fejl, intet er gemt.", [sv.fejl]);
-    else if (!medPdf) {
-      D.lister = await laesJson("data/pakkelister.json");
-      if (S === mig) {
-        S.base = D.lister.find(p => nøgle(p.navn) === nøgle(gemNavn)) || S.base;
-        S.egen = !!S.base;
-        if (!S.job) S.rørt = false;
-        sætSvar(sv.status === "ADVARSEL" ? "adv" : "ok", sv.status === "ADVARSEL" ? "Gemt, men tjek advarslerne" : "Listen er gemt",
-          [...sv.advarsler.map(a => "Advarsel: " + a), ...sv.info]);
-      }
-    } else {
+    else if (sv.status === "FEJL") sætSvar("fejl", "Fejl, ingen PDF.", [sv.fejl]);
+    else {
       const punkter = [...sv.advarsler.map(a => "Advarsel: " + a), ...sv.info];
       const titel = sv.status === "ADVARSEL" ? "Lavet, men tjek advarslerne" : "Pakkelisten er klar";
       sætSvar(sv.status === "ADVARSEL" ? "adv" : "ok", titel, [...punkter, "Henter PDF …"]);
       const r = await laesFil(sv.pdf);
       const link = r ? URL.createObjectURL(new Blob([await r.arrayBuffer()], {type: "application/pdf"})) : null;
-      if (S === mig) sætSvar(sv.status === "ADVARSEL" ? "adv" : "ok", titel, r ? punkter : [...punkter, "PDF'en kunne ikke hentes."], link);
+      if (S === mig) sætSvar(sv.status === "ADVARSEL" ? "adv" : "ok", titel, r ? punkter : [...punkter, "PDF'en kunne ikke hentes."], link, decodeURIComponent(sv.pdf.split("/").pop()));
     }
   } catch (e) {
     if (S === mig) sætSvar("fejl", "Det gik galt.", [e.message]);
@@ -640,18 +695,46 @@ async function send(hvad) {   // "pdf": lav PDF (gemmer intet), "gem": gem som l
     if (S === mig) tegnListe();
   }
 }
+async function gemSomListe() {
+  const gemNavn = (S.gemNavn || "").trim();
+  if (!gemNavn) { alert("Skriv et navn til listen."); return; }
+  const findes = D.lister.find(p => nøgle(p.navn) === nøgle(gemNavn));
+  const linjer = Object.values(S.l).filter(l => l.antal > 0)
+    .map(l => ({udstyr: l.udstyr, antal: l.antal, ...(l.note?.trim() ? {note: l.note.trim()} : {})}));
+  const krav = {type: "pakkeliste", job: (S.jobNavn || gemNavn).trim(), dato: S.job?.dato || null, transport: S.transport, linjer, pdf: false,
+    udgangspunkt: S.base?.navn || null,
+    ...(findes ? {gem: "opdater", liste: findes.navn} : {gem: "ny", ny_navn: gemNavn, ny_type: "Skabelon"})};
+  const mig = S, før = D.lister.map(p => ({...p})), førS = {base: S.base, egen: S.egen, rørt: S.rørt};
+  // med det samme
+  let liste;
+  if (findes) { liste = {...findes, linjer, transport: S.transport}; D.lister = D.lister.map(p => p === findes ? liste : p); }
+  else { liste = {navn: gemNavn, type: "Skabelon", transport: S.transport, linjer}; D.lister = [...D.lister, liste]; }
+  S.base = liste; S.egen = true;
+  if (!S.job) S.rørt = false;
+  tegnListe();
+  const tekst = `${findes ? "Opdatering af" : "Ny liste"} '${liste.navn}'`;
+  const tilbage = () => { D.lister = før; if (S === mig) Object.assign(S, førS); opfrisk(); };
+  try {
+    await iBaggrunden("pakkeliste", krav, `Panel: gem liste ${liste.navn}`, {tekst,
+      ok: async () => {
+        D.lister = await laesJson("data/pakkelister.json");
+        if (S === mig) S.base = D.lister.find(p => nøgle(p.navn) === nøgle(gemNavn)) || S.base;
+        opfrisk();
+      },
+      fejl: tilbage});
+  } catch (e) { tilbage(); sendFejl(tekst, e); }
+}
 async function lukOpgave(o) {
   if (!confirm(`Er listen printet og pakket? Opgave #${o.id} sættes til Færdig.`)) return;
+  const før = D.opgaver;
+  D.opgaver = D.opgaver.map(x => x.id === o.id ? {...x, status: "Færdig"} : x);
+  opfrisk();
+  const tekst = `Opgave #${o.id}`;
+  const tilbage = () => { D.opgaver = før; opfrisk(); };
   try {
-    sætSvar("", "Lukker opgaven …");
-    const sv = await anmod("luk", {type: "luk-opgave", opgave_id: o.id}, `Panel: luk opgave #${o.id}`);
-    if (!sv) { sætSvar("fejl", "Intet svar efter 4 minutter.", ["Tjek kørslen under Actions i fabz-data."]); return; }
-    if (sv.status === "FEJL") { sætSvar("fejl", "Opgaven er ikke lukket.", [sv.fejl]); return; }
-    D.opgaver = await laesJson("data/opgaver.json");
-    if (S) { S.svar = {klasse: "ok", titel: "Opgaven er lukket", punkter: sv.info}; tegnListe(); }
-  } catch (e) {
-    sætSvar("fejl", "Det gik galt.", [e.message]);
-  }
+    await iBaggrunden("luk", {type: "luk-opgave", opgave_id: o.id}, `Panel: luk opgave #${o.id}`, {tekst,
+      ok: async () => { D.opgaver = await laesJson("data/opgaver.json"); opfrisk(); }, fejl: tilbage});
+  } catch (e) { tilbage(); sendFejl(tekst, e); }
 }
 
 // ---------- lager-fanen ----------
@@ -758,38 +841,49 @@ function tegnBar() {
   const bar = $("bar");
   if (!bar) return;
   const n = ændringer().length + L.ny.length;
-  bar.style.display = n || L.svar ? "" : "none";
-  const s = L.svar;
+  bar.style.display = n ? "" : "none";
   bar.replaceChildren(h("div", {class: "indre"},
-    s ? h("div", {class: "svar " + s.klasse}, h("b", {}, s.titel), s.punkter?.length ? h("ul", {}, s.punkter.map(p => h("li", {}, p))) : null)
-      : h("div", {style: "flex:1"}, h("b", {}, `${n} ${n === 1 ? "ændring" : "ændringer"}`), h("span", {class: "muted"}, " er ikke gemt endnu")),
-    n ? [h("button", {class: "btn ghost", type: "button", disabled: optaget, onclick: () => { nulstilLager(); visLager(); }}, "Fortryd"),
-         h("button", {class: "btn primaer", type: "button", disabled: optaget, onclick: gemLager}, optaget ? "Gemmer …" : "Gem på lageret")]
-      : h("button", {class: "x", type: "button", title: "Luk", onclick: () => { L.svar = null; tegnBar(); }}, "×")));
+    h("div", {style: "flex:1"}, h("b", {}, `${n} ${n === 1 ? "ændring" : "ændringer"}`), h("span", {class: "muted"}, " er ikke gemt endnu")),
+    h("button", {class: "btn ghost", type: "button", onclick: () => { nulstilLager(); visLager(); }}, "Fortryd"),
+    h("button", {class: "btn primaer", type: "button", onclick: gemLager}, "Gem på lageret")));
+}
+function anvendLager(us, ret, ny) {   // samme regler som fabz.py lager_ret/lager_ny, kun til visning indtil svaret kommer
+  const ud = us.map(u => ({...u}));
+  for (const r of ret) {
+    const u = ud.find(x => nøgle(x.navn) === nøgle(r.navn));
+    if (!u) continue;
+    for (const [k, v] of Object.entries(r.felter)) {
+      if (k === "note") { if (String(v || "").trim()) u.note = String(v).trim(); else delete u.note; }
+      else if (k === "antal") u.antal = Number(v);
+      else u[k] = k === "navn" ? String(v).trim() : v;
+    }
+    if (u.antal === 0 && (u.status || "På lager") === "På lager") u.status = "Udgået";
+  }
+  for (const n of ny) ud.push({navn: n.navn, kategori: n.kategori, antal: n.antal, status: "På lager", ...(n.note ? {note: n.note} : {})});
+  return ud;
 }
 async function gemLager() {
   const ret = ændringer();
   if (ret.some(r => r.felter.navn !== undefined && !String(r.felter.navn).trim())) { alert("Et navn er tomt."); return; }
   const ny = L.ny.map(x => ({navn: x.navn, kategori: x.kategori, antal: x.antal, note: x.note}));
-  optaget = true;
-  L.svar = {klasse: "", titel: "Gemmer på lageret … det tager typisk under et minut."};
-  tegnBar();
-  try {
-    const sv = await anmod("lager", {type: "lager", ret, ny}, `Panel: lager (${ret.length} rettet, ${ny.length} nye)`);
-    if (!sv) L.svar = {klasse: "fejl", titel: "Intet svar efter 4 minutter.", punkter: ["Tjek kørslen under Actions i fabz-data."]};
-    else if (sv.status === "FEJL") L.svar = {klasse: "fejl", titel: "Fejl, intet er gemt.", punkter: [sv.fejl]};
-    else {
-      [D.udstyr, D.lister] = await Promise.all([laesJson("data/udstyr.json"), laesJson("data/pakkelister.json")]);
-      nulstilLager();
-      L.svar = {klasse: sv.status === "ADVARSEL" ? "adv" : "ok", titel: sv.status === "ADVARSEL" ? "Gemt, men tjek advarslerne" : "Gemt",
-                punkter: [...sv.advarsler.map(a => "Advarsel: " + a), ...sv.info]};
-    }
-  } catch (e) {
-    L.svar = {klasse: "fejl", titel: "Det gik galt.", punkter: [e.message]};
-  } finally {
-    optaget = false;
+  const førU = D.udstyr, førLister = D.lister, førL = L;
+  // med det samme
+  const omdøbt = new Map(ret.filter(r => r.felter.navn !== undefined).map(r => [nøgle(r.navn), String(r.felter.navn).trim()]));
+  D.udstyr = anvendLager(D.udstyr, ret, ny);
+  D.lister = D.lister.map(p => ({...p, linjer: p.linjer.map(l => omdøbt.has(nøgle(l.udstyr)) ? {...l, udstyr: omdøbt.get(nøgle(l.udstyr))} : l)}));
+  nulstilLager(); L.q = førL.q; L.udgaaede = førL.udgaaede;
+  visLager();
+  const tekst = `Lager (${ret.length} rettet, ${ny.length} nye)`;
+  const tilbage = () => {
+    D.udstyr = førU; D.lister = førLister;
+    L = førL;   // dine ændringer kommer tilbage i tabellen, så du kan rette og gemme igen
     if (fane === "lager") visLager();
-  }
+  };
+  try {
+    await iBaggrunden("lager", {type: "lager", ret, ny}, `Panel: lager (${ret.length} rettet, ${ny.length} nye)`, {tekst,
+      ok: async () => { [D.udstyr, D.lister] = await Promise.all([laesJson("data/udstyr.json"), laesJson("data/pakkelister.json")]); opfrisk(); },
+      fejl: tilbage});
+  } catch (e) { tilbage(); sendFejl(tekst, e); }
 }
 
 // ---------- hent alle jobs ----------
@@ -844,7 +938,7 @@ async function start() {
   tegn();
 }
 window.addEventListener("beforeunload", e => {
-  if ((L && (ændringer().length || L.ny.length)) || optaget) { e.preventDefault(); e.returnValue = ""; }
+  if (sender > 0 || (L && (ændringer().length || L.ny.length))) { e.preventDefault(); e.returnValue = ""; }
 });
 start();
 </script>
