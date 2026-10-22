@@ -288,7 +288,7 @@ function tegnTop() {
     top.replaceChildren(
       h("button", {class: "tilbage", type: "button", onclick: lukEditor}, "← Jobs"),
       h("div", {class: "spacer"}),
-      h("span", {class: "muted lille"}, "Ændringer gemmes først, når du laver PDF'en"));
+      h("span", {class: "muted lille"}, "Intet gemmes, før du trykker Gem liste eller laver PDF"));
     return;
   }
   const o = D.kalender?.opdateret;
@@ -499,8 +499,11 @@ function tegnListe() {
       seg(["Skabelon", "Fast"], S.nyType, v => { S.nyType = v; tegnListe(); })) : null,
     h("div", {class: "resume lille", style: advN ? "color:var(--adv)" : "color:var(--svag)"},
       `${linjer.length} linjer · ${stk} stk` + (advN ? ` · ${advN} advarsler` : "") + (S.transport ? "" : " · vælg transport")),
-    h("button", {class: "btn primaer stor", type: "button", disabled: optaget || !linjer.length || !S.transport, onclick: send},
-      optaget ? "Arbejder …" : "Lav pakkeliste (PDF)"),
+    h("div", {style: "display:flex;gap:8px"},
+      S.gem !== "kun_job" ? h("button", {class: "btn stor", type: "button", style: "width:auto;flex:none",
+        title: "Gem listen uden at lave PDF", disabled: optaget || !linjer.length || !S.transport, onclick: () => send(false)}, "Gem liste") : null,
+      h("button", {class: "btn primaer stor", type: "button", disabled: optaget || !linjer.length || !S.transport, onclick: () => send(true)},
+        optaget ? "Arbejder …" : S.gem === "kun_job" ? "Lav pakkeliste (PDF)" : "Gem og lav PDF")),
     h("div", {id: "svar"}));
   k.replaceChildren(hoved, krop, fod);
   krop.scrollTop = gl;
@@ -518,24 +521,36 @@ function tegnSvar() {
     s.punkter?.length ? h("ul", {}, s.punkter.map(p => h("li", {}, p))) : null,
     s.link ? h("a", {class: "btn primaer", href: s.link, target: "_blank", rel: "noopener"}, "Åbn PDF og print") : null) : "");
 }
-async function send() {
+async function send(medPdf) {
   const navn = (S.jobNavn || "").trim();
   if (!navn) { alert("Skriv et navn til PDF'en."); return; }
   if (S.gem === "ny" && !(S.nyNavn || "").trim()) { alert("Skriv et navn til den nye liste."); return; }
   const linjer = Object.values(S.l).filter(l => l.antal > 0)
     .map(l => ({udstyr: l.udstyr, antal: l.antal, ...(l.note?.trim() ? {note: l.note.trim()} : {})}));
   const krav = {type: "pakkeliste", job: navn, dato: S.job?.dato || null, transport: S.transport, linjer, gem: S.gem,
-    udgangspunkt: S.egen && S.base ? S.base.navn : null, liste: S.base?.navn || null, ny_navn: (S.nyNavn || "").trim(), ny_type: S.nyType};
+    udgangspunkt: S.egen && S.base ? S.base.navn : null, liste: S.base?.navn || null, ny_navn: (S.nyNavn || "").trim(), ny_type: S.nyType,
+    pdf: medPdf};
+  const listeNavn = S.gem === "ny" ? krav.ny_navn : S.base?.navn;
   const mig = S;
   optaget = true;
   tegnListe();
   try {
-    sætSvar("", "Laver pakkelisten … det tager typisk under et minut.");
+    sætSvar("", (medPdf ? "Laver pakkelisten" : "Gemmer listen") + " … det tager typisk under et minut.");
     const sv = await anmod("pakkeliste", krav, `Panel: pakkeliste ${navn}`);
     if (S !== mig) return;
     if (!sv) sætSvar("fejl", "Intet svar efter 4 minutter.", ["Tjek kørslen under Actions i fabz-data. Anmodningen ligger stadig i inbox/."]);
     else if (sv.status === "FEJL") sætSvar("fejl", "Fejl, intet er gemt.", [sv.fejl]);
-    else {
+    else if (!medPdf) {
+      D.lister = await laesJson("data/pakkelister.json");
+      if (S === mig) {
+        // listen findes nu: næste gem opdaterer den
+        S.base = D.lister.find(p => nøgle(p.navn) === nøgle(listeNavn)) || S.base;
+        S.egen = !!S.base;
+        S.gem = S.base ? "opdater" : S.gem;
+        sætSvar(sv.status === "ADVARSEL" ? "adv" : "ok", sv.status === "ADVARSEL" ? "Gemt, men tjek advarslerne" : "Listen er gemt",
+          [...sv.advarsler.map(a => "Advarsel: " + a), ...sv.info]);
+      }
+    } else {
       const punkter = [...sv.advarsler.map(a => "Advarsel: " + a), ...sv.info];
       const titel = sv.status === "ADVARSEL" ? "Lavet, men tjek advarslerne" : "Pakkelisten er klar";
       sætSvar(sv.status === "ADVARSEL" ? "adv" : "ok", titel, [...punkter, "Henter PDF …"]);
