@@ -125,7 +125,7 @@ input::placeholder{color:var(--svagere)}
 .lr{border-top:1px solid var(--linje)}
 .kort .lr:first-child{border-top:0}
 .lr.aendret{box-shadow:inset 3px 0 0 var(--accent);background:var(--accent-blid)}
-.lr.solgt{opacity:.55}
+.lr.udgaaet{opacity:.55}
 .felt{width:100%;border:1px solid transparent;background:none;border-radius:7px;padding:5px 7px}
 .felt:hover{background:var(--hover)}
 select.felt{appearance:none;-webkit-appearance:none;cursor:pointer}
@@ -150,7 +150,7 @@ select.felt{appearance:none;-webkit-appearance:none;cursor:pointer}
 "use strict";
 const REPO = "djay-fabz/fabz-data", BRANCH = "main", API = "https://api.github.com";
 const KAT = ["Lyd", "DJ-udstyr", "Lys", "Scene", "Stativer", "Kabler & strøm", "Transport", "Andet", "Løse genstande"];
-const STATUS = ["På lager", "Defekt", "Udlånt", "Solgt"];
+const STATUS = ["På lager", "Defekt", "Udlånt", "Udgået"];
 const EKSTRA = "Leje og andet";
 const TOKEN_KEY = "fabz-panel-token";
 const lager = {
@@ -389,7 +389,7 @@ function tegnRækker() {
   el.replaceChildren();
   for (const kat of kategorier()) {
     if (P.kat !== "Alle" && P.kat !== kat) continue;
-    const us = D.udstyr.filter(u => u.kategori === kat && (u.status !== "Solgt" || S.l[nøgle(u.navn)]) && (!q || nøgle(u.navn).includes(q)))
+    const us = D.udstyr.filter(u => u.kategori === kat && (u.status !== "Udgået" || S.l[nøgle(u.navn)]) && (!q || nøgle(u.navn).includes(q)))
       .sort((a, b) => a.navn.localeCompare(b.navn, "da"));
     if (us.length) el.append(h("div", {class: "gruppe"}, h("div", {class: "overskrift"}, kat), h("div", {class: "kort"}, us.map(vælgerRække))));
   }
@@ -583,7 +583,7 @@ async function lukOpgave(o) {
 // ---------- lager-fanen ----------
 const FELTER = ["navn", "kategori", "antal", "status", "note"];
 function nulstilLager() {
-  L = {w: D.udstyr.map(u => ({...u, status: u.status || "På lager", note: u.note || "", _orig: u.navn})), ny: [], q: "", solgte: false, visNy: false, svar: null};
+  L = {w: D.udstyr.map(u => ({...u, status: u.status || "På lager", note: u.note || "", _orig: u.navn})), ny: [], q: "", udgaaede: false, visNy: false, svar: null};
 }
 function ændringer() {
   const ud = [];
@@ -607,12 +607,12 @@ function visLager() {
   if (!L) nulstilLager();
   const y = window.scrollY;
   const søg = h("input", {class: "input", type: "search", placeholder: "Søg …", value: L.q, oninput: () => { L.q = søg.value; filtrér(); }});
-  const aktive = D.udstyr.filter(u => u.status !== "Solgt").length;
+  const aktive = D.udstyr.filter(u => u.status !== "Udgået").length;
   const side = h("div", {class: "lagerside"},
     h("div", {class: "lagertop"},
       h("h1", {}, "Lager"), h("span", {class: "muted"}, `${aktive} ting`),
       h("div", {class: "spacer"}), søg,
-      h("label", {class: "muted lille"}, h("input", {type: "checkbox", checked: L.solgte, onchange: e => { L.solgte = e.target.checked; visLager(); }}), " Vis solgte"),
+      h("label", {class: "muted lille"}, h("input", {type: "checkbox", checked: L.udgaaede, onchange: e => { L.udgaaede = e.target.checked; visLager(); }}), " Vis udgået"),
       h("button", {class: "btn primaer", type: "button", onclick: () => { L.visNy = true; visLager(); $("nyNavn")?.focus(); }}, "+ Nyt udstyr")),
     L.visNy ? nyForm() : null,
     h("div", {class: "lhd"}, h("span", {}, "Navn"), h("span", {}, "Kategori"), h("span", {}, "Antal"), h("span", {}, "Status"), h("span", {}, "Fast note"), h("span", {})),
@@ -622,7 +622,7 @@ function visLager() {
         h("span", {class: "muted"}, n.note || ""),
         h("button", {class: "x", type: "button", title: "Fjern", onclick: () => { L.ny.splice(i, 1); visLager(); }}, "×"))))) : null,
     kategorier().map(kat => {
-      const ws = L.w.filter(w => w.kategori === kat && (L.solgte || w.status !== "Solgt" || erÆndret(w))).sort((a, b) => a._orig.localeCompare(b._orig, "da"));
+      const ws = L.w.filter(w => w.kategori === kat && (L.udgaaede || w.status !== "Udgået" || erÆndret(w))).sort((a, b) => a._orig.localeCompare(b._orig, "da"));
       return ws.length ? h("div", {class: "gruppe", "data-gruppe": ""}, h("div", {class: "overskrift"}, kat), h("div", {class: "kort"}, ws.map(lagerRække))) : null;
     }),
     h("div", {class: "bar", id: "bar"}));
@@ -632,7 +632,7 @@ function visLager() {
   window.scrollTo(0, y);
 }
 function lagerRække(w) {
-  const r = h("div", {class: "lr" + (w.status === "Solgt" ? " solgt" : ""), "data-navn": nøgle(w.navn)});
+  const r = h("div", {class: "lr" + (w.status === "Udgået" ? " udgaaet" : ""), "data-navn": nøgle(w.navn)});
   const markér = () => { r.classList.toggle("aendret", erÆndret(w)); r.dataset.navn = nøgle(w.navn); L.svar = null; tegnBar(); };
   const antalEl = h("span", {}, w.antal);
   const skift = d => { w.antal = Math.max(0, (Number(w.antal) || 0) + d); antalEl.textContent = w.antal; markér(); };
