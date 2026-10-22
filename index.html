@@ -107,6 +107,11 @@ input::placeholder{color:var(--svagere)}
 .ll:hover .notefelt::placeholder,.notefelt:focus::placeholder{color:var(--svagere)}
 .notefelt{display:block;width:100%;border:0;background:none;padding:0;margin-top:0;font-size:12px;line-height:16px;color:var(--svag);border-radius:4px}
 .advl{font-size:12px;color:var(--adv);margin-top:2px}
+.godk{display:flex;align-items:center;gap:10px;margin-top:14px;padding:10px 12px;border-radius:10px;background:var(--flade2);font-size:13px}
+.godk.ok{background:var(--ok-blid);color:var(--ok);font-weight:600}
+.godk .fyld{flex:1}
+.btn.godkend{border-color:var(--ok);color:var(--ok);background:none}
+.btn.godkend:hover{background:var(--ok-blid)}
 .ekstra{margin-top:22px;padding:12px;border-radius:10px;background:var(--flade2);border:1px dashed var(--linje)}
 .lfod{border-top:1px solid var(--linje);padding:14px 22px 18px}
 .resume{margin:10px 0}
@@ -243,9 +248,13 @@ async function skrivFil(p, obj, besked) {
     body: {message: besked, content: base64(JSON.stringify(obj, null, 1)), branch: BRANCH}}), "inbox");
 }
 async function hentData() {
-  const [kalender, udstyr, lister, opgaver] = await Promise.all(
-    ["data/kalender.json", "data/udstyr.json", "data/pakkelister.json", "data/opgaver.json"].map(laesJson));
-  D = {kalender, udstyr, lister, opgaver};
+  const [kalender, udstyr, lister, opgaver, jobpl] = await Promise.all([
+    ...["data/kalender.json", "data/udstyr.json", "data/pakkelister.json", "data/opgaver.json"].map(laesJson), laesJobpl()]);
+  D = {kalender, udstyr, lister, opgaver, jobpl};
+}
+async function laesJobpl() {   // findes først, når den første liste er godkendt
+  const r = await laesFil("data/jobpakkelister.json");
+  return r ? r.json() : [];
 }
 function nytId(præfiks) {
   const d = new Date(), p = n => String(n).padStart(2, "0");
@@ -280,6 +289,9 @@ function listeTilJob(j) {
 }
 const jobNøgle = j => `${j.dato}|${j.navn.toLowerCase()}`;
 const opgaveTilJob = j => D.opgaver.find(o => o.job_noegle === jobNøgle(j)) || null;
+const jobplTilJob = j => (D.jobpl || []).find(r => r.job_noegle === jobNøgle(j)) || null;
+const signatur = linjer => JSON.stringify(linjer.filter(l => l.antal > 0).map(l => [nøgle(l.udstyr), l.antal, (l.note || "").trim()]).sort());
+const kortDato = iso => `${Number(iso.slice(8, 10))}/${Number(iso.slice(5, 7))}`;
 
 // ---------- topbjælke ----------
 function tegnTop() {
@@ -288,7 +300,7 @@ function tegnTop() {
     top.replaceChildren(
       h("button", {class: "tilbage", type: "button", onclick: lukEditor}, "← Jobs"),
       h("div", {class: "spacer"}),
-      h("span", {class: "muted lille"}, "Intet gemmes, før du trykker Gem liste eller laver PDF"));
+      h("span", {class: "muted lille"}, "Intet gemmes, før du godkender, trykker Gem liste eller laver PDF"));
     return;
   }
   const o = D.kalender?.opdateret;
@@ -326,37 +338,43 @@ function visJobs() {
     h("div", {class: "muted"}, "Vælg et job for at lave eller tjekke pakkelisten."),
     h("div", {class: "jobliste"},
       js.length ? js.map(j => {
-        const liste = listeTilJob(j), o = opgaveTilJob(j), d = dag(j.dato);
-        const færdig = o?.status === "Færdig";
+        const liste = listeTilJob(j), o = opgaveTilJob(j), jp = jobplTilJob(j), d = dag(j.dato);
+        const klar = !!jp?.godkendt || o?.status === "Færdig";
         return h("button", {class: "job", type: "button", onclick: () => åbnJob(j)},
           h("div", {class: "dato"}, h("b", {}, d.getDate()), h("span", {}, MD[d.getMonth()])),
           h("div", {class: "t"}, h("b", {}, j.navn), h("span", {class: "muted lille"}, [DAGE[d.getDay()], j.sted].filter(Boolean).join(" · "))),
           h("span", {class: "status"},
-            h("span", {class: "prik " + (færdig ? "ok" : liste ? "" : "adv")}),
-            færdig ? "Pakket" : liste ? "Liste: " + liste.navn : "Ingen liste"));
+            h("span", {class: "prik " + (klar ? "ok" : liste || jp ? "adv" : "")}),
+            klar ? "Pakkeliste klar" : liste || jp ? "Ikke godkendt" : "Ingen liste"));
       }) : h("div", {class: "tom"}, "Ingen jobs fra i dag og frem. Tryk Hent alle jobs.")),
     h("div", {class: "andre"}, valg)));
 }
 
 // ---------- editor (fuld skærm) ----------
 function åbnJob(j) {
-  const liste = listeTilJob(j);
+  const liste = listeTilJob(j), jp = jobplTilJob(j);
   nyEditor({job: j, base: liste, egen: !!liste, jobNavn: j.navn, gem: "kun_job"});
+  if (jp) {   // jobbets egen (godkendte) liste går forud for standardlisten
+    indlæs(jp);
+    S.transport = jp.transport || S.transport;
+    S.godk = jp.godkendt || null;
+    S.snap = signatur(jp.linjer);
+    tegn();
+  }
 }
 function åbnListe(navn) {
   const p = D.lister.find(x => x.navn === navn);
   nyEditor({job: null, base: p, egen: true, jobNavn: p.navn, gem: "opdater"});
 }
 function nyEditor(o) {
-  S = {...o, l: {}, transport: o.base?.transport || "", nyNavn: o.jobNavn, nyType: "Skabelon", svar: null};
+  S = {...o, l: {}, transport: o.base?.transport || "", nyNavn: o.jobNavn, nyType: "Skabelon", svar: null, rørt: false, godk: null, snap: null};
   indlæs(o.base);
   P = {q: "", kat: "Alle"};
   tegn();
   window.scrollTo(0, 0);
 }
 function lukEditor() {
-  const ændret = Object.keys(S.l).length && !S.svar;
-  if (ændret && !confirm("Gå tilbage uden at lave PDF? Dine ændringer på listen forsvinder.")) return;
+  if (S.rørt && !confirm("Gå tilbage uden at gemme? Dine ændringer på listen forsvinder.")) return;
   S = null;
   tegn();
 }
@@ -407,6 +425,7 @@ function sætAntal(key, navn, n) {
   if (n <= 0) delete S.l[key];
   else S.l[key] = {...(S.l[key] || {udstyr: navn, note: ""}), antal: n};
   S.svar = null;
+  S.rørt = true;
   tegnRækker();
   tegnListe();
 }
@@ -433,6 +452,7 @@ function tegnListe() {
     if (linjer.length && !confirm("Erstat listen med " + (e.target.value || "en tom liste") + "?")) { e.target.value = S.base?.navn || ""; return; }
     S.base = D.lister.find(x => x.navn === e.target.value) || null;
     S.transport = S.base?.transport || S.transport;
+    S.rørt = true;
     indlæs(S.base);
     tegnRækker();
     tegnListe();
@@ -447,8 +467,9 @@ function tegnListe() {
     h("div", {class: "felter"},
       h("label", {}, h("span", {class: "etiket"}, "Navn på PDF"),
         h("input", {class: "input", value: S.jobNavn, oninput: e => { S.jobNavn = e.target.value; }})),
-      h("div", {}, h("span", {class: "etiket"}, "Transport"), seg(["Trailer", "Kun bil"], S.transport, v => { S.transport = v; tegnListe(); }))),
-    S.egen ? null : h("label", {style: "display:block;margin-top:12px"}, h("span", {class: "etiket"}, "Start fra"), startFra));
+      h("div", {}, h("span", {class: "etiket"}, "Transport"), seg(["Trailer", "Kun bil"], S.transport, v => { S.transport = v; S.rørt = true; tegnListe(); }))),
+    S.egen ? null : h("label", {style: "display:block;margin-top:12px"}, h("span", {class: "etiket"}, "Start fra"), startFra),
+    S.job ? godkendBlok(linjer) : null);
 
   const krop = h("div", {class: "lkrop", id: "lkrop"});
   if (!linjer.length) {
@@ -468,7 +489,7 @@ function tegnListe() {
         const adv = advarsler(l, lm.get(key));
         return h("div", {class: "ll"},
           h("div", {class: "n"}, l.udstyr,
-            h("input", {class: "notefelt", placeholder: "Tilføj note", value: l.note || "", oninput: e => { S.l[key].note = e.target.value; }}),
+            h("input", {class: "notefelt", placeholder: "Tilføj note", value: l.note || "", oninput: e => { S.l[key].note = e.target.value; S.rørt = true; }}),
             adv.length ? h("div", {class: "advl"}, adv.join(". ")) : null),
           stepper(l.antal, d => sætAntal(key, l.udstyr, l.antal + d), l.udstyr));
       })));
@@ -501,13 +522,56 @@ function tegnListe() {
       `${linjer.length} linjer · ${stk} stk` + (advN ? ` · ${advN} advarsler` : "") + (S.transport ? "" : " · vælg transport")),
     h("div", {style: "display:flex;gap:8px"},
       S.gem !== "kun_job" ? h("button", {class: "btn stor", type: "button", style: "width:auto;flex:none",
-        title: "Gem listen uden at lave PDF", disabled: optaget || !linjer.length || !S.transport, onclick: () => send(false)}, "Gem liste") : null,
+        title: "Gem listen uden at lave PDF", disabled: optaget || !linjer.length || !S.transport, onclick: () => send(false)}, S.gem === "opdater" ? "Opdater" : "Gem ny liste") : null,
       h("button", {class: "btn primaer stor", type: "button", disabled: optaget || !linjer.length || !S.transport, onclick: () => send(true)},
-        optaget ? "Arbejder …" : S.gem === "kun_job" ? "Lav pakkeliste (PDF)" : "Gem og lav PDF")),
+        optaget ? "Arbejder …" : S.gem === "kun_job" ? "Lav pakkeliste (PDF)" : S.gem === "opdater" ? "Opdater og lav PDF" : "Gem og lav PDF")),
     h("div", {id: "svar"}));
   k.replaceChildren(hoved, krop, fod);
   krop.scrollTop = gl;
   tegnSvar();
+}
+function godkendBlok(linjer) {
+  const ændret = S.godk && signatur(Object.values(S.l)) !== S.snap;
+  const kan = !optaget && linjer.length && S.transport;
+  if (S.godk && !ændret)
+    return h("div", {class: "godk ok"}, h("span", {class: "fyld"}, `✓ Pakkeliste godkendt ${kortDato(S.godk)}`),
+      h("button", {class: "btn ghost lille", type: "button", disabled: optaget, onclick: () => godkend(false)}, "Genåbn liste"));
+  return h("div", {class: "godk"},
+    h("span", {class: "fyld", style: ændret ? "color:var(--adv)" : "color:var(--svag)"},
+      ændret ? "Ændret efter godkendelse" : "Ikke godkendt endnu"),
+    h("button", {class: "btn godkend", type: "button", disabled: !kan, title: kan ? "" : "Listen skal have udstyr og transport",
+      onclick: () => godkend(true)}, ændret ? "✓ Godkend igen" : "✓ Godkend pakkeliste"));
+}
+async function godkend(ja) {
+  if (!ja && !confirm("Genåbn listen? Den bliver liggende, men jobbet står som ikke godkendt (gul), indtil du godkender igen.")) return;
+  const linjer = Object.values(S.l).filter(l => l.antal > 0)
+    .map(l => ({udstyr: l.udstyr, antal: l.antal, ...(l.note?.trim() ? {note: l.note.trim()} : {})}));
+  const krav = ja ? {type: "godkend", job: S.job.navn, dato: S.job.dato, transport: S.transport, linjer, udgangspunkt: S.base?.navn || null, godkendt: true}
+                  : {type: "godkend", job: S.job.navn, dato: S.job.dato, godkendt: false};
+  const mig = S;
+  optaget = true;
+  tegnListe();
+  try {
+    sætSvar("", (ja ? "Godkender" : "Genåbner listen") + " … det tager typisk under et minut.");
+    const sv = await anmod("godkend", krav, `Panel: ${ja ? "godkend" : "genåbn"} ${S.job.navn}`);
+    if (S !== mig) return;
+    if (!sv) sætSvar("fejl", "Intet svar efter 4 minutter.", ["Tjek kørslen under Actions i fabz-data."]);
+    else if (sv.status === "FEJL") sætSvar("fejl", "Fejl, intet er gemt.", [sv.fejl]);
+    else {
+      [D.jobpl, D.opgaver] = await Promise.all([laesJobpl(), laesJson("data/opgaver.json")]);
+      const jp = jobplTilJob(S.job);
+      S.godk = jp?.godkendt || null;
+      S.snap = jp ? signatur(jp.linjer) : null;
+      S.rørt = false;
+      sætSvar(sv.status === "ADVARSEL" ? "adv" : "ok", ja ? (sv.status === "ADVARSEL" ? "Godkendt, men tjek advarslerne" : "Pakkelisten er godkendt") : "Listen er genåbnet",
+        [...sv.advarsler.map(a => "Advarsel: " + a), ...sv.info]);
+    }
+  } catch (e) {
+    if (S === mig) sætSvar("fejl", "Det gik galt.", [e.message]);
+  } finally {
+    optaget = false;
+    if (S === mig) tegnListe();
+  }
 }
 function sætSvar(klasse, titel, punkter, link) {
   if (S) S.svar = {klasse, titel, punkter, link};
@@ -547,6 +611,7 @@ async function send(medPdf) {
         S.base = D.lister.find(p => nøgle(p.navn) === nøgle(listeNavn)) || S.base;
         S.egen = !!S.base;
         S.gem = S.base ? "opdater" : S.gem;
+        S.rørt = false;
         sætSvar(sv.status === "ADVARSEL" ? "adv" : "ok", sv.status === "ADVARSEL" ? "Gemt, men tjek advarslerne" : "Listen er gemt",
           [...sv.advarsler.map(a => "Advarsel: " + a), ...sv.info]);
       }
@@ -556,6 +621,7 @@ async function send(medPdf) {
       sætSvar(sv.status === "ADVARSEL" ? "adv" : "ok", titel, [...punkter, "Henter PDF …"]);
       const r = await laesFil(sv.pdf);
       const link = r ? URL.createObjectURL(new Blob([await r.arrayBuffer()], {type: "application/pdf"})) : null;
+      if (S === mig && S.gem !== "kun_job") S.rørt = false;
       if (S === mig) sætSvar(sv.status === "ADVARSEL" ? "adv" : "ok", titel, r ? punkter : [...punkter, "PDF'en kunne ikke hentes."], link);
       if (S.gem !== "kun_job") D.lister = await laesJson("data/pakkelister.json");
     }
