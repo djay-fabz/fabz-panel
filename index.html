@@ -608,7 +608,7 @@ function tegnListe() {
     S.egen ? null : h("label", {style: "display:block;margin-top:12px"}, h("span", {class: "etiket"}, "Start fra"), startFra),
     S.job ? godkendBlok(linjer) : null,
     S.job && !erKlub(S.job) ? festkortBlok() : null,
-    S.job && (erKlub(S.job) || !jobtype(S.job)) ? klubkortBlok() : null);
+    S.job && erKlub(S.job) ? klubkortBlok() : null);
 
   const krop = h("div", {class: "lkrop", id: "lkrop"});
   if (!linjer.length) {
