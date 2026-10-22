@@ -312,8 +312,15 @@ async function hentData() {
   const [kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, ideer, indtaegter, typer, salg, festkort, klubkort, kkTekster] = await Promise.all([
     ...["data/kalender.json", "data/udstyr.json", "data/pakkelister.json", "data/opgaver.json"].map(laesJson), laesJobpl(),
     ...["data/henvendelser.json", "data/dagsplaner.json", "data/ideer.json", "data/indtaegter.json", "data/typer.json", "data/salg.json", "data/festkort.json", "data/klubkort.json"].map(p => laesFil(p).then(r => r ? r.json() : [])),
-    laesFil("tools/klubkort/kort.json").then(r => r ? r.json() : {kort: []})]);
+    laesKkTekster()]);
   D = {kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, ideer, indtaegter, typer, salg, festkort, klubkort, kkTekster};
+}
+async function laesKkTekster() {   // Oscars rettede tekster, ellers standardteksterne fra tools/klubkort
+  const r = await laesFil("data/klubkort_tekster.json");
+  const rows = r ? await r.json() : [];
+  if (rows.length) return rows;
+  const std = await laesFil("tools/klubkort/kort.json");
+  return std ? (await std.json()).kort.map(k => ({nr: k.nr, tekst: k.tekst, svar: k.svar || "", aktiv: true})) : [];
 }
 async function laesJobpl() {   // findes først, når den første liste er godkendt
   const r = await laesFil("data/jobpakkelister.json");
@@ -449,7 +456,7 @@ function tegnTop() {
   top.replaceChildren(
     h("span", {class: "brand"}, "Fabz"),
     h("nav", {class: "tabs"},
-      [["idag", "I dag"], ["opgaver", "Opgaver"], ["foresp", "Forespørgsler"], ["salg", "Salg"], ["pakkelister", "Pakkelister"], ["lager", "Lager"], ["ideer", "Idéer"], ["indtaegter", "Indtægter"]].map(([v, t]) =>
+      [["idag", "I dag"], ["opgaver", "Opgaver"], ["foresp", "Forespørgsler"], ["salg", "Salg"], ["pakkelister", "Pakkelister"], ["kort", "Kort"], ["lager", "Lager"], ["ideer", "Idéer"], ["indtaegter", "Indtægter"]].map(([v, t]) =>
         h("button", {type: "button", class: "tab" + (fane === v ? " aktiv" : ""), onclick: () => { fane = v; tegn(); window.scrollTo(0, 0); }}, t))),
     h("div", {class: "spacer"}),
     ...(fane === "pakkelister" || fane === "idag" ? [tid, h("button", {class: "btn", type: "button", disabled: henterJobs, onclick: hentJobs}, henterJobs ? "Henter …" : "Hent alle jobs")] : []),
@@ -458,7 +465,7 @@ function tegnTop() {
 function tegn() {
   document.body.classList.remove("bar-synlig");
   tegnTop();
-  const vis = {idag: visIDag, opgaver: visOpgaver, foresp: visForesp, salg: visSalg, ideer: visIdeer, indtaegter: visIndtaegter, lager: visLager}[fane];
+  const vis = {idag: visIDag, opgaver: visOpgaver, foresp: visForesp, salg: visSalg, ideer: visIdeer, indtaegter: visIndtaegter, lager: visLager, kort: visKort}[fane];
   if (vis) vis();
   else if (S) visEditor();
   else visJobs();
@@ -607,8 +614,8 @@ function tegnListe() {
       h("div", {}, h("span", {class: "etiket"}, "Transport"), seg(["Trailer", "Kun bil"], S.transport, v => { S.transport = v; S.rørt = true; tegnListe(); }))),
     S.egen ? null : h("label", {style: "display:block;margin-top:12px"}, h("span", {class: "etiket"}, "Start fra"), startFra),
     S.job ? godkendBlok(linjer) : null,
-    S.job && !erKlub(S.job) ? festkortBlok() : null,
-    S.job && erKlub(S.job) ? klubkortBlok() : null);
+    S.job && !erKlub(S.job) ? festkortBlok(S.job, S, tegnListe) : null,
+    S.job && erKlub(S.job) ? klubkortBlok(S.job, S, tegnListe) : null);
 
   const krop = h("div", {class: "lkrop", id: "lkrop"});
   if (!linjer.length) {
@@ -684,9 +691,9 @@ function gætAnledning(j) {
   const t = nøgle(m ? m[1] : "").split(/[ ,]/)[0];
   return ANLEDNING[t] || "Fest";
 }
-function festkortBlok() {
-  const j = S.job, rec = festkortTilJob(j);
-  const fk = S.fk ||= {navne: rec?.navne || j.navn, anledning: rec?.anledning || gætAnledning(j), åben: false, svar: null};
+function festkortBlok(j, st, gentegn) {
+  const rec = festkortTilJob(j);
+  const fk = st.fk ||= {navne: rec?.navne || j.navn, anledning: rec?.anledning || gætAnledning(j), åben: false, svar: null};
   const d = dag(j.dato), linje = () => `${(fk.anledning || "").trim() || "…"} · ${d.getDate()}. ${MDL[d.getMonth()]} ${d.getFullYear()}`;
   const visLinje = h("div", {class: "muted lille", style: "margin-top:6px"});
   const opdLinje = () => { visLinje.textContent = "På kortet: " + linje(); };
@@ -694,8 +701,7 @@ function festkortBlok() {
   const lav = async () => {
     if (!(fk.navne || "").trim() || !(fk.anledning || "").trim()) { alert("Skriv navne og anledning."); return; }
     if (/·|\d{4}/.test(fk.anledning)) { alert("Skriv kun anledningen, fx Bryllup. Datoen kommer fra jobbet."); return; }
-    const mig = S;
-    fk.arbejder = true; fk.svar = {klasse: "", titel: "Laver visitkort og barskilt … typisk 20-30 sekunder"}; tegnListe();
+    fk.arbejder = true; fk.svar = {klasse: "", titel: "Laver visitkort og barskilt … typisk 20-30 sekunder"}; gentegn();
     try {
       const sv = await kørOgVent("festkort", [`--dato=${j.dato}`, `--job=${j.navn}`, `--navne=${fk.navne.trim()}`, `--anledning=${fk.anledning.trim()}`]);
       if (!sv) fk.svar = {klasse: "fejl", titel: "Intet svar efter 4 minutter."};
@@ -707,12 +713,12 @@ function festkortBlok() {
       }
     } catch (e) { fk.svar = {klasse: "fejl", titel: "Det gik galt", punkter: [e.message]}; }
     fk.arbejder = false;
-    if (S === mig) tegnListe();
+    if (st.fk === fk) gentegn();
   };
   return h("div", {class: "godk" + (rec ? " ok" : ""), style: "flex-direction:column;align-items:stretch"},
     h("div", {style: "display:flex;align-items:center;gap:10px"},
       h("span", {class: "fyld"}, rec ? `✓ Festkort lavet ${kortDato(rec.lavet)} · kampagne ${rec.kampagne}` : "Festkort og barskilt"),
-      h("button", {class: "btn " + (rec ? "ghost lille" : "godkend"), type: "button", onclick: () => { fk.åben = !fk.åben; tegnListe(); }},
+      h("button", {class: "btn " + (rec ? "ghost lille" : "godkend"), type: "button", onclick: () => { fk.åben = !fk.åben; gentegn(); }},
         fk.åben ? "Luk" : rec ? "Lav igen" : "Lav kort")),
     fk.åben ? h("div", {style: "margin-top:10px;color:var(--tekst);font-weight:400"},
       h("div", {class: "felter", style: "grid-template-columns:1.4fr 1fr;margin-top:0"},
@@ -726,13 +732,13 @@ function festkortBlok() {
         fk.svar.klasse === "ok" ? h("div", {class: "lille muted", style: "margin-top:8px"},
           "Print fra Preview med Scale 100 %. Visitkort: preset Mat karton 250g, side 1, vend arket som ved kalibreringen, så side 2. Barskilt: ensidet, almindeligt papir.") : null) : null) : null);
 }
-function klubkortBlok() {
-  const j = S.job, rec = klubkortTilJob(j), alle = (D.kkTekster?.kort || []);
-  const kk = S.kk ||= {valgt: new Set(rec?.kort || alle.map(k => k.nr)), åben: false, svar: null};
+function klubkortBlok(j, st, gentegn) {
+  const rec = klubkortTilJob(j), alle = (D.kkTekster || []).filter(k => k.aktiv !== false);
+  const kk = st.kk ||= {valgt: new Set((rec?.kort || alle.map(k => k.nr)).filter(n => alle.some(k => k.nr === n))), åben: false, svar: null};
   const lav = async () => {
     if (!kk.valgt.size) { alert("Vælg mindst ét kort."); return; }
-    const mig = S, nr = alle.map(k => k.nr).filter(n => kk.valgt.has(n));
-    kk.arbejder = true; kk.svar = {klasse: "", titel: "Laver klubkort … typisk 20-30 sekunder"}; tegnListe();
+    const nr = alle.map(k => k.nr).filter(n => kk.valgt.has(n));
+    kk.arbejder = true; kk.svar = {klasse: "", titel: "Laver klubkort … typisk 20-30 sekunder"}; gentegn();
     try {
       const sv = await kørOgVent("klubkort", [`--dato=${j.dato}`, `--job=${j.navn}`, `--kort=${nr.join(",")}`]);
       if (!sv) kk.svar = {klasse: "fejl", titel: "Intet svar efter 4 minutter."};
@@ -744,16 +750,16 @@ function klubkortBlok() {
       }
     } catch (e) { kk.svar = {klasse: "fejl", titel: "Det gik galt", punkter: [e.message]}; }
     kk.arbejder = false;
-    if (S === mig) tegnListe();
+    if (st.kk === kk) gentegn();
   };
   const valg = alle.map(k => h("label", {style: "display:flex;gap:10px;align-items:flex-start;padding:6px 0;cursor:pointer"},
     h("input", {type: "checkbox", checked: kk.valgt.has(k.nr), style: "margin-top:4px",
       onchange: e => { e.target.checked ? kk.valgt.add(k.nr) : kk.valgt.delete(k.nr); }}),
-    h("span", {}, k.tekst.join(" "), k.svar ? h("span", {class: "muted"}, " " + k.svar) : null)));
+    h("span", {}, k.tekst.replace(/\n/g, " "), k.svar ? h("span", {class: "muted"}, " " + k.svar) : null)));
   return h("div", {class: "godk" + (rec ? " ok" : ""), style: "flex-direction:column;align-items:stretch"},
     h("div", {style: "display:flex;align-items:center;gap:10px"},
       h("span", {class: "fyld"}, rec ? `✓ Klubkort lavet ${kortDato(rec.lavet)} · kampagne ${rec.kampagne}` : "Klubkort med QR-kode"),
-      h("button", {class: "btn " + (rec ? "ghost lille" : "godkend"), type: "button", onclick: () => { kk.åben = !kk.åben; tegnListe(); }},
+      h("button", {class: "btn " + (rec ? "ghost lille" : "godkend"), type: "button", onclick: () => { kk.åben = !kk.åben; gentegn(); }},
         kk.åben ? "Luk" : rec ? "Lav igen" : "Lav kort")),
     kk.åben ? h("div", {style: "margin-top:10px;color:var(--tekst);font-weight:400"},
       h("div", {class: "muted lille"}, "Vælg kortene. Hvert kort får sin egen QR-kampagne for jobbet. 4 kort pr. A4."),
@@ -1050,7 +1056,7 @@ async function gemLager() {
 const FILER = {henvendelser: "data/henvendelser.json", opgaver: "data/opgaver.json", dagsplaner: "data/dagsplaner.json",
                ideer: "data/ideer.json", indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json"};
 async function laesValgfri(p) { const r = await laesFil(p); return r ? r.json() : []; }
-async function genindlæs(navne) { await Promise.all(navne.map(async n => { D[n] = await laesValgfri(FILER[n]); })); }
+async function genindlæs(navne) { await Promise.all(navne.map(async n => { D[n] = n === "kkTekster" ? await laesKkTekster() : await laesValgfri(FILER[n]); })); }
 const plusDage = (iso, n) => { const d = dag(iso); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
 const nuHHMM = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, "0")}.${String(d.getMinutes()).padStart(2, "0")}`; };
 const kr = v => `${Math.round(Number(v) || 0).toLocaleString("da-DK")} kr.`;
@@ -1565,6 +1571,63 @@ function visIndtaegter() {
         h("span", {class: "pill" + (r.type === "Kontant" ? " gul" : " blå")}, r.type),
         r.i_dinero ? h("span", {class: "pill"}, "i Dinero") : null,
         h("b", {style: "min-width:90px;text-align:right"}, kr(r.beloeb))))) : tom("Ingen registrerede indtægter endnu."))));
+}
+
+// ---------- Kort: festkort og klubkort til et job, og klubkortenes tekster ----------
+const KT = {job: null, slags: null, red: {}, ny: {tekst: "", svar: ""}};
+function visKort() {
+  const js = jobs();
+  if (!KT.job || !js.some(j => jobNøgle(j) === KT.job)) { const f = js.find(erKlub) || js[0]; KT.job = f ? jobNøgle(f) : null; KT.slags = null; KT.fk = KT.kk = null; }
+  const j = js.find(x => jobNøgle(x) === KT.job);
+  const slags = KT.slags || (j && erKlub(j) ? "Klubkort" : "Festkort");
+  const vælgJob = h("select", {class: "input", onchange: e => { KT.job = e.target.value; KT.slags = null; KT.fk = KT.kk = null; tegn(); }},
+    js.map(x => h("option", {value: jobNøgle(x), selected: jobNøgle(x) === KT.job},
+      `${kortDato(x.dato)} · ${x.navn}${jobtype(x) ? " · " + jobtype(x) : ""}${festkortTilJob(x) || klubkortTilJob(x) ? " ✓" : ""}`)));
+  const tekster = D.kkTekster || [];
+  const ændret = k => { const r = KT.red[k.nr]; return r && ((r.tekst ?? k.tekst) !== k.tekst || (r.svar ?? (k.svar || "")) !== (k.svar || "")); };
+  const gemTekst = k => {
+    const r = KT.red[k.nr], tekst = (r.tekst ?? k.tekst).trim(), svar = (r.svar ?? k.svar ?? "").trim();
+    if (!tekst) { alert("Teksten må ikke være tom. Skjul kortet i stedet."); return; }
+    kør("klubkort-tekst-ret", [String(k.nr), `--tekst=${tekst}`, `--svar=${svar}`], {tekst: `Kort ${k.nr} rettet`, efter: ["kkTekster"],
+      med: () => { Object.assign(k, {tekst, svar}); delete KT.red[k.nr]; }});
+  };
+  const skjul = k => kør("klubkort-tekst-ret", [String(k.nr), `--aktiv=${k.aktiv === false ? "ja" : "nej"}`],
+    {tekst: k.aktiv === false ? `Kort ${k.nr} vises igen` : `Kort ${k.nr} er skjult`, efter: ["kkTekster"], med: () => { k.aktiv = k.aktiv === false; }});
+  const opret = () => {
+    const tekst = (KT.ny.tekst || "").trim(), svar = (KT.ny.svar || "").trim();
+    if (!tekst) { alert("Skriv teksten til kortet."); return; }
+    kør("klubkort-tekst-ny", [`--tekst=${tekst}`, ...(svar ? [`--svar=${svar}`] : [])], {tekst: "Nyt klubkort", efter: ["kkTekster"],
+      med: () => { (D.kkTekster ||= []).push({nr: "…", tekst, svar, aktiv: true}); KT.ny = {tekst: "", svar: ""}; }});
+  };
+  const kortRække = k => {
+    const r = KT.red[k.nr] ||= {}, venter = k.nr === "…";
+    return h("div", {class: "r", style: "align-items:flex-start;gap:12px" + (k.aktiv === false ? ";opacity:.55" : "")},
+      h("span", {class: "pill", style: "margin-top:8px"}, venter ? "…" : `#${k.nr}`),
+      h("div", {class: "n", style: "display:grid;gap:6px"},
+        h("textarea", {class: "input", rows: 3, disabled: venter, value: r.tekst ?? k.tekst, oninput: e => { r.tekst = e.target.value; }, onchange: () => tegn()}),
+        h("input", {class: "input", disabled: venter, value: r.svar ?? (k.svar || ""), placeholder: "Sidste linje i rødt (valgfri), fx Det gjorde jeg heller ikke.",
+          oninput: e => { r.svar = e.target.value; }, onchange: () => tegn()})),
+      h("div", {style: "display:grid;gap:6px;margin-top:2px"},
+        h("button", {class: "btn primaer lille", type: "button", disabled: venter || !ændret(k), onclick: () => gemTekst(k)}, "Gem"),
+        h("button", {class: "btn ghost lille", type: "button", disabled: venter, onclick: () => skjul(k)}, k.aktiv === false ? "Vis igen" : "Skjul")));
+  };
+  $("rod").replaceChildren(h("div", {class: "side"},
+    h("h1", {}, "Kort"),
+    h("div", {class: "muted"}, "Festkort (visitkort og barskilt) og klubkort med QR-kode til et job. Målene er faste: teksten tilpasses feltet, QR-kode og skærelinjer flytter sig aldrig."),
+    h("div", {class: "kort2", style: "margin-top:16px"},
+      js.length ? h("div", {class: "felter", style: "grid-template-columns:1.6fr 1fr;margin-top:0"},
+        felt("Job", vælgJob), h("div", {}, h("span", {class: "etiket"}, "Slags"), seg(["Klubkort", "Festkort"], slags, v => { KT.slags = v; tegn(); })))
+        : tom("Ingen kommende jobs. Hent jobs under Pakkelister."),
+      j ? (slags === "Klubkort" ? klubkortBlok(j, KT, tegn) : festkortBlok(j, KT, tegn)) : null),
+    h("div", {class: "gruppe"}, h("div", {class: "overskrift"}, "Klubkortenes tekster"),
+      h("div", {class: "muted lille", style: "margin-bottom:8px"}, "Linjeskift bliver på kortet. Uden linjeskift brydes teksten selv. Skjulte kort kommer ikke med på nye ark, men nummeret genbruges aldrig, så tallene i Framer Analytics passer."),
+      tekster.length ? h("div", {class: "kort"}, tekster.map(kortRække)) : tom("Ingen tekster endnu."),
+      h("div", {class: "kort2", style: "margin-top:12px"},
+        h("div", {class: "etiket"}, "Nyt kort"),
+        h("div", {style: "display:grid;gap:6px;margin-top:6px"},
+          tekstfelt(KT.ny, "tekst", {rows: 3, placeholder: "Fx Vidste du godt, at …"}),
+          inp(KT.ny, "svar", {placeholder: "Sidste linje i rødt (valgfri)"})),
+        h("button", {class: "btn primaer", type: "button", style: "margin-top:8px", onclick: opret}, "Opret kort")))));
 }
 
 // ---------- Salg ----------
