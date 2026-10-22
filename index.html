@@ -342,6 +342,8 @@ async function hentData() {
     ...["data/henvendelser.json", "data/dagsplaner.json", "data/ideer.json", "data/indtaegter.json", "data/typer.json", "data/salg.json", "data/festkort.json", "data/klubkort.json"].map(p => laesFil(p).then(r => r ? r.json() : [])),
     laesKkTekster()]);
   D = {kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, ideer, indtaegter, typer, salg, festkort, klubkort, kkTekster};
+  const jr = await laesFil("data/jobrute.json");
+  D.jobrute = jr ? await jr.json() : {};
 }
 async function laesKkTekster() {   // Oscars rettede tekster, ellers standardteksterne fra tools/klubkort
   const r = await laesFil("data/klubkort_tekster.json");
@@ -529,6 +531,7 @@ function visJobs() {
             h("div", {class: "t"}, h("b", {}, j.navn), h("span", {class: "muted lille"}, [DAGE[d.getDay()], j.sted].filter(Boolean).join(" · ")))),
           h("div", {class: "del"},
             delRække("Pakkeliste", klar ? "Klar og godkendt" : liste || jp ? "Skal godkendes" : "Skal laves", klar),
+            delRække("Kørsel", (D.jobrute || {})[key] ? "Plan gemt, kommer på side 2" : "Ikke lavet", !!(D.jobrute || {})[key]),
             delRække("Kort", kort ? "Lavet" : kortO ? "Skal laves" : "Ingen kort oprettet", !!kort),
             åbne.length ? h("div", {}, h("b", {}, "Opgaver"), h("span", {}, åbne.map(o => `${o.titel}${o.deadline ? " (frist " + visDato(o.deadline) + ")" : ""}`).join(" · ")))
               : delRække("Opgaver", "Ingen åbne", false)));
@@ -1740,7 +1743,30 @@ function visKort() {
 
 // ---------- Kørsel: køretid og tidsplan mellem flere adresser (kommandoen rute, OpenStreetMap) ----------
 const nyttStop = () => ({navn: "", adr: "", ophold: "", note: ""});
-const RU = {koeretoej: "trailer", stop: [nyttStop(), nyttStop()], mode: "fremme", tid: "", arbejder: false, svar: null};
+const RU = {koeretoej: "trailer", stop: [nyttStop(), nyttStop()], mode: "fremme", tid: "", arbejder: false, svar: null, job: ""};
+const jobRuteNøgle = j => `${j.dato}|${j.navn.toLowerCase()}`;
+function vælgRuteJob(nøgle) {   // henter adresse og ankomsttid fra jobbets booking i kalenderen, eller den gemte plan
+  const r = RU, j = jobs().find(x => jobRuteNøgle(x) === nøgle);
+  r.job = j ? nøgle : ""; r.svar = null;
+  if (!j) return;
+  const gemt = (D.jobrute || {})[nøgle];
+  if (gemt?.input) {
+    const i = gemt.input;
+    r.koeretoej = i.koeretoej || "trailer"; r.mode = i.fremme ? "fremme" : "afgang"; r.tid = i.fremme || i.afgang || "";
+    r.stop = i.stop.map(x => ({navn: x.navn || "", adr: x.adresse || "", ophold: x.ophold ? String(x.ophold) : "", note: x.note || ""}));
+    return;
+  }
+  const tekst = (j.besk || "").replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "");
+  const adr = /Adresse:\s*([^\n]+)/i.exec(tekst), ank = /Ankomst til opstilling:\s*(?:ca\.\s*)?(\d{1,2})[.:](\d{2})/i.exec(tekst);
+  const sidste = r.stop[r.stop.length - 1];
+  sidste.navn = j.navn;
+  if (adr) {   // "Haverslev Hallen, Strandvejen 21, 9610 Nørager" -> uden stedets navn, som adressesøgningen ikke kender
+    const dele = adr[1].split(",").map(x => x.trim()).filter(Boolean);
+    while (dele.length > 2 && !/\d/.test(dele[0])) dele.shift();
+    sidste.adr = dele.join(", ");
+  }
+  if (ank) { r.mode = "fremme"; r.tid = `${ank[1]}.${ank[2]}`; }
+}
 const km1 = v => Number(v).toLocaleString("da-DK", {minimumFractionDigits: 1, maximumFractionDigits: 1});
 function ruteKort(e) {   // ét kort pr. stop og pr. kørsel (kan printes)
   if (e.slags === "koersel") {
@@ -1771,10 +1797,13 @@ function visRute() {
       stop: brugt.map(x => ({navn: x.navn.trim(), adresse: x.adr.trim(), ophold: Math.max(0, parseInt(x.ophold, 10) || 0), note: x.note.trim()}))};
     r.arbejder = true; r.svar = {klasse: "", titel: "Beregner ruten … typisk under et minut"}; tegn();
     try {
-      const sv = await kørOgVent("rute", ["--json", "@json"], json);
+      const sv = await kørOgVent("rute", ["--json", "@json", ...(r.job ? ["--job", r.job] : [])], json);
       if (!sv) r.svar = {klasse: "fejl", titel: "Intet svar efter 4 minutter."};
       else if (sv.status === "FEJL") r.svar = {klasse: "fejl", titel: "Ruten er ikke beregnet", fejl: sv.fejl};
-      else r.svar = {klasse: "ok", titel: "Ruten er beregnet", data: sv.data, info: sv.info || []};
+      else {
+        r.svar = {klasse: "ok", titel: "Ruten er beregnet", data: sv.data, info: sv.info || []};
+        if (r.job) (D.jobrute ||= {})[r.job] = {gemt: new Date().toISOString(), input: json};
+      }
     } catch (e) { r.svar = {klasse: "fejl", titel: "Det gik galt", fejl: e.message}; }
     r.arbejder = false;
     if (fane === "rute") tegn();
@@ -1797,6 +1826,11 @@ function visRute() {
   $("rod").replaceChildren(h("div", {class: "side"},
     h("h1", {}, "Kørsel"),
     h("div", {class: "muted"}, "Skriv stedene i rækkefølge, vælg køretøj og tidspunkt. Trailer regner med højst 80 km/t, bil med vejens egen hastighed. Køretiden er uden trafik og regnet med lidt ekstra tid. Ophold er tiden på stedet: på første adresse før afgang, på sidste efter ankomst."),
+    h("div", {class: "gruppe", style: "margin-top:16px"}, h("div", {class: "overskrift"}, "Job"),
+      h("select", {class: "input", style: "margin-top:8px", disabled: r.arbejder, onchange: e => { vælgRuteJob(e.target.value); tegn(); }},
+        h("option", {value: ""}, "Intet job (kun beregning)"),
+        jobs().map(j => h("option", {value: jobRuteNøgle(j), selected: r.job === jobRuteNøgle(j)}, `${visDato(j.dato)} ${j.navn}${(D.jobrute || {})[jobRuteNøgle(j)] ? " (plan gemt)" : ""}`))),
+      h("div", {class: "muted lille", style: "margin-top:6px"}, r.job ? "Adresse og ankomsttid er hentet fra bookingen i kalenderen. Du kan rette dem. Når ruten er beregnet, gemmes den på jobbet og kommer på side 2 i pakkelisten i stedet for kalenderens tidsplan. Kalenderen ændres ikke." : "Vælg et job for at hente adresse og ankomsttid fra kalenderen og gemme planen på jobbet.")),
     h("div", {class: "gruppe", style: "margin-top:16px"}, h("div", {class: "overskrift"}, "Køretøj"),
       h("div", {style: "display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"}, knap("trailer", "Trailer (højst 80 km/t)"), knap("bil", "Bil (normal hastighed)"))),
     h("div", {class: "gruppe", style: "margin-top:16px"}, h("div", {class: "overskrift"}, "Steder"),
