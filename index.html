@@ -309,10 +309,11 @@ async function skrivFil(p, obj, besked) {
     body: {message: besked, content: base64(JSON.stringify(obj, null, 1)), branch: BRANCH}}), "inbox");
 }
 async function hentData() {
-  const [kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, ideer, indtaegter, typer, salg, festkort] = await Promise.all([
+  const [kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, ideer, indtaegter, typer, salg, festkort, klubkort, kkTekster] = await Promise.all([
     ...["data/kalender.json", "data/udstyr.json", "data/pakkelister.json", "data/opgaver.json"].map(laesJson), laesJobpl(),
-    ...["data/henvendelser.json", "data/dagsplaner.json", "data/ideer.json", "data/indtaegter.json", "data/typer.json", "data/salg.json", "data/festkort.json"].map(p => laesFil(p).then(r => r ? r.json() : []))]);
-  D = {kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, ideer, indtaegter, typer, salg, festkort};
+    ...["data/henvendelser.json", "data/dagsplaner.json", "data/ideer.json", "data/indtaegter.json", "data/typer.json", "data/salg.json", "data/festkort.json", "data/klubkort.json"].map(p => laesFil(p).then(r => r ? r.json() : [])),
+    laesFil("tools/klubkort/kort.json").then(r => r ? r.json() : {kort: []})]);
+  D = {kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, ideer, indtaegter, typer, salg, festkort, klubkort, kkTekster};
 }
 async function laesJobpl() {   // findes først, når den første liste er godkendt
   const r = await laesFil("data/jobpakkelister.json");
@@ -420,6 +421,9 @@ function listeTilJob(j) {
 const jobNøgle = j => `${j.dato}|${j.navn.toLowerCase()}`;
 const opgaveTilJob = j => D.opgaver.find(o => o.job_noegle === jobNøgle(j) && (o.job_opgave || "pakkeliste") === "pakkeliste") || null;
 const festkortTilJob = j => (D.festkort || []).find(r => r.job_noegle === jobNøgle(j)) || null;
+const klubkortTilJob = j => (D.klubkort || []).find(r => r.job_noegle === jobNøgle(j)) || null;
+const jobtype = j => { const m = /jobtype\s*:\s*([^<\n\r]*)/i.exec(j.besk || ""); return m ? m[1].trim() : ""; };
+const erKlub = j => /klub|bar\b/i.test(jobtype(j));
 const jobplTilJob = j => (D.jobpl || []).find(r => r.job_noegle === jobNøgle(j)) || null;
 const signatur = linjer => JSON.stringify(linjer.filter(l => l.antal > 0).map(l => [nøgle(l.udstyr), l.antal, (l.note || "").trim()]).sort());
 const kortDato = iso => `${Number(iso.slice(8, 10))}/${Number(iso.slice(5, 7))}`;
@@ -475,7 +479,7 @@ function visJobs() {
         return h("button", {class: "job", type: "button", onclick: () => åbnJob(j)},
           h("div", {class: "dato"}, h("b", {}, d.getDate()), h("span", {}, MD[d.getMonth()])),
           h("div", {class: "t"}, h("b", {}, j.navn), h("span", {class: "muted lille"}, [DAGE[d.getDay()], j.sted].filter(Boolean).join(" · "))),
-          festkortTilJob(j) ? h("span", {class: "pill grøn", title: "Festkort er lavet"}, "Kort ✓") : null,
+          festkortTilJob(j) || klubkortTilJob(j) ? h("span", {class: "pill grøn", title: "Kort er lavet"}, "Kort ✓") : null,
           h("span", {class: "status"},
             h("span", {class: "prik " + (klar ? "ok" : liste || jp ? "adv" : "")}),
             klar ? "Pakkeliste klar" : liste || jp ? "Ikke godkendt" : "Ingen liste"));
@@ -603,7 +607,8 @@ function tegnListe() {
       h("div", {}, h("span", {class: "etiket"}, "Transport"), seg(["Trailer", "Kun bil"], S.transport, v => { S.transport = v; S.rørt = true; tegnListe(); }))),
     S.egen ? null : h("label", {style: "display:block;margin-top:12px"}, h("span", {class: "etiket"}, "Start fra"), startFra),
     S.job ? godkendBlok(linjer) : null,
-    S.job ? festkortBlok() : null);
+    S.job && !erKlub(S.job) ? festkortBlok() : null,
+    S.job && (erKlub(S.job) || !jobtype(S.job)) ? klubkortBlok() : null);
 
   const krop = h("div", {class: "lkrop", id: "lkrop"});
   if (!linjer.length) {
@@ -720,6 +725,45 @@ function festkortBlok() {
         (fk.svar.filer || []).map(f => f.link ? h("div", {style: "margin-top:8px"}, h("div", {class: "lille muted"}, f.navn), pdfKnapper(f.link, f.navn)) : null),
         fk.svar.klasse === "ok" ? h("div", {class: "lille muted", style: "margin-top:8px"},
           "Print fra Preview med Scale 100 %. Visitkort: preset Mat karton 250g, side 1, vend arket som ved kalibreringen, så side 2. Barskilt: ensidet, almindeligt papir.") : null) : null) : null);
+}
+function klubkortBlok() {
+  const j = S.job, rec = klubkortTilJob(j), alle = (D.kkTekster?.kort || []);
+  const kk = S.kk ||= {valgt: new Set(rec?.kort || alle.map(k => k.nr)), åben: false, svar: null};
+  const lav = async () => {
+    if (!kk.valgt.size) { alert("Vælg mindst ét kort."); return; }
+    const mig = S, nr = alle.map(k => k.nr).filter(n => kk.valgt.has(n));
+    kk.arbejder = true; kk.svar = {klasse: "", titel: "Laver klubkort … typisk 20-30 sekunder"}; tegnListe();
+    try {
+      const sv = await kørOgVent("klubkort", [`--dato=${j.dato}`, `--job=${j.navn}`, `--kort=${nr.join(",")}`]);
+      if (!sv) kk.svar = {klasse: "fejl", titel: "Intet svar efter 4 minutter."};
+      else if (sv.status === "FEJL") kk.svar = {klasse: "fejl", titel: "Kortene er ikke lavet", punkter: [sv.fejl]};
+      else {
+        const filer = await Promise.all((sv.pdfs || []).map(async p => ({navn: decodeURIComponent(p.split("/").pop()), link: await hentPdf(p)})));
+        kk.svar = {klasse: "ok", titel: "Kortene er klar", punkter: sv.info.filter(l => !l.startsWith("Klubkort:")), filer};
+        await genindlæs(["klubkort"]);
+      }
+    } catch (e) { kk.svar = {klasse: "fejl", titel: "Det gik galt", punkter: [e.message]}; }
+    kk.arbejder = false;
+    if (S === mig) tegnListe();
+  };
+  const valg = alle.map(k => h("label", {style: "display:flex;gap:10px;align-items:flex-start;padding:6px 0;cursor:pointer"},
+    h("input", {type: "checkbox", checked: kk.valgt.has(k.nr), style: "margin-top:4px",
+      onchange: e => { e.target.checked ? kk.valgt.add(k.nr) : kk.valgt.delete(k.nr); }}),
+    h("span", {}, k.tekst.join(" "), k.svar ? h("span", {class: "muted"}, " " + k.svar) : null)));
+  return h("div", {class: "godk" + (rec ? " ok" : ""), style: "flex-direction:column;align-items:stretch"},
+    h("div", {style: "display:flex;align-items:center;gap:10px"},
+      h("span", {class: "fyld"}, rec ? `✓ Klubkort lavet ${kortDato(rec.lavet)} · kampagne ${rec.kampagne}` : "Klubkort med QR-kode"),
+      h("button", {class: "btn " + (rec ? "ghost lille" : "godkend"), type: "button", onclick: () => { kk.åben = !kk.åben; tegnListe(); }},
+        kk.åben ? "Luk" : rec ? "Lav igen" : "Lav kort")),
+    kk.åben ? h("div", {style: "margin-top:10px;color:var(--tekst);font-weight:400"},
+      h("div", {class: "muted lille"}, "Vælg kortene. Hvert kort får sin egen QR-kampagne for jobbet. 4 kort pr. A4."),
+      valg,
+      h("button", {class: "btn primaer", type: "button", style: "margin-top:10px", disabled: kk.arbejder, onclick: lav}, kk.arbejder ? "Laver kort …" : "Lav klubkort"),
+      kk.svar ? h("div", {class: "svar " + kk.svar.klasse}, h("b", {}, kk.svar.titel),
+        kk.svar.punkter?.length ? h("ul", {}, kk.svar.punkter.map(x => h("li", {}, x))) : null,
+        (kk.svar.filer || []).map(f => f.link ? h("div", {style: "margin-top:8px"}, h("div", {class: "lille muted"}, f.navn), pdfKnapper(f.link, f.navn)) : null),
+        kk.svar.klasse === "ok" ? h("div", {class: "lille muted", style: "margin-top:8px"},
+          "Print fra Preview med Scale 100 %, ensidet. Skær på de lysegrå mærker midt på kanterne.") : null) : null) : null);
 }
 function godkendBlok(linjer) {
   const ændret = S.godk && signatur(Object.values(S.l)) !== S.snap;
@@ -1004,7 +1048,7 @@ async function gemLager() {
 
 // ---------- fælles: kør fabz.py-kommandoer fra panelet ----------
 const FILER = {henvendelser: "data/henvendelser.json", opgaver: "data/opgaver.json", dagsplaner: "data/dagsplaner.json",
-               ideer: "data/ideer.json", indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json"};
+               ideer: "data/ideer.json", indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json"};
 async function laesValgfri(p) { const r = await laesFil(p); return r ? r.json() : []; }
 async function genindlæs(navne) { await Promise.all(navne.map(async n => { D[n] = await laesValgfri(FILER[n]); })); }
 const plusDage = (iso, n) => { const d = dag(iso); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
