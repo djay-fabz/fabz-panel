@@ -112,6 +112,7 @@ input::placeholder{color:var(--svagere)}
 .godk .fyld{flex:1}
 .btn.godkend{border-color:var(--ok);color:var(--ok);background:none}
 .btn.godkend:hover{background:var(--ok-blid)}
+.genbrug{margin-top:12px;padding:12px;border-radius:10px;background:var(--flade2)}
 .ekstra{margin-top:22px;padding:12px;border-radius:10px;background:var(--flade2);border:1px dashed var(--linje)}
 .lfod{border-top:1px solid var(--linje);padding:14px 22px 18px}
 .resume{margin:10px 0}
@@ -300,7 +301,7 @@ function tegnTop() {
     top.replaceChildren(
       h("button", {class: "tilbage", type: "button", onclick: lukEditor}, "← Jobs"),
       h("div", {class: "spacer"}),
-      h("span", {class: "muted lille"}, "Intet gemmes, før du godkender, trykker Gem liste eller laver PDF"));
+      h("span", {class: "muted lille"}, S.job ? "Godkend gemmer listen til dette job. PDF gemmer intet" : "Ændringer gemmes, når du trykker Opdater"));
     return;
   }
   const o = D.kalender?.opdateret;
@@ -353,7 +354,7 @@ function visJobs() {
 // ---------- editor (fuld skærm) ----------
 function åbnJob(j) {
   const liste = listeTilJob(j), jp = jobplTilJob(j);
-  nyEditor({job: j, base: liste, egen: !!liste, jobNavn: j.navn, gem: "kun_job"});
+  nyEditor({job: j, base: liste, egen: !!liste, jobNavn: j.navn, gemNavn: liste?.navn || j.navn, visGem: false});
   if (jp) {   // jobbets egen (godkendte) liste går forud for standardlisten
     indlæs(jp);
     S.transport = jp.transport || S.transport;
@@ -364,10 +365,10 @@ function åbnJob(j) {
 }
 function åbnListe(navn) {
   const p = D.lister.find(x => x.navn === navn);
-  nyEditor({job: null, base: p, egen: true, jobNavn: p.navn, gem: "opdater"});
+  nyEditor({job: null, base: p, egen: true, jobNavn: p.navn, gemNavn: p.navn, visGem: true});
 }
 function nyEditor(o) {
-  S = {...o, l: {}, transport: o.base?.transport || "", nyNavn: o.jobNavn, nyType: "Skabelon", svar: null, rørt: false, godk: null, snap: null};
+  S = {...o, l: {}, transport: o.base?.transport || "", svar: null, rørt: false, godk: null, snap: null};
   indlæs(o.base);
   P = {q: "", kat: "Alle"};
   tegn();
@@ -508,28 +509,37 @@ function tegnListe() {
   krop.append(h("div", {class: "ekstra"}, h("span", {class: "etiket"}, "Leje eller andet, der ikke er på lageret"),
     h("div", {style: "display:flex;gap:8px"}, ny, h("button", {class: "btn", type: "button", onclick: tilføj}, "Tilføj"))));
 
-  const gemValg = [["kun_job", "Kun dette job"]];
-  if (S.egen && S.base) gemValg.push(["opdater", "Opdater standard"]);
-  gemValg.push(["ny", "Ny liste"]);
-  if (!gemValg.some(v => v[0] === S.gem)) S.gem = "kun_job";
+  const kan = !optaget && linjer.length && S.transport;
+  const gemNavn = (S.gemNavn || "").trim();
+  const findes = D.lister.find(p => nøgle(p.navn) === nøgle(gemNavn));
+  const gemBlok = S.visGem
+    ? h("div", {class: "genbrug"},
+        h("div", {style: "display:flex;align-items:center"}, h("span", {class: "etiket", style: "flex:1;margin:0"}, "Gem som liste, du kan vælge til andre jobs"),
+          S.job ? h("button", {class: "x", type: "button", title: "Luk", onclick: () => { S.visGem = false; tegnListe(); }}, "×") : null),
+        h("div", {style: "display:flex;gap:8px;margin-top:6px"},
+          h("input", {class: "input", placeholder: "Navn på listen", value: S.gemNavn, oninput: e => {
+            S.gemNavn = e.target.value;
+            const f = D.lister.find(p => nøgle(p.navn) === nøgle(e.target.value));
+            gemKnap.textContent = f ? `Opdater '${f.navn}'` : "Gem ny liste";
+            gemHjælp.textContent = f ? "Erstatter den gemte liste med denne." : "Bliver en ny liste.";
+          }}),
+          (gemKnap = h("button", {class: "btn", type: "button", style: "flex:none", disabled: !kan, onclick: () => send("gem")},
+            findes ? `Opdater '${findes.navn}'` : "Gem ny liste"))),
+        (gemHjælp = h("div", {class: "lille muted", style: "margin-top:4px"}, findes ? "Erstatter den gemte liste med denne." : "Bliver en ny liste.")))
+    : h("button", {class: "btn ghost lille", type: "button", style: "margin-top:8px;padding-left:0",
+        onclick: () => { S.visGem = true; tegnListe(); }}, "Gem som liste til andre jobs …");
   const fod = h("div", {class: "lfod"},
-    h("span", {class: "etiket"}, S.gem === "opdater" ? `Gem: ændringerne bliver standard for '${S.base.navn}'` : "Gem listen"),
-    seg(gemValg, S.gem, v => { S.gem = v; tegnListe(); }),
-    S.gem === "ny" ? h("div", {style: "display:flex;gap:8px;margin-top:8px"},
-      h("input", {class: "input", placeholder: "Navn på den nye liste", value: S.nyNavn, oninput: e => { S.nyNavn = e.target.value; }}),
-      seg(["Skabelon", "Fast"], S.nyType, v => { S.nyType = v; tegnListe(); })) : null,
     h("div", {class: "resume lille", style: advN ? "color:var(--adv)" : "color:var(--svag)"},
       `${linjer.length} linjer · ${stk} stk` + (advN ? ` · ${advN} advarsler` : "") + (S.transport ? "" : " · vælg transport")),
-    h("div", {style: "display:flex;gap:8px"},
-      S.gem !== "kun_job" ? h("button", {class: "btn stor", type: "button", style: "width:auto;flex:none",
-        title: "Gem listen uden at lave PDF", disabled: optaget || !linjer.length || !S.transport, onclick: () => send(false)}, S.gem === "opdater" ? "Opdater" : "Gem ny liste") : null,
-      h("button", {class: "btn primaer stor", type: "button", disabled: optaget || !linjer.length || !S.transport, onclick: () => send(true)},
-        optaget ? "Arbejder …" : S.gem === "kun_job" ? "Lav pakkeliste (PDF)" : S.gem === "opdater" ? "Opdater og lav PDF" : "Gem og lav PDF")),
+    h("button", {class: "btn primaer stor", type: "button", disabled: !kan, onclick: () => send("pdf")},
+      optaget ? "Arbejder …" : "Lav pakkeliste (PDF)"),
+    gemBlok,
     h("div", {id: "svar"}));
   k.replaceChildren(hoved, krop, fod);
   krop.scrollTop = gl;
   tegnSvar();
 }
+let gemKnap = null, gemHjælp = null;
 function godkendBlok(linjer) {
   const ændret = S.godk && signatur(Object.values(S.l)) !== S.snap;
   const kan = !optaget && linjer.length && S.transport;
@@ -585,16 +595,18 @@ function tegnSvar() {
     s.punkter?.length ? h("ul", {}, s.punkter.map(p => h("li", {}, p))) : null,
     s.link ? h("a", {class: "btn primaer", href: s.link, target: "_blank", rel: "noopener"}, "Åbn PDF og print") : null) : "");
 }
-async function send(medPdf) {
+async function send(hvad) {   // "pdf": lav PDF (gemmer intet), "gem": gem som liste til andre jobs
+  const medPdf = hvad === "pdf";
   const navn = (S.jobNavn || "").trim();
   if (!navn) { alert("Skriv et navn til PDF'en."); return; }
-  if (S.gem === "ny" && !(S.nyNavn || "").trim()) { alert("Skriv et navn til den nye liste."); return; }
+  const gemNavn = (S.gemNavn || "").trim();
+  if (!medPdf && !gemNavn) { alert("Skriv et navn til listen."); return; }
+  const findes = D.lister.find(p => nøgle(p.navn) === nøgle(gemNavn));
   const linjer = Object.values(S.l).filter(l => l.antal > 0)
     .map(l => ({udstyr: l.udstyr, antal: l.antal, ...(l.note?.trim() ? {note: l.note.trim()} : {})}));
-  const krav = {type: "pakkeliste", job: navn, dato: S.job?.dato || null, transport: S.transport, linjer, gem: S.gem,
-    udgangspunkt: S.egen && S.base ? S.base.navn : null, liste: S.base?.navn || null, ny_navn: (S.nyNavn || "").trim(), ny_type: S.nyType,
-    pdf: medPdf};
-  const listeNavn = S.gem === "ny" ? krav.ny_navn : S.base?.navn;
+  const krav = {type: "pakkeliste", job: navn, dato: S.job?.dato || null, transport: S.transport, linjer, pdf: medPdf,
+    udgangspunkt: S.base?.navn || null,
+    ...(medPdf ? {gem: "kun_job"} : findes ? {gem: "opdater", liste: findes.navn} : {gem: "ny", ny_navn: gemNavn, ny_type: "Skabelon"})};
   const mig = S;
   optaget = true;
   tegnListe();
@@ -607,11 +619,9 @@ async function send(medPdf) {
     else if (!medPdf) {
       D.lister = await laesJson("data/pakkelister.json");
       if (S === mig) {
-        // listen findes nu: næste gem opdaterer den
-        S.base = D.lister.find(p => nøgle(p.navn) === nøgle(listeNavn)) || S.base;
+        S.base = D.lister.find(p => nøgle(p.navn) === nøgle(gemNavn)) || S.base;
         S.egen = !!S.base;
-        S.gem = S.base ? "opdater" : S.gem;
-        S.rørt = false;
+        if (!S.job) S.rørt = false;
         sætSvar(sv.status === "ADVARSEL" ? "adv" : "ok", sv.status === "ADVARSEL" ? "Gemt, men tjek advarslerne" : "Listen er gemt",
           [...sv.advarsler.map(a => "Advarsel: " + a), ...sv.info]);
       }
@@ -621,9 +631,7 @@ async function send(medPdf) {
       sætSvar(sv.status === "ADVARSEL" ? "adv" : "ok", titel, [...punkter, "Henter PDF …"]);
       const r = await laesFil(sv.pdf);
       const link = r ? URL.createObjectURL(new Blob([await r.arrayBuffer()], {type: "application/pdf"})) : null;
-      if (S === mig && S.gem !== "kun_job") S.rørt = false;
       if (S === mig) sætSvar(sv.status === "ADVARSEL" ? "adv" : "ok", titel, r ? punkter : [...punkter, "PDF'en kunne ikke hentes."], link);
-      if (S.gem !== "kun_job") D.lister = await laesJson("data/pakkelister.json");
     }
   } catch (e) {
     if (S === mig) sætSvar("fejl", "Det gik galt.", [e.message]);
