@@ -39,7 +39,8 @@ input::placeholder{color:var(--svagere)}
 .tilbage:hover{background:var(--hover);color:var(--tekst)}
 
 /* knapper og felter */
-.btn{border:1px solid var(--linje);background:var(--flade);padding:7px 13px;border-radius:8px;font-weight:500}
+.btn{border:1px solid var(--linje);background:var(--flade);color:var(--tekst);padding:7px 13px;border-radius:8px;font-weight:500}
+a.btn{display:inline-block;text-decoration:none}
 .btn:hover{background:var(--hover)}
 .btn.primaer{background:var(--accent);border-color:var(--accent);color:var(--accent-tekst)}
 .btn.primaer:hover{filter:brightness(1.06);background:var(--accent)}
@@ -308,10 +309,10 @@ async function skrivFil(p, obj, besked) {
     body: {message: besked, content: base64(JSON.stringify(obj, null, 1)), branch: BRANCH}}), "inbox");
 }
 async function hentData() {
-  const [kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, ideer, indtaegter, typer, salg] = await Promise.all([
+  const [kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, ideer, indtaegter, typer, salg, festkort] = await Promise.all([
     ...["data/kalender.json", "data/udstyr.json", "data/pakkelister.json", "data/opgaver.json"].map(laesJson), laesJobpl(),
-    ...["data/henvendelser.json", "data/dagsplaner.json", "data/ideer.json", "data/indtaegter.json", "data/typer.json", "data/salg.json"].map(p => laesFil(p).then(r => r ? r.json() : []))]);
-  D = {kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, ideer, indtaegter, typer, salg};
+    ...["data/henvendelser.json", "data/dagsplaner.json", "data/ideer.json", "data/indtaegter.json", "data/typer.json", "data/salg.json", "data/festkort.json"].map(p => laesFil(p).then(r => r ? r.json() : []))]);
+  D = {kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, ideer, indtaegter, typer, salg, festkort};
 }
 async function laesJobpl() {   // findes først, når den første liste er godkendt
   const r = await laesFil("data/jobpakkelister.json");
@@ -417,7 +418,8 @@ function listeTilJob(j) {
   return D.lister.find(p => nøgle(p.navn) === ønsket) || null;
 }
 const jobNøgle = j => `${j.dato}|${j.navn.toLowerCase()}`;
-const opgaveTilJob = j => D.opgaver.find(o => o.job_noegle === jobNøgle(j)) || null;
+const opgaveTilJob = j => D.opgaver.find(o => o.job_noegle === jobNøgle(j) && (o.job_opgave || "pakkeliste") === "pakkeliste") || null;
+const festkortTilJob = j => (D.festkort || []).find(r => r.job_noegle === jobNøgle(j)) || null;
 const jobplTilJob = j => (D.jobpl || []).find(r => r.job_noegle === jobNøgle(j)) || null;
 const signatur = linjer => JSON.stringify(linjer.filter(l => l.antal > 0).map(l => [nøgle(l.udstyr), l.antal, (l.note || "").trim()]).sort());
 const kortDato = iso => `${Number(iso.slice(8, 10))}/${Number(iso.slice(5, 7))}`;
@@ -473,6 +475,7 @@ function visJobs() {
         return h("button", {class: "job", type: "button", onclick: () => åbnJob(j)},
           h("div", {class: "dato"}, h("b", {}, d.getDate()), h("span", {}, MD[d.getMonth()])),
           h("div", {class: "t"}, h("b", {}, j.navn), h("span", {class: "muted lille"}, [DAGE[d.getDay()], j.sted].filter(Boolean).join(" · "))),
+          festkortTilJob(j) ? h("span", {class: "pill grøn", title: "Festkort er lavet"}, "Kort ✓") : null,
           h("span", {class: "status"},
             h("span", {class: "prik " + (klar ? "ok" : liste || jp ? "adv" : "")}),
             klar ? "Pakkeliste klar" : liste || jp ? "Ikke godkendt" : "Ingen liste"));
@@ -497,7 +500,7 @@ function åbnListe(navn) {
   nyEditor({job: null, base: p, egen: true, jobNavn: p.navn, gemNavn: p.navn, visGem: true});
 }
 function nyEditor(o) {
-  S = {...o, l: {}, transport: o.base?.transport || "", svar: null, rørt: false, godk: null, snap: null};
+  S = {...o, l: {}, transport: o.base?.transport || "", svar: null, rørt: false, godk: null, snap: null, fk: null};
   indlæs(o.base);
   P = {q: "", kat: "Alle"};
   tegn();
@@ -599,7 +602,8 @@ function tegnListe() {
         h("input", {class: "input", value: S.jobNavn, oninput: e => { S.jobNavn = e.target.value; }})),
       h("div", {}, h("span", {class: "etiket"}, "Transport"), seg(["Trailer", "Kun bil"], S.transport, v => { S.transport = v; S.rørt = true; tegnListe(); }))),
     S.egen ? null : h("label", {style: "display:block;margin-top:12px"}, h("span", {class: "etiket"}, "Start fra"), startFra),
-    S.job ? godkendBlok(linjer) : null);
+    S.job ? godkendBlok(linjer) : null,
+    S.job ? festkortBlok() : null);
 
   const krop = h("div", {class: "lkrop", id: "lkrop"});
   if (!linjer.length) {
@@ -669,6 +673,54 @@ function tegnListe() {
   tegnSvar();
 }
 let gemKnap = null, gemHjælp = null;
+const ANLEDNING = {bryllup: "Bryllup", privatfest: "Fest", erhverv: "Firmafest", efterskole: "Fest"};
+function gætAnledning(j) {
+  const m = /jobtype\s*:\s*([^<\n\r]*)/i.exec(j.besk || "");
+  const t = nøgle(m ? m[1] : "").split(/[ ,]/)[0];
+  return ANLEDNING[t] || "Fest";
+}
+function festkortBlok() {
+  const j = S.job, rec = festkortTilJob(j);
+  const fk = S.fk ||= {navne: rec?.navne || j.navn, anledning: rec?.anledning || gætAnledning(j), åben: false, svar: null};
+  const d = dag(j.dato), linje = () => `${(fk.anledning || "").trim() || "…"} · ${d.getDate()}. ${MDL[d.getMonth()]} ${d.getFullYear()}`;
+  const visLinje = h("div", {class: "muted lille", style: "margin-top:6px"});
+  const opdLinje = () => { visLinje.textContent = "På kortet: " + linje(); };
+  opdLinje();
+  const lav = async () => {
+    if (!(fk.navne || "").trim() || !(fk.anledning || "").trim()) { alert("Skriv navne og anledning."); return; }
+    if (/·|\d{4}/.test(fk.anledning)) { alert("Skriv kun anledningen, fx Bryllup. Datoen kommer fra jobbet."); return; }
+    const mig = S;
+    fk.arbejder = true; fk.svar = {klasse: "", titel: "Laver visitkort og barskilt … typisk 20-30 sekunder"}; tegnListe();
+    try {
+      const sv = await kørOgVent("festkort", [`--dato=${j.dato}`, `--job=${j.navn}`, `--navne=${fk.navne.trim()}`, `--anledning=${fk.anledning.trim()}`]);
+      if (!sv) fk.svar = {klasse: "fejl", titel: "Intet svar efter 4 minutter."};
+      else if (sv.status === "FEJL") fk.svar = {klasse: "fejl", titel: "Kortene er ikke lavet", punkter: [sv.fejl]};
+      else {
+        const filer = await Promise.all((sv.pdfs || []).map(async p => ({navn: decodeURIComponent(p.split("/").pop()), link: await hentPdf(p)})));
+        fk.svar = {klasse: "ok", titel: "Kortene er klar", punkter: sv.info.filter(l => l.startsWith("Kampagne")), filer};
+        await genindlæs(["festkort", "opgaver"]);
+      }
+    } catch (e) { fk.svar = {klasse: "fejl", titel: "Det gik galt", punkter: [e.message]}; }
+    fk.arbejder = false;
+    if (S === mig) tegnListe();
+  };
+  return h("div", {class: "godk" + (rec ? " ok" : ""), style: "flex-direction:column;align-items:stretch"},
+    h("div", {style: "display:flex;align-items:center;gap:10px"},
+      h("span", {class: "fyld"}, rec ? `✓ Festkort lavet ${kortDato(rec.lavet)} · kampagne ${rec.kampagne}` : "Festkort og barskilt"),
+      h("button", {class: "btn " + (rec ? "ghost lille" : "godkend"), type: "button", onclick: () => { fk.åben = !fk.åben; tegnListe(); }},
+        fk.åben ? "Luk" : rec ? "Lav igen" : "Lav kort")),
+    fk.åben ? h("div", {style: "margin-top:10px;color:var(--tekst);font-weight:400"},
+      h("div", {class: "felter", style: "grid-template-columns:1.4fr 1fr;margin-top:0"},
+        h("label", {}, h("span", {class: "etiket"}, "Navne på kortet"), h("input", {class: "input", value: fk.navne, oninput: e => { fk.navne = e.target.value; }})),
+        h("label", {}, h("span", {class: "etiket"}, "Anledning"), h("input", {class: "input", value: fk.anledning, placeholder: "Fx Bryllup", oninput: e => { fk.anledning = e.target.value; opdLinje(); }}))),
+      visLinje,
+      h("button", {class: "btn primaer", type: "button", style: "margin-top:10px", disabled: fk.arbejder, onclick: lav}, fk.arbejder ? "Laver kort …" : "Lav visitkort og barskilt"),
+      fk.svar ? h("div", {class: "svar " + fk.svar.klasse}, h("b", {}, fk.svar.titel),
+        fk.svar.punkter?.length ? h("ul", {}, fk.svar.punkter.map(x => h("li", {}, x))) : null,
+        (fk.svar.filer || []).map(f => f.link ? h("div", {style: "margin-top:8px"}, h("div", {class: "lille muted"}, f.navn), pdfKnapper(f.link, f.navn)) : null),
+        fk.svar.klasse === "ok" ? h("div", {class: "lille muted", style: "margin-top:8px"},
+          "Print fra Preview med Scale 100 %. Visitkort: preset Mat karton 250g, side 1, vend arket som ved kalibreringen, så side 2. Barskilt: ensidet, almindeligt papir.") : null) : null) : null);
+}
 function godkendBlok(linjer) {
   const ændret = S.godk && signatur(Object.values(S.l)) !== S.snap;
   const kan = !optaget && linjer.length && S.transport;
@@ -952,7 +1004,7 @@ async function gemLager() {
 
 // ---------- fælles: kør fabz.py-kommandoer fra panelet ----------
 const FILER = {henvendelser: "data/henvendelser.json", opgaver: "data/opgaver.json", dagsplaner: "data/dagsplaner.json",
-               ideer: "data/ideer.json", indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json"};
+               ideer: "data/ideer.json", indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json"};
 async function laesValgfri(p) { const r = await laesFil(p); return r ? r.json() : []; }
 async function genindlæs(navne) { await Promise.all(navne.map(async n => { D[n] = await laesValgfri(FILER[n]); })); }
 const plusDage = (iso, n) => { const d = dag(iso); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
