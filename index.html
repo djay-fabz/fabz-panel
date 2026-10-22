@@ -304,9 +304,21 @@ function base64(tekst) {
   for (const x of new TextEncoder().encode(tekst)) s += String.fromCharCode(x);
   return btoa(s);
 }
-async function skrivFil(p, obj, besked) {
-  tjek(await gh(`/repos/${REPO}/contents/${sti(p)}`, {method: "PUT",
-    body: {message: besked, content: base64(JSON.stringify(obj, null, 1)), branch: BRANCH}}), "inbox");
+// Skrivninger sendes én ad gangen. Trykker man hurtigt flere gange, kan GitHub svare 409 (to commits på samme tid),
+// så prøver vi igen et par gange, før det meldes som fejl.
+let skriveKø = Promise.resolve();
+function skrivFil(p, obj, besked) {
+  const job = skriveKø.then(async () => {
+    const body = {message: besked, content: base64(JSON.stringify(obj, null, 1)), branch: BRANCH};
+    for (let forsøg = 0; ; forsøg++) {
+      const r = await gh(`/repos/${REPO}/contents/${sti(p)}`, {method: "PUT", body});
+      if ((r.status === 409 || r.status === 422) && forsøg < 4) { await new Promise(ok => setTimeout(ok, 600 * (forsøg + 1))); continue; }
+      tjek(r, "inbox");
+      return;
+    }
+  });
+  skriveKø = job.catch(() => {});
+  return job;
 }
 async function hentData() {
   const [kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, ideer, indtaegter, typer, salg, festkort, klubkort, kkTekster] = await Promise.all([
@@ -1615,10 +1627,10 @@ function visKort() {
     const r = KT.red[k.nr], tekst = (r.tekst ?? k.tekst).trim(), svar = (r.svar ?? k.svar ?? "").trim();
     if (!tekst) { alert("Teksten må ikke være tom. Skjul kortet i stedet."); return; }
     kør("klubkort-tekst-ret", [String(k.nr), `--tekst=${tekst}`, `--svar=${svar}`], {tekst: `Kort ${k.nr} rettet`, efter: ["kkTekster"],
-      med: () => { Object.assign(k, {tekst, svar}); delete KT.red[k.nr]; }});
+      med: () => { Object.assign(k, {tekst, svar, venter: true}); delete KT.red[k.nr]; }});
   };
   const skjul = k => kør("klubkort-tekst-ret", [String(k.nr), `--aktiv=${k.aktiv === false ? "ja" : "nej"}`],
-    {tekst: k.aktiv === false ? `Kort ${k.nr} vises igen` : `Kort ${k.nr} er skjult`, efter: ["kkTekster"], med: () => { k.aktiv = k.aktiv === false; }});
+    {tekst: k.aktiv === false ? `Kort ${k.nr} vises igen` : `Kort ${k.nr} er skjult`, efter: ["kkTekster"], med: () => { k.aktiv = k.aktiv === false; k.venter = true; }});
   const opret = () => {
     const tekst = (KT.ny.tekst || "").trim(), svar = (KT.ny.svar || "").trim();
     if (!tekst) { alert("Skriv teksten til kortet."); return; }
@@ -1626,7 +1638,7 @@ function visKort() {
       med: () => { (D.kkTekster ||= []).push({nr: "…", tekst, svar, aktiv: true}); KT.ny = {tekst: "", svar: ""}; }});
   };
   const kortRække = k => {
-    const r = KT.red[k.nr] ||= {}, venter = k.nr === "…";
+    const r = KT.red[k.nr] ||= {}, venter = k.nr === "…" || k.venter;
     return h("div", {class: "r", style: "align-items:flex-start;gap:12px" + (k.aktiv === false ? ";opacity:.55" : "")},
       h("span", {class: "pill", style: "margin-top:8px"}, venter ? "…" : `#${k.nr}`),
       h("div", {class: "n", style: "display:grid;gap:6px"},
