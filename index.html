@@ -126,7 +126,14 @@ a.btn{display:inline-block;text-decoration:none}
 .rkort h3{margin:0;font-size:19px;line-height:1.25}
 .rtid{min-width:84px;font-weight:700;font-size:24px;line-height:1.1;font-variant-numeric:tabular-nums}
 .rtid.lille{font-size:14px;font-weight:600;color:var(--svag)}
-.rnote{margin-top:8px;padding:8px 10px;border-radius:8px;background:var(--adv-blid);color:var(--adv);font-weight:600}
+.rnote{margin-top:6px;color:var(--svag)}
+.subnav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.jobkort{border:1px solid var(--linje);background:var(--flade);border-radius:12px;overflow:hidden}
+.jobkort .job{border:0;border-radius:0;background:transparent}
+.jobkort .del{border-top:1px solid var(--linje);padding:10px 16px;display:grid;gap:6px;font-size:13.5px}
+.jobkort .del div{display:flex;gap:8px;align-items:baseline}
+.jobkort .del b{min-width:92px;font-weight:600}
+.jobkort .del .g{color:var(--svag)}
 .rkoer{margin:6px 0 0 18px;padding:10px 16px;border-left:4px solid var(--accent);background:var(--accent-blid);border-radius:0 12px 12px 0}
 .rkoer h2{margin:0;font-size:28px;line-height:1.15;letter-spacing:-.01em}
 @media print{.top,#beskeder,.ikke-print{display:none!important}.side>*:not(.rute-resultat){display:none!important}body{background:#fff}.rkort{box-shadow:none}}
@@ -477,8 +484,8 @@ function tegnTop() {
   top.replaceChildren(
     h("span", {class: "brand"}, "Fabz"),
     h("nav", {class: "tabs"},
-      [["idag", "I dag"], ["opgaver", "Opgaver"], ["foresp", "Forespørgsler"], ["salg", "Salg"], ["pakkelister", "Pakkelister"], ["kort", "Kort"], ["rute", "Kørsel"], ["lager", "Lager"], ["ideer", "Idéer"], ["indtaegter", "Indtægter"]].map(([v, t]) =>
-        h("button", {type: "button", class: "tab" + (fane === v ? " aktiv" : ""), onclick: () => { fane = v; tegn(); window.scrollTo(0, 0); }}, t))),
+      [["idag", "I dag"], ["opgaver", "Opgaver"], ["foresp", "Forespørgsler"], ["salg", "Salg"], ["pakkelister", "Jobs"], ["lager", "Lager"], ["ideer", "Idéer"], ["indtaegter", "Indtægter"]].map(([v, t]) =>
+        h("button", {type: "button", class: "tab" + (fane === v || (v === "pakkelister" && (fane === "kort" || fane === "rute")) ? " aktiv" : ""), onclick: () => { fane = v; tegn(); window.scrollTo(0, 0); }}, t))),
     h("div", {class: "spacer"}),
     ...(fane === "pakkelister" || fane === "idag" ? [tid, h("button", {class: "btn", type: "button", disabled: henterJobs, onclick: hentJobs}, henterJobs ? "Henter …" : "Hent alle jobs")] : []),
     h("button", {class: "btn ghost lille", type: "button", onclick: skiftToken}, "Skift token"));
@@ -490,6 +497,12 @@ function tegn() {
   if (vis) vis();
   else if (S) visEditor();
   else visJobs();
+  if (!S && (fane === "pakkelister" || fane === "kort" || fane === "rute")) {
+    const side = $("rod").firstChild;
+    if (side) side.prepend(h("div", {class: "subnav"},
+      [["pakkelister", "Oversigt"], ["kort", "Kort"], ["rute", "Kørsel"]].map(([v, t]) =>
+        h("button", {type: "button", class: "btn" + (fane === v ? " primaer" : ""), onclick: () => { fane = v; tegn(); window.scrollTo(0, 0); }}, t))));
+  }
 }
 
 // ---------- startside: jobs ----------
@@ -497,20 +510,28 @@ function visJobs() {
   const js = jobs();
   const valg = h("select", {class: "input", onchange: e => { if (e.target.value) åbnListe(e.target.value); }},
     h("option", {value: ""}, "Åbn en gemt liste …"), D.lister.map(p => h("option", {value: p.navn}, p.navn)));
+  const delRække = (navn, tekst, ok) => h("div", {}, h("b", {}, navn), h("span", {class: ok ? "" : "g"}, tekst));
   $("rod").replaceChildren(h("div", {class: "side"},
-    h("h1", {}, "Pakkelister"),
-    h("div", {class: "muted"}, "Vælg et job for at lave eller tjekke pakkelisten."),
+    h("h1", {}, "Jobs"),
+    h("div", {class: "muted"}, "Hvad der er lavet og hvad der mangler til hvert job. Tryk på jobbet for at åbne pakkelisten."),
     h("div", {class: "jobliste"},
       js.length ? js.map(j => {
-        const liste = listeTilJob(j), o = opgaveTilJob(j), jp = jobplTilJob(j), d = dag(j.dato);
-        const klar = !!jp?.godkendt || o?.status === "Færdig";
-        return h("button", {class: "job", type: "button", onclick: () => åbnJob(j)},
-          h("div", {class: "dato"}, h("b", {}, d.getDate()), h("span", {}, MD[d.getMonth()])),
-          h("div", {class: "t"}, h("b", {}, j.navn), h("span", {class: "muted lille"}, [DAGE[d.getDay()], j.sted].filter(Boolean).join(" · "))),
-          festkortTilJob(j) || klubkortTilJob(j) ? h("span", {class: "pill grøn", title: "Kort er lavet"}, "Kort ✓") : null,
-          h("span", {class: "status"},
-            h("span", {class: "prik " + (klar ? "ok" : liste || jp ? "adv" : "")}),
-            klar ? "Pakkeliste klar" : liste || jp ? "Ikke godkendt" : "Ingen liste"));
+        const liste = listeTilJob(j), jp = jobplTilJob(j), d = dag(j.dato), key = jobNøgle(j);
+        const opg = D.opgaver.filter(o => o.job_noegle === key);
+        const pakO = opgaveTilJob(j);
+        const klar = !!jp?.godkendt || pakO?.status === "Færdig";
+        const kort = festkortTilJob(j) || klubkortTilJob(j);
+        const kortO = opg.find(o => o.job_opgave === "festkort" && o.status !== "Færdig");
+        const åbne = opg.filter(o => o.status !== "Færdig");
+        return h("div", {class: "jobkort"},
+          h("button", {class: "job", type: "button", onclick: () => åbnJob(j)},
+            h("div", {class: "dato"}, h("b", {}, d.getDate()), h("span", {}, MD[d.getMonth()])),
+            h("div", {class: "t"}, h("b", {}, j.navn), h("span", {class: "muted lille"}, [DAGE[d.getDay()], j.sted].filter(Boolean).join(" · ")))),
+          h("div", {class: "del"},
+            delRække("Pakkeliste", klar ? "Klar og godkendt" : liste || jp ? "Skal godkendes" : "Skal laves", klar),
+            delRække("Kort", kort ? "Lavet" : kortO ? "Skal laves" : "Ingen kort oprettet", !!kort),
+            åbne.length ? h("div", {}, h("b", {}, "Opgaver"), h("span", {}, åbne.map(o => `${o.titel}${o.deadline ? " (frist " + visDato(o.deadline) + ")" : ""}`).join(" · ")))
+              : delRække("Opgaver", "Ingen åbne", false)));
       }) : h("div", {class: "tom"}, "Ingen jobs fra i dag og frem. Tryk Hent alle jobs.")),
     h("div", {class: "andre"}, valg)));
 }
@@ -1726,7 +1747,7 @@ function ruteKort(e) {   // ét kort pr. stop og pr. kørsel (kan printes)
     return h("div", {class: "rkoer"},
       h("div", {class: "rtid lille"}, `${e.tid}–${e.slut}`),
       h("div", {}, h("h2", {}, "Kørsel"),
-        h("div", {class: "muted"}, `${km1(e.km)} km · ca. ${e.min} min + ${e.buffer} min buffer`),
+        h("div", {class: "muted"}, `${km1(e.km)} km · ca. ${e.min} min`),
         h("div", {class: "muted lille"}, `${e.fra} → ${e.til}`)));
   }
   const stor = e.ankomst || e.afgang;
@@ -1736,7 +1757,7 @@ function ruteKort(e) {   // ét kort pr. stop og pr. kørsel (kan printes)
     h("div", {style: "flex:1;min-width:0"},
       h("h3", {}, e.navn || e.adresse),
       e.navn ? h("div", {class: "muted lille"}, e.adresse) : null,
-      e.ophold ? h("div", {style: "margin-top:6px"}, h("span", {class: "pill gul"}, `Ophold ${e.ophold} min`)) : null,
+      e.ophold ? h("div", {class: "muted", style: "margin-top:6px"}, `Ophold ${e.ophold} min`) : null,
       e.note ? h("div", {class: "rnote"}, "Husk: " + e.note) : null));
 }
 function visRute() {
@@ -1775,7 +1796,7 @@ function visRute() {
   };
   $("rod").replaceChildren(h("div", {class: "side"},
     h("h1", {}, "Kørsel"),
-    h("div", {class: "muted"}, "Skriv stedene i rækkefølge, vælg køretøj og tidspunkt. Trailer regner med højst 80 km/t, bil med vejens egen hastighed. Uden trafik, så der lægges 10 minutters buffer pr. times kørsel på (mindst 10 minutter i alt). Ophold er tiden på stedet: på første adresse før afgang, på sidste efter ankomst."),
+    h("div", {class: "muted"}, "Skriv stedene i rækkefølge, vælg køretøj og tidspunkt. Trailer regner med højst 80 km/t, bil med vejens egen hastighed. Køretiden er uden trafik og regnet med lidt ekstra tid. Ophold er tiden på stedet: på første adresse før afgang, på sidste efter ankomst."),
     h("div", {class: "gruppe", style: "margin-top:16px"}, h("div", {class: "overskrift"}, "Køretøj"),
       h("div", {style: "display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"}, knap("trailer", "Trailer (højst 80 km/t)"), knap("bil", "Bil (normal hastighed)"))),
     h("div", {class: "gruppe", style: "margin-top:16px"}, h("div", {class: "overskrift"}, "Steder"),
@@ -1796,7 +1817,7 @@ function visRute() {
         h("button", {class: "btn primaer lille ikke-print", type: "button", onclick: () => window.print()}, "Print")),
       h("div", {class: "chips"},
         h("span", {class: "pill blå"}, d.koeretoej === "trailer" ? "Trailer, højst 80 km/t" : "Bil"),
-        h("span", {class: "pill"}, `${km1(d.km)} km`), h("span", {class: "pill"}, `${d.min} min køretid`), h("span", {class: "pill"}, `${d.buffer} min buffer`)),
+        h("span", {class: "pill"}, `${km1(d.km)} km`), h("span", {class: "pill"}, `${d.min} min køretid`)),
       d.elementer.map(ruteKort),
       h("div", {class: "muted lille", style: "margin-top:10px"}, "Uden trafik, færger og vejarbejde. Adresserne er fundet som: " + d.elementer.filter(e => e.slags === "stop").map(e => `${e.nr}. ${e.fundet}`).join(" · "))) : null));
 }
