@@ -487,7 +487,7 @@ function tegnTop() {
     h("span", {class: "brand"}, "Fabz"),
     h("nav", {class: "tabs"},
       [["idag", "I dag"], ["opgaver", "Opgaver"], ["foresp", "Forespørgsler"], ["salg", "Salg"], ["pakkelister", "Jobs"], ["lager", "Lager"], ["ideer", "Idéer"], ["indtaegter", "Indtægter"]].map(([v, t]) =>
-        h("button", {type: "button", class: "tab" + (fane === v || (v === "pakkelister" && (fane === "kort" || fane === "rute")) ? " aktiv" : ""), onclick: () => { fane = v; tegn(); window.scrollTo(0, 0); }}, t))),
+        h("button", {type: "button", class: "tab" + (fane === v || (v === "pakkelister" && (fane === "kort" || fane === "rute")) ? " aktiv" : ""), onclick: () => { fane = v; if (v === "pakkelister") { JH = null; S = null; } tegn(); window.scrollTo(0, 0); }}, t))),
     h("div", {class: "spacer"}),
     ...(fane === "pakkelister" || fane === "idag" ? [tid, h("button", {class: "btn", type: "button", disabled: henterJobs, onclick: hentJobs}, henterJobs ? "Henter …" : "Hent alle jobs")] : []),
     h("button", {class: "btn ghost lille", type: "button", onclick: skiftToken}, "Skift token"));
@@ -499,44 +499,76 @@ function tegn() {
   if (vis) vis();
   else if (S) visEditor();
   else visJobs();
-  if (!S && (fane === "pakkelister" || fane === "kort" || fane === "rute")) {
+  if (!S && (fane === "kort" || fane === "rute")) {
     const side = $("rod").firstChild;
     if (side) side.prepend(h("div", {class: "subnav"},
-      [["pakkelister", "Oversigt"], ["kort", "Kort"], ["rute", "Kørsel"]].map(([v, t]) =>
-        h("button", {type: "button", class: "btn" + (fane === v ? " primaer" : ""), onclick: () => { fane = v; tegn(); window.scrollTo(0, 0); }}, t))));
+      h("button", {type: "button", class: "btn ghost lille", onclick: () => { fane = "pakkelister"; tegn(); window.scrollTo(0, 0); }}, JH ? "← Tilbage til jobbet" : "← Jobs")));
   }
 }
 
 // ---------- startside: jobs ----------
+let JH = null, JF = "alle";   // JH: åbnet jobs nøgle (jobbets side), JF: filter på oversigten
+const jobStatus = j => {
+  const key = jobNøgle(j), liste = listeTilJob(j), jp = jobplTilJob(j), opg = D.opgaver.filter(o => o.job_noegle === key);
+  const klar = !!jp?.godkendt || opgaveTilJob(j)?.status === "Færdig";
+  const kort = !!(festkortTilJob(j) || klubkortTilJob(j));
+  const kortO = opg.some(o => o.job_opgave === "festkort" && o.status !== "Færdig");
+  return {key, klar, pak: klar ? "Klar" : liste || jp ? "Skal godkendes" : "Skal laves", kort, kortTekst: kort ? "Lavet" : kortO ? "Skal laves" : "Ingen kort oprettet",
+    kørsel: !!(D.jobrute || {})[key], åbne: opg.filter(o => o.status !== "Færdig")};
+};
+const jobTider = j => {   // linjerne under TIDER i bookingen (kun læsning)
+  const t = (j.besk || "").replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "").split("\n").map(x => x.trim());
+  const i = t.indexOf("TIDER");
+  if (i < 0) return [];
+  const ud = [];
+  for (const l of t.slice(i + 1)) { if (!l || l === l.toUpperCase() && /^[A-ZÆØÅ ]{3,}$/.test(l)) break; ud.push(l); }
+  return ud;
+};
+const FILTRE = [["alle", "Alle jobs"], ["pak", "Pakkeliste mangler"], ["kort", "Kort mangler"], ["koersel", "Kørsel mangler"], ["opg", "Har åbne opgaver"]];
 function visJobs() {
   const js = jobs();
+  const j0 = JH ? js.find(x => jobNøgle(x) === JH) : null;
+  if (JH && !j0) JH = null;
+  if (j0) return visJobSide(j0);
   const valg = h("select", {class: "input", onchange: e => { if (e.target.value) åbnListe(e.target.value); }},
     h("option", {value: ""}, "Åbn en gemt liste …"), D.lister.map(p => h("option", {value: p.navn}, p.navn)));
-  const delRække = (navn, tekst, ok) => h("div", {}, h("b", {}, navn), h("span", {class: ok ? "" : "g"}, tekst));
+  const ok = j => { const st = jobStatus(j); return JF === "alle" || (JF === "pak" && !st.klar) || (JF === "kort" && !st.kort) || (JF === "koersel" && !st.kørsel) || (JF === "opg" && st.åbne.length); };
+  const vist = js.filter(ok);
+  const chip = (t, god) => h("span", {class: "pill" + (god ? " grøn" : "")}, t);
   $("rod").replaceChildren(h("div", {class: "side"},
     h("h1", {}, "Jobs"),
-    h("div", {class: "muted"}, "Hvad der er lavet og hvad der mangler til hvert job. Tryk på jobbet for at åbne pakkelisten."),
+    h("div", {style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px"},
+      h("select", {class: "input", style: "max-width:260px", onchange: e => { JF = e.target.value; tegn(); }},
+        FILTRE.map(([v, t]) => h("option", {value: v, selected: JF === v}, t))),
+      h("span", {class: "muted lille"}, `${vist.length} af ${js.length} jobs`)),
     h("div", {class: "jobliste"},
-      js.length ? js.map(j => {
-        const liste = listeTilJob(j), jp = jobplTilJob(j), d = dag(j.dato), key = jobNøgle(j);
-        const opg = D.opgaver.filter(o => o.job_noegle === key);
-        const pakO = opgaveTilJob(j);
-        const klar = !!jp?.godkendt || pakO?.status === "Færdig";
-        const kort = festkortTilJob(j) || klubkortTilJob(j);
-        const kortO = opg.find(o => o.job_opgave === "festkort" && o.status !== "Færdig");
-        const åbne = opg.filter(o => o.status !== "Færdig");
-        return h("div", {class: "jobkort"},
-          h("button", {class: "job", type: "button", onclick: () => åbnJob(j)},
-            h("div", {class: "dato"}, h("b", {}, d.getDate()), h("span", {}, MD[d.getMonth()])),
-            h("div", {class: "t"}, h("b", {}, j.navn), h("span", {class: "muted lille"}, [DAGE[d.getDay()], j.sted].filter(Boolean).join(" · ")))),
-          h("div", {class: "del"},
-            delRække("Pakkeliste", klar ? "Klar og godkendt" : liste || jp ? "Skal godkendes" : "Skal laves", klar),
-            delRække("Kørsel", (D.jobrute || {})[key] ? "Plan gemt, kommer på side 2" : "Ikke lavet", !!(D.jobrute || {})[key]),
-            delRække("Kort", kort ? "Lavet" : kortO ? "Skal laves" : "Ingen kort oprettet", !!kort),
-            åbne.length ? h("div", {}, h("b", {}, "Opgaver"), h("span", {}, åbne.map(o => `${o.titel}${o.deadline ? " (frist " + visDato(o.deadline) + ")" : ""}`).join(" · ")))
-              : delRække("Opgaver", "Ingen åbne", false)));
-      }) : h("div", {class: "tom"}, "Ingen jobs fra i dag og frem. Tryk Hent alle jobs.")),
-    h("div", {class: "andre"}, valg)));
+      vist.length ? vist.map(j => {
+        const st = jobStatus(j), d = dag(j.dato);
+        return h("button", {class: "job", type: "button", onclick: () => { JH = st.key; tegn(); window.scrollTo(0, 0); }},
+          h("div", {class: "dato"}, h("b", {}, d.getDate()), h("span", {}, MD[d.getMonth()])),
+          h("div", {class: "t"}, h("b", {}, j.navn), h("span", {class: "muted lille"}, [DAGE[d.getDay()], j.sted].filter(Boolean).join(" · ")),
+            h("div", {class: "chips", style: "margin-top:6px"}, chip("Pakkeliste: " + st.pak, st.klar), chip("Kort: " + st.kortTekst, st.kort), chip("Kørsel: " + (st.kørsel ? "gemt" : "ikke lavet"), st.kørsel),
+              st.åbne.length ? chip(st.åbne.length + (st.åbne.length === 1 ? " åben opgave" : " åbne opgaver")) : null)));
+      }) : h("div", {class: "tom"}, js.length ? "Ingen jobs matcher filteret." : "Ingen jobs fra i dag og frem. Tryk Hent alle jobs.")),
+    h("div", {class: "andre", style: "display:flex;gap:8px;flex-wrap:wrap"}, valg,
+      h("button", {class: "btn", type: "button", onclick: () => { RU.job = ""; fane = "rute"; tegn(); }}, "Køreberegning uden job"))));
+}
+function visJobSide(j) {   // alt til ét job samlet: pakkeliste, kort, kørsel, opgaver og tider
+  const st = jobStatus(j), d = dag(j.dato), tider = jobTider(j);
+  const afsnit = (titel, status, god, knap, ekstra) => h("div", {class: "gruppe", style: "margin-top:12px"},
+    h("div", {style: "display:flex;align-items:center;gap:8px;flex-wrap:wrap"}, h("div", {class: "overskrift", style: "margin:0"}, titel),
+      h("span", {class: "pill" + (god ? " grøn" : "")}, status), h("div", {class: "spacer"}), knap),
+    ekstra || null);
+  $("rod").replaceChildren(h("div", {class: "side"},
+    h("button", {class: "btn ghost lille", type: "button", onclick: () => { JH = null; tegn(); window.scrollTo(0, 0); }}, "← Alle jobs"),
+    h("h1", {style: "margin-top:10px"}, j.navn),
+    h("div", {class: "muted"}, [`${DAGE[d.getDay()]} ${visDato(j.dato)}`, j.sted].filter(Boolean).join(" · ")),
+    tider.length ? h("div", {class: "muted lille", style: "margin-top:6px"}, tider.join(" · ")) : null,
+    afsnit("Pakkeliste", st.pak, st.klar, h("button", {class: "btn primaer lille", type: "button", onclick: () => åbnJob(j)}, "Åbn pakkeliste")),
+    afsnit("Kort", st.kortTekst, st.kort, h("button", {class: "btn lille", type: "button", onclick: () => { KT.job = st.key; KT.slags = null; KT.fk = KT.kk = null; fane = "kort"; tegn(); window.scrollTo(0, 0); }}, "Åbn kort")),
+    afsnit("Kørsel", st.kørsel ? "Plan gemt, kommer på side 2" : "Ikke lavet", st.kørsel, h("button", {class: "btn lille", type: "button", onclick: () => { vælgRuteJob(st.key); fane = "rute"; tegn(); window.scrollTo(0, 0); }}, st.kørsel ? "Åbn kørsel" : "Lav kørsel")),
+    afsnit("Opgaver", st.åbne.length ? `${st.åbne.length} åbne` : "Ingen åbne", !st.åbne.length, h("button", {class: "btn lille", type: "button", onclick: () => { fane = "opgaver"; tegn(); window.scrollTo(0, 0); }}, "Gå til Opgaver"),
+      st.åbne.length ? h("div", {class: "muted", style: "margin-top:8px;display:grid;gap:4px"}, st.åbne.map(o => h("div", {}, `${o.titel}${o.deadline ? " (frist " + visDato(o.deadline) + ")" : ""}`))) : null)));
 }
 
 // ---------- editor (fuld skærm) ----------
