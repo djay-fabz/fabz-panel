@@ -728,7 +728,7 @@ function festkortBlok(j, st, gentegn) {
       h("button", {class: "btn primaer", type: "button", style: "margin-top:10px", disabled: fk.arbejder, onclick: lav}, fk.arbejder ? "Laver kort …" : "Lav visitkort og barskilt"),
       fk.svar ? h("div", {class: "svar " + fk.svar.klasse}, h("b", {}, fk.svar.titel),
         fk.svar.punkter?.length ? h("ul", {}, fk.svar.punkter.map(x => h("li", {}, x))) : null,
-        (fk.svar.filer || []).map(f => f.link ? h("div", {style: "margin-top:8px"}, h("div", {class: "lille muted"}, f.navn), pdfKnapper(f.link, f.navn)) : null),
+        (fk.svar.filer || []).map(f => f.link ? h("div", {style: "margin-top:8px"}, h("div", {class: "lille muted"}, f.navn), pdfKnapper(f.link, f.navn, () => markérPrintet(j, "Festkort"))) : null),
         fk.svar.klasse === "ok" ? h("div", {class: "lille muted", style: "margin-top:8px"},
           "Print fra Preview med Scale 100 %. Visitkort: preset Mat karton 250g, side 1, vend arket som ved kalibreringen, så side 2. Barskilt: ensidet, almindeligt papir.") : null) : null) : null);
 }
@@ -767,7 +767,7 @@ function klubkortBlok(j, st, gentegn) {
       h("button", {class: "btn primaer", type: "button", style: "margin-top:10px", disabled: kk.arbejder, onclick: lav}, kk.arbejder ? "Laver kort …" : "Lav klubkort"),
       kk.svar ? h("div", {class: "svar " + kk.svar.klasse}, h("b", {}, kk.svar.titel),
         kk.svar.punkter?.length ? h("ul", {}, kk.svar.punkter.map(x => h("li", {}, x))) : null,
-        (kk.svar.filer || []).map(f => f.link ? h("div", {style: "margin-top:8px"}, h("div", {class: "lille muted"}, f.navn), pdfKnapper(f.link, f.navn)) : null),
+        (kk.svar.filer || []).map(f => f.link ? h("div", {style: "margin-top:8px"}, h("div", {class: "lille muted"}, f.navn), pdfKnapper(f.link, f.navn, () => markérPrintet(j, "Klubkort"))) : null),
         kk.svar.klasse === "ok" ? h("div", {class: "lille muted", style: "margin-top:8px"},
           "Print fra Preview med Scale 100 %, ensidet. Skær på de lysegrå mærker midt på kanterne.") : null) : null) : null);
 }
@@ -1085,10 +1085,19 @@ async function hentPdf(sti) {
   const r = await laesFil(sti);
   return r ? URL.createObjectURL(new Blob([await r.arrayBuffer()], {type: "application/pdf"})) : null;
 }
-function pdfKnapper(link, navn) {
+function pdfKnapper(link, navn, vedKlik) {
   return h("div", {style: "display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"},
-    h("a", {class: "btn primaer", href: link, target: "_blank", rel: "noopener"}, "Åbn PDF og print"),
-    h("a", {class: "btn", href: link, download: navn}, "Hent PDF"));
+    h("a", {class: "btn primaer", href: link, target: "_blank", rel: "noopener", onclick: () => vedKlik && vedKlik()}, "Åbn PDF og print"),
+    h("a", {class: "btn", href: link, download: navn, onclick: () => vedKlik && vedKlik()}, "Hent PDF"));
+}
+// Kort: status pr. job. Åbnes eller hentes PDF'en, markeres kortene som printet (kan fortrydes i fanen Kort)
+const kortRec = (j, slags) => slags === "Klubkort" ? klubkortTilJob(j) : festkortTilJob(j);
+function markérPrintet(j, slags, fortryd) {
+  const rec = kortRec(j, slags);
+  if (!rec || (!fortryd && rec.printet) || (fortryd && !rec.printet)) return;
+  const fil = slags === "Klubkort" ? "klubkort" : "festkort";
+  kør("kort-printet", [`--slags=${fil}`, `--dato=${j.dato}`, `--job=${j.navn}`, ...(fortryd ? ["--fortryd"] : [])],
+    {tekst: `${slags} til ${j.navn}: ` + (fortryd ? "ikke printet" : "printet"), efter: [fil], med: () => { rec.printet = fortryd ? null : iDag(); }});
 }
 const felt = (etiket, el, ekstra) => h("label", {class: "fl" + (ekstra ? " " + ekstra : "")}, h("span", {class: "etiket"}, etiket), el);
 const inp = (st, k, attr = {}) => h("input", {class: "input", value: st[k] ?? "", ...attr, oninput: e => { st[k] = e.target.value; }});
@@ -1580,9 +1589,26 @@ function visKort() {
   if (!KT.job || !js.some(j => jobNøgle(j) === KT.job)) { const f = js.find(erKlub) || js[0]; KT.job = f ? jobNøgle(f) : null; KT.slags = null; KT.fk = KT.kk = null; }
   const j = js.find(x => jobNøgle(x) === KT.job);
   const slags = KT.slags || (j && erKlub(j) ? "Klubkort" : "Festkort");
-  const vælgJob = h("select", {class: "input", onchange: e => { KT.job = e.target.value; KT.slags = null; KT.fk = KT.kk = null; tegn(); }},
-    js.map(x => h("option", {value: jobNøgle(x), selected: jobNøgle(x) === KT.job},
-      `${kortDato(x.dato)} · ${x.navn}${jobtype(x) ? " · " + jobtype(x) : ""}${festkortTilJob(x) || klubkortTilJob(x) ? " ✓" : ""}`)));
+  const standardSlags = x => erKlub(x) ? "Klubkort" : "Festkort";
+  const status = (x, sl) => {
+    const rec = kortRec(x, sl);
+    if (!rec) return h("span", {class: "status"}, h("span", {class: "prik"}), "Ikke lavet");
+    if (!rec.printet) return h("span", {class: "status"}, h("span", {class: "prik adv"}), "Lavet, ikke printet");
+    return h("span", {class: "status"}, h("span", {class: "prik ok"}), `Printet ${kortDato(rec.printet)}`);
+  };
+  const række = x => {
+    const valgt = jobNøgle(x) === KT.job, sl = valgt ? slags : standardSlags(x), rec = kortRec(x, sl), d = dag(x.dato);
+    const rk = h("div", {class: "job" + (valgt ? " valgt" : ""), role: "button", tabindex: 0, style: "cursor:pointer" + (valgt ? ";border-color:var(--accent, #6ea8fe)" : ""),
+      onclick: () => { if (valgt) return; KT.job = jobNøgle(x); KT.slags = null; KT.fk = KT.kk = null; tegn(); }},
+      h("div", {class: "dato"}, h("b", {}, d.getDate()), h("span", {}, MD[d.getMonth()])),
+      h("div", {class: "t"}, h("b", {}, x.navn), h("span", {class: "muted lille"}, [DAGE[d.getDay()], jobtype(x) || "Ingen jobtype", sl].filter(Boolean).join(" · "))),
+      status(x, sl),
+      rec ? h("button", {class: "btn ghost lille", type: "button", onclick: e => { e.stopPropagation(); markérPrintet(x, sl, !!rec.printet); }},
+        rec.printet ? "Fortryd printet" : "Markér printet") : null);
+    return valgt ? [rk, h("div", {style: "margin:4px 0 14px"},
+      h("div", {style: "margin-bottom:8px"}, seg(["Klubkort", "Festkort"], slags, v => { KT.slags = v; tegn(); })),
+      slags === "Klubkort" ? klubkortBlok(x, KT, tegn) : festkortBlok(x, KT, tegn))] : [rk];
+  };
   const tekster = D.kkTekster || [];
   const ændret = k => { const r = KT.red[k.nr]; return r && ((r.tekst ?? k.tekst) !== k.tekst || (r.svar ?? (k.svar || "")) !== (k.svar || "")); };
   const gemTekst = k => {
@@ -1614,11 +1640,8 @@ function visKort() {
   $("rod").replaceChildren(h("div", {class: "side"},
     h("h1", {}, "Kort"),
     h("div", {class: "muted"}, "Festkort (visitkort og barskilt) og klubkort med QR-kode til et job. Målene er faste: teksten tilpasses feltet, QR-kode og skærelinjer flytter sig aldrig."),
-    h("div", {class: "kort2", style: "margin-top:16px"},
-      js.length ? h("div", {class: "felter", style: "grid-template-columns:1.6fr 1fr;margin-top:0"},
-        felt("Job", vælgJob), h("div", {}, h("span", {class: "etiket"}, "Slags"), seg(["Klubkort", "Festkort"], slags, v => { KT.slags = v; tegn(); })))
-        : tom("Ingen kommende jobs. Hent jobs under Pakkelister."),
-      j ? (slags === "Klubkort" ? klubkortBlok(j, KT, tegn) : festkortBlok(j, KT, tegn)) : null),
+    h("div", {class: "jobliste", style: "margin-top:16px"},
+      js.length ? js.flatMap(række) : tom("Ingen kommende jobs. Hent jobs under Pakkelister.")),
     h("div", {class: "gruppe"}, h("div", {class: "overskrift"}, "Klubkortenes tekster"),
       h("div", {class: "muted lille", style: "margin-bottom:8px"}, "Linjeskift bliver på kortet. Uden linjeskift brydes teksten selv. Skjulte kort kommer ikke med på nye ark, men nummeret genbruges aldrig, så tallene i Framer Analytics passer."),
       tekster.length ? h("div", {class: "kort"}, tekster.map(kortRække)) : tom("Ingen tekster endnu."),
