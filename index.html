@@ -5,85 +5,169 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Fabz panel</title>
 <style>
-:root{--bg:#f6f7f9;--kort:#fff;--tekst:#1b2330;--svag:#64708a;--linje:#dfe3ea;--accent:#1f2937;--accenttekst:#fff;--ok:#1a7f4b;--adv:#b45309;--fejl:#b91c1c;--markeret:#2563eb}
-@media (prefers-color-scheme:dark){:root{--bg:#10141b;--kort:#182030;--tekst:#e8ecf3;--svag:#93a0b8;--linje:#2a3447;--accent:#e8ecf3;--accenttekst:#10141b;--ok:#4ade80;--adv:#fbbf24;--fejl:#f87171;--markeret:#60a5fa}}
+:root{
+  --bg:#f4f5f7;--flade:#fff;--flade2:#f9fafb;--tekst:#16191f;--svag:#6b7280;--svagere:#9ca3af;
+  --linje:#e7e9ee;--hover:#f1f3f6;--accent:#2563eb;--accent-blid:#eef4ff;--accent-tekst:#fff;
+  --adv:#b45309;--adv-blid:#fff5e6;--fejl:#b91c1c;--fejl-blid:#fdeeee;--ok:#15803d;--ok-blid:#eaf7ef;
+  --skygge:0 1px 2px rgba(16,24,40,.06);--top:56px;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0e1116;--flade:#161a21;--flade2:#1b2029;--tekst:#e8ebf1;--svag:#9aa3b2;--svagere:#6b7484;
+  --linje:#252b36;--hover:#1e242e;--accent:#6aa2ff;--accent-blid:#18263d;--accent-tekst:#0e1116;
+  --adv:#f4b04a;--adv-blid:#2a2114;--fejl:#f87171;--fejl-blid:#2b1717;--ok:#4ade80;--ok-blid:#13281b;--skygge:none}}
 *{box-sizing:border-box}
-body{margin:0;font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--tekst)}
+html,body{margin:0}
+body{font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--tekst);-webkit-font-smoothing:antialiased}
 button,input,select{font:inherit;color:inherit}
-header{display:flex;align-items:center;gap:16px;padding:10px 20px;background:var(--kort);border-bottom:1px solid var(--linje);position:sticky;top:0;z-index:5}
-header h1{font-size:17px;margin:0}
-.faner{display:flex;gap:4px}
-.fane{padding:6px 12px;border-radius:8px;border:0;background:none;cursor:pointer;color:var(--svag)}
-.fane.aktiv{background:var(--accent);color:var(--accenttekst)}
-.fane[disabled]{opacity:.5;cursor:default}
-.fyld{flex:1}
-.lille{font-size:13px;color:var(--svag)}
-.knap{padding:7px 14px;border-radius:8px;border:1px solid var(--linje);background:var(--kort);cursor:pointer}
-.knap.primaer{background:var(--accent);color:var(--accenttekst);border-color:var(--accent)}
-.knap[disabled]{opacity:.5;cursor:default}
-main{display:grid;grid-template-columns:330px 1fr;gap:20px;padding:20px;max-width:1300px;margin:0 auto}
-.side,.editor{background:var(--kort);border:1px solid var(--linje);border-radius:12px;padding:14px}
-.side h2,.editor h2{font-size:14px;text-transform:uppercase;letter-spacing:.04em;color:var(--svag);margin:0 0 8px}
-.job{display:block;width:100%;text-align:left;padding:9px 10px;border:1px solid var(--linje);border-radius:10px;background:none;cursor:pointer;margin-bottom:6px}
-.job.valgt{border-color:var(--markeret);box-shadow:0 0 0 1px var(--markeret)}
-.job b{display:block}
-.mærke{display:inline-block;font-size:12px;padding:1px 7px;border-radius:99px;border:1px solid var(--linje);color:var(--svag);margin:2px 4px 0 0}
-.mærke.ok{color:var(--ok);border-color:var(--ok)}
-.mærke.adv{color:var(--adv);border-color:var(--adv)}
-.felter{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin:10px 0}
-.felt label{display:block;font-size:12px;color:var(--svag)}
-.felt input,.felt select{padding:6px 8px;border:1px solid var(--linje);border-radius:8px;background:var(--bg)}
-.kat{margin-top:16px}
-.kat h3{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--svag);margin:0 0 4px;padding-bottom:3px;border-bottom:2px solid var(--linje)}
-.raekke{display:grid;grid-template-columns:minmax(150px,1.2fr) auto minmax(100px,1fr);gap:10px;align-items:center;padding:5px 0;border-bottom:1px solid var(--linje)}
-.raekke .navn b{font-weight:600}
-.raekke.i-brug .navn b{color:var(--markeret)}
-.q{min-width:30px;height:30px;border:1px solid var(--linje);background:var(--bg);border-radius:6px;cursor:pointer;padding:0 6px}
-.q.sat{background:var(--markeret);border-color:var(--markeret);color:#fff}
-.antal{display:inline-block;min-width:28px;text-align:center;font-weight:700;margin:0 6px}
-.note{width:100%;padding:5px 8px;border:1px solid var(--linje);border-radius:6px;background:var(--bg)}
-.raekkeadv{grid-column:1/-1;font-size:13px;color:var(--adv)}
-.raekkeadv:empty{display:none}
-.bund{position:sticky;bottom:0;background:var(--kort);border-top:1px solid var(--linje);margin:16px -14px -14px;padding:12px 14px;border-radius:0 0 12px 12px}
-.valg{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-bottom:10px}
-.valg label{cursor:pointer}
-.svar{margin-top:12px;padding:10px 12px;border-radius:10px;border:1px solid var(--linje);font-size:14px}
-.svar.ok{border-color:var(--ok)}.svar.adv{border-color:var(--adv)}.svar.fejl{border-color:var(--fejl)}
-.svar ul{margin:6px 0 0;padding-left:18px}
-.tom{color:var(--svag);padding:30px 0;text-align:center}
-.opsaet{max-width:520px;margin:60px auto;background:var(--kort);border:1px solid var(--linje);border-radius:12px;padding:22px}
-.opsaet input{width:100%;padding:8px;border:1px solid var(--linje);border-radius:8px;background:var(--bg);margin:8px 0}
+button{cursor:pointer}
+input::placeholder{color:var(--svagere)}
+
+/* top */
+.top{position:sticky;top:0;z-index:10;height:var(--top);display:flex;align-items:center;gap:14px;padding:0 20px;background:var(--flade);border-bottom:1px solid var(--linje)}
+.brand{font-weight:700;letter-spacing:.02em;margin-right:6px}
+.tabs{display:flex;gap:2px;background:var(--bg);padding:3px;border-radius:9px}
+.tab{border:0;background:none;padding:5px 14px;border-radius:7px;color:var(--svag);font-weight:500}
+.tab.aktiv{background:var(--flade);color:var(--tekst);box-shadow:var(--skygge),0 0 0 1px var(--linje)}
+.tab:disabled{opacity:.4;cursor:default}
+.spacer{flex:1}
+.muted{color:var(--svag)}.lille{font-size:12.5px}
+.tilbage{border:0;background:none;padding:6px 10px 6px 4px;border-radius:8px;color:var(--svag);font-weight:500}
+.tilbage:hover{background:var(--hover);color:var(--tekst)}
+
+/* knapper og felter */
+.btn{border:1px solid var(--linje);background:var(--flade);padding:7px 13px;border-radius:8px;font-weight:500}
+.btn:hover{background:var(--hover)}
+.btn.primaer{background:var(--accent);border-color:var(--accent);color:var(--accent-tekst)}
+.btn.primaer:hover{filter:brightness(1.06);background:var(--accent)}
+.btn.stor{width:100%;padding:11px 16px;font-size:15px}
+.btn:disabled{opacity:.45;cursor:default;filter:none}
+.btn.ghost{border-color:transparent;background:none;color:var(--svag)}
+.btn.ghost:hover{background:var(--hover);color:var(--tekst)}
+.input{width:100%;padding:8px 11px;border:1px solid var(--linje);border-radius:9px;background:var(--flade)}
+.input:focus,.felt:focus,.notefelt:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.etiket{display:block;font-size:11.5px;color:var(--svag);margin-bottom:4px}
+.seg{display:inline-flex;flex-wrap:wrap;background:var(--bg);border-radius:9px;padding:3px;gap:2px}
+.seg button{border:0;background:none;padding:5px 11px;border-radius:7px;color:var(--svag);font-size:13px;font-weight:500}
+.seg button.aktiv{background:var(--flade);color:var(--tekst);box-shadow:var(--skygge),0 0 0 1px var(--linje)}
+.overskrift{font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--svagere);margin:0 0 6px 2px}
+.tom{color:var(--svag);text-align:center;padding:48px 12px}
+
+/* jobs (startside) */
+.side{max-width:760px;margin:0 auto;padding:28px 24px 60px}
+.side h1{font-size:22px;margin:0 0 4px}
+.jobliste{margin-top:20px;display:flex;flex-direction:column;gap:8px}
+.job{display:flex;gap:16px;align-items:center;width:100%;text-align:left;border:1px solid var(--linje);background:var(--flade);padding:12px 16px;border-radius:12px}
+.job:hover{border-color:var(--accent)}
+.dato{flex:none;width:44px;text-align:center;line-height:1.1}
+.dato b{display:block;font-size:20px}
+.dato span{font-size:11px;color:var(--svag);text-transform:uppercase;letter-spacing:.04em}
+.job .t{flex:1;min-width:0}
+.job .t b{display:block;font-size:15px;font-weight:600}
+.job .t span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status{font-size:12.5px;color:var(--svag);white-space:nowrap}
+.prik{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;background:var(--svagere);vertical-align:1px}
+.prik.ok{background:var(--ok)}.prik.adv{background:var(--adv)}
+.andre{margin-top:28px;display:flex;gap:10px;align-items:center}
+.andre select{max-width:280px}
+
+/* editor (fuld skærm) */
+.ed{display:grid;grid-template-columns:minmax(0,1fr) minmax(380px,460px);height:calc(100vh - var(--top))}
+.vaelg{overflow:auto;padding:0 28px 40px}
+.soeg{position:sticky;top:0;z-index:2;background:var(--bg);padding:20px 0 12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{border:1px solid var(--linje);background:var(--flade);border-radius:99px;padding:4px 12px;font-size:12.5px;color:var(--svag)}
+.chip:hover{color:var(--tekst)}
+.chip.aktiv{background:var(--tekst);border-color:var(--tekst);color:var(--flade)}
+.gruppe{margin-top:20px}
+.kort{background:var(--flade);border:1px solid var(--linje);border-radius:12px;overflow:hidden}
+.r{display:flex;align-items:center;gap:14px;padding:10px 14px;border-top:1px solid var(--linje)}
+.r:first-child{border-top:0}
+.r .n{flex:1;min-width:0;color:var(--svag)}
+.r.paa .n{color:var(--tekst);font-weight:600}
+.r.paa .step{border-color:var(--accent)}
+.lagertal{color:var(--svagere);font-size:12.5px;white-space:nowrap}
+.tag{font-size:11px;padding:1px 8px;border-radius:99px;background:var(--adv-blid);color:var(--adv);margin-left:8px;font-weight:500;white-space:nowrap}
+.step{display:inline-flex;align-items:center;border:1px solid var(--linje);border-radius:99px;background:var(--flade);height:32px;flex:none}
+.step button{width:32px;height:30px;border:0;background:none;font-size:17px;line-height:1;color:var(--svag);border-radius:99px}
+.step button:hover{background:var(--hover);color:var(--tekst)}
+.step span{min-width:22px;text-align:center;font-weight:600;font-variant-numeric:tabular-nums}
+.plus{flex:none;width:32px;height:32px;border-radius:99px;border:1px solid var(--linje);background:var(--flade);color:var(--svag);font-size:18px;line-height:1}
+.plus:hover{border-color:var(--accent);color:var(--accent)}
+
+.liste{background:var(--flade);border-left:1px solid var(--linje);display:flex;flex-direction:column;min-height:0}
+.lhoved{padding:20px 22px 14px;border-bottom:1px solid var(--linje)}
+.lhoved h2{margin:0;font-size:19px}
+.felter{display:grid;grid-template-columns:1fr auto;gap:12px;margin-top:14px;align-items:end}
+.lkrop{flex:1;overflow:auto;padding:6px 22px 22px}
+.lg{margin-top:16px}
+.ll{display:flex;gap:12px;align-items:flex-start;padding:5px 0 3px;border-top:1px solid var(--linje)}
+.lg .ll:first-of-type{border-top:0}
+.ll .n{flex:1;min-width:0;padding-top:5px}
+.notefelt::placeholder{color:transparent}
+.ll:hover .notefelt::placeholder,.notefelt:focus::placeholder{color:var(--svagere)}
+.notefelt{display:block;width:100%;border:0;background:none;padding:0;margin-top:0;font-size:12px;line-height:16px;color:var(--svag);border-radius:4px}
+.advl{font-size:12px;color:var(--adv);margin-top:2px}
+.ekstra{margin-top:22px;padding:12px;border-radius:10px;background:var(--flade2);border:1px dashed var(--linje)}
+.lfod{border-top:1px solid var(--linje);padding:14px 22px 18px}
+.resume{margin:10px 0}
+.svar{margin-top:10px;padding:10px 12px;border-radius:10px;font-size:13px;background:var(--flade2)}
+.svar.ok{background:var(--ok-blid)}.svar.adv{background:var(--adv-blid)}.svar.fejl{background:var(--fejl-blid)}
+.svar ul{margin:4px 0 0;padding-left:18px}
+.svar a.btn{display:inline-block;margin-top:8px;text-decoration:none}
+
+/* lager-fanen */
+.lagerside{max-width:1100px;margin:0 auto;padding:24px 24px 130px}
+.lagertop{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.lagertop h1{font-size:22px;margin:0}
+.lagertop .input{width:240px}
+.lhd,.lr{display:grid;grid-template-columns:minmax(180px,2.2fr) 150px 112px 112px minmax(140px,2fr) 32px;gap:8px;align-items:center;padding:6px 12px}
+.lhd{font-size:11.5px;color:var(--svagere);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-top:20px}
+.lr{border-top:1px solid var(--linje)}
+.kort .lr:first-child{border-top:0}
+.lr.aendret{box-shadow:inset 3px 0 0 var(--accent);background:var(--accent-blid)}
+.lr.solgt{opacity:.55}
+.felt{width:100%;border:1px solid transparent;background:none;border-radius:7px;padding:5px 7px}
+.felt:hover{background:var(--hover)}
+select.felt{appearance:none;-webkit-appearance:none;cursor:pointer}
+.x{border:0;background:none;color:var(--svagere);font-size:18px;border-radius:6px;width:28px;height:28px}
+.x:hover{background:var(--hover);color:var(--tekst)}
+.nyform{margin-top:16px;padding:14px;border:1px solid var(--linje);border-radius:12px;background:var(--flade);display:grid;grid-template-columns:2fr 160px 120px 2fr auto;gap:10px;align-items:end}
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--flade);border-top:1px solid var(--linje);padding:12px 24px}
+.bar .indre{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:10px}
+.bar .svar{margin:0;flex:1}
+
+.opsaet{max-width:520px;margin:60px auto;background:var(--flade);border:1px solid var(--linje);border-radius:14px;padding:24px}
+.opsaet h2{margin-top:0}
 .fejltekst{color:var(--fejl)}
-a{color:var(--markeret)}
-@media (max-width:900px){main{grid-template-columns:1fr}}
-@media print{header,.side,.bund{display:none}}
+@media (max-width:900px){.ed{grid-template-columns:1fr;height:auto}.liste{border-left:0;border-top:1px solid var(--linje)}}
 </style>
 </head>
 <body>
-<header>
-  <h1>Fabz panel</h1>
-  <div class="faner">
-    <button class="fane aktiv" type="button">Pakkelister</button>
-    <button class="fane" type="button" disabled title="Kommer i fase B">Forespørgsler</button>
-  </div>
-  <div class="fyld"></div>
-  <span class="lille" id="opdateret"></span>
-  <button class="knap" id="hentjobs" type="button">Hent alle jobs</button>
-  <button class="knap" id="skiftToken" type="button">Skift token</button>
-</header>
+<header class="top" id="top"></header>
 <div id="rod"></div>
 
 <script>
 "use strict";
 const REPO = "djay-fabz/fabz-data", BRANCH = "main", API = "https://api.github.com";
 const KAT = ["Lyd", "DJ-udstyr", "Lys", "Scene", "Stativer", "Kabler & strøm", "Transport", "Andet", "Løse genstande"];
+const STATUS = ["På lager", "Defekt", "Udlånt", "Solgt"];
+const EKSTRA = "Leje og andet";
 const TOKEN_KEY = "fabz-panel-token";
+const lager = {
+  get: k => { try { return localStorage.getItem(k); } catch { return null; } },
+  set: (k, v) => { try { localStorage.setItem(k, v); } catch {} },
+  del: k => { try { localStorage.removeItem(k); } catch {} }
+};
 let token = null;
 let D = {kalender: null, udstyr: [], lister: [], opgaver: []};
-let S = null;      // editorens tilstand
-let optaget = false;
+let fane = "pakkelister";
+let S = null;                      // åben pakkeliste (fuld skærm)
+let P = {q: "", kat: "Alle"};      // søgning i lageret
+let L = null;                      // lager-fanens ændringer
+let optaget = false, henterJobs = false;
 
 // ---------- hjælpere ----------
+const $ = id => document.getElementById(id);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const EGENSKAB = ["value", "checked", "disabled", "selected"];
 function h(tag, props, ...born) {
@@ -94,30 +178,43 @@ function h(tag, props, ...born) {
     else if (EGENSKAB.includes(k)) e[k] = v;
     else if (v !== false && v != null) e.setAttribute(k, v === true ? "" : v);
   }
-  for (const c of born.flat()) {
+  for (const c of born.flat(Infinity)) {
     if (c == null || c === false) continue;
     e.append(c.nodeType ? c : document.createTextNode(String(c)));
   }
   return e;
 }
+const nøgle = s => String(s || "").trim().toLowerCase();
 const iDag = () => new Intl.DateTimeFormat("sv-SE", {timeZone: "Europe/Copenhagen"}).format(new Date());
-const DAGE = ["søn", "man", "tir", "ons", "tor", "fre", "lør"];
-function kortDato(iso) {
-  const d = new Date(iso.slice(0, 10) + "T12:00:00");
-  return `${DAGE[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}`;
+const DAGE = ["søndag", "mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag"];
+const MD = ["jan", "feb", "mar", "apr", "maj", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+const MDL = ["januar", "februar", "marts", "april", "maj", "juni", "juli", "august", "september", "oktober", "november", "december"];
+const dag = iso => new Date(iso.slice(0, 10) + "T12:00:00");
+const langDato = iso => { const d = dag(iso); return `${DAGE[d.getDay()]} ${d.getDate()}. ${MDL[d.getMonth()]}`; };
+const kategorier = () => { const k = [...KAT]; for (const u of D.udstyr) if (u.kategori && !k.includes(u.kategori)) k.push(u.kategori); return k; };
+const lagerMap = () => new Map(D.udstyr.map(u => [nøgle(u.navn), u]));
+function stepper(antal, f, titel) {
+  return h("span", {class: "step"},
+    h("button", {type: "button", title: "En mindre", "aria-label": `En mindre ${titel || ""}`, onclick: () => f(-1)}, "−"),
+    h("span", {}, antal),
+    h("button", {type: "button", title: "En mere", "aria-label": `En mere ${titel || ""}`, onclick: () => f(1)}, "+"));
 }
-const nøgle = s => s.trim().toLowerCase();
+function seg(valg, aktiv, f) {
+  return h("div", {class: "seg"}, valg.map(v => {
+    const [værdi, tekst] = Array.isArray(v) ? v : [v, v];
+    return h("button", {type: "button", class: værdi === aktiv ? "aktiv" : "", onclick: () => f(værdi)}, tekst);
+  }));
+}
 
 // ---------- GitHub ----------
 const sti = p => p.split("/").map(encodeURIComponent).join("/");
-async function gh(path, {method = "GET", body, raw = false} = {}) {
-  const r = await fetch(API + path, {
+function gh(path, {method = "GET", body, raw = false} = {}) {
+  return fetch(API + path, {
     method, cache: "no-store",
     headers: {Authorization: "Bearer " + token, Accept: raw ? "application/vnd.github.raw+json" : "application/vnd.github+json",
               ...(body ? {"Content-Type": "application/json"} : {})},
     body: body ? JSON.stringify(body) : undefined
   });
-  return r;
 }
 function tjek(r, hvad) {
   if (r.ok) return r;
@@ -137,29 +234,42 @@ async function laesJson(p) {
   return r.json();
 }
 function base64(tekst) {
-  const b = new TextEncoder().encode(tekst);
   let s = "";
-  for (const x of b) s += String.fromCharCode(x);
+  for (const x of new TextEncoder().encode(tekst)) s += String.fromCharCode(x);
   return btoa(s);
 }
 async function skrivFil(p, obj, besked) {
-  const r = await gh(`/repos/${REPO}/contents/${sti(p)}`, {method: "PUT",
-    body: {message: besked, content: base64(JSON.stringify(obj, null, 1)), branch: BRANCH}});
-  tjek(r, "inbox");
+  tjek(await gh(`/repos/${REPO}/contents/${sti(p)}`, {method: "PUT",
+    body: {message: besked, content: base64(JSON.stringify(obj, null, 1)), branch: BRANCH}}), "inbox");
 }
 async function hentData() {
   const [kalender, udstyr, lister, opgaver] = await Promise.all(
     ["data/kalender.json", "data/udstyr.json", "data/pakkelister.json", "data/opgaver.json"].map(laesJson));
   D = {kalender, udstyr, lister, opgaver};
 }
+function nytId(præfiks) {
+  const d = new Date(), p = n => String(n).padStart(2, "0");
+  return `${præfiks}-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}-${Math.random().toString(36).slice(2, 6)}`;
+}
+// lægger en anmodning i inbox/ og venter på svaret fra fabz.py inbox
+async function anmod(præfiks, krav, besked) {
+  const id = nytId(præfiks);
+  await skrivFil(`inbox/${id}.json`, krav, besked);
+  const start = Date.now();
+  while (Date.now() - start < 240000) {
+    await sleep(3000);
+    const r = await laesFil(`inbox/svar/${id}.json`);
+    if (r) return r.json();
+  }
+  return null;
+}
 
-// ---------- jobs og lister ----------
+// ---------- jobs ----------
 function jobs() {
   const idag = iDag();
   return (D.kalender?.begivenheder || []).filter(e => e.kalender === "bookinger").map(e => {
     const m = /^\s*DJ\s*:\s*(.+)/i.exec(e.titel || "");
-    if (!m) return null;
-    return {navn: m[1].trim(), dato: e.start.slice(0, 10), sted: e.sted || "", besk: e.beskrivelse || ""};
+    return m ? {navn: m[1].trim(), dato: e.start.slice(0, 10), sted: e.sted || "", besk: e.beskrivelse || ""} : null;
   }).filter(j => j && j.dato >= idag).sort((a, b) => a.dato.localeCompare(b.dato) || a.navn.localeCompare(b.navn));
 }
 // samme regel som fabz.py pakke-opgaver: listen med jobbets navn, eller "Pakkeliste: <liste>" i beskrivelsen
@@ -171,52 +281,65 @@ function listeTilJob(j) {
 const jobNøgle = j => `${j.dato}|${j.navn.toLowerCase()}`;
 const opgaveTilJob = j => D.opgaver.find(o => o.job_noegle === jobNøgle(j)) || null;
 
-// ---------- opsætning ----------
-function visOpsaet(fejl) {
-  const felt = h("input", {type: "password", placeholder: "github_pat_...", autocomplete: "off"});
-  $rod().replaceChildren(h("div", {class: "opsaet"},
-    h("h2", {}, "Første gang: indsæt din token"),
-    h("p", {}, "Tokenen (fine-grained, kun til ", REPO, ", Contents og Actions read/write) ligger i 1Password. Den gemmes kun i denne browser."),
-    fejl ? h("p", {class: "fejltekst"}, fejl) : null, felt,
-    h("button", {class: "knap primaer", type: "button", onclick: () => {
-      const t = felt.value.trim();
-      if (!t) return;
-      localStorage.setItem(TOKEN_KEY, t);
-      token = t;
-      start();
-    }}, "Gem og åbn")));
-}
-const $rod = () => document.getElementById("rod");
-
-// ---------- visning ----------
-function visOpdateret() {
-  const el = document.getElementById("opdateret");
-  const o = D.kalender?.opdateret;
-  if (!o) { el.textContent = ""; return; }
-  const d = new Date(o);
-  const gammel = Date.now() - d.getTime() > 26 * 3600 * 1000;
-  el.textContent = `Jobs hentet ${d.getDate()}/${d.getMonth() + 1} kl. ${String(d.getHours()).padStart(2, "0")}.${String(d.getMinutes()).padStart(2, "0")}` + (gammel ? " (ældre end et døgn)" : "");
-  el.style.color = gammel ? "var(--adv)" : "";
-}
-function visSide() {
-  const side = document.getElementById("side");
-  side.replaceChildren(h("h2", {}, "Kommende jobs"));
-  const js = jobs();
-  if (!js.length) side.append(h("div", {class: "tom"}, "Ingen jobs fra i dag og frem. Tryk Hent alle jobs."));
-  for (const j of js) {
-    const liste = listeTilJob(j), o = opgaveTilJob(j);
-    const valgt = S?.job && jobNøgle(S.job) === jobNøgle(j);
-    side.append(h("button", {class: "job" + (valgt ? " valgt" : ""), type: "button", onclick: () => vælgJob(j)},
-      h("b", {}, j.navn), h("span", {class: "lille"}, kortDato(j.dato) + (j.sted ? " · " + j.sted : "")), h("br"),
-      h("span", {class: "mærke " + (liste ? "ok" : "adv")}, liste ? "Liste: " + liste.navn : "Ingen liste"),
-      o ? h("span", {class: "mærke " + (o.status === "Færdig" ? "ok" : "")}, "Opgave: " + o.status) : null));
+// ---------- topbjælke ----------
+function tegnTop() {
+  const top = $("top");
+  if (S && fane === "pakkelister") {
+    top.replaceChildren(
+      h("button", {class: "tilbage", type: "button", onclick: lukEditor}, "← Jobs"),
+      h("div", {class: "spacer"}),
+      h("span", {class: "muted lille"}, "Ændringer gemmes først, når du laver PDF'en"));
+    return;
   }
-  side.append(h("h2", {style: "margin-top:18px"}, "Åbn en liste uden job"));
-  const sel = h("select", {class: "note", onchange: () => { if (sel.value) åbnListe(sel.value); }},
-    h("option", {value: ""}, "Vælg liste ..."), D.lister.map(p => h("option", {value: p.navn}, p.navn)));
-  side.append(sel);
+  const o = D.kalender?.opdateret;
+  let tid = "";
+  if (o) {
+    const d = new Date(o);
+    const gammel = Date.now() - d.getTime() > 26 * 3600 * 1000;
+    tid = h("span", {class: "lille", style: gammel ? "color:var(--adv)" : "color:var(--svag)"},
+      `Jobs hentet ${d.getDate()}/${d.getMonth() + 1} kl. ${String(d.getHours()).padStart(2, "0")}.${String(d.getMinutes()).padStart(2, "0")}`);
+  }
+  top.replaceChildren(
+    h("span", {class: "brand"}, "Fabz"),
+    h("nav", {class: "tabs"},
+      [["pakkelister", "Pakkelister"], ["lager", "Lager"]].map(([v, t]) =>
+        h("button", {type: "button", class: "tab" + (fane === v ? " aktiv" : ""), onclick: () => { fane = v; tegn(); }}, t)),
+      h("button", {type: "button", class: "tab", disabled: true, title: "Kommer senere"}, "Forespørgsler")),
+    h("div", {class: "spacer"}),
+    ...(fane === "pakkelister" ? [tid, h("button", {class: "btn", type: "button", disabled: henterJobs, onclick: hentJobs}, henterJobs ? "Henter …" : "Hent alle jobs")] : []),
+    h("button", {class: "btn ghost lille", type: "button", onclick: skiftToken}, "Skift token"));
 }
-function vælgJob(j) {
+function tegn() {
+  tegnTop();
+  if (fane === "lager") visLager();
+  else if (S) visEditor();
+  else visJobs();
+}
+
+// ---------- startside: jobs ----------
+function visJobs() {
+  const js = jobs();
+  const valg = h("select", {class: "input", onchange: e => { if (e.target.value) åbnListe(e.target.value); }},
+    h("option", {value: ""}, "Åbn en gemt liste …"), D.lister.map(p => h("option", {value: p.navn}, p.navn)));
+  $("rod").replaceChildren(h("div", {class: "side"},
+    h("h1", {}, "Pakkelister"),
+    h("div", {class: "muted"}, "Vælg et job for at lave eller tjekke pakkelisten."),
+    h("div", {class: "jobliste"},
+      js.length ? js.map(j => {
+        const liste = listeTilJob(j), o = opgaveTilJob(j), d = dag(j.dato);
+        const færdig = o?.status === "Færdig";
+        return h("button", {class: "job", type: "button", onclick: () => åbnJob(j)},
+          h("div", {class: "dato"}, h("b", {}, d.getDate()), h("span", {}, MD[d.getMonth()])),
+          h("div", {class: "t"}, h("b", {}, j.navn), h("span", {class: "muted lille"}, [DAGE[d.getDay()], j.sted].filter(Boolean).join(" · "))),
+          h("span", {class: "status"},
+            h("span", {class: "prik " + (færdig ? "ok" : liste ? "" : "adv")}),
+            færdig ? "Pakket" : liste ? "Liste: " + liste.navn : "Ingen liste"));
+      }) : h("div", {class: "tom"}, "Ingen jobs fra i dag og frem. Tryk Hent alle jobs.")),
+    h("div", {class: "andre"}, valg)));
+}
+
+// ---------- editor (fuld skærm) ----------
+function åbnJob(j) {
   const liste = listeTilJob(j);
   nyEditor({job: j, base: liste, egen: !!liste, jobNavn: j.navn, gem: "kun_job"});
 }
@@ -224,291 +347,416 @@ function åbnListe(navn) {
   const p = D.lister.find(x => x.navn === navn);
   nyEditor({job: null, base: p, egen: true, jobNavn: p.navn, gem: "opdater"});
 }
-function nyEditor({job, base, egen, jobNavn, gem}) {
-  S = {job, base, egen, jobNavn, gem, l: {}, transport: base?.transport || "", nyNavn: jobNavn, nyType: "Skabelon"};
-  indlæsLinjer(base);
-  visSide();
-  visEditor();
+function nyEditor(o) {
+  S = {...o, l: {}, transport: o.base?.transport || "", nyNavn: o.jobNavn, nyType: "Skabelon", svar: null};
+  indlæs(o.base);
+  P = {q: "", kat: "Alle"};
+  tegn();
+  window.scrollTo(0, 0);
 }
-function indlæsLinjer(base) {
+function lukEditor() {
+  const ændret = Object.keys(S.l).length && !S.svar;
+  if (ændret && !confirm("Gå tilbage uden at lave PDF? Dine ændringer på listen forsvinder.")) return;
+  S = null;
+  tegn();
+}
+function indlæs(base) {
   S.l = {};
   for (const l of base?.linjer || []) S.l[nøgle(l.udstyr)] = {udstyr: l.udstyr, antal: l.antal, note: l.note || ""};
 }
-
-// ---------- editor ----------
-let opdaterBund = () => {};
 function visEditor() {
-  const ed = document.getElementById("editor");
-  if (!S) { ed.replaceChildren(h("div", {class: "tom"}, "Vælg et job eller en liste til venstre.")); return; }
-  const o = S.job ? opgaveTilJob(S.job) : null;
-  const lager = new Map();
-  for (const u of D.udstyr) {
-    if (u.status === "Solgt" && !S.l[nøgle(u.navn)]) continue;
-    lager.set(nøgle(u.navn), u);
-  }
-  const rækker = [];   // {kat, el, navn}
-  const delOpd = [];
-
-  function række(key, navn, u) {
-    const hent = () => S.l[key] || {udstyr: navn, antal: 0, note: ""};
-    const antalEl = h("span", {class: "antal"});
-    const adv = h("div", {class: "raekkeadv"});
-    const knapper = [0, 1, 2, 3, 4].map(n => h("button", {type: "button", class: "q", onclick: () => sæt(n)}, n));
-    const noteEl = h("input", {class: "note", placeholder: "note", value: hent().note, oninput: () => {
-      S.l[key] = {...hent(), udstyr: navn, note: noteEl.value};
-    }});
-    const el = h("div", {class: "raekke"},
-      h("div", {class: "navn"}, h("b", {}, navn), " ",
-        u ? h("span", {class: "lille"}, `på lager: ${u.antal}`) : h("span", {class: "lille"}, "uden for lageret"),
-        u && u.status !== "På lager" ? h("span", {class: "mærke adv"}, u.status) : null),
-      h("div", {}, h("button", {type: "button", class: "q", onclick: () => sæt(hent().antal - 1)}, "−"), antalEl,
-        knapper, h("button", {type: "button", class: "q", onclick: () => sæt(hent().antal + 1)}, "+")),
-      noteEl, adv);
-    function sæt(n) {
-      S.l[key] = {...hent(), udstyr: navn, antal: Math.max(0, n)};
-      opdater();
-      opdaterBund();
-    }
-    function opdater() {
-      const a = hent().antal;
-      antalEl.textContent = a;
-      knapper.forEach((b, i) => b.classList.toggle("sat", i === a));
-      el.classList.toggle("i-brug", a > 0);
-      const t = [];
-      if (a > 0 && u && a > u.antal) t.push(`Mere end lageret (${u.antal})`);
-      if (a > 0 && u && u.status !== "På lager") t.push(`Status er ${u.status}`);
-      if (a > 0 && !u && !/^LEJE:/i.test(navn)) t.push("Findes ikke i lageret. Skriv LEJE: foran, hvis det er leje");
-      adv.textContent = t.join(". ");
-      adv.dataset.n = t.length;
-    }
-    opdater();
-    delOpd.push(opdater);
-    return el;
-  }
-
-  const kategorier = [...KAT];
-  for (const u of lager.values()) if (!kategorier.includes(u.kategori)) kategorier.push(u.kategori);
-  const lagerBlok = h("div", {});
-  const søg = h("input", {class: "note", placeholder: "Søg i lageret", oninput: filtrer});
-  const katBlokke = [];
-  for (const k of kategorier) {
-    const us = [...lager.values()].filter(u => u.kategori === k).sort((a, b) => a.navn.localeCompare(b.navn, "da"));
-    if (!us.length) continue;
-    const rs = us.map(u => ({navn: u.navn, el: række(nøgle(u.navn), u.navn, u)}));
-    const blok = h("div", {class: "kat"}, h("h3", {}, k), rs.map(r => r.el));
-    katBlokke.push({blok, rs});
-    lagerBlok.append(blok);
-  }
-  function filtrer() {
-    const q = nøgle(søg.value);
-    for (const {blok, rs} of katBlokke) {
-      let synlig = 0;
-      for (const r of rs) {
-        const vis = !q || nøgle(r.navn).includes(q);
-        r.el.style.display = vis ? "" : "none";
-        if (vis) synlig++;
-      }
-      blok.style.display = synlig ? "" : "none";
-    }
-  }
-
-  // linjer der ikke findes i lageret (leje, ekstra)
-  const ekstraBlok = h("div", {class: "kat"}, h("h3", {}, "Leje og andet uden for lageret"));
-  const ekstraNøgler = Object.keys(S.l).filter(k => !lager.has(k));
-  for (const k of ekstraNøgler) ekstraBlok.append(række(k, S.l[k].udstyr, null));
-  const nyNavn = h("input", {class: "note", placeholder: "LEJE: Scene 3x2", value: "LEJE: "});
-  ekstraBlok.append(h("div", {class: "felter"},
-    h("div", {class: "felt", style: "flex:1;min-width:200px"}, h("label", {}, "Tilføj linje"), nyNavn),
-    h("button", {type: "button", class: "knap", onclick: () => {
-      const n = nyNavn.value.trim();
-      if (!n || /^LEJE:\s*$/i.test(n)) return;
-      if (S.l[nøgle(n)] || lager.has(nøgle(n))) { alert("Linjen findes allerede på listen."); return; }
-      S.l[nøgle(n)] = {udstyr: n, antal: 1, note: ""};
-      visEditor();
-    }}, "Tilføj")));
-
-  // top
-  const startFra = h("select", {onchange: () => {
-    const p = D.lister.find(x => x.navn === startFra.value);
-    S.base = p || null;
-    S.transport = p?.transport || "";
-    indlæsLinjer(p);
-    visEditor();
-  }}, h("option", {value: ""}, "Tom"), D.lister.map(p => h("option", {value: p.navn, selected: S.base?.navn === p.navn}, p.navn)));
-  const transport = h("select", {onchange: () => { S.transport = transport.value; opdaterBund(); }},
-    h("option", {value: ""}, "Vælg ..."), ["Trailer", "Kun bil"].map(t => h("option", {value: t, selected: S.transport === t}, t)));
-  const jobNavn = h("input", {value: S.jobNavn, oninput: () => { S.jobNavn = jobNavn.value; }});
-  const lukKnap = o && o.status !== "Færdig" ? h("button", {class: "knap", type: "button", onclick: () => lukOpgave(o)}, `Luk opgave #${o.id}`) : null;
-
-  // bund: gem-valg og knap
-  const gemEl = h("div", {class: "valg"});
-  const nyDel = h("span", {});
-  function tegnGem() {
-    gemEl.replaceChildren();
-    const valg = [["kun_job", "Kun til dette job"]];
-    if (S.egen && S.base) valg.push(["opdater", `Gem som standard (opdater '${S.base.navn}')`]);
-    valg.push(["ny", "Gem som ny liste"]);
-    if (!valg.some(v => v[0] === S.gem)) S.gem = "kun_job";
-    for (const [v, t] of valg) gemEl.append(h("label", {}, h("input", {type: "radio", name: "gem", checked: S.gem === v, onchange: () => { S.gem = v; tegnGem(); }}), " ", t));
-    if (S.gem === "ny") {
-      gemEl.append(h("input", {class: "note", style: "width:200px", placeholder: "Navn på listen", value: S.nyNavn, oninput: e => { S.nyNavn = e.target.value; }}),
-        h("select", {onchange: e => { S.nyType = e.target.value; }}, ["Skabelon", "Fast"].map(t => h("option", {value: t, selected: S.nyType === t}, t))));
-    }
-  }
-  tegnGem();
-  const resumé = h("span", {class: "lille"});
-  const lavKnap = h("button", {class: "knap primaer", type: "button", onclick: () => send()}, "Lav pakkeliste (PDF)");
-  const svarEl = h("div", {id: "svar"});
-  opdaterBund = () => {
-    const ls = Object.values(S.l).filter(l => l.antal > 0);
-    const advN = [...ed.querySelectorAll(".raekkeadv")].reduce((s, e) => s + Number(e.dataset.n || 0), 0);
-    resumé.textContent = `${ls.length} linjer, ${ls.reduce((s, l) => s + l.antal, 0)} stk` + (advN ? `, ${advN} advarsler` : "") + (S.transport ? "" : ". Vælg transport");
-    resumé.style.color = advN ? "var(--adv)" : "";
-    lavKnap.disabled = optaget || !ls.length || !S.transport;
-  };
-
-  ed.replaceChildren(
-    h("h2", {}, S.job ? `${S.job.navn} · ${kortDato(S.job.dato)}` : `Liste: ${S.base.navn}`),
-    S.job?.sted ? h("div", {class: "lille"}, S.job.sted) : null,
-    h("div", {class: "felter"},
-      h("div", {class: "felt"}, h("label", {}, "Navn på PDF"), jobNavn),
-      S.egen ? h("div", {class: "felt"}, h("label", {}, "Udgangspunkt"), h("div", {}, S.base.navn)) :
-               h("div", {class: "felt"}, h("label", {}, "Start fra"), startFra),
-      h("div", {class: "felt"}, h("label", {}, "Transport"), transport),
-      h("div", {class: "felt"}, lukKnap)),
-    søg, lagerBlok, ekstraBlok,
-    h("div", {class: "bund"}, gemEl, h("div", {class: "valg"}, lavKnap, resumé), svarEl));
-  filtrer();
-  opdaterBund();
+  $("rod").replaceChildren(h("div", {class: "ed"},
+    h("div", {class: "vaelg", id: "vaelg"}), h("div", {class: "liste", id: "liste"})));
+  tegnVælger();
+  tegnListe();
 }
 
-// ---------- send og svar ----------
-function nytId(præfiks) {
-  const d = new Date(), p = n => String(n).padStart(2, "0");
-  return `${præfiks}-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}-${Math.random().toString(36).slice(2, 6)}`;
+// venstre: lageret
+function tegnVælger() {
+  const søg = h("input", {class: "input", type: "search", placeholder: "Søg i lageret …", value: P.q,
+    oninput: () => { P.q = søg.value; tegnRækker(); }});
+  const chips = h("div", {class: "chips"});
+  const tegnChips = () => chips.replaceChildren(...["Alle", ...kategorier()].filter(k => k === "Alle" || D.udstyr.some(u => u.kategori === k))
+    .map(k => h("button", {type: "button", class: "chip" + (P.kat === k ? " aktiv" : ""), onclick: () => { P.kat = k; tegnChips(); tegnRækker(); }}, k)));
+  tegnChips();
+  $("vaelg").replaceChildren(h("div", {class: "soeg"}, søg, chips), h("div", {id: "raekker"}));
+  tegnRækker();
 }
-function visSvar(klasse, titel, punkter, ekstra) {
-  const el = document.getElementById("svar");
+function tegnRækker() {
+  const el = $("raekker");
   if (!el) return;
-  el.replaceChildren(h("div", {class: "svar " + klasse}, h("b", {}, titel),
-    punkter?.length ? h("ul", {}, punkter.map(p => h("li", {}, p))) : null, ekstra || null));
-}
-async function ventSvar(id) {
-  const start = Date.now();
-  while (Date.now() - start < 240000) {
-    await sleep(3000);
-    const r = await laesFil(`inbox/svar/${id}.json`);
-    if (r) return r.json();
+  const q = nøgle(P.q);
+  el.replaceChildren();
+  for (const kat of kategorier()) {
+    if (P.kat !== "Alle" && P.kat !== kat) continue;
+    const us = D.udstyr.filter(u => u.kategori === kat && (u.status !== "Solgt" || S.l[nøgle(u.navn)]) && (!q || nøgle(u.navn).includes(q)))
+      .sort((a, b) => a.navn.localeCompare(b.navn, "da"));
+    if (us.length) el.append(h("div", {class: "gruppe"}, h("div", {class: "overskrift"}, kat), h("div", {class: "kort"}, us.map(vælgerRække))));
   }
-  return null;
+  if (!el.children.length) el.append(h("div", {class: "tom"}, "Intet udstyr matcher søgningen."));
+}
+function vælgerRække(u) {
+  const key = nøgle(u.navn), a = S.l[key]?.antal || 0;
+  return h("div", {class: "r" + (a ? " paa" : "")},
+    h("div", {class: "n"}, u.navn, u.status !== "På lager" ? h("span", {class: "tag"}, u.status) : null),
+    h("span", {class: "lagertal"}, `${u.antal} på lager`),
+    a ? stepper(a, d => sætAntal(key, u.navn, a + d), u.navn)
+      : h("button", {type: "button", class: "plus", title: "Læg på listen", "aria-label": "Læg på listen: " + u.navn, onclick: () => sætAntal(key, u.navn, 1)}, "+"));
+}
+function sætAntal(key, navn, n) {
+  if (n <= 0) delete S.l[key];
+  else S.l[key] = {...(S.l[key] || {udstyr: navn, note: ""}), antal: n};
+  S.svar = null;
+  tegnRækker();
+  tegnListe();
+}
+
+// højre: pakkelisten
+function advarsler(l, u) {
+  const t = [];
+  if (u && l.antal > u.antal) t.push(`Lageret har kun ${u.antal}`);
+  if (u && u.status !== "På lager") t.push(`Status er ${u.status}`);
+  if (!u && !/^LEJE:/i.test(l.udstyr)) t.push("Findes ikke i lageret");
+  return t;
+}
+function tegnListe() {
+  const k = $("liste");
+  if (!k) return;
+  const gl = $("lkrop")?.scrollTop || 0;
+  const o = S.job ? opgaveTilJob(S.job) : null;
+  const lm = lagerMap();
+  const linjer = Object.entries(S.l).filter(([, l]) => l.antal > 0);
+  const advN = linjer.reduce((s, [key, l]) => s + advarsler(l, lm.get(key)).length, 0);
+  const stk = linjer.reduce((s, [, l]) => s + l.antal, 0);
+
+  const startFra = h("select", {class: "input", onchange: e => {
+    if (linjer.length && !confirm("Erstat listen med " + (e.target.value || "en tom liste") + "?")) { e.target.value = S.base?.navn || ""; return; }
+    S.base = D.lister.find(x => x.navn === e.target.value) || null;
+    S.transport = S.base?.transport || S.transport;
+    indlæs(S.base);
+    tegnRækker();
+    tegnListe();
+  }}, h("option", {value: ""}, "Tom liste"), D.lister.map(p => h("option", {value: p.navn, selected: S.base?.navn === p.navn}, p.navn)));
+
+  const hoved = h("div", {class: "lhoved"},
+    h("div", {style: "display:flex;gap:12px;align-items:flex-start"},
+      h("div", {style: "flex:1;min-width:0"},
+        h("h2", {}, S.job ? S.job.navn : S.base.navn),
+        h("div", {class: "muted lille"}, S.job ? [langDato(S.job.dato), S.job.sted].filter(Boolean).join(" · ") : `Gemt liste (${S.base.type || "liste"})`)),
+      o && o.status !== "Færdig" ? h("button", {class: "btn lille", type: "button", onclick: () => lukOpgave(o)}, "Luk opgave") : null),
+    h("div", {class: "felter"},
+      h("label", {}, h("span", {class: "etiket"}, "Navn på PDF"),
+        h("input", {class: "input", value: S.jobNavn, oninput: e => { S.jobNavn = e.target.value; }})),
+      h("div", {}, h("span", {class: "etiket"}, "Transport"), seg(["Trailer", "Kun bil"], S.transport, v => { S.transport = v; tegnListe(); }))),
+    S.egen ? null : h("label", {style: "display:block;margin-top:12px"}, h("span", {class: "etiket"}, "Start fra"), startFra));
+
+  const krop = h("div", {class: "lkrop", id: "lkrop"});
+  if (!linjer.length) {
+    krop.append(h("div", {class: "tom"}, "Listen er tom.", h("br"), h("span", {class: "lille"}, "Tryk + ud for udstyret til venstre.")));
+  } else {
+    const grupper = new Map();
+    for (const [key, l] of linjer) {
+      const kat = lm.get(key)?.kategori || EKSTRA;
+      if (!grupper.has(kat)) grupper.set(kat, []);
+      grupper.get(kat).push([key, l]);
+    }
+    for (const kat of [...kategorier(), EKSTRA]) {
+      const g = grupper.get(kat);
+      if (!g) continue;
+      g.sort((a, b) => a[1].udstyr.localeCompare(b[1].udstyr, "da"));
+      krop.append(h("div", {class: "lg"}, h("div", {class: "overskrift"}, kat), g.map(([key, l]) => {
+        const adv = advarsler(l, lm.get(key));
+        return h("div", {class: "ll"},
+          h("div", {class: "n"}, l.udstyr,
+            h("input", {class: "notefelt", placeholder: "Tilføj note", value: l.note || "", oninput: e => { S.l[key].note = e.target.value; }}),
+            adv.length ? h("div", {class: "advl"}, adv.join(". ")) : null),
+          stepper(l.antal, d => sætAntal(key, l.udstyr, l.antal + d), l.udstyr));
+      })));
+    }
+  }
+  const ny = h("input", {class: "input", placeholder: "Fx LEJE: Scene 3x2 m"});
+  const tilføj = () => {
+    const n = ny.value.trim();
+    if (!n) return;
+    const key = nøgle(n);
+    if (S.l[key]) { alert("Den står allerede på listen."); return; }
+    if (lm.has(key)) { sætAntal(key, lm.get(key).navn, 1); return; }
+    sætAntal(key, n, 1);
+  };
+  ny.addEventListener("keydown", e => { if (e.key === "Enter") tilføj(); });
+  krop.append(h("div", {class: "ekstra"}, h("span", {class: "etiket"}, "Leje eller andet, der ikke er på lageret"),
+    h("div", {style: "display:flex;gap:8px"}, ny, h("button", {class: "btn", type: "button", onclick: tilføj}, "Tilføj"))));
+
+  const gemValg = [["kun_job", "Kun dette job"]];
+  if (S.egen && S.base) gemValg.push(["opdater", "Opdater standard"]);
+  gemValg.push(["ny", "Ny liste"]);
+  if (!gemValg.some(v => v[0] === S.gem)) S.gem = "kun_job";
+  const fod = h("div", {class: "lfod"},
+    h("span", {class: "etiket"}, S.gem === "opdater" ? `Gem: ændringerne bliver standard for '${S.base.navn}'` : "Gem listen"),
+    seg(gemValg, S.gem, v => { S.gem = v; tegnListe(); }),
+    S.gem === "ny" ? h("div", {style: "display:flex;gap:8px;margin-top:8px"},
+      h("input", {class: "input", placeholder: "Navn på den nye liste", value: S.nyNavn, oninput: e => { S.nyNavn = e.target.value; }}),
+      seg(["Skabelon", "Fast"], S.nyType, v => { S.nyType = v; tegnListe(); })) : null,
+    h("div", {class: "resume lille", style: advN ? "color:var(--adv)" : "color:var(--svag)"},
+      `${linjer.length} linjer · ${stk} stk` + (advN ? ` · ${advN} advarsler` : "") + (S.transport ? "" : " · vælg transport")),
+    h("button", {class: "btn primaer stor", type: "button", disabled: optaget || !linjer.length || !S.transport, onclick: send},
+      optaget ? "Arbejder …" : "Lav pakkeliste (PDF)"),
+    h("div", {id: "svar"}));
+  k.replaceChildren(hoved, krop, fod);
+  krop.scrollTop = gl;
+  tegnSvar();
+}
+function sætSvar(klasse, titel, punkter, link) {
+  if (S) S.svar = {klasse, titel, punkter, link};
+  tegnSvar();
+}
+function tegnSvar() {
+  const el = $("svar");
+  if (!el || !S) return;
+  const s = S.svar;
+  el.replaceChildren(s ? h("div", {class: "svar " + s.klasse}, h("b", {}, s.titel),
+    s.punkter?.length ? h("ul", {}, s.punkter.map(p => h("li", {}, p))) : null,
+    s.link ? h("a", {class: "btn primaer", href: s.link, target: "_blank", rel: "noopener"}, "Åbn PDF og print") : null) : "");
 }
 async function send() {
   const navn = (S.jobNavn || "").trim();
   if (!navn) { alert("Skriv et navn til PDF'en."); return; }
   if (S.gem === "ny" && !(S.nyNavn || "").trim()) { alert("Skriv et navn til den nye liste."); return; }
-  const linjer = Object.values(S.l).filter(l => l.antal > 0).map(l => ({udstyr: l.udstyr, antal: l.antal, ...(l.note?.trim() ? {note: l.note.trim()} : {})}));
-  const id = nytId("pakkeliste");
+  const linjer = Object.values(S.l).filter(l => l.antal > 0)
+    .map(l => ({udstyr: l.udstyr, antal: l.antal, ...(l.note?.trim() ? {note: l.note.trim()} : {})}));
   const krav = {type: "pakkeliste", job: navn, dato: S.job?.dato || null, transport: S.transport, linjer, gem: S.gem,
     udgangspunkt: S.egen && S.base ? S.base.navn : null, liste: S.base?.navn || null, ny_navn: (S.nyNavn || "").trim(), ny_type: S.nyType};
+  const mig = S;
   optaget = true;
-  opdaterBund();
+  tegnListe();
   try {
-    visSvar("", "Sender ...");
-    await skrivFil(`inbox/${id}.json`, krav, `Panel: pakkeliste ${navn}`);
-    visSvar("", "Sendt. Venter på svar, det tager typisk under et minut ...");
-    const sv = await ventSvar(id);
-    if (!sv) {
-      visSvar("fejl", "Intet svar efter 4 minutter.", ["Tjek kørslen under Actions i fabz-data. Anmodningen ligger stadig i inbox/."]);
-    } else if (sv.status === "FEJL") {
-      visSvar("fejl", "Fejl, intet er gemt.", [sv.fejl]);
-    } else {
-      const ekstra = h("div", {}, "Henter PDF ...");
-      visSvar(sv.status === "ADVARSEL" ? "adv" : "ok", sv.status === "ADVARSEL" ? "Lavet, men tjek advarslerne" : "Lavet",
-        [...sv.advarsler.map(a => "Advarsel: " + a), ...sv.info], ekstra);
+    sætSvar("", "Laver pakkelisten … det tager typisk under et minut.");
+    const sv = await anmod("pakkeliste", krav, `Panel: pakkeliste ${navn}`);
+    if (S !== mig) return;
+    if (!sv) sætSvar("fejl", "Intet svar efter 4 minutter.", ["Tjek kørslen under Actions i fabz-data. Anmodningen ligger stadig i inbox/."]);
+    else if (sv.status === "FEJL") sætSvar("fejl", "Fejl, intet er gemt.", [sv.fejl]);
+    else {
+      const punkter = [...sv.advarsler.map(a => "Advarsel: " + a), ...sv.info];
+      const titel = sv.status === "ADVARSEL" ? "Lavet, men tjek advarslerne" : "Pakkelisten er klar";
+      sætSvar(sv.status === "ADVARSEL" ? "adv" : "ok", titel, [...punkter, "Henter PDF …"]);
       const r = await laesFil(sv.pdf);
-      if (!r) { ekstra.textContent = "PDF'en kunne ikke hentes."; }
-      else {
-        const url = URL.createObjectURL(new Blob([await r.arrayBuffer()], {type: "application/pdf"}));
-        ekstra.replaceChildren(h("a", {href: url, target: "_blank", rel: "noopener", class: "knap primaer", style: "text-decoration:none;display:inline-block;margin-top:8px"}, "Åbn PDF og print"));
-      }
-      if (S.gem !== "kun_job") { D.lister = await laesJson("data/pakkelister.json"); visSide(); }
+      const link = r ? URL.createObjectURL(new Blob([await r.arrayBuffer()], {type: "application/pdf"})) : null;
+      if (S === mig) sætSvar(sv.status === "ADVARSEL" ? "adv" : "ok", titel, r ? punkter : [...punkter, "PDF'en kunne ikke hentes."], link);
+      if (S.gem !== "kun_job") D.lister = await laesJson("data/pakkelister.json");
     }
   } catch (e) {
-    visSvar("fejl", "Det gik galt.", [e.message]);
+    if (S === mig) sætSvar("fejl", "Det gik galt.", [e.message]);
   } finally {
     optaget = false;
-    opdaterBund();
+    if (S === mig) tegnListe();
   }
 }
 async function lukOpgave(o) {
   if (!confirm(`Er listen printet og pakket? Opgave #${o.id} sættes til Færdig.`)) return;
-  const id = nytId("luk");
   try {
-    visSvar("", "Lukker opgaven ...");
-    await skrivFil(`inbox/${id}.json`, {type: "luk-opgave", opgave_id: o.id}, `Panel: luk opgave #${o.id}`);
-    const sv = await ventSvar(id);
-    if (!sv) { visSvar("fejl", "Intet svar efter 4 minutter.", ["Tjek kørslen under Actions i fabz-data."]); return; }
-    if (sv.status === "FEJL") { visSvar("fejl", "Fejl, opgaven er ikke lukket.", [sv.fejl]); return; }
+    sætSvar("", "Lukker opgaven …");
+    const sv = await anmod("luk", {type: "luk-opgave", opgave_id: o.id}, `Panel: luk opgave #${o.id}`);
+    if (!sv) { sætSvar("fejl", "Intet svar efter 4 minutter.", ["Tjek kørslen under Actions i fabz-data."]); return; }
+    if (sv.status === "FEJL") { sætSvar("fejl", "Opgaven er ikke lukket.", [sv.fejl]); return; }
     D.opgaver = await laesJson("data/opgaver.json");
-    visSide();
-    visEditor();
-    visSvar("ok", "Opgaven er lukket", sv.info);
+    if (S) { S.svar = {klasse: "ok", titel: "Opgaven er lukket", punkter: sv.info}; tegnListe(); }
   } catch (e) {
-    visSvar("fejl", "Det gik galt.", [e.message]);
+    sætSvar("fejl", "Det gik galt.", [e.message]);
+  }
+}
+
+// ---------- lager-fanen ----------
+const FELTER = ["navn", "kategori", "antal", "status", "note"];
+function nulstilLager() {
+  L = {w: D.udstyr.map(u => ({...u, status: u.status || "På lager", note: u.note || "", _orig: u.navn})), ny: [], q: "", solgte: false, visNy: false, svar: null};
+}
+function ændringer() {
+  const ud = [];
+  for (const w of L.w) {
+    const o = D.udstyr.find(u => u.navn === w._orig);
+    if (!o) continue;
+    const f = {};
+    for (const k of FELTER) {
+      const a = o[k] ?? (k === "status" ? "På lager" : ""), b = k === "navn" ? w.navn.trim() : w[k];
+      if (String(a) !== String(b ?? "")) f[k] = b;
+    }
+    if (Object.keys(f).length) ud.push({navn: w._orig, felter: f});
+  }
+  return ud;
+}
+const erÆndret = w => { const o = D.udstyr.find(u => u.navn === w._orig); return !!o && FELTER.some(k => String(o[k] ?? (k === "status" ? "På lager" : "")) !== String(k === "navn" ? w.navn.trim() : (w[k] ?? ""))); };
+function vælg(valg, v, f) {
+  return h("select", {class: "felt", onchange: e => f(e.target.value)}, valg.map(x => h("option", {value: x, selected: x === v}, x)));
+}
+function visLager() {
+  if (!L) nulstilLager();
+  const y = window.scrollY;
+  const søg = h("input", {class: "input", type: "search", placeholder: "Søg …", value: L.q, oninput: () => { L.q = søg.value; filtrér(); }});
+  const aktive = D.udstyr.filter(u => u.status !== "Solgt").length;
+  const side = h("div", {class: "lagerside"},
+    h("div", {class: "lagertop"},
+      h("h1", {}, "Lager"), h("span", {class: "muted"}, `${aktive} ting`),
+      h("div", {class: "spacer"}), søg,
+      h("label", {class: "muted lille"}, h("input", {type: "checkbox", checked: L.solgte, onchange: e => { L.solgte = e.target.checked; visLager(); }}), " Vis solgte"),
+      h("button", {class: "btn primaer", type: "button", onclick: () => { L.visNy = true; visLager(); $("nyNavn")?.focus(); }}, "+ Nyt udstyr")),
+    L.visNy ? nyForm() : null,
+    h("div", {class: "lhd"}, h("span", {}, "Navn"), h("span", {}, "Kategori"), h("span", {}, "Antal"), h("span", {}, "Status"), h("span", {}, "Fast note"), h("span", {})),
+    L.ny.length ? h("div", {class: "gruppe", "data-gruppe": ""}, h("div", {class: "overskrift"}, "Nyt, gemmes når du trykker Gem"),
+      h("div", {class: "kort"}, L.ny.map((n, i) => h("div", {class: "lr aendret", "data-navn": nøgle(n.navn)},
+        h("span", {style: "padding:0 7px;font-weight:600"}, n.navn), h("span", {}, n.kategori), h("span", {}, n.antal + " stk"), h("span", {}, "På lager"),
+        h("span", {class: "muted"}, n.note || ""),
+        h("button", {class: "x", type: "button", title: "Fjern", onclick: () => { L.ny.splice(i, 1); visLager(); }}, "×"))))) : null,
+    kategorier().map(kat => {
+      const ws = L.w.filter(w => w.kategori === kat && (L.solgte || w.status !== "Solgt" || erÆndret(w))).sort((a, b) => a._orig.localeCompare(b._orig, "da"));
+      return ws.length ? h("div", {class: "gruppe", "data-gruppe": ""}, h("div", {class: "overskrift"}, kat), h("div", {class: "kort"}, ws.map(lagerRække))) : null;
+    }),
+    h("div", {class: "bar", id: "bar"}));
+  $("rod").replaceChildren(side);
+  filtrér();
+  tegnBar();
+  window.scrollTo(0, y);
+}
+function lagerRække(w) {
+  const r = h("div", {class: "lr" + (w.status === "Solgt" ? " solgt" : ""), "data-navn": nøgle(w.navn)});
+  const markér = () => { r.classList.toggle("aendret", erÆndret(w)); r.dataset.navn = nøgle(w.navn); L.svar = null; tegnBar(); };
+  const antalEl = h("span", {}, w.antal);
+  const skift = d => { w.antal = Math.max(0, (Number(w.antal) || 0) + d); antalEl.textContent = w.antal; markér(); };
+  r.append(
+    h("input", {class: "felt", value: w.navn, "aria-label": "Navn", style: "font-weight:500", oninput: e => { w.navn = e.target.value; markér(); }}),
+    vælg(kategorier(), w.kategori, v => { w.kategori = v; L.svar = null; visLager(); }),
+    h("span", {class: "step"}, h("button", {type: "button", "aria-label": "En mindre", onclick: () => skift(-1)}, "−"), antalEl,
+      h("button", {type: "button", "aria-label": "En mere", onclick: () => skift(1)}, "+")),
+    vælg(STATUS, w.status, v => { w.status = v; L.svar = null; visLager(); }),
+    h("input", {class: "felt", value: w.note || "", placeholder: "–", "aria-label": "Note", oninput: e => { w.note = e.target.value; markér(); }}),
+    h("span", {}));
+  r.classList.toggle("aendret", erÆndret(w));
+  return r;
+}
+function filtrér() {
+  const q = nøgle(L.q);
+  for (const g of document.querySelectorAll("[data-gruppe]")) {
+    let n = 0;
+    for (const r of g.querySelectorAll(".lr")) { const vis = !q || r.dataset.navn.includes(q); r.style.display = vis ? "" : "none"; if (vis) n++; }
+    g.style.display = n ? "" : "none";
+  }
+}
+function nyForm() {
+  const navn = h("input", {class: "input", id: "nyNavn", placeholder: "Fx Røgmaskine"});
+  const kat = vælg(KAT, KAT[0], () => {});
+  kat.className = "input";
+  const antal = h("input", {class: "input", type: "number", min: "0", step: "1", value: "1"});
+  const note = h("input", {class: "input", placeholder: "Fast note (valgfri)"});
+  const tilføj = () => {
+    const n = navn.value.trim(), a = Number(antal.value);
+    if (!n) { navn.focus(); return; }
+    if ([...L.w.map(w => w.navn), ...L.ny.map(x => x.navn)].some(x => nøgle(x) === nøgle(n))) { alert(`'${n}' findes allerede på lageret.`); return; }
+    if (!Number.isInteger(a) || a < 0) { alert("Antal skal være et helt tal fra 0 og op."); return; }
+    L.ny.push({navn: n, kategori: kat.value, antal: a, note: note.value.trim()});
+    L.svar = null;
+    visLager();
+    $("nyNavn")?.focus();
+  };
+  navn.addEventListener("keydown", e => { if (e.key === "Enter") tilføj(); });
+  return h("div", {class: "nyform"},
+    h("label", {}, h("span", {class: "etiket"}, "Navn"), navn),
+    h("label", {}, h("span", {class: "etiket"}, "Kategori"), kat),
+    h("label", {}, h("span", {class: "etiket"}, "Antal"), antal),
+    h("label", {}, h("span", {class: "etiket"}, "Note"), note),
+    h("div", {style: "display:flex;gap:6px"}, h("button", {class: "btn primaer", type: "button", onclick: tilføj}, "Tilføj"),
+      h("button", {class: "btn ghost", type: "button", onclick: () => { L.visNy = false; visLager(); }}, "Luk")));
+}
+function tegnBar() {
+  const bar = $("bar");
+  if (!bar) return;
+  const n = ændringer().length + L.ny.length;
+  bar.style.display = n || L.svar ? "" : "none";
+  const s = L.svar;
+  bar.replaceChildren(h("div", {class: "indre"},
+    s ? h("div", {class: "svar " + s.klasse}, h("b", {}, s.titel), s.punkter?.length ? h("ul", {}, s.punkter.map(p => h("li", {}, p))) : null)
+      : h("div", {style: "flex:1"}, h("b", {}, `${n} ${n === 1 ? "ændring" : "ændringer"}`), h("span", {class: "muted"}, " er ikke gemt endnu")),
+    n ? [h("button", {class: "btn ghost", type: "button", disabled: optaget, onclick: () => { nulstilLager(); visLager(); }}, "Fortryd"),
+         h("button", {class: "btn primaer", type: "button", disabled: optaget, onclick: gemLager}, optaget ? "Gemmer …" : "Gem på lageret")]
+      : h("button", {class: "x", type: "button", title: "Luk", onclick: () => { L.svar = null; tegnBar(); }}, "×")));
+}
+async function gemLager() {
+  const ret = ændringer();
+  if (ret.some(r => r.felter.navn !== undefined && !String(r.felter.navn).trim())) { alert("Et navn er tomt."); return; }
+  const ny = L.ny.map(x => ({navn: x.navn, kategori: x.kategori, antal: x.antal, note: x.note}));
+  optaget = true;
+  L.svar = {klasse: "", titel: "Gemmer på lageret … det tager typisk under et minut."};
+  tegnBar();
+  try {
+    const sv = await anmod("lager", {type: "lager", ret, ny}, `Panel: lager (${ret.length} rettet, ${ny.length} nye)`);
+    if (!sv) L.svar = {klasse: "fejl", titel: "Intet svar efter 4 minutter.", punkter: ["Tjek kørslen under Actions i fabz-data."]};
+    else if (sv.status === "FEJL") L.svar = {klasse: "fejl", titel: "Fejl, intet er gemt.", punkter: [sv.fejl]};
+    else {
+      [D.udstyr, D.lister] = await Promise.all([laesJson("data/udstyr.json"), laesJson("data/pakkelister.json")]);
+      nulstilLager();
+      L.svar = {klasse: sv.status === "ADVARSEL" ? "adv" : "ok", titel: sv.status === "ADVARSEL" ? "Gemt, men tjek advarslerne" : "Gemt",
+                punkter: [...sv.advarsler.map(a => "Advarsel: " + a), ...sv.info]};
+    }
+  } catch (e) {
+    L.svar = {klasse: "fejl", titel: "Det gik galt.", punkter: [e.message]};
+  } finally {
+    optaget = false;
+    if (fane === "lager") visLager();
   }
 }
 
 // ---------- hent alle jobs ----------
 async function hentJobs() {
-  const knap = document.getElementById("hentjobs");
-  knap.disabled = true;
+  henterJobs = true;
+  tegnTop();
   const t0 = Date.now();
   try {
-    knap.textContent = "Starter ...";
-    const r = await gh(`/repos/${REPO}/actions/workflows/kalender.yml/dispatches`, {method: "POST", body: {ref: BRANCH, inputs: {opgaver: "true"}}});
-    tjek(r, "kalender-workflowet");
-    knap.textContent = "Henter ...";
-    let ok = null;
+    tjek(await gh(`/repos/${REPO}/actions/workflows/kalender.yml/dispatches`, {method: "POST", body: {ref: BRANCH, inputs: {opgaver: "true"}}}), "kalender-workflowet");
+    let run = null;
     while (Date.now() - t0 < 240000) {
       await sleep(4000);
-      const rr = await gh(`/repos/${REPO}/actions/workflows/kalender.yml/runs?event=workflow_dispatch&per_page=5&t=${Date.now()}`);
-      tjek(rr, "kørselsstatus");
-      const run = (await rr.json()).workflow_runs.find(x => Date.parse(x.created_at) >= t0 - 60000);
-      if (run && run.status === "completed") { ok = run; break; }
+      const rr = tjek(await gh(`/repos/${REPO}/actions/workflows/kalender.yml/runs?event=workflow_dispatch&per_page=5&t=${Date.now()}`), "kørselsstatus");
+      run = (await rr.json()).workflow_runs.find(x => Date.parse(x.created_at) >= t0 - 60000);
+      if (run && run.status === "completed") break;
+      run = null;
     }
-    if (!ok) throw new Error("Hentningen blev ikke færdig inden 4 minutter. Tjek Actions i fabz-data.");
-    if (ok.conclusion !== "success") throw new Error("Hentningen fejlede (" + ok.conclusion + "). Se " + ok.html_url);
+    if (!run) throw new Error("Hentningen blev ikke færdig inden 4 minutter. Tjek Actions i fabz-data.");
+    if (run.conclusion !== "success") throw new Error("Hentningen fejlede (" + run.conclusion + "). Se " + run.html_url);
     await hentData();
-    visOpdateret();
-    visSide();
-    if (S) visEditor();
   } catch (e) {
     alert(e.message);
   } finally {
-    knap.textContent = "Hent alle jobs";
-    knap.disabled = false;
+    henterJobs = false;
+    tegn();
   }
 }
 
-// ---------- start ----------
-async function start() {
-  token = localStorage.getItem(TOKEN_KEY);
-  if (!token) { visOpsaet(); return; }
-  $rod().replaceChildren(h("div", {class: "tom"}, "Henter data ..."));
-  try {
-    await hentData();
-  } catch (e) {
-    visOpsaet(e.message);
-    return;
-  }
-  $rod().replaceChildren(h("main", {}, h("div", {class: "side", id: "side"}), h("div", {class: "editor", id: "editor"})));
-  S = null;
-  visOpdateret();
-  visSide();
-  visEditor();
+// ---------- token og start ----------
+function skiftToken() {
+  lager.del(TOKEN_KEY);
+  token = null;
+  visOpsaet();
 }
-document.getElementById("hentjobs").addEventListener("click", hentJobs);
-document.getElementById("skiftToken").addEventListener("click", () => { localStorage.removeItem(TOKEN_KEY); token = null; visOpsaet(); });
+function visOpsaet(fejl) {
+  $("top").replaceChildren(h("span", {class: "brand"}, "Fabz"));
+  const felt = h("input", {class: "input", type: "password", placeholder: "github_pat_…", autocomplete: "off"});
+  const gem = () => { const t = felt.value.trim(); if (!t) return; lager.set(TOKEN_KEY, t); token = t; start(); };
+  felt.addEventListener("keydown", e => { if (e.key === "Enter") gem(); });
+  $("rod").replaceChildren(h("div", {class: "opsaet"},
+    h("h2", {}, "Indsæt din token"),
+    h("p", {class: "muted"}, "Den ligger i 1Password (fine-grained, kun til ", REPO, ", Contents og Actions read/write). Den gemmes kun i denne browser."),
+    fejl ? h("p", {class: "fejltekst"}, fejl) : null, felt,
+    h("div", {style: "margin-top:12px"}, h("button", {class: "btn primaer", type: "button", onclick: gem}, "Gem og åbn"))));
+}
+async function start() {
+  token = token || lager.get(TOKEN_KEY);
+  if (!token) { visOpsaet(); return; }
+  $("rod").replaceChildren(h("div", {class: "tom"}, "Henter data …"));
+  try { await hentData(); } catch (e) { visOpsaet(e.message); return; }
+  S = null; L = null;
+  tegn();
+}
+window.addEventListener("beforeunload", e => {
+  if ((L && (ændringer().length || L.ny.length)) || optaget) { e.preventDefault(); e.returnValue = ""; }
+});
 start();
 </script>
 </body>
