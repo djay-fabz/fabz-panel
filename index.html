@@ -308,10 +308,10 @@ async function skrivFil(p, obj, besked) {
     body: {message: besked, content: base64(JSON.stringify(obj, null, 1)), branch: BRANCH}}), "inbox");
 }
 async function hentData() {
-  const [kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, ideer, indtaegter, typer] = await Promise.all([
+  const [kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, ideer, indtaegter, typer, salg] = await Promise.all([
     ...["data/kalender.json", "data/udstyr.json", "data/pakkelister.json", "data/opgaver.json"].map(laesJson), laesJobpl(),
-    ...["data/henvendelser.json", "data/dagsplaner.json", "data/ideer.json", "data/indtaegter.json", "data/typer.json"].map(p => laesFil(p).then(r => r ? r.json() : []))]);
-  D = {kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, ideer, indtaegter, typer};
+    ...["data/henvendelser.json", "data/dagsplaner.json", "data/ideer.json", "data/indtaegter.json", "data/typer.json", "data/salg.json"].map(p => laesFil(p).then(r => r ? r.json() : []))]);
+  D = {kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, ideer, indtaegter, typer, salg};
 }
 async function laesJobpl() {   // findes først, når den første liste er godkendt
   const r = await laesFil("data/jobpakkelister.json");
@@ -443,7 +443,7 @@ function tegnTop() {
   top.replaceChildren(
     h("span", {class: "brand"}, "Fabz"),
     h("nav", {class: "tabs"},
-      [["idag", "I dag"], ["opgaver", "Opgaver"], ["foresp", "Forespørgsler"], ["pakkelister", "Pakkelister"], ["lager", "Lager"], ["ideer", "Idéer"], ["indtaegter", "Indtægter"]].map(([v, t]) =>
+      [["idag", "I dag"], ["opgaver", "Opgaver"], ["foresp", "Forespørgsler"], ["salg", "Salg"], ["pakkelister", "Pakkelister"], ["lager", "Lager"], ["ideer", "Idéer"], ["indtaegter", "Indtægter"]].map(([v, t]) =>
         h("button", {type: "button", class: "tab" + (fane === v ? " aktiv" : ""), onclick: () => { fane = v; tegn(); window.scrollTo(0, 0); }}, t))),
     h("div", {class: "spacer"}),
     ...(fane === "pakkelister" || fane === "idag" ? [tid, h("button", {class: "btn", type: "button", disabled: henterJobs, onclick: hentJobs}, henterJobs ? "Henter …" : "Hent alle jobs")] : []),
@@ -452,7 +452,7 @@ function tegnTop() {
 function tegn() {
   document.body.classList.remove("bar-synlig");
   tegnTop();
-  const vis = {idag: visIDag, opgaver: visOpgaver, foresp: visForesp, ideer: visIdeer, indtaegter: visIndtaegter, lager: visLager}[fane];
+  const vis = {idag: visIDag, opgaver: visOpgaver, foresp: visForesp, salg: visSalg, ideer: visIdeer, indtaegter: visIndtaegter, lager: visLager}[fane];
   if (vis) vis();
   else if (S) visEditor();
   else visJobs();
@@ -952,7 +952,7 @@ async function gemLager() {
 
 // ---------- fælles: kør fabz.py-kommandoer fra panelet ----------
 const FILER = {henvendelser: "data/henvendelser.json", opgaver: "data/opgaver.json", dagsplaner: "data/dagsplaner.json",
-               ideer: "data/ideer.json", indtaegter: "data/indtaegter.json", typer: "data/typer.json"};
+               ideer: "data/ideer.json", indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json"};
 async function laesValgfri(p) { const r = await laesFil(p); return r ? r.json() : []; }
 async function genindlæs(navne) { await Promise.all(navne.map(async n => { D[n] = await laesValgfri(FILER[n]); })); }
 const plusDage = (iso, n) => { const d = dag(iso); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
@@ -1053,6 +1053,10 @@ function visIDag() {
         sideKort(`Forespørgsler der venter (${henv.length})`, henv.length ? henv.slice(0, 6).map(x => h("button", {class: "mini link", type: "button", disabled: x.id === "…",
           onclick: () => { fane = "foresp"; FQ.vis = "h"; FQ.valgt = x.id; tegn(); }},
           h("span", {class: "pill " + pillKlasse(x.status)}, x.status), h("span", {}, x.kunde))) : h("div", {class: "muted lille"}, "Ingen")),
+        (() => { const due = (D.salg || []).filter(s => s.naeste_opfoelgning && s.naeste_opfoelgning <= iDag());
+          return sideKort(`Salg: følg op i dag (${due.length})`, due.length ? due.map(s => h("button", {class: "mini link", type: "button",
+            onclick: () => { fane = "salg"; SG.vis = "s"; SG.valgt = s.navn; SG.k = {naeste: s.naeste || ""}; tegn(); }},
+            h("span", {class: "lille tid " + (s.naeste_opfoelgning < iDag() ? "rød" : "muted")}, kortDato(s.naeste_opfoelgning)), h("span", {}, s.navn))) : h("div", {class: "muted lille"}, "Ingen")); })(),
         sideKort("Næste jobs", næste.length ? næste.map(j => {
           const jp = jobplTilJob(j), klar = !!jp?.godkendt || opgaveTilJob(j)?.status === "Færdig";
           return h("button", {class: "mini link", type: "button", onclick: () => { fane = "pakkelister"; åbnJob(j); }},
@@ -1465,6 +1469,109 @@ function visIndtaegter() {
         h("span", {class: "pill" + (r.type === "Kontant" ? " gul" : " blå")}, r.type),
         r.i_dinero ? h("span", {class: "pill"}, "i Dinero") : null,
         h("b", {style: "min-width:90px;text-align:right"}, kr(r.beloeb))))) : tom("Ingen registrerede indtægter endnu."))));
+}
+
+// ---------- Salg ----------
+const S_TYPE = ["Eksisterende kunde", "Venue", "Ny virksomhed"];
+const S_STATUS = ["Ikke kontaktet", "Kontaktet", "Møde aftalt", "Tilbud sendt", "Booket", "Ikke nu"];
+const SG = {vis: null, valgt: null, lukkede: false, ny: {}, k: {}};
+const salgPill = s => ({"Kontaktet": "blå", "Møde aftalt": "blå", "Tilbud sendt": "gul", "Booket": "grøn"})[s] || "";
+function visSalg() {
+  const idag = iDag(), rows = (D.salg || []).slice();
+  const åben = s => !["Booket", "Ikke nu"].includes(s.status);
+  const iDagL = rows.filter(s => s.naeste_opfoelgning && s.naeste_opfoelgning <= idag).sort((a, b) => a.naeste_opfoelgning.localeCompare(b.naeste_opfoelgning));
+  const senere = rows.filter(s => s.naeste_opfoelgning && s.naeste_opfoelgning > idag).sort((a, b) => a.naeste_opfoelgning.localeCompare(b.naeste_opfoelgning));
+  const uden = rows.filter(s => !s.naeste_opfoelgning && åben(s));
+  const lukket = rows.filter(s => !s.naeste_opfoelgning && !åben(s));
+  const række = s => h("button", {type: "button", class: "r række" + (SG.vis === "s" && SG.valgt === s.navn ? " valgt" : ""), disabled: !!s._ny,
+    onclick: () => { SG.vis = "s"; SG.valgt = s.navn; SG.k = {naeste: s.naeste || ""}; tegn(); }},
+    h("div", {class: "n"}, h("div", {class: "titel"}, s.navn, s._ny ? h("span", {class: "muted lille"}, "  gemmes …") : null),
+      h("div", {class: "meta"}, h("span", {}, s.type),
+        s.naeste_opfoelgning ? h("span", {class: s.naeste_opfoelgning < idag ? "rød" : ""}, "følg op " + kortDato(s.naeste_opfoelgning)) : null,
+        s.naeste ? h("span", {style: "overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:320px"}, s.naeste) : null)),
+    h("span", {class: "pill " + salgPill(s.status)}, s.status));
+  const gruppe = (titel, l, tomTekst) => [h("div", {class: "overskrift", style: "margin-top:16px"}, `${titel} (${l.length})`),
+    h("div", {class: "kort"}, l.length ? l.map(række) : tom(tomTekst))];
+  const venstre = h("div", {class: "liste-kol"},
+    h("div", {class: "kh"}, h("h1", {}, "Salg"), h("div", {class: "spacer"}),
+      h("button", {class: "btn primaer", type: "button", onclick: () => { SG.vis = "ny"; SG.ny = {type: "Ny virksomhed", status: "Ikke kontaktet"}; tegn(); }}, "+ Ny kunde")),
+    gruppe("Følg op i dag", iDagL, "Ingen at følge op på i dag."),
+    uden.length ? [h("div", {class: "overskrift gul-t", style: "margin-top:16px"}, `Uden opfølgningsdato (${uden.length})`), h("div", {class: "kort"}, uden.map(række))] : null,
+    gruppe("Senere", senere, "Ingen planlagte opfølgninger."),
+    h("button", {class: "btn ghost lille", type: "button", style: "margin-top:12px", onclick: () => { SG.lukkede = !SG.lukkede; tegn(); }},
+      SG.lukkede ? "Skjul Booket og Ikke nu" : `Vis Booket og Ikke nu (${lukket.length})`),
+    SG.lukkede && lukket.length ? h("div", {class: "kort"}, lukket.map(række)) : null);
+  const højre = h("div", {class: "detalje-kol"},
+    SG.vis === "ny" ? nySalgForm() : SG.vis === "s" ? salgDetalje((D.salg || []).find(s => s.navn === SG.valgt)) : tom("Vælg en kunde, eller tilføj en ny."));
+  $("rod").replaceChildren(h("div", {class: "to"}, venstre, højre));
+}
+function datoKnapper(st, k, felt) {
+  const sæt = n => { st[k] = plusDage(iDag(), n); if (felt) felt.value = st[k]; };
+  return h("div", {class: "rk", style: "margin-top:4px;gap:6px;flex-wrap:wrap"},
+    [["+3 dage", 3], ["+1 uge", 7], ["+2 uger", 14], ["+1 md.", 30]].map(([t, n]) => h("button", {class: "chip", type: "button", onclick: () => sæt(n)}, t)));
+}
+function salgDetalje(s) {
+  if (!s) return tom("Kunden findes ikke længere.");
+  const k = SG.k, efter = ["salg"];
+  const opf = h("input", {class: "input", type: "date", value: k.opfoelgning || "", onchange: e => { k.opfoelgning = e.target.value; }});
+  const registrér = () => {
+    const tekst = (k.tekst || "").trim();
+    if (!tekst) { alert("Skriv kort hvad der skete."); return; }
+    if (!k.opfoelgning && !k.ingen && !["Booket", "Ikke nu"].includes(k.status || s.status)
+        && !confirm("Ingen ny opfølgningsdato. Så falder kunden ud af listen over opfølgninger. Fortsæt?")) return;
+    const args = [...((k.naeste || "").trim() ? [`--naeste=${k.naeste.trim()}`] : []),
+      ...(k.opfoelgning ? [`--opfoelgning=${k.opfoelgning}`] : k.ingen ? ["--ingen-opfoelgning"] : []),
+      ...(k.status && k.status !== s.status ? [`--status=${k.status}`] : []), "--", s.navn, tekst];
+    kør("salg-kontakt", args, {tekst: `${s.navn}: kontakt`, efter, med: () => {
+      s.senest_kontakt = iDag(); s.historik = ((s.historik || "") + ` ${iDag()}: ${tekst}`).trim();
+      if ((k.naeste || "").trim()) s.naeste = k.naeste.trim();
+      if (k.opfoelgning) s.naeste_opfoelgning = k.opfoelgning; else if (k.ingen) delete s.naeste_opfoelgning;
+      if (k.status) s.status = k.status;
+      SG.k = {naeste: s.naeste || ""};
+    }});
+  };
+  return h("div", {class: "kort2"},
+    h("div", {class: "kh"}, h("h2", {}, s.navn), h("span", {class: "muted lille"}, s.type)),
+    seg(S_STATUS, s.status, v => { if (v !== s.status) kør("salg-ret", ["--", s.navn, `status=${v}`], {tekst: `${s.navn}: ${v}`, efter, med: () => { s.status = v; }}); }),
+    h("div", {class: "felter3", style: "margin-top:12px"},
+      felt("Næste opfølgning", h("div", {class: "muted"}, s.naeste_opfoelgning ? dagNavnLang(s.naeste_opfoelgning) : "ingen dato")),
+      felt("Senest kontakt", h("div", {class: "muted"}, s.senest_kontakt ? kortDatoÅr(s.senest_kontakt) : "–"))),
+    s.kontakt ? h("div", {class: "info"}, h("div", {class: "etiket"}, "Kontaktperson"), h("div", {class: "pre"}, s.kontakt)) : null,
+    s.naeste ? h("div", {class: "info"}, h("div", {class: "etiket"}, "Næste skridt"), h("div", {class: "pre"}, s.naeste)) : null,
+    h("div", {class: "afslut"},
+      h("div", {class: "etiket", style: "font-weight:600;color:var(--tekst)"}, "Registrér kontakt"),
+      felt("Hvad skete der?", tekstfelt(k, "tekst", {rows: 2, placeholder: "Fx Ringede til Felix. Han sender navnet på bestyrelsen."})),
+      felt("Næste skridt", inp(k, "naeste")),
+      h("div", {class: "felter3", style: "margin:4px 0 0"},
+        h("div", {}, felt("Ny opfølgning", opf), datoKnapper(k, "opfoelgning", opf)),
+        felt("Ny status (valgfri)", sel([["", "Uændret"], ...S_STATUS], k, "status"))),
+      h("label", {class: "cb", style: "border:0;padding:6px 0"}, h("input", {type: "checkbox", checked: !!k.ingen, onchange: e => { k.ingen = e.target.checked; }}),
+        h("span", {class: "t"}, "Ingen ny opfølgning (fjern datoen)")),
+      h("button", {class: "btn primaer", type: "button", style: "margin-top:6px", onclick: registrér}, "Gem kontakt")),
+    s.historik ? h("div", {class: "info"}, h("div", {class: "etiket"}, "Historik"), h("div", {class: "pre lille muted"}, s.historik)) : null);
+}
+function nySalgForm() {
+  const n = SG.ny;
+  const opf = h("input", {class: "input", type: "date", value: n.opfoelgning || "", onchange: e => { n.opfoelgning = e.target.value; }});
+  return h("div", {class: "kort2"},
+    h("div", {class: "kh"}, h("h2", {}, "Ny kunde i salg"), h("button", {class: "x", type: "button", onclick: () => { SG.vis = null; tegn(); }}, "×")),
+    felt("Navn (firma eller venue)", inp(n, "navn")),
+    h("div", {class: "felter3"}, felt("Type", sel(S_TYPE, n, "type")), felt("Status", sel(S_STATUS, n, "status"))),
+    felt("Kontaktperson (navn, rolle, telefon, mail)", inp(n, "kontakt")),
+    felt("Næste skridt", inp(n, "naeste")),
+    h("div", {}, felt("Første opfølgning", opf), datoKnapper(n, "opfoelgning", opf)),
+    felt("Kendt historik (valgfri)", tekstfelt(n, "historik", {rows: 2})),
+    h("button", {class: "btn primaer stor", type: "button", style: "margin-top:12px", onclick: () => {
+      const navn = (n.navn || "").trim();
+      if (!navn) { alert("Skriv et navn."); return; }
+      if ((D.salg || []).some(s => nøgle(s.navn) === nøgle(navn))) { alert(`'${navn}' findes allerede i salg.`); return; }
+      const args = [`--type=${n.type}`, `--status=${n.status}`,
+        ...["kontakt", "naeste", "opfoelgning", "historik"].filter(x => String(n[x] ?? "").trim()).map(x => `--${x}=${String(n[x]).trim()}`), "--", navn];
+      kør("salg-ny", args, {tekst: `Salg: ${navn}`, efter: ["salg"], med: () => {
+        (D.salg ||= []).push({navn, type: n.type, status: n.status, _ny: true, ...(n.opfoelgning ? {naeste_opfoelgning: n.opfoelgning} : {}), ...(n.naeste ? {naeste: n.naeste} : {})});
+        SG.vis = null; SG.ny = {};
+      }});
+    }}, "Tilføj"));
 }
 
 // ---------- hent alle jobs ----------
