@@ -1559,6 +1559,7 @@ function planlægPanel() {
           OP.planArbejder && OP.planMode !== "selv" ? "Laver forslag …" : "Foreslå en plan"),
         h("button", {class: "btn", type: "button", disabled: OP.planArbejder, onclick: () => lavForslag(true)},
           OP.planArbejder && OP.planMode === "selv" ? "Åbner …" : "Lav selv"))),
+    !p ? h("div", {class: "muted lille", style: "margin-top:8px"}, "Foreslå en plan: panelet foreslår opgaver til tiden, og du kan rette bagefter. Lav selv: tom plan, du vælger opgaverne.") : null,
     p ? [
       h("div", {class: "muted lille", style: "margin-top:8px"}, enkelt ? `${dagNavnLang(p.dato)} · arbejdstid ${p.foer_tid}, ingen frokostpause` : `${dagNavnLang(p.dato)} · før frokost ${p.foer_tid} · efter frokost ${p.efter_tid}`),
       h("div", {class: "muted lille", style: "margin-top:4px"}, "Tryk på en opgave i listen til venstre, eller træk den over i en blok."),
