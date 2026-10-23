@@ -2041,7 +2041,7 @@ function visRute() {
   };
   $("rod").replaceChildren(h("div", {class: "side"},
     h("h1", {}, "Kørsel"),
-    h("div", {class: "muted"}, "Skriv stedene i rækkefølge og vælg køretøj. Sæt en tid på de steder, hvor du skal være på et bestemt tidspunkt, og en afgangstid på første sted, hvis du kender den. Mellem faste tider regnes der baglæns (hvornår skal jeg køre), og efter den sidste faste tid regnes der hurtigst muligt. Trailer regner med højst 80 km/t, bil med vejens egen hastighed. Køretiden er uden trafik og regnet med lidt ekstra tid. Ophold er tiden på stedet: på første adresse før afgang, på sidste efter ankomst."),
+    h("div", {class: "muted"}, "Skriv stedene i rækkefølge og vælg køretøj. Sæt en tid på de steder, hvor du skal være på et bestemt tidspunkt, og en afgangstid på første sted, hvis du kender den. Mellem faste tider regnes der baglæns (hvornår skal jeg køre), og efter den sidste faste tid regnes der hurtigst muligt. Trailer regner med højst 80 km/t, bil med vejens egen hastighed. Køretiden er ren kørsel uden trafik, færger og vejarbejde. Ophold er tiden på stedet: på første adresse før afgang, på sidste efter ankomst."),
     h("div", {class: "gruppe", style: "margin-top:16px"}, h("div", {class: "overskrift"}, "Job"),
       h("select", {class: "input", style: "margin-top:8px", disabled: r.arbejder, onchange: e => { vælgRuteJob(e.target.value); tegn(); }},
         h("option", {value: ""}, "Intet job (kun beregning)"),
