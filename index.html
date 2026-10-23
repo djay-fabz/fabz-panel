@@ -550,8 +550,10 @@ const jobStatus = j => {
   const klar = !!jp?.godkendt || opgaveTilJob(j)?.status === "Færdig";
   const kort = !!(festkortTilJob(j) || klubkortTilJob(j));
   const kortO = opg.some(o => o.job_opgave === "festkort" && o.status !== "Færdig");
+  const dage = Math.round((dag(j.dato) - dag(iDag())) / 864e5);
   return {key, klar, pak: klar ? "Klar" : liste || jp ? "Skal godkendes" : "Skal laves", kort, kortTekst: kort ? "Lavet" : kortO ? "Skal laves" : "Ingen skilte oprettet",
-    kørsel: !!(D.jobrute || {})[key], åbne: opg.filter(o => o.status !== "Færdig")};
+    skilteRel: kort || kortO || erKlub(j),   // skilte vises kun, når jobbet har dem, har en skilte-opgave eller er et klubjob
+    dage, kørsel: !!(D.jobrute || {})[key], åbne: opg.filter(o => o.status !== "Færdig")};
 };
 const jobTider = j => {   // linjerne under TIDER i bookingen (kun læsning)
   const t = (j.besk || "").replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "").split("\n").map(x => x.trim());
@@ -569,9 +571,11 @@ function visJobs() {
   if (j0) return visJobSide(j0);
   const valg = h("select", {class: "input", onchange: e => { if (e.target.value) åbnListe(e.target.value); }},
     h("option", {value: ""}, "Åbn en gemt liste …"), D.lister.map(p => h("option", {value: p.navn}, p.navn)));
-  const ok = j => { const st = jobStatus(j); return JF === "alle" || (JF === "pak" && !st.klar) || (JF === "kort" && !st.kort) || (JF === "koersel" && !st.kørsel) || (JF === "opg" && st.åbne.length); };
+  const ok = j => { const st = jobStatus(j); return JF === "alle" || (JF === "pak" && !st.klar) || (JF === "kort" && st.skilteRel && !st.kort) || (JF === "koersel" && !st.kørsel) || (JF === "opg" && st.åbne.length); };
   const vist = js.filter(ok);
-  const chip = (t, god) => h("span", {class: "pill" + (god ? " grøn" : "")}, t);
+  // grøn = klar, rød = mangler og jobbet er inden for 3 dage, gul = mangler, grå = intet at gøre endnu
+  const chip = (t, god, dage) => h("span", {class: "pill" + (god ? " grøn" : dage == null ? "" : dage <= 3 ? " rød-pill" : " gul")}, t);
+  const nårTekst = n => n <= 0 ? "I dag" : n === 1 ? "I morgen" : `Om ${n} dage`;
   $("rod").replaceChildren(h("div", {class: "side"},
     h("div", {style: "display:flex;align-items:center;gap:12px;flex-wrap:wrap"}, h("h1", {style: "margin:0"}, "Jobs"), h("div", {class: "spacer"}), hentJobsLinje()),
     h("div", {style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px"},
@@ -584,8 +588,10 @@ function visJobs() {
         return h("button", {class: "job", type: "button", onclick: () => { JH = st.key; tegn(); window.scrollTo(0, 0); }},
           h("div", {class: "dato"}, h("b", {}, d.getDate()), h("span", {}, MD[d.getMonth()])),
           h("div", {class: "t"}, h("b", {}, j.navn), h("span", {class: "muted lille"}, [DAGE[d.getDay()], j.sted].filter(Boolean).join(" · ")),
-            h("div", {class: "chips", style: "margin-top:6px"}, chip("Pakkeliste: " + st.pak, st.klar), chip("Skilte: " + st.kortTekst, st.kort), chip("Kørsel: " + (st.kørsel ? "gemt" : "ikke lavet"), st.kørsel),
-              st.åbne.length ? chip(st.åbne.length + (st.åbne.length === 1 ? " åben opgave" : " åbne opgaver")) : null)));
+            h("div", {class: "chips", style: "margin-top:6px"}, chip("Pakkeliste: " + st.pak, st.klar, st.dage),
+              st.skilteRel ? chip("Skilte: " + st.kortTekst, st.kort, st.dage) : null, chip("Kørsel: " + (st.kørsel ? "gemt" : "ikke lavet"), st.kørsel),
+              st.åbne.length ? chip(st.åbne.length + (st.åbne.length === 1 ? " åben opgave" : " åbne opgaver")) : null)),
+          h("div", {class: st.dage <= 1 ? "" : "muted lille", style: st.dage <= 1 ? "font-weight:600;white-space:nowrap" : "white-space:nowrap"}, nårTekst(st.dage)));
       }) : h("div", {class: "tom"}, js.length ? "Ingen jobs matcher filteret." : "Ingen jobs fra i dag og frem. Tryk Hent alle jobs.")),
     h("div", {class: "andre", style: "display:flex;gap:8px;flex-wrap:wrap"}, valg,
       h("button", {class: "btn", type: "button", onclick: () => { RU.job = ""; fane = "rute"; tegn(); }}, "Køreberegning uden job"))));
