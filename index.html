@@ -2087,8 +2087,9 @@ function visSalg() {
         s.naeste_opfoelgning ? h("span", {class: s.naeste_opfoelgning < idag ? "rød" : ""}, "følg op " + kortDato(s.naeste_opfoelgning)) : null,
         s.naeste ? h("span", {style: "overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:320px"}, s.naeste) : null)),
     h("span", {class: "pill " + salgPill(s.status)}, s.status));
-  const gruppe = (titel, l, tomTekst) => [h("div", {class: "overskrift", style: "margin-top:16px"}, `${titel} (${l.length})`),
-    h("div", {class: "kort"}, l.length ? l.map(række) : tom(tomTekst))];
+  const gruppe = (titel, l, tomTekst) => l.length
+    ? [h("div", {class: "overskrift", style: "margin-top:16px"}, `${titel} (${l.length})`), h("div", {class: "kort"}, l.map(række))]
+    : [h("div", {class: "overskrift", style: "margin-top:16px"}, `${titel} (0)`), h("div", {class: "muted lille", style: "padding:2px 0 0"}, tomTekst)];
   const venstre = h("div", {class: "liste-kol"},
     h("div", {class: "kh"}, h("h1", {}, "Salg"), h("div", {class: "spacer"}),
       h("button", {class: "btn primaer", type: "button", onclick: () => { SG.vis = "ny"; SG.ny = {type: "Ny virksomhed", status: "Ikke kontaktet"}; tegn(); }}, "+ Ny kunde")),
