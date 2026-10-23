@@ -38,6 +38,24 @@ input::placeholder{color:var(--svagere)}
 .tilbage{border:0;background:none;padding:6px 10px 6px 4px;border-radius:8px;color:var(--svag);font-weight:500}
 .tilbage:hover{background:var(--hover);color:var(--tekst)}
 
+/* menu: Mere */
+.mere{position:relative;display:flex}
+.meremenu{position:absolute;right:0;top:calc(100% + 8px);min-width:190px;background:var(--flade);border:1px solid var(--linje);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.18);padding:6px;z-index:30;display:flex;flex-direction:column}
+.meremenu button{border:0;background:none;text-align:left;padding:9px 12px;border-radius:8px;font-weight:500}
+.meremenu button:hover{background:var(--hover)}.meremenu button.aktiv{background:var(--bg)}
+.meremenu hr{border:0;border-top:1px solid var(--linje);margin:4px 2px;width:auto}
+@media (max-width:700px){
+  .top{padding:0 14px}
+  .tabs{position:fixed;left:0;right:0;bottom:0;z-index:12;border-radius:0;background:var(--flade);border-top:1px solid var(--linje);padding:4px 4px calc(4px + env(safe-area-inset-bottom));gap:0;justify-content:space-around}
+  .tabs .tab,.tabs .mere{flex:1}.tabs .mere .tab{width:100%}
+  .tab{padding:9px 2px;font-size:12.5px;text-align:center;white-space:nowrap}
+  .meremenu{top:auto;bottom:calc(100% + 8px);right:8px}
+  body{padding-bottom:calc(60px + env(safe-area-inset-bottom))}
+  .bar{bottom:calc(56px + env(safe-area-inset-bottom))}
+  .beskeder{bottom:calc(68px + env(safe-area-inset-bottom))}
+  body.bar-synlig .beskeder{bottom:calc(140px + env(safe-area-inset-bottom))}
+}
+
 /* knapper og felter */
 .btn{border:1px solid var(--linje);background:var(--flade);color:var(--tekst);padding:7px 13px;border-radius:8px;font-weight:500}
 a.btn{display:inline-block;text-decoration:none}
@@ -467,6 +485,17 @@ const jobplTilJob = j => (D.jobpl || []).find(r => r.job_noegle === jobNøgle(j)
 const signatur = linjer => JSON.stringify(linjer.filter(l => l.antal > 0).map(l => [nøgle(l.udstyr), l.antal, (l.note || "").trim()]).sort());
 const kortDato = iso => `${Number(iso.slice(8, 10))}/${Number(iso.slice(5, 7))}`;
 
+// Hent alle jobs: knap og tidspunkt for sidste hentning (ligger på Jobs og I dag)
+function hentJobsLinje() {
+  const o = D.kalender?.opdateret;
+  let tid = null;
+  if (o) {
+    const d = new Date(o), gammel = Date.now() - d.getTime() > 26 * 3600 * 1000;
+    tid = h("span", {class: "lille", style: gammel ? "color:var(--adv)" : "color:var(--svag)"},
+      `Hentet ${d.getDate()}/${d.getMonth() + 1} kl. ${String(d.getHours()).padStart(2, "0")}.${String(d.getMinutes()).padStart(2, "0")}`);
+  }
+  return h("div", {style: "display:flex;align-items:center;gap:8px"}, tid, h("button", {class: "btn lille", type: "button", disabled: henterJobs, onclick: hentJobs}, henterJobs ? "Henter …" : "Hent alle jobs"));
+}
 // ---------- topbjælke ----------
 function tegnTop() {
   const top = $("top");
@@ -477,23 +506,24 @@ function tegnTop() {
       h("span", {class: "muted lille"}, S.job ? "Godkend gemmer listen til dette job. PDF gemmer intet" : "Ændringer gemmes, når du trykker Opdater"));
     return;
   }
-  const o = D.kalender?.opdateret;
-  let tid = "";
-  if (o) {
-    const d = new Date(o);
-    const gammel = Date.now() - d.getTime() > 26 * 3600 * 1000;
-    tid = h("span", {class: "lille", style: gammel ? "color:var(--adv)" : "color:var(--svag)"},
-      `Jobs hentet ${d.getDate()}/${d.getMonth() + 1} kl. ${String(d.getHours()).padStart(2, "0")}.${String(d.getMinutes()).padStart(2, "0")}`);
-  }
+  const aktiv = v => fane === v || (v === "pakkelister" && (fane === "kort" || fane === "rute"));
+  const gå = v => { fane = v; MERE = false; if (v === "pakkelister") { JH = null; S = null; } tegn(); window.scrollTo(0, 0); };
+  const hoved = [["idag", "I dag"], ["opgaver", "Opgaver"], ["pakkelister", "Jobs"], ["foresp", "Forespørgsler"]];
+  const mere = [["salg", "Salg"], ["lager", "Lager"], ["ideer", "Idéer"], ["indtaegter", "Indtægter"]];
   top.replaceChildren(
     h("span", {class: "brand"}, "Fabz"),
     h("nav", {class: "tabs"},
-      [["idag", "I dag"], ["opgaver", "Opgaver"], ["foresp", "Forespørgsler"], ["salg", "Salg"], ["pakkelister", "Jobs"], ["lager", "Lager"], ["ideer", "Idéer"], ["indtaegter", "Indtægter"]].map(([v, t]) =>
-        h("button", {type: "button", class: "tab" + (fane === v || (v === "pakkelister" && (fane === "kort" || fane === "rute")) ? " aktiv" : ""), onclick: () => { fane = v; if (v === "pakkelister") { JH = null; S = null; } tegn(); window.scrollTo(0, 0); }}, t))),
-    h("div", {class: "spacer"}),
-    ...(fane === "pakkelister" || fane === "idag" ? [tid, h("button", {class: "btn", type: "button", disabled: henterJobs, onclick: hentJobs}, henterJobs ? "Henter …" : "Hent alle jobs")] : []),
-    h("button", {class: "btn ghost lille", type: "button", onclick: skiftToken}, "Skift token"));
+      hoved.map(([v, t]) => h("button", {type: "button", class: "tab" + (aktiv(v) ? " aktiv" : ""), onclick: () => gå(v)}, t)),
+      h("div", {class: "mere"},
+        h("button", {type: "button", class: "tab" + (mere.some(([v]) => v === fane) ? " aktiv" : ""), onclick: e => { e.stopPropagation(); MERE = !MERE; tegnTop(); }},
+          (mere.find(([v]) => v === fane) || [0, "Mere"])[1] + " ▾"),
+        MERE ? h("div", {class: "meremenu", onclick: e => e.stopPropagation()},
+          mere.map(([v, t]) => h("button", {type: "button", class: fane === v ? "aktiv" : "", onclick: () => gå(v)}, t)),
+          h("hr"), h("button", {type: "button", onclick: () => { MERE = false; skiftToken(); }}, "Skift token")) : null)),
+    h("div", {class: "spacer"}));
 }
+let MERE = false;
+document.addEventListener("click", () => { if (MERE) { MERE = false; tegnTop(); } });
 function tegn() {
   document.body.classList.remove("bar-synlig");
   tegnTop();
@@ -538,7 +568,7 @@ function visJobs() {
   const vist = js.filter(ok);
   const chip = (t, god) => h("span", {class: "pill" + (god ? " grøn" : "")}, t);
   $("rod").replaceChildren(h("div", {class: "side"},
-    h("h1", {}, "Jobs"),
+    h("div", {style: "display:flex;align-items:center;gap:12px;flex-wrap:wrap"}, h("h1", {style: "margin:0"}, "Jobs"), h("div", {class: "spacer"}), hentJobsLinje()),
     h("div", {style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px"},
       h("select", {class: "input", style: "max-width:260px", onchange: e => { JF = e.target.value; tegn(); }},
         FILTRE.map(([v, t]) => h("option", {value: v, selected: JF === v}, t))),
@@ -2059,7 +2089,7 @@ function nySalgForm() {
 // ---------- hent alle jobs ----------
 async function hentJobs() {
   henterJobs = true;
-  tegnTop();
+  tegn();
   const t0 = Date.now();
   try {
     tjek(await gh(`/repos/${REPO}/actions/workflows/kalender.yml/dispatches`, {method: "POST", body: {ref: BRANCH, inputs: {opgaver: "true"}}}), "kalender-workflowet");
