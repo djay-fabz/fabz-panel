@@ -1230,6 +1230,7 @@ function tidInput(værdi, ved, attr = {}) {   // 24-timers tid, skrevet som 17.2
 
 // ---------- I dag ----------
 const NÅET_KEY = dato => "fabz-naaet-" + dato;
+const BRUGT_KEY = dato => "fabz-brugt-" + dato;
 function visIDag() {
   const idag = iDag(), d = dag(idag);
   const dp = (D.dagsplaner || []).find(x => x.dato === idag);
@@ -1246,13 +1247,15 @@ function visIDag() {
   try { nået = JSON.parse(lager.get(NÅET_KEY(idag)) || "[]"); } catch {}
   const fulgtOp = dp?.status === "Fulgt op";
   if (fulgtOp) nået = dp.naaede_punkter || [];
+  let brugt = {};
+  try { brugt = JSON.parse(lager.get(BRUGT_KEY(idag)) || "{}"); } catch {}
   const planKort = h("div", {class: "kort2"},
     h("div", {class: "kh"}, h("h2", {}, "Dagens plan"),
       dp?.moedt_ind ? h("span", {class: "muted lille"}, `Mødt ind ${dp.moedt_ind}` + (dp.moedetid ? ` · aftalt ${dp.moedetid}` : ""))
         : h("button", {class: "btn lille", type: "button", onclick: () => kør("moedt-ind", [nuHHMM()], {tekst: "Mødt ind", efter: ["dagsplaner"],
             med: () => { const x = (D.dagsplaner ||= []).find(x => x.dato === idag); if (x) x.moedt_ind = nuHHMM(); else D.dagsplaner.push({dato: idag, moedt_ind: nuHHMM()}); }})}, "Mødt ind nu")),
     dp?.plan_punkter?.length ? [
-      ...[["foer_frokost", "Før frokost"], ["efter_frokost", "Efter frokost"], ["hvis_tid", "Hvis der er tid"]].map(([hv, navn]) => {
+      ...[["foer_frokost", dp.plan_punkter.some(p => p.halvdel === "efter_frokost") ? "Før frokost" : "Arbejdstid"], ["efter_frokost", "Efter frokost"], ["hvis_tid", "Hvis der er tid"]].map(([hv, navn]) => {
         const ps = dp.plan_punkter.filter(p => p.halvdel === hv);
         return ps.length ? h("div", {class: "lg"}, h("div", {class: "overskrift"}, navn), ps.map(p =>
           h("label", {class: "cb" + (nået.includes(p.nr) ? " gjort" : "")},
@@ -1262,10 +1265,14 @@ function visIDag() {
               e.target.closest(".cb").classList.toggle("gjort", e.target.checked);
             }}),
             h("span", {class: "t"}, p.overskredet ? h("span", {class: "rød"}, "! ") : null, p.tekst),
-            p.min ? h("span", {class: "muted lille"}, p.min + " min") : null))) : null;
+            p.min ? h("span", {class: "muted lille"}, p.min + " min") : null,
+            fulgtOp ? (p.brugt != null ? h("span", {class: "muted lille"}, "brugt " + p.brugt + " min") : null)
+              : h("input", {class: "input", type: "number", min: "0", max: "720", placeholder: "brugt, min", style: "width:92px;padding:4px 8px;margin-left:8px", value: brugt[p.nr] ?? "",
+                  oninput: e => { if (e.target.value === "") delete brugt[p.nr]; else brugt[p.nr] = Number(e.target.value); lager.set(BRUGT_KEY(idag), JSON.stringify(brugt)); },
+                  onclick: e => e.stopPropagation()})))) : null;
       }),
-      fulgtOp ? h("div", {class: "godk ok", style: "margin-top:14px"}, `Fulgt op: nået ${dp.naaet_min ?? "?"} af ${dp.planlagt_min ?? "?"} min`)
-        : afslutDag(idag, () => nået)
+      fulgtOp ? [h("div", {class: "godk ok", style: "margin-top:14px"}, `Fulgt op: nået ${dp.naaet_min ?? "?"} af ${dp.planlagt_min ?? "?"} min`), estimatForslag(dp)]
+        : afslutDag(idag, () => nået, () => brugt)
     ] : h("div", {class: "tom", style: "padding:24px 0"}, "Ingen plan for i dag.", h("br"),
           h("button", {class: "btn primaer", type: "button", style: "margin-top:12px", onclick: () => { fane = "opgaver"; OP.vis = "plan"; OP.planDato = idag; tegn(); }}, "Planlæg dagen")));
 
@@ -1295,21 +1302,35 @@ function visIDag() {
             h("span", {class: "prik " + (klar ? "ok" : listeTilJob(j) || jp ? "adv" : ""), style: "margin-left:auto"}));
         }) : h("div", {class: "muted lille"}, "Ingen"))))));
 }
-function afslutDag(dato, nået) {
+function estimatForslag(dp) {   // tid brugt mod estimat, så Oscar kan rette opgavens omfang med ét tryk
+  const rækker = (dp.plan_punkter || []).filter(p => p.id != null && p.brugt != null).map(p => ({p, o: D.opgaver.find(o => o.id === p.id)})).filter(x => x.o && x.o.status !== "Færdig");
+  if (!rækker.length) return null;
+  return h("div", {class: "lg"}, h("div", {class: "overskrift"}, "Tid brugt mod estimat"),
+    rækker.map(({p, o}) => {
+      const i_alt = o.tid_brugt ?? p.brugt, afv = o.estimat != null && i_alt !== o.estimat;
+      return h("div", {class: "mini"}, h("span", {class: "t", style: "flex:1"}, o.titel,
+          h("span", {class: "muted lille"}, ` · estimat ${o.estimat ?? "intet"} min · brugt i alt ${i_alt} min`)),
+        o.estimat == null || afv ? h("button", {class: "btn lille", type: "button", onclick: () => kør("ret", [String(o.id), `estimat=${i_alt}`],
+          {tekst: `#${o.id}: estimat ${i_alt} min`, efter: ["opgaver"], med: () => { o.estimat = i_alt; }})}, `Sæt estimat til ${i_alt}`) : h("span", {class: "pill grøn"}, "Passer"));
+    }));
+}
+function afslutDag(dato, nået, brugt) {
   const st = {uplanlagt: ""};
   return h("div", {class: "afslut"},
     h("div", {class: "etiket"}, "Afslut dagen"),
+    h("div", {class: "muted lille", style: "margin-bottom:6px"}, "Skriv minutter brugt ud for hvert punkt, så kan estimaterne rettes."),
     tekstfelt(st, "uplanlagt", {rows: 2, placeholder: "Hvad kom der af uplanlagt? (valgfrit)"}),
     h("button", {class: "btn", type: "button", style: "margin-top:8px", onclick: () => {
       const n = nået();
       if (!confirm(`Følg op på dagen med ${n.length} punkter nået?`)) return;
-      kør("dag-opfoelg", [dato, ...(st.uplanlagt.trim() ? [`--uplanlagt=${st.uplanlagt.trim()}`] : []), "--naaet", ...n.map(String)],
-        {tekst: "Opfølgning på dagen", efter: ["dagsplaner"], med: () => { const x = D.dagsplaner.find(x => x.dato === dato); if (x) { x.status = "Fulgt op"; x.naaede_punkter = n; } }});
+      const b = Object.entries(brugt()).map(([nr, m]) => `${nr}=${m}`);
+      kør("dag-opfoelg", [dato, ...(st.uplanlagt.trim() ? [`--uplanlagt=${st.uplanlagt.trim()}`] : []), "--naaet", ...n.map(String), ...(b.length ? ["--brugt", ...b] : [])],
+        {tekst: "Opfølgning på dagen", efter: ["dagsplaner", "opgaver"], med: () => { const x = D.dagsplaner.find(x => x.dato === dato); if (x) { x.status = "Fulgt op"; x.naaede_punkter = n; } }});
     }}, "Følg op på dagen"));
 }
 
 // ---------- Opgaver ----------
-const OP = {filter: "Åbne", vis: null, valgt: null, ny: {}, plan: null, planDato: null, planStop: "", planSvar: null, planPdf: null, planArbejder: false};
+const OP = {filter: "Åbne", vis: null, valgt: null, ny: {}, plan: null, planDato: null, planStop: "", planFra: "", planFrokost: "kal", planMode: null, planSvar: null, planPdf: null, planArbejder: false};
 const O_STATUS = ["Ikke startet", "I gang", "Venter"];
 function opgaveFiltre(o) {
   const idag = iDag();
@@ -1413,10 +1434,13 @@ function planlægPanel() {
   const idag = iDag();
   if (!OP.planDato) OP.planDato = (D.dagsplaner || []).some(x => x.dato === idag && x.plan_punkter?.length) || new Date().getHours() >= 14 ? plusDage(idag, 1) : idag;
   const p = OP.plan;
-  const lavForslag = async () => {
+  const lavForslag = async (tom) => {
+    for (const [k, v] of [["planFra", OP.planFra], ["planStop", OP.planStop]]) if (v && !/^\d{1,2}[.:]\d{2}$/.test(v)) { alert("Skriv tiden som 10.00."); return; }
+    OP.planMode = tom ? "selv" : "foreslaa";
     OP.planArbejder = true; OP.planSvar = null; OP.planPdf = null; tegn();
     try {
-      const sv = await kørOgVent("planlaeg-forslag", [OP.planDato, ...(OP.planStop ? [`--stop=${OP.planStop}`] : [])]);
+      const sv = await kørOgVent("planlaeg-forslag", [OP.planDato, ...(OP.planFra ? [`--fra=${OP.planFra}`] : []), ...(OP.planStop ? [`--stop=${OP.planStop}`] : []),
+        ...(OP.planFrokost === "ingen" ? ["--ingen-frokost"] : []), ...(tom ? ["--tom"] : [])]);
       if (!sv) OP.planSvar = {klasse: "fejl", titel: "Intet svar efter 4 minutter."};
       else if (sv.status === "FEJL") OP.planSvar = {klasse: "fejl", titel: "Forslaget kunne ikke laves", punkter: [sv.fejl]};
       else { OP.plan = sv.data; OP.planSvar = sv.advarsler.length ? {klasse: "adv", titel: "Tjek inden du godkender", punkter: sv.advarsler} : null; }
@@ -1440,24 +1464,43 @@ function planlægPanel() {
     } catch (e) { OP.planSvar = {klasse: "fejl", titel: "Det gik galt", punkter: [e.message]}; }
     OP.planArbejder = false; if (fane === "opgaver") tegn();
   };
-  const halvdele = [["foer_frokost", "Før frokost"], ["efter_frokost", "Efter frokost"], ["hvis_tid", "Hvis der er tid"]];
+  const enkelt = !!p?.enkelt;
+  const halvdele = [["foer_frokost", enkelt ? "Arbejdstid" : "Før frokost"], ...(enkelt ? [] : [["efter_frokost", "Efter frokost"]]), ["hvis_tid", "Hvis der er tid"]];
+  const iPlan = new Set(p ? ["foer_frokost", "efter_frokost", "hvis_tid"].flatMap(hv => p[hv]).map(x => x.id).filter(x => x != null) : []);
+  const ledigeOpg = p ? D.opgaver.filter(o => !["Færdig", "Venter"].includes(o.status) && !iPlan.has(o.id) && o.id !== "…")
+    .sort((a, b) => (a.deadline || "9999").localeCompare(b.deadline || "9999") || a.id - b.id) : [];
+  const tilføj = (o, hv) => { p[hv].push({tekst: o.titel, min: o.estimat ?? null, id: o.id, ...(o.deadline && o.deadline < p.dato ? {overskredet: true} : {})}); tegn(); };
   return h("div", {class: "kort2"},
     h("div", {class: "kh"}, h("h2", {}, "Planlæg dag"), h("button", {class: "x", type: "button", onclick: () => { OP.vis = null; tegn(); }}, "×")),
     h("div", {class: "rk"},
       felt("Dag", datoInput(OP.planDato, v => { OP.planDato = v; OP.plan = null; tegn(); })),
-      felt("Stop (valgfrit, fx 14.00)", h("input", {class: "input", value: OP.planStop, placeholder: "16.00", oninput: e => { OP.planStop = e.target.value.trim(); }})),
-      h("button", {class: "btn" + (p ? "" : " primaer"), type: "button", style: "align-self:end", disabled: OP.planArbejder, onclick: lavForslag},
-        OP.planArbejder && !p ? "Laver forslag …" : p ? "Lav nyt forslag" : "Lav forslag")),
+      felt("Fra (fx 10.00)", h("input", {class: "input", value: OP.planFra, placeholder: "nu / mødetid", oninput: e => { OP.planFra = e.target.value.trim(); }})),
+      felt("Til (fx 13.00)", h("input", {class: "input", value: OP.planStop, placeholder: "16.00", oninput: e => { OP.planStop = e.target.value.trim(); }})),
+      felt("Frokostpause", h("select", {class: "input", onchange: e => { OP.planFrokost = e.target.value; }},
+        h("option", {value: "kal", selected: OP.planFrokost === "kal"}, "Efter kalenderen"), h("option", {value: "ingen", selected: OP.planFrokost === "ingen"}, "Ingen pause"))),
+      h("div", {style: "display:flex;gap:8px;align-self:end;flex-wrap:wrap"},
+        h("button", {class: "btn" + (p ? "" : " primaer"), type: "button", disabled: OP.planArbejder, onclick: () => lavForslag(false)},
+          OP.planArbejder && OP.planMode !== "selv" ? "Laver forslag …" : "Foreslå en plan"),
+        h("button", {class: "btn", type: "button", disabled: OP.planArbejder, onclick: () => lavForslag(true)},
+          OP.planArbejder && OP.planMode === "selv" ? "Åbner …" : "Lav selv"))),
     p ? [
-      h("div", {class: "muted lille", style: "margin-top:8px"}, `${dagNavnLang(p.dato)} · før frokost ${p.foer_tid} · efter frokost ${p.efter_tid}`),
-      ...halvdele.map(([hv, navn]) => h("div", {class: "lg"}, h("div", {class: "overskrift"}, navn + (hv !== "hvis_tid" ? ` · ${p[hv].reduce((s, x) => s + (Number(x.min) || 0), 0)} min` : "")),
+      h("div", {class: "muted lille", style: "margin-top:8px"}, enkelt ? `${dagNavnLang(p.dato)} · arbejdstid ${p.foer_tid}, ingen frokostpause` : `${dagNavnLang(p.dato)} · før frokost ${p.foer_tid} · efter frokost ${p.efter_tid}`),
+      ...halvdele.map(([hv, navn]) => { const sum = p[hv].reduce((s, x) => s + (Number(x.min) || 0), 0), led = hv === "foer_frokost" ? p.ledig_foer : hv === "efter_frokost" ? p.ledig_efter : null;
+        return h("div", {class: "lg"}, h("div", {class: "overskrift"}, navn + (hv !== "hvis_tid" ? ` · ${sum} af ${led ?? "?"} min` : ""),
+          led != null && sum > led ? h("span", {class: "rød", style: "margin-left:8px;text-transform:none"}, `${sum - led} min for meget`) : null),
         p[hv].map((x, i) => h("div", {class: "planpunkt" + (/VÆLG/.test(x.tekst) ? " mangler" : "")},
           h("input", {class: "input", value: x.tekst, oninput: e => { x.tekst = e.target.value; e.target.parentElement.classList.toggle("mangler", /VÆLG/.test(x.tekst)); }}),
           h("input", {class: "input min", type: "number", min: "0", value: x.min ?? "", placeholder: "min", oninput: e => { x.min = e.target.value === "" ? null : Number(e.target.value); }}),
           h("select", {class: "input flyt", title: "Flyt", onchange: e => { const til = e.target.value; if (til === hv) return; p[hv].splice(i, 1); p[til].push(x); tegn(); }},
             halvdele.map(([v, t]) => h("option", {value: v, selected: v === hv}, t))),
           h("button", {class: "x", type: "button", title: "Fjern", onclick: () => { p[hv].splice(i, 1); tegn(); }}, "×"))),
-        h("button", {class: "btn ghost lille", type: "button", onclick: () => { p[hv].push({tekst: "", min: 15}); tegn(); }}, "+ Punkt"))),
+        h("button", {class: "btn ghost lille", type: "button", onclick: () => { p[hv].push({tekst: "", min: 15}); tegn(); }}, "+ Punkt")); }),
+      h("details", {class: "lg", open: OP.planMode === "selv"},
+        h("summary", {class: "overskrift", style: "cursor:pointer"}, `Tilføj fra åbne opgaver (${ledigeOpg.length})`),
+        ledigeOpg.length ? ledigeOpg.map(o => h("div", {class: "planpunkt", style: "grid-template-columns:1fr auto"},
+          h("div", {}, h("span", {}, (o.deadline && o.deadline < p.dato ? "! " : "") + o.titel), " ",
+            h("span", {class: "muted lille"}, `${o.estimat != null ? o.estimat + " min" : "intet estimat"}${o.deadline ? " · frist " + visDato(o.deadline) : ""}`)),
+          h("div", {style: "display:flex;gap:4px"}, halvdele.map(([hv, navn]) => h("button", {class: "btn ghost lille", type: "button", title: "Læg i " + navn, onclick: () => tilføj(o, hv)}, "+ " + (hv === "hvis_tid" ? "Hvis tid" : enkelt ? "Plan" : hv === "foer_frokost" ? "Før" : "Efter")))))) : h("div", {class: "muted lille"}, "Ingen flere åbne opgaver.")),
       felt("Noter til planen (valgfrit)", tekstfelt(p, "noter", {rows: 2})),
       h("button", {class: "btn primaer stor", type: "button", style: "margin-top:12px", disabled: OP.planArbejder, onclick: godkend}, OP.planArbejder ? "Arbejder …" : "Godkend og print")
     ] : null,
