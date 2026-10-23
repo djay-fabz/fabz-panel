@@ -211,6 +211,8 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .planpunkt{display:grid;grid-template-columns:1fr 70px 130px 28px;gap:6px;align-items:center;margin:4px 0}
 .planpunkt .input{padding:6px 9px}
 .planpunkt.mangler .input:first-child{border-color:var(--adv);background:var(--adv-blid)}
+.række.plantræk{cursor:grab}.række.iplan{opacity:.5;cursor:default}
+.lg.slip{border:1.5px dashed transparent;border-radius:10px;padding:6px 8px;margin-left:-8px;margin-right:-8px}.lg.slip.over{border-color:var(--accent);background:var(--accent-blid)}
 .idé-krop{padding:4px 16px 16px}
 .idé.åben{background:var(--flade2)}
 .idé + .idé{border-top:1px solid var(--linje)}
@@ -1349,14 +1351,19 @@ function visOpgaver() {
       h("button", {type: "button", class: "chip" + (OP.filter === f ? " aktiv" : ""), onclick: () => { OP.filter = f; tegn(); }}, f))),
     h("div", {class: "kort", style: "margin-top:14px"}, liste.length ? liste.map(o => {
       const krav = o.faerdig_naar || [], ok = krav.filter(k => k.ok).length;
-      return h("button", {type: "button", class: "r række" + (OP.vis === "opgave" && OP.valgt === o.id ? " valgt" : ""), disabled: o.id === "…", onclick: () => { OP.vis = "opgave"; OP.valgt = o.id; tegn(); }},
+      const planlægger = OP.vis === "plan" && !!OP.plan && o.status !== "Færdig" && o.id !== "…";
+      const iPlanen = planlægger && ["foer_frokost", "efter_frokost", "hvis_tid"].some(k => OP.plan[k].some(x => x.id === o.id));
+      return h("button", {type: "button", class: "r række" + (OP.vis === "opgave" && OP.valgt === o.id ? " valgt" : "") + (planlægger ? " plantræk" : "") + (iPlanen ? " iplan" : ""), disabled: o.id === "…",
+        ...(planlægger && !iPlanen ? {draggable: "true", ondragstart: e => { e.dataTransfer.setData("text/plain", String(o.id)); e.dataTransfer.effectAllowed = "copy"; }} : {}),
+        onclick: () => { if (planlægger) { if (!iPlanen) { planTilføj(o); tegn(); } return; } OP.vis = "opgave"; OP.valgt = o.id; tegn(); }},
         h("div", {class: "n"}, h("div", {class: "titel"}, o.titel, o.id === "…" ? h("span", {class: "muted lille"}, "  gemmes …") : null),
           h("div", {class: "meta"},
             o.deadline ? h("span", {class: o.deadline < idag && o.status !== "Færdig" ? "rød" : ""}, "dl " + kortDato(o.deadline)) : null,
             o.prioritet ? h("span", {}, o.prioritet) : null,
             o.estimat != null ? h("span", {}, o.estimat + " min") : null,
             krav.length ? h("span", {}, `${ok}/${krav.length} krav`) : null,
-            o.status === "I gang" || o.status === "Venter" ? h("span", {class: "pill " + (o.status === "I gang" ? "blå" : "")}, o.status) : null)));
+            o.status === "I gang" || o.status === "Venter" ? h("span", {class: "pill " + (o.status === "I gang" ? "blå" : "")}, o.status) : null,
+            iPlanen ? h("span", {class: "pill grøn"}, "i planen") : planlægger ? h("span", {class: "muted lille"}, "+ tryk eller træk") : null)));
     }) : tom("Ingen opgaver her.")));
   const højre = h("div", {class: "detalje-kol"},
     OP.vis === "ny" ? nyOpgaveForm() : OP.vis === "plan" ? planlægPanel() : OP.vis === "opgave" ? opgaveDetalje(D.opgaver.find(o => o.id === OP.valgt))
@@ -1430,6 +1437,15 @@ function nyOpgaveForm() {
 }
 const PRIO = ["Høj", "Mellem", "Lav"];
 const KATEGORI_O = ["Internet opgave", "Ingen internet", "Deep work / ingen AI", "Møde online", "Møde fysisk"];
+function planTilføj(o, hv) {   // lægger en opgave ind i den åbne plan (klik eller træk fra opgavelisten)
+  const p = OP.plan;
+  if (!p || o.status === "Færdig" || ["foer_frokost", "efter_frokost", "hvis_tid"].some(k => p[k].some(x => x.id === o.id))) return false;
+  const sum = k => p[k].reduce((t, x) => t + (Number(x.min) || 0), 0), m = Number(o.estimat) || 0;
+  if (!hv) hv = p.enkelt ? (sum("foer_frokost") + m <= p.ledig_foer ? "foer_frokost" : "hvis_tid")
+    : sum("foer_frokost") + m <= p.ledig_foer ? "foer_frokost" : sum("efter_frokost") + m <= p.ledig_efter ? "efter_frokost" : "hvis_tid";
+  p[hv].push({tekst: o.titel, min: o.estimat ?? null, id: o.id, ...(o.deadline && o.deadline < p.dato ? {overskredet: true} : {})});
+  return true;
+}
 function planlægPanel() {
   const idag = iDag();
   if (!OP.planDato) OP.planDato = (D.dagsplaner || []).some(x => x.dato === idag && x.plan_punkter?.length) || new Date().getHours() >= 14 ? plusDage(idag, 1) : idag;
@@ -1485,8 +1501,14 @@ function planlægPanel() {
           OP.planArbejder && OP.planMode === "selv" ? "Åbner …" : "Lav selv"))),
     p ? [
       h("div", {class: "muted lille", style: "margin-top:8px"}, enkelt ? `${dagNavnLang(p.dato)} · arbejdstid ${p.foer_tid}, ingen frokostpause` : `${dagNavnLang(p.dato)} · før frokost ${p.foer_tid} · efter frokost ${p.efter_tid}`),
+      h("div", {class: "muted lille", style: "margin-top:4px"}, "Tryk på en opgave i listen til venstre, eller træk den over i en blok."),
       ...halvdele.map(([hv, navn]) => { const sum = p[hv].reduce((s, x) => s + (Number(x.min) || 0), 0), led = hv === "foer_frokost" ? p.ledig_foer : hv === "efter_frokost" ? p.ledig_efter : null;
-        return h("div", {class: "lg"}, h("div", {class: "overskrift"}, navn + (hv !== "hvis_tid" ? ` · ${sum} af ${led ?? "?"} min` : ""),
+        return h("div", {class: "lg slip",
+          ondragover: e => { e.preventDefault(); e.currentTarget.classList.add("over"); },
+          ondragleave: e => { e.currentTarget.classList.remove("over"); },
+          ondrop: e => { e.preventDefault(); e.currentTarget.classList.remove("over");
+            const o = D.opgaver.find(x => String(x.id) === e.dataTransfer.getData("text/plain")); if (o && planTilføj(o, hv)) tegn(); }},
+          h("div", {class: "overskrift"}, navn + (hv !== "hvis_tid" ? ` · ${sum} af ${led ?? "?"} min` : ""),
           led != null && sum > led ? h("span", {class: "rød", style: "margin-left:8px;text-transform:none"}, `${sum - led} min for meget`) : null),
         p[hv].map((x, i) => h("div", {class: "planpunkt" + (/VÆLG/.test(x.tekst) ? " mangler" : "")},
           h("input", {class: "input", value: x.tekst, oninput: e => { x.tekst = e.target.value; e.target.parentElement.classList.toggle("mangler", /VÆLG/.test(x.tekst)); }}),
