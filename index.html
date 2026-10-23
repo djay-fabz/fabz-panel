@@ -1839,8 +1839,8 @@ function visKort() {
 }
 
 // ---------- Kørsel: køretid og tidsplan mellem flere adresser (kommandoen rute, OpenStreetMap) ----------
-const nyttStop = () => ({navn: "", adr: "", ophold: "", note: ""});
-const RU = {koeretoej: "trailer", stop: [nyttStop(), nyttStop()], mode: "fremme", tid: "", arbejder: false, svar: null, job: ""};
+const nyttStop = () => ({navn: "", adr: "", ophold: "", note: "", tid: ""});
+const RU = {koeretoej: "trailer", stop: [nyttStop(), nyttStop()], arbejder: false, svar: null, job: ""};
 const jobRuteNøgle = j => `${j.dato}|${j.navn.toLowerCase()}`;
 function vælgRuteJob(nøgle) {   // henter adresse og ankomsttid fra jobbets booking i kalenderen, eller den gemte plan
   const r = RU, j = jobs().find(x => jobRuteNøgle(x) === nøgle);
@@ -1849,8 +1849,9 @@ function vælgRuteJob(nøgle) {   // henter adresse og ankomsttid fra jobbets bo
   const gemt = (D.jobrute || {})[nøgle];
   if (gemt?.input) {
     const i = gemt.input;
-    r.koeretoej = i.koeretoej || "trailer"; r.mode = i.fremme ? "fremme" : "afgang"; r.tid = i.fremme || i.afgang || "";
-    r.stop = i.stop.map(x => ({navn: x.navn || "", adr: x.adresse || "", ophold: x.ophold ? String(x.ophold) : "", note: x.note || ""}));
+    r.koeretoej = i.koeretoej || "trailer";
+    r.stop = i.stop.map((x, k) => ({navn: x.navn || "", adr: x.adresse || "", ophold: x.ophold ? String(x.ophold) : "", note: x.note || "",
+      tid: x.tid || (k === 0 ? i.afgang : k === i.stop.length - 1 ? i.fremme : "") || ""}));
     return;
   }
   const tekst = (j.besk || "").replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "");
@@ -1862,7 +1863,7 @@ function vælgRuteJob(nøgle) {   // henter adresse og ankomsttid fra jobbets bo
     while (dele.length > 2 && !/\d/.test(dele[0])) dele.shift();
     sidste.adr = dele.join(", ");
   }
-  if (ank) { r.mode = "fremme"; r.tid = `${ank[1]}.${ank[2]}`; }
+  if (ank) sidste.tid = `${ank[1].padStart(2, "0")}.${ank[2]}`;
 }
 const km1 = v => Number(v).toLocaleString("da-DK", {minimumFractionDigits: 1, maximumFractionDigits: 1});
 function ruteKort(e) {   // ét kort pr. stop og pr. kørsel (kan printes)
@@ -1876,11 +1877,12 @@ function ruteKort(e) {   // ét kort pr. stop og pr. kørsel (kan printes)
   const stor = e.ankomst || e.afgang;
   return h("div", {class: "rkort"},
     h("div", {class: "rtid"}, stor,
-      h("div", {class: "muted lille"}, e.ankomst ? (e.afgang ? (e.sidste ? "Færdig " + e.afgang : "Afgang " + e.afgang) : "Ankomst") : "Afgang")),
+      h("div", {class: "muted lille"}, e.ankomst ? (e.afgang && (e.ophold || e.venter || e.sidste) ? (e.sidste ? "Færdig " + e.afgang : "Afgang " + e.afgang) : "Ankomst") : "Afgang")),
     h("div", {style: "flex:1;min-width:0"},
       h("h3", {}, e.navn || e.adresse),
       e.navn ? h("div", {class: "muted lille"}, e.adresse) : null,
       e.ophold ? h("div", {class: "muted", style: "margin-top:6px"}, `Ophold ${e.ophold} min`) : null,
+      e.venter ? h("div", {class: "muted", style: "margin-top:4px"}, `Tid til overs ${e.venter} min`) : null,
       e.note ? h("div", {class: "rnote"}, "Husk: " + e.note) : null));
 }
 function visRute() {
@@ -1889,9 +1891,9 @@ function visRute() {
   const beregn = async () => {
     const brugt = r.stop.filter(x => x.adr.trim());
     if (brugt.length < 2) { alert("Skriv mindst to adresser (fra og til)."); return; }
-    if (!r.tid) { alert("Skriv et tidspunkt som 17.25."); return; }
-    const json = {koeretoej: r.koeretoej, [r.mode]: r.tid,
-      stop: brugt.map(x => ({navn: x.navn.trim(), adresse: x.adr.trim(), ophold: Math.max(0, parseInt(x.ophold, 10) || 0), note: x.note.trim()}))};
+    if (!brugt.some(x => x.tid)) { alert("Skriv mindst ét tidspunkt: afgang fra første sted, eller kl. på et sted, fx at være fremme senest."); return; }
+    const json = {koeretoej: r.koeretoej,
+      stop: brugt.map(x => ({navn: x.navn.trim(), adresse: x.adr.trim(), ophold: Math.max(0, parseInt(x.ophold, 10) || 0), note: x.note.trim(), ...(x.tid ? {tid: x.tid} : {})}))};
     r.arbejder = true; r.svar = {klasse: "", titel: "Beregner ruten … typisk under et minut"}; tegn();
     try {
       const sv = await kørOgVent("rute", ["--json", "@json", ...(r.job ? ["--job", r.job] : [])], json);
@@ -1913,7 +1915,10 @@ function visRute() {
     h("input", {class: "input", style: "margin-top:8px", value: x.adr, placeholder: "Gade, nummer og by", disabled: r.arbejder, oninput: e => { x.adr = e.target.value; }}),
     h("div", {style: "display:grid;grid-template-columns:110px 1fr;gap:8px;margin-top:8px"},
       h("input", {class: "input", type: "number", min: "0", max: "600", value: x.ophold, placeholder: "Ophold, min", disabled: r.arbejder, oninput: e => { x.ophold = e.target.value; }}),
-      h("input", {class: "input", value: x.note, placeholder: "Note: det du skal huske her (valgfri)", maxlength: "300", disabled: r.arbejder, oninput: e => { x.note = e.target.value; }})));
+      h("input", {class: "input", value: x.note, placeholder: "Note: det du skal huske her (valgfri)", maxlength: "300", disabled: r.arbejder, oninput: e => { x.note = e.target.value; }})),
+    h("div", {style: "display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap"},
+      h("span", {class: "muted lille", style: "flex:1 1 200px"}, i === 0 ? "Kører herfra kl." : i === r.stop.length - 1 ? "Skal senest være her kl. (tom: hurtigst muligt)" : "Skal være her kl."),
+      tidInput(x.tid, v => { x.tid = v; }, {style: "max-width:110px", disabled: r.arbejder})));
   const knap = (v, t) => h("button", {type: "button", class: "btn" + (r.koeretoej === v ? " primaer" : ""), disabled: r.arbejder, onclick: () => { r.koeretoej = v; tegn(); }}, t);
   const d = r.svar?.data;
   const kopiér = async () => {
@@ -1922,7 +1927,7 @@ function visRute() {
   };
   $("rod").replaceChildren(h("div", {class: "side"},
     h("h1", {}, "Kørsel"),
-    h("div", {class: "muted"}, "Skriv stedene i rækkefølge, vælg køretøj og tidspunkt. Trailer regner med højst 80 km/t, bil med vejens egen hastighed. Køretiden er uden trafik og regnet med lidt ekstra tid. Ophold er tiden på stedet: på første adresse før afgang, på sidste efter ankomst."),
+    h("div", {class: "muted"}, "Skriv stedene i rækkefølge og vælg køretøj. Sæt en tid på de steder, hvor du skal være på et bestemt tidspunkt, og en afgangstid på første sted, hvis du kender den. Mellem faste tider regnes der baglæns (hvornår skal jeg køre), og efter den sidste faste tid regnes der hurtigst muligt. Trailer regner med højst 80 km/t, bil med vejens egen hastighed. Køretiden er uden trafik og regnet med lidt ekstra tid. Ophold er tiden på stedet: på første adresse før afgang, på sidste efter ankomst."),
     h("div", {class: "gruppe", style: "margin-top:16px"}, h("div", {class: "overskrift"}, "Job"),
       h("select", {class: "input", style: "margin-top:8px", disabled: r.arbejder, onchange: e => { vælgRuteJob(e.target.value); tegn(); }},
         h("option", {value: ""}, "Intet job (kun beregning)"),
@@ -1934,13 +1939,8 @@ function visRute() {
       r.stop.map(række),
       h("button", {class: "btn ghost lille", type: "button", style: "margin-top:10px", disabled: r.arbejder || r.stop.length >= 10,
         onclick: () => { r.stop.splice(r.stop.length - 1, 0, nyttStop()); tegn(); }}, "+ Tilføj stop")),
-    h("div", {class: "gruppe", style: "margin-top:16px"}, h("div", {class: "overskrift"}, "Tidspunkt"),
-      h("div", {style: "display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap"},
-        h("select", {class: "input", style: "flex:1 1 260px", disabled: r.arbejder, onchange: e => { r.mode = e.target.value; }},
-          h("option", {value: "fremme", selected: r.mode === "fremme"}, "Skal være fremme på sidste adresse kl."),
-          h("option", {value: "afgang", selected: r.mode === "afgang"}, "Afgang fra første adresse kl.")),
-        tidInput(r.tid, v => { r.tid = v; }, {style: "max-width:140px", disabled: r.arbejder}))),
     h("button", {class: "btn primaer", type: "button", style: "margin-top:16px", disabled: r.arbejder, onclick: beregn}, r.arbejder ? "Beregner …" : "Beregn rute"),
+    d?.advarsler?.length ? h("div", {class: "svar adv", style: "margin-top:12px"}, h("b", {}, "Tjek tiderne"), h("ul", {}, d.advarsler.map(x => h("li", {}, x)))) : null,
     r.svar && !d ? h("div", {class: "svar " + r.svar.klasse, style: "margin-top:12px"}, h("b", {}, r.svar.titel), r.svar.fejl ? h("div", {}, r.svar.fejl) : null) : null,
     d ? h("div", {class: "rute-resultat", style: "margin-top:20px"},
       h("div", {style: "display:flex;align-items:center;gap:8px;flex-wrap:wrap"}, h("h1", {style: "margin:0"}, "Tidsplan"), h("div", {class: "spacer"}),
