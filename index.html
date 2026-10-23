@@ -230,6 +230,10 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .planpunkt{display:grid;grid-template-columns:1fr 70px 130px 28px;gap:6px;align-items:center;margin:4px 0}
 .planpunkt .input{padding:6px 9px}
 .planpunkt.mangler .input:first-child{border-color:var(--adv);background:var(--adv-blid)}
+.adrfelt{position:relative}
+.forslag{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:15;background:var(--flade);border:1px solid var(--linje);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.18);padding:4px;max-height:260px;overflow:auto}
+.forslag .fi{display:block;width:100%;text-align:left;border:0;background:none;padding:8px 10px;border-radius:7px}
+.forslag .fi:hover,.forslag .fi.aktiv{background:var(--hover)}
 .række.plantræk{cursor:grab}.række.iplan{opacity:.5;cursor:default}
 .lg.slip{border:1.5px dashed transparent;border-radius:10px;padding:6px 8px;margin-left:-8px;margin-right:-8px}.lg.slip.over{border-color:var(--accent);background:var(--accent-blid)}
 .idé-krop{padding:4px 16px 16px}
@@ -1871,6 +1875,59 @@ function visKort() {
 
 // ---------- Kørsel: køretid og tidsplan mellem flere adresser (kommandoen rute, OpenStreetMap) ----------
 const nyttStop = () => ({navn: "", adr: "", ophold: "", note: "", tid: ""});
+// Adresseforslag mens man skriver: Photon (OpenStreetMap), kun Danmark. Det valgte forslag giver koordinater, som beregningen bruger direkte.
+const PHOTON = "https://photon.komoot.io/api/";
+const FORSLAG = new Map();
+function forslagTekst(p) {
+  const by = p.city || p.locality || p.district || p.county || "";
+  const post = [p.postcode, by].filter(Boolean).join(" ");
+  const gade = p.street ? [p.street, p.housenumber].filter(Boolean).join(" ") : "";
+  return [p.name && p.name !== p.street ? p.name : "", gade, post].filter(Boolean).join(", ");
+}
+async function hentForslag(q, signal) {
+  if (FORSLAG.has(q)) return FORSLAG.get(q);
+  const r = await fetch(`${PHOTON}?q=${encodeURIComponent(q)}&limit=8&lang=default&lat=56.16&lon=9.54&bbox=8.0,54.5,15.3,57.8`, {signal});
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  const ud = (await r.json()).features.filter(f => f.properties.countrycode === "DK" && (f.properties.street || f.properties.name))
+    .map(f => ({tekst: forslagTekst(f.properties), lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1]}))
+    .filter((f, i, a) => f.tekst && a.findIndex(g => g.tekst === f.tekst) === i).slice(0, 6);
+  FORSLAG.set(q, ud);
+  return ud;
+}
+function adrFelt(x, slukket) {
+  const input = h("input", {class: "input", value: x.adr, placeholder: "Gade, nummer og by", disabled: slukket, autocomplete: "off", "aria-autocomplete": "list"});
+  const liste = h("div", {class: "forslag", hidden: true});
+  const status = h("div", {class: "lille muted", style: "margin-top:4px;min-height:1em"}, x.lat != null ? "✓ Adressen er valgt fra forslag" : "");
+  let valg = [], nu = -1, timer = null, afbryd = null;
+  const luk = () => { liste.hidden = true; nu = -1; };
+  const vælg = f => { input.value = x.adr = f.tekst; x.lat = f.lat; x.lon = f.lon; status.textContent = "✓ Adressen er valgt fra forslag"; luk(); };
+  const vis = () => {
+    liste.replaceChildren(...valg.map((f, i) => h("button", {type: "button", class: "fi" + (i === nu ? " aktiv" : ""), onmousedown: e => { e.preventDefault(); vælg(f); }}, f.tekst)));
+    liste.hidden = !valg.length;
+  };
+  input.addEventListener("input", () => {
+    x.adr = input.value; x.lat = x.lon = null; status.textContent = "";
+    clearTimeout(timer); afbryd?.abort();
+    const q = input.value.trim();
+    if (q.length < 3) { luk(); return; }
+    timer = setTimeout(async () => {
+      afbryd = new AbortController();
+      try {
+        valg = await hentForslag(q, afbryd.signal); nu = -1; vis();
+        status.textContent = valg.length ? "" : "Ingen forslag. Skriv gade, nummer og by.";
+      } catch (e) { if (e.name !== "AbortError") { luk(); status.textContent = "Forslag er ikke tilgængelige lige nu. Skriv adressen selv."; } }
+    }, 350);
+  });
+  input.addEventListener("keydown", e => {
+    if (liste.hidden) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); nu = (nu + 1) % valg.length; vis(); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); nu = (nu - 1 + valg.length) % valg.length; vis(); }
+    else if (e.key === "Enter" && nu >= 0) { e.preventDefault(); vælg(valg[nu]); }
+    else if (e.key === "Escape") luk();
+  });
+  input.addEventListener("blur", () => setTimeout(luk, 150));
+  return h("div", {class: "adrfelt", style: "margin-top:8px"}, h("div", {style: "position:relative"}, input, liste), status);
+}
 const RU = {koeretoej: "trailer", stop: [nyttStop(), nyttStop()], arbejder: false, svar: null, job: ""};
 const jobRuteNøgle = j => `${j.dato}|${j.navn.toLowerCase()}`;
 function vælgRuteJob(nøgle) {   // henter adresse og ankomsttid fra jobbets booking i kalenderen, eller den gemte plan
@@ -1881,7 +1938,7 @@ function vælgRuteJob(nøgle) {   // henter adresse og ankomsttid fra jobbets bo
   if (gemt?.input) {
     const i = gemt.input;
     r.koeretoej = i.koeretoej || "trailer";
-    r.stop = i.stop.map((x, k) => ({navn: x.navn || "", adr: x.adresse || "", ophold: x.ophold ? String(x.ophold) : "", note: x.note || "",
+    r.stop = i.stop.map((x, k) => ({navn: x.navn || "", adr: x.adresse || "", lat: x.lat ?? null, lon: x.lon ?? null, ophold: x.ophold ? String(x.ophold) : "", note: x.note || "",
       tid: x.tid || (k === 0 ? i.afgang : k === i.stop.length - 1 ? i.fremme : "") || ""}));
     return;
   }
@@ -1924,7 +1981,7 @@ function visRute() {
     if (brugt.length < 2) { alert("Skriv mindst to adresser (fra og til)."); return; }
     if (!brugt.some(x => x.tid)) { alert("Skriv mindst ét tidspunkt: afgang fra første sted, eller kl. på et sted, fx at være fremme senest."); return; }
     const json = {koeretoej: r.koeretoej,
-      stop: brugt.map(x => ({navn: x.navn.trim(), adresse: x.adr.trim(), ophold: Math.max(0, parseInt(x.ophold, 10) || 0), note: x.note.trim(), ...(x.tid ? {tid: x.tid} : {})}))};
+      stop: brugt.map(x => ({navn: x.navn.trim(), adresse: x.adr.trim(), ...(x.lat != null ? {lat: x.lat, lon: x.lon} : {}), ophold: Math.max(0, parseInt(x.ophold, 10) || 0), note: x.note.trim(), ...(x.tid ? {tid: x.tid} : {})}))};
     r.arbejder = true; r.svar = {klasse: "", titel: "Beregner ruten … typisk under et minut"}; tegn();
     try {
       const sv = await kørOgVent("rute", ["--json", "@json", ...(r.job ? ["--job", r.job] : [])], json);
@@ -1943,7 +2000,7 @@ function visRute() {
       h("span", {class: "etiket"}, navnPaa(i)),
       h("input", {class: "input", value: x.navn, placeholder: "Navn på stedet (overskrift, valgfrit)", disabled: r.arbejder, oninput: e => { x.navn = e.target.value; }}),
       mellem(i) ? h("button", {class: "btn ghost lille", type: "button", disabled: r.arbejder, onclick: () => { r.stop.splice(i, 1); tegn(); }}, "Fjern") : h("span", {})),
-    h("input", {class: "input", style: "margin-top:8px", value: x.adr, placeholder: "Gade, nummer og by", disabled: r.arbejder, oninput: e => { x.adr = e.target.value; }}),
+    adrFelt(x, r.arbejder),
     h("div", {style: "display:grid;grid-template-columns:minmax(120px,150px) 1fr;gap:8px;margin-top:8px"},
       h("input", {class: "input", type: "number", min: "0", max: "600", value: x.ophold, placeholder: "Ophold (min)", disabled: r.arbejder, oninput: e => { x.ophold = e.target.value; }}),
       h("input", {class: "input", value: x.note, placeholder: "Note: det du skal huske her (valgfri)", maxlength: "300", disabled: r.arbejder, oninput: e => { x.note = e.target.value; }})),
@@ -1969,7 +2026,8 @@ function visRute() {
     h("div", {class: "gruppe", style: "margin-top:16px"}, h("div", {class: "overskrift"}, "Steder"),
       r.stop.map(række),
       h("button", {class: "btn ghost lille", type: "button", style: "margin-top:10px", disabled: r.arbejder || r.stop.length >= 10,
-        onclick: () => { r.stop.splice(r.stop.length - 1, 0, nyttStop()); tegn(); }}, "+ Tilføj stop")),
+        onclick: () => { r.stop.splice(r.stop.length - 1, 0, nyttStop()); tegn(); }}, "+ Tilføj stop"),
+      h("div", {class: "muted lille", style: "margin-top:8px"}, "Adresseforslag: © OpenStreetMap-bidragydere (Photon). Vælg et forslag for den sikreste adresse.")),
     h("button", {class: "btn primaer", type: "button", style: "margin-top:16px", disabled: r.arbejder, onclick: beregn}, r.arbejder ? "Beregner …" : "Beregn rute"),
     d?.advarsler?.length ? h("div", {class: "svar adv", style: "margin-top:12px"}, h("b", {}, "Tjek tiderne"), h("ul", {}, d.advarsler.map(x => h("li", {}, x)))) : null,
     r.svar && !d ? h("div", {class: "svar " + r.svar.klasse, style: "margin-top:12px"}, h("b", {}, r.svar.titel), r.svar.fejl ? h("div", {}, r.svar.fejl) : null) : null,
