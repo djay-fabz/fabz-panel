@@ -1281,7 +1281,9 @@ function visIDag() {
     .sort((a, b) => (a.heldag ? 0 : 1) - (b.heldag ? 0 : 1) || a.start.localeCompare(b.start));
   const grænse = plusDage(idag, 7);
   const åbne = D.opgaver.filter(o => !["Færdig", "Venter"].includes(o.status));
-  const dl = åbne.filter(o => o.deadline && o.deadline <= grænse).sort((a, b) => a.deadline.localeCompare(b.deadline));
+  const sorteret = åbne.filter(o => o.deadline && o.deadline <= grænse).sort((a, b) => a.deadline.localeCompare(b.deadline));
+  const forsinket = sorteret.filter(o => o.deadline < idag), dl = sorteret.filter(o => o.deadline >= idag);
+  const dagensJobs = jobs().filter(j => j.dato === idag);
   const henv = (D.henvendelser || []).filter(x => ["Ny", "Tilbud sendt"].includes(x.status));
   const næste = jobs().slice(0, 4);
 
@@ -1325,6 +1327,23 @@ function visIDag() {
     h("div", {class: "idag"},
       planKort,
       h("div", {class: "stak"},
+        ...dagensJobs.map(j => {
+          const st = jobStatus(j);
+          const næste = !st.klar ? ["Pakkeliste: " + st.pak.toLowerCase(), "Åbn jobbet", () => { fane = "pakkelister"; åbnJob(j); }]
+            : !st.kørsel ? ["Kørsel er ikke lavet", "Lav kørsel", () => { vælgRuteJob(st.key); fane = "rute"; tegn(); }]
+            : null;
+          const række = (t, ok) => h("div", {class: "mini"}, h("span", {class: "prik " + (ok ? "ok" : "adv")}), h("span", {}, t));
+          return h("div", {class: "kort2"}, h("div", {class: "kh"}, h("h3", {}, "Dagens job: " + j.navn)),
+            j.sted ? h("div", {class: "muted lille", style: "margin-bottom:6px"}, j.sted) : null,
+            række("Pakkeliste: " + st.pak, st.klar),
+            st.skilteRel ? række("Skilte: " + st.kortTekst, st.kort) : null,
+            række("Kørsel: " + (st.kørsel ? "gemt" : "ikke lavet"), st.kørsel),
+            næste ? h("button", {class: "btn primaer lille", type: "button", style: "margin-top:10px", onclick: næste[2]}, næste[1]) : h("button", {class: "btn lille", type: "button", style: "margin-top:10px", onclick: () => { fane = "pakkelister"; åbnJob(j); }}, "Alt er klar · åbn jobbet"));
+        }),
+        forsinket.length ? h("div", {class: "kort2"}, h("div", {class: "kh"}, h("h3", {class: "rød"}, `Forsinket (${forsinket.length})`)),
+          forsinket.slice(0, 8).map(o => h("button", {class: "mini link", type: "button", disabled: o.id === "…",
+            onclick: () => { fane = "opgaver"; OP.vis = "opgave"; OP.valgt = o.id; tegn(); }},
+            h("span", {class: "lille tid rød"}, kortDato(o.deadline)), h("span", {}, o.titel)))) : null,
         sideKort("Kalender i dag", kal.length ? kal.map(e => h("div", {class: "mini"},
           h("span", {class: "muted lille tid"}, e.heldag ? "Hele dagen" : e.start.slice(11, 16).replace(":", ".")),
           h("span", {}, e.titel, e.sted ? h("span", {class: "muted lille"}, " · " + e.sted) : null))) : h("div", {class: "muted lille"}, "Intet i kalenderen")),
