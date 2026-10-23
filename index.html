@@ -155,7 +155,14 @@ a.btn{display:inline-block;text-decoration:none}
 .jobkort .del .g{color:var(--svag)}
 .rkoer{margin:6px 0 0 18px;padding:10px 16px;border-left:4px solid var(--accent);background:var(--accent-blid);border-radius:0 12px 12px 0}
 .rkoer h2{margin:0;font-size:28px;line-height:1.15;letter-spacing:-.01em}
-@media print{.top,#beskeder,.ikke-print{display:none!important}.side>*:not(.rute-resultat){display:none!important}body{background:#fff}.rkort{box-shadow:none}}
+@media print{.top,#beskeder,.ikke-print{display:none!important}.side>*:not(.rute-resultat){display:none!important}body{background:#fff}.rkort{box-shadow:none}
+  @page{size:A4;margin:10mm}
+  html,body{font-size:12px}.side,.side.bred{max-width:none;padding:0}
+  .rute-resultat h2,.rute-resultat .resume{margin:0 0 4px}
+  .rkort{margin-top:4px;padding:6px 12px;gap:12px;border-radius:8px}.rkort h3{font-size:14px}
+  .rtid{min-width:62px;font-size:17px}.rtid.lille{font-size:11px}
+  .rkoer{margin:3px 0 0 14px;padding:4px 12px;gap:12px;border-radius:0 8px 8px 0}.rkoer h2{font-size:15px}
+  .rnote{margin-top:2px}}
 .svar{margin-top:10px;padding:10px 12px;border-radius:10px;font-size:13px;background:var(--flade2)}
 .svar.ok{background:var(--ok-blid)}.svar.adv{background:var(--adv-blid)}.svar.fejl{background:var(--fejl-blid)}
 .svar ul{margin:4px 0 0;padding-left:18px}
