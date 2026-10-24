@@ -101,6 +101,8 @@ a.btn{display:inline-block;text-decoration:none}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .chip{border:1px solid var(--linje);background:var(--flade);border-radius:99px;padding:4px 12px;font-size:12.5px;color:var(--svag)}
 .chip:hover{color:var(--tekst)}
+.anlaeg{margin-bottom:14px;padding:12px;border:1px solid var(--linje);border-radius:12px;background:var(--flade)}
+.chip:disabled{opacity:.5;cursor:default}
 .chip.aktiv{background:var(--tekst);border-color:var(--tekst);color:var(--flade)}
 .gruppe{margin-top:20px}
 .kort{background:var(--flade);border:1px solid var(--linje);border-radius:12px;overflow:hidden}
@@ -376,6 +378,8 @@ async function hentData() {
   D = {kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, ideer, indtaegter, typer, salg, festkort, klubkort, kkTekster};
   const jr = await laesFil("data/jobrute.json");
   D.jobrute = jr ? await jr.json() : {};
+  const su = await laesFil("data/setups.json");
+  D.setups = su ? await su.json() : {grupper: [], setups: []};
 }
 async function laesKkTekster() {   // Oscars rettede tekster, ellers standardteksterne fra tools/klubkort
   const r = await laesFil("data/klubkort_tekster.json");
@@ -638,7 +642,7 @@ function åbnListe(navn) {
   nyEditor({job: null, base: p, egen: true, jobNavn: p.navn, gemNavn: p.navn, visGem: true});
 }
 function nyEditor(o) {
-  S = {...o, l: {}, transport: o.base?.transport || "", svar: null, rørt: false, godk: null, snap: null, fk: null};
+  S = {...o, l: {}, transport: o.base?.transport || "", svar: null, rørt: false, godk: null, snap: null, fk: null, anlæg: [], bidrag: {}};
   indlæs(o.base);
   P = {q: "", kat: "Alle"};
   tegn();
@@ -650,7 +654,7 @@ function lukEditor() {
   tegn();
 }
 function indlæs(base) {
-  S.l = {};
+  S.l = {}; S.anlæg = []; S.bidrag = {};
   for (const l of base?.linjer || []) S.l[nøgle(l.udstyr)] = {udstyr: l.udstyr, antal: l.antal, note: l.note || ""};
 }
 function visEditor() {
@@ -668,8 +672,53 @@ function tegnVælger() {
   const tegnChips = () => chips.replaceChildren(...["Alle", ...kategorier()].filter(k => k === "Alle" || D.udstyr.some(u => u.kategori === k))
     .map(k => h("button", {type: "button", class: "chip" + (P.kat === k ? " aktiv" : ""), onclick: () => { P.kat = k; tegnChips(); tegnRækker(); }}, k)));
   tegnChips();
-  $("vaelg").replaceChildren(h("div", {class: "soeg"}, søg, chips), h("div", {id: "raekker"}));
+  $("vaelg").replaceChildren(anlægStribe(), h("div", {class: "soeg"}, søg, chips), h("div", {id: "raekker"}));
   tegnRækker();
+}
+// anlæg: vælg fx Mackie, så lægges alt det kræver på listen (samme regler som fabz_setups.udregn)
+function anlægUdregn(valgte) {
+  const o = D.setups || {grupper: [], setups: []}, sm = new Map(o.setups.map(x => [nøgle(x.navn), x]));
+  let valg = valgte.map(n => sm.get(nøgle(n))).filter(Boolean);
+  if (valg.some(x => !x.altid)) for (const x of o.setups) if (x.altid && !valg.includes(x)) valg.push(x);
+  const ud = new Map();
+  for (const x of valg) for (const l of x.linjer || []) {
+    const k = nøgle(l.udstyr), e = ud.get(k) || {udstyr: l.udstyr, antal: 0, note: []};
+    e.antal += l.antal; if (l.note && !e.note.includes(l.note)) e.note.push(l.note); ud.set(k, e);
+  }
+  return {linjer: ud, altid: valg.filter(x => x.altid).map(x => x.navn)};
+}
+function sætAnlæg(navn) {
+  const o = D.setups, x = o.setups.find(y => y.navn === navn), g = o.grupper.find(y => y.navn === x.gruppe);
+  let valgte = S.anlæg.includes(navn) ? S.anlæg.filter(n => n !== navn) : [...S.anlæg, navn];
+  if (g?.eksklusiv && valgte.includes(navn)) valgte = valgte.filter(n => n === navn || o.setups.find(y => y.navn === n)?.gruppe !== x.gruppe);
+  const ny = anlægUdregn(valgte).linjer;
+  for (const [k, b] of Object.entries(S.bidrag)) {   // træk det forrige valg fra, resten (manuelle linjer) bliver stående
+    const l = S.l[k]; if (!l) continue;
+    l.antal -= b.antal;
+    if (b.note && l.note === b.note) l.note = "";
+    if (l.antal <= 0) delete S.l[k];
+  }
+  S.bidrag = {};
+  for (const [k, e] of ny) {
+    const note = e.note.join("; "), l = S.l[k] || (S.l[k] = {udstyr: e.udstyr, antal: 0, note: ""});
+    l.antal += e.antal;
+    const sat = !l.note && note; if (sat) l.note = note;
+    S.bidrag[k] = {antal: e.antal, note: sat ? note : ""};
+  }
+  S.anlæg = valgte; S.svar = null; S.rørt = true;
+  tegnVælger(); tegnListe();
+}
+function anlægStribe() {
+  const o = D.setups || {setups: []};
+  if (!o.setups.length) return h("div", {hidden: true});
+  const grp = [...new Set(o.setups.filter(x => !x.altid).map(x => x.gruppe))];
+  const altid = o.setups.filter(x => x.altid);
+  return h("div", {class: "anlaeg"}, h("div", {class: "overskrift"}, "Vælg anlæg"),
+    grp.map(g => h("div", {class: "chips", style: "margin-top:6px"}, h("span", {class: "muted lille", style: "align-self:center;min-width:76px"}, g),
+      o.setups.filter(x => !x.altid && x.gruppe === g).map(x => { const tom = !(x.linjer || []).length;
+        return h("button", {type: "button", class: "chip" + (S.anlæg.includes(x.navn) ? " aktiv" : ""), disabled: tom, title: tom ? "Ingen linjer sat op endnu" : x.linjer.length + " linjer",
+          onclick: () => sætAnlæg(x.navn)}, [x.ikon, x.navn].filter(Boolean).join(" ")); }))),
+    altid.length ? h("div", {class: "muted lille", style: "margin-top:6px"}, "Kommer altid med: " + altid.map(x => x.navn).join(", ")) : null);
 }
 function tegnRækker() {
   const el = $("raekker");
@@ -725,7 +774,7 @@ function tegnListe() {
     S.transport = S.base?.transport || S.transport;
     S.rørt = true;
     indlæs(S.base);
-    tegnRækker();
+    tegnVælger();
     tegnListe();
   }}, h("option", {value: ""}, "Tom liste"), D.lister.map(p => h("option", {value: p.navn, selected: S.base?.navn === p.navn}, p.navn)));
 
