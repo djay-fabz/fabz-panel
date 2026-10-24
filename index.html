@@ -259,11 +259,35 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .idé button.r{border-top:0}
 .tal3{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
 .stort{font-size:26px;font-weight:700;margin:4px 0}
-@media (max-width:900px){.idag,.to,.tal3{grid-template-columns:1fr}.detalje-kol{position:static;max-height:none}}
+@media (max-width:900px){.idag,.to,.tal3{grid-template-columns:1fr}.detalje-kol{position:static;max-height:none;order:-1}.detalje-kol:has(>.tom){display:none}}
 .opsaet{max-width:520px;margin:60px auto;background:var(--flade);border:1px solid var(--linje);border-radius:14px;padding:24px}
 .opsaet h2{margin-top:0}
 .fejltekst{color:var(--fejl)}
 @media (max-width:900px){.ed{grid-template-columns:1fr;height:auto}.liste{border-left:0;border-top:1px solid var(--linje)}}
+/* telefon: ligger sidst, så reglerne vinder over grundreglerne ovenfor */
+@media (max-width:700px){
+  /* telefon: berøringsflader mindst 40 px, og intet må være bredere end skærmen (ellers vokser visningen, og bundfanerne ryger ud af billedet) */
+  html,body{overflow-x:hidden}
+  .tab{min-height:44px}
+  .meremenu button{padding:12px 14px;min-height:44px}
+  .btn{min-height:40px}.btn.lille{min-height:40px}
+  .chip{padding:9px 14px;font-size:13px;min-height:40px}
+  .seg button{padding:9px 12px;min-height:40px}
+  .step{height:42px}.step button{width:40px;height:40px}
+  .plus{width:40px;height:40px}
+  .x{width:40px;height:40px}
+  .tilbage{min-height:40px}
+  .mini{min-height:44px}
+  .lagertop .input{width:100%}
+  .lagertop label{display:inline-flex;align-items:center;min-height:40px;padding:0 4px}
+  .lhd{display:none}
+  .lr{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;grid-template-areas:"navn navn antal" "kat status x" "note note note";row-gap:4px;padding:10px 8px}
+  .lr>:nth-child(1){grid-area:navn}.lr>:nth-child(2){grid-area:kat}.lr>:nth-child(3){grid-area:antal}.lr>:nth-child(4){grid-area:status}.lr>:nth-child(5){grid-area:note}.lr>:nth-child(6){grid-area:x}
+  .felt,.input,select.input{min-height:40px}
+  .nyform{grid-template-columns:1fr 1fr}
+  .planpunkt:not([style]){grid-template-columns:1fr 64px 40px;grid-template-areas:"tekst min x" "flyt flyt flyt"}
+  .planpunkt:not([style])>.input:first-child{grid-area:tekst}.planpunkt .min{grid-area:min}.planpunkt .flyt{grid-area:flyt}.planpunkt>.x{grid-area:x}
+}
 </style>
 </head>
 <body>
@@ -527,7 +551,7 @@ function tegnTop() {
     top.replaceChildren(
       h("button", {class: "tilbage", type: "button", onclick: lukEditor}, "← Jobs"),
       h("div", {class: "spacer"}),
-      h("span", {class: "muted lille"}, S.job ? "Godkend gemmer listen til dette job. PDF gemmer intet" : "Ændringer gemmes, når du trykker Opdater"));
+      h("span", {class: "muted lille"}, S.job ? "PDF husker listen på jobbet. Godkend gør den klar (grøn)" : "Ændringer gemmes, når du trykker Opdater"));
     return;
   }
   const aktiv = v => fane === v || (v === "pakkelister" && (fane === "kort" || fane === "rute"));
@@ -1081,7 +1105,7 @@ async function send(hvad) {   // "pdf": lav PDF (gemmer intet), "gem": gem som l
   const linjer = Object.values(S.l).filter(l => l.antal > 0)
     .map(l => ({udstyr: l.udstyr, antal: l.antal, ...(l.note?.trim() ? {note: l.note.trim()} : {})}));
   const krav = {type: "pakkeliste", job: navn, dato: S.job?.dato || null, transport: S.transport, linjer, pdf: true,
-    udgangspunkt: S.base?.navn || null, gem: "kun_job"};
+    udgangspunkt: S.base?.navn || null, gem: "kun_job", anlaeg: anlægGem(), job_navn: S.job?.navn || null};   // job_navn: kalenderens navn, så listen huskes på jobbet selv om PDF'en hedder noget andet
   const mig = S;
   optaget = true;
   tegnListe();
@@ -1098,6 +1122,11 @@ async function send(hvad) {   // "pdf": lav PDF (gemmer intet), "gem": gem som l
       const r = await laesFil(sv.pdf);
       const link = r ? URL.createObjectURL(new Blob([await r.arrayBuffer()], {type: "application/pdf"})) : null;
       if (S === mig) sætSvar(sv.status === "ADVARSEL" ? "adv" : "ok", titel, r ? punkter : [...punkter, "PDF'en kunne ikke hentes."], link, decodeURIComponent(sv.pdf.split("/").pop()));
+      if (mig.job) {   // fabz.py har husket listen og anlægsvalget på jobbet (ikke godkendt); hent det, så status og knapper står rigtigt
+        D.jobpl = await laesJobpl();
+        const jp = jobplTilJob(mig.job);
+        if (S === mig && jp && signatur(jp.linjer) === signatur(linjer)) S.rørt = false;
+      }
     }
   } catch (e) {
     if (S === mig) sætSvar("fejl", "Det gik galt.", [e.message]);
@@ -1542,7 +1571,7 @@ function visOpgaver() {
       const iPlanen = planlægger && ["foer_frokost", "efter_frokost", "hvis_tid"].some(k => OP.plan[k].some(x => x.id === o.id));
       return h("button", {type: "button", class: "r række" + (OP.vis === "opgave" && OP.valgt === o.id ? " valgt" : "") + (planlægger ? " plantræk" : "") + (iPlanen ? " iplan" : ""), disabled: o.id === "…",
         ...(planlægger && !iPlanen ? {draggable: "true", ondragstart: e => { e.dataTransfer.setData("text/plain", String(o.id)); e.dataTransfer.effectAllowed = "copy"; }} : {}),
-        onclick: () => { if (planlægger) { if (!iPlanen) { planTilføj(o); tegn(); } return; } OP.vis = "opgave"; OP.valgt = o.id; tegn(); }},
+        onclick: () => { if (planlægger) { if (!iPlanen) { planTilføj(o); tegn(); } return; } OP.vis = "opgave"; OP.valgt = o.id; tegn(); if (window.innerWidth <= 900) window.scrollTo(0, 0); }},   // telefon: detaljen ligger øverst
         h("div", {class: "n"}, h("div", {class: "titel"}, o.titel, o.id === "…" ? h("span", {class: "muted lille"}, "  gemmes …") : null),
           h("div", {class: "meta"},
             o.deadline ? h("span", {class: o.deadline < idag && o.status !== "Færdig" ? "rød" : ""}, "dl " + kortDato(o.deadline)) : null,
