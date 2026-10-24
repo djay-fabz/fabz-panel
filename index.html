@@ -101,8 +101,16 @@ a.btn{display:inline-block;text-decoration:none}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .chip{border:1px solid var(--linje);background:var(--flade);border-radius:99px;padding:4px 12px;font-size:12.5px;color:var(--svag)}
 .chip:hover{color:var(--tekst)}
-.anlaeg{margin-bottom:14px;padding:12px;border:1px solid var(--linje);border-radius:12px;background:var(--flade)}
-.chip:disabled{opacity:.5;cursor:default}
+.anlaeg{margin-bottom:14px;padding:14px;border:1px solid var(--linje);border-radius:14px;background:var(--flade)}
+.agr{margin-top:12px}.agh{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}.agn{font-weight:600}.agantal{margin-left:auto;display:flex;align-items:center;gap:8px}
+.agrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
+.anl{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 8px 10px;border:1px solid var(--linje);border-radius:12px;background:var(--flade);color:var(--tekst);text-align:center;cursor:pointer;transition:background .12s,border-color .12s}
+.anl:hover:not(:disabled){background:var(--hover)}
+.anl .ik{display:flex;height:32px;align-items:center;justify-content:center;font-size:24px;color:var(--svag)}
+.anl .an{font-size:13px;font-weight:600;line-height:1.2}.anl .as{font-size:11.5px;color:var(--svag);line-height:1.2}
+.anl.aktiv{border-color:var(--accent);background:var(--accent-blid);box-shadow:0 0 0 1px var(--accent) inset}.anl.aktiv .ik{color:var(--accent)}
+.anl.aktiv::after{content:"✓";position:absolute;top:6px;right:8px;font-size:12px;color:var(--accent);font-weight:700}
+.anl.frosset{opacity:.45;border-style:dashed;cursor:not-allowed}
 .chip.aktiv{background:var(--tekst);border-color:var(--tekst);color:var(--flade)}
 .gruppe{margin-top:20px}
 .kort{background:var(--flade);border:1px solid var(--linje);border-radius:12px;overflow:hidden}
@@ -642,7 +650,7 @@ function åbnListe(navn) {
   nyEditor({job: null, base: p, egen: true, jobNavn: p.navn, gemNavn: p.navn, visGem: true});
 }
 function nyEditor(o) {
-  S = {...o, l: {}, transport: o.base?.transport || "", svar: null, rørt: false, godk: null, snap: null, fk: null, anlæg: [], bidrag: {}};
+  S = {...o, l: {}, transport: o.base?.transport || "", svar: null, rørt: false, godk: null, snap: null, fk: null, anlæg: [], antal: {}, bidrag: {}};
   indlæs(o.base);
   P = {q: "", kat: "Alle"};
   tegn();
@@ -654,7 +662,10 @@ function lukEditor() {
   tegn();
 }
 function indlæs(base) {
-  S.l = {}; S.anlæg = []; S.bidrag = {};
+  S.l = {}; S.anlæg = []; S.antal = {}; S.bidrag = {};
+  const an = base?.anlaeg;   // knapperne står, som da listen blev gemt
+  if (an) { S.anlæg = [...(an.valgte || [])]; S.antal = {...(an.antal || {})};
+    for (const b of an.bidrag || []) S.bidrag[nøgle(b.udstyr)] = {udstyr: b.udstyr, antal: b.antal, note: b.note || ""}; }
   for (const l of base?.linjer || []) S.l[nøgle(l.udstyr)] = {udstyr: l.udstyr, antal: l.antal, note: l.note || ""};
 }
 function visEditor() {
@@ -675,50 +686,108 @@ function tegnVælger() {
   $("vaelg").replaceChildren(anlægStribe(), h("div", {class: "soeg"}, søg, chips), h("div", {id: "raekker"}));
   tegnRækker();
 }
-// anlæg: vælg fx Mackie, så lægges alt det kræver på listen (samme regler som fabz_setups.udregn)
-function anlægUdregn(valgte) {
+// ---------- anlæg: vælg fx Mackie, så lægges alt det kræver på listen (samme regler som fabz_setups.udregn) ----------
+const IKON = {   // 24x24, streger i tekstfarven
+  mackie: '<rect x="5" y="2.5" width="14" height="5.5" rx="1.2"/><rect x="5" y="9.2" width="14" height="5.5" rx="1.2"/><rect x="5" y="15.9" width="14" height="5.5" rx="1.2"/><circle cx="12" cy="5.2" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="12" cy="18.7" r="1.3"/>',
+  top2: '<rect x="2.5" y="4" width="8" height="16" rx="1.5"/><rect x="13.5" y="4" width="8" height="16" rx="1.5"/><circle cx="6.5" cy="8" r="1.1"/><circle cx="6.5" cy="14.5" r="2.6"/><circle cx="17.5" cy="8" r="1.1"/><circle cx="17.5" cy="14.5" r="2.6"/>',
+  top2bund1: '<rect x="2.5" y="2.5" width="8" height="10" rx="1.5"/><rect x="13.5" y="2.5" width="8" height="10" rx="1.5"/><circle cx="6.5" cy="5.6" r="1"/><circle cx="6.5" cy="9.4" r="1.6"/><circle cx="17.5" cy="5.6" r="1"/><circle cx="17.5" cy="9.4" r="1.6"/><rect x="6" y="14.5" width="12" height="7" rx="1.5"/><circle cx="12" cy="18" r="2.4"/>',
+  top2bund2: '<rect x="2.5" y="2" width="8" height="8" rx="1.3"/><rect x="13.5" y="2" width="8" height="8" rx="1.3"/><circle cx="6.5" cy="6" r="1.8"/><circle cx="17.5" cy="6" r="1.8"/><rect x="2.5" y="12.5" width="8" height="9" rx="1.3"/><rect x="13.5" y="12.5" width="8" height="9" rx="1.3"/><circle cx="6.5" cy="17" r="2.6"/><circle cx="17.5" cy="17" r="2.6"/>',
+  tbar: '<path d="M3 6h18"/><path d="M12 6v12"/><path d="M12 18l-5 3.5M12 18l5 3.5"/><circle cx="7" cy="9.6" r="1.7"/><circle cx="17" cy="9.6" r="1.7"/>',
+  truss: '<path d="M2.5 7h19M2.5 17h19"/><path d="M2.5 17L7 7l4.5 10L16 7l5.5 10"/>',
+  kabel: '<circle cx="11" cy="11" r="7.5"/><circle cx="11" cy="11" r="3.8"/><path d="M17 17c1.5 2 3 3 4.5 3"/>',
+  haze: '<path d="M7 18.5h10.5a3.5 3.5 0 0 0 .4-7 5 5 0 0 0-9.6-1.3A4.2 4.2 0 0 0 7 18.5z"/><path d="M8 21.5h8" opacity=".5"/>',
+  scene: '<path d="M3 13l6-4.5h12L15 13z"/><path d="M3 13h12v5.5H3z"/><path d="M15 13l6-4.5v5.5l-6 4.5"/>',
+  lys: '<circle cx="12" cy="9" r="4.5"/><path d="M12 13.5V18M8 21h8M12 18v3"/>',
+};
+const ikonEl = (nøgle, tekst) => {
+  const e = document.createElement("span"); e.className = "ik";
+  if (IKON[nøgle]) e.innerHTML = `<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IKON[nøgle]}</svg>`;
+  else e.textContent = nøgle || "";
+  return e;
+};
+const anlægGruppe = x => (D.setups?.grupper || []).find(g => g.navn === x.gruppe);
+function anlægGyldig(x) {   // null = kan vælges, ellers hvorfor det er frosset
+  const g = anlægGruppe(x);
+  if (!(x.linjer || []).length) return "Ikke sat op endnu";
+  if (g?.antal) {
+    const n = S.antal[g.navn] || 0;
+    if (!n) return `Vælg antal ${g.antal.navn} først`;
+    if ((x.fra != null && n < x.fra) || (x.til != null && n > x.til)) return `Kun ${x.fra ?? g.antal.min}-${x.til ?? g.antal.max} stk`;
+  }
+  return null;
+}
+function anlægUdregn(valgte, antal) {
   const o = D.setups || {grupper: [], setups: []}, sm = new Map(o.setups.map(x => [nøgle(x.navn), x]));
-  let valg = valgte.map(n => sm.get(nøgle(n))).filter(Boolean);
+  const valg = valgte.map(n => sm.get(nøgle(n))).filter(Boolean);
   if (valg.some(x => !x.altid)) for (const x of o.setups) if (x.altid && !valg.includes(x)) valg.push(x);
   const ud = new Map();
-  for (const x of valg) for (const l of x.linjer || []) {
+  const læg = (l, n) => {
     const k = nøgle(l.udstyr), e = ud.get(k) || {udstyr: l.udstyr, antal: 0, note: []};
-    e.antal += l.antal; if (l.note && !e.note.includes(l.note)) e.note.push(l.note); ud.set(k, e);
-  }
-  return {linjer: ud, altid: valg.filter(x => x.altid).map(x => x.navn)};
+    e.antal += l.pr != null ? l.antal * Math.ceil(n / l.pr) : l.antal;
+    if (l.note && !e.note.includes(l.note)) e.note.push(l.note);
+    ud.set(k, e);
+  };
+  for (const g of o.grupper) if (g.antal && antal[g.navn]) for (const l of g.linjer || []) læg(l, antal[g.navn]);
+  for (const x of valg) { const g = o.grupper.find(y => y.navn === x.gruppe); for (const l of x.linjer || []) læg(l, g?.antal ? antal[g.navn] || 0 : 0); }
+  return ud;
 }
-function sætAnlæg(navn) {
-  const o = D.setups, x = o.setups.find(y => y.navn === navn), g = o.grupper.find(y => y.navn === x.gruppe);
-  let valgte = S.anlæg.includes(navn) ? S.anlæg.filter(n => n !== navn) : [...S.anlæg, navn];
-  if (g?.eksklusiv && valgte.includes(navn)) valgte = valgte.filter(n => n === navn || o.setups.find(y => y.navn === n)?.gruppe !== x.gruppe);
-  const ny = anlægUdregn(valgte).linjer;
-  for (const [k, b] of Object.entries(S.bidrag)) {   // træk det forrige valg fra, resten (manuelle linjer) bliver stående
+function anvendAnlæg(valgte, antal) {   // trækker det forrige valg fra listen og lægger det nye på; manuelle linjer bliver stående
+  for (const [k, b] of Object.entries(S.bidrag)) {
     const l = S.l[k]; if (!l) continue;
     l.antal -= b.antal;
     if (b.note && l.note === b.note) l.note = "";
     if (l.antal <= 0) delete S.l[k];
   }
   S.bidrag = {};
-  for (const [k, e] of ny) {
+  S.anlæg = valgte; S.antal = antal;
+  for (const [k, e] of anlægUdregn(valgte, antal)) {
     const note = e.note.join("; "), l = S.l[k] || (S.l[k] = {udstyr: e.udstyr, antal: 0, note: ""});
     l.antal += e.antal;
     const sat = !l.note && note; if (sat) l.note = note;
-    S.bidrag[k] = {antal: e.antal, note: sat ? note : ""};
+    S.bidrag[k] = {udstyr: e.udstyr, antal: e.antal, note: sat ? note : ""};
   }
-  S.anlæg = valgte; S.svar = null; S.rørt = true;
+  S.svar = null; S.rørt = true;
   tegnVælger(); tegnListe();
+}
+function sætAnlæg(navn) {
+  const x = D.setups.setups.find(y => y.navn === navn), g = anlægGruppe(x);
+  let valgte = S.anlæg.includes(navn) ? S.anlæg.filter(n => n !== navn) : [...S.anlæg, navn];
+  if (g?.eksklusiv && valgte.includes(navn)) valgte = valgte.filter(n => n === navn || D.setups.setups.find(y => y.navn === n)?.gruppe !== x.gruppe);
+  anvendAnlæg(valgte, S.antal);
+}
+function sætAnlægAntal(g, d) {
+  const a = g.antal, nu = S.antal[g.navn] || 0;
+  let n = nu + d;
+  if (nu === 0 && d > 0) n = a.min;
+  else if (n < a.min) n = 0;
+  else if (n > a.max) n = a.max;
+  if (n === nu) return;
+  const antal = {...S.antal, [g.navn]: n};
+  if (!n) delete antal[g.navn];
+  const gl = S.anlæg;
+  S.antal = antal;   // gyldighed regnes på det nye antal: anlæg, der ikke passer mere, vælges fra
+  const valgte = gl.filter(nv => { const x = D.setups.setups.find(y => y.navn === nv); return !x || x.gruppe !== g.navn || !anlægGyldig(x); });
+  anvendAnlæg(valgte, antal);
+}
+function anlægGem() {   // det der huskes sammen med listen, så knapperne står som sidst
+  return {valgte: S.anlæg, antal: S.antal, bidrag: Object.values(S.bidrag).map(b => ({udstyr: b.udstyr, antal: b.antal, ...(b.note ? {note: b.note} : {})}))};
 }
 function anlægStribe() {
   const o = D.setups || {setups: []};
   if (!o.setups.length) return h("div", {hidden: true});
-  const grp = [...new Set(o.setups.filter(x => !x.altid).map(x => x.gruppe))];
   const altid = o.setups.filter(x => x.altid);
+  const grupper = (o.grupper || []).filter(g => o.setups.some(x => !x.altid && x.gruppe === g.navn));
   return h("div", {class: "anlaeg"}, h("div", {class: "overskrift"}, "Vælg anlæg"),
-    grp.map(g => h("div", {class: "chips", style: "margin-top:6px"}, h("span", {class: "muted lille", style: "align-self:center;min-width:76px"}, g),
-      o.setups.filter(x => !x.altid && x.gruppe === g).map(x => { const tom = !(x.linjer || []).length;
-        return h("button", {type: "button", class: "chip" + (S.anlæg.includes(x.navn) ? " aktiv" : ""), disabled: tom, title: tom ? "Ingen linjer sat op endnu" : x.linjer.length + " linjer",
-          onclick: () => sætAnlæg(x.navn)}, [x.ikon, x.navn].filter(Boolean).join(" ")); }))),
-    altid.length ? h("div", {class: "muted lille", style: "margin-top:6px"}, "Kommer altid med: " + altid.map(x => x.navn).join(", ")) : null);
+    grupper.map(g => h("div", {class: "agr"},
+      h("div", {class: "agh"}, h("span", {class: "agn"}, g.navn), g.eksklusiv ? h("span", {class: "muted lille"}, "vælg ét") : h("span", {class: "muted lille"}, "vælg flere"),
+        g.antal ? h("span", {class: "agantal"}, h("span", {class: "muted lille"}, "Antal " + g.antal.navn),
+          stepper(S.antal[g.navn] || "–", d => sætAnlægAntal(g, d), g.antal.navn)) : null),
+      h("div", {class: "agrid"}, o.setups.filter(x => !x.altid && x.gruppe === g.navn).map(x => {
+        const frys = anlægGyldig(x), på = S.anlæg.includes(x.navn);
+        return h("button", {type: "button", class: "anl" + (på ? " aktiv" : "") + (frys && !på ? " frosset" : ""), disabled: !!frys && !på, title: frys || `${x.linjer.length} linjer`,
+          "aria-pressed": på ? "true" : "false", onclick: () => sætAnlæg(x.navn)},
+          ikonEl(x.ikon), h("span", {class: "an"}, x.navn), h("span", {class: "as"}, frys && !på ? frys : `${x.linjer.length} linjer`)); })))),
+    altid.length ? h("div", {class: "muted lille", style: "margin-top:8px"}, "Kommer altid med: " + altid.map(x => x.navn).join(", ")) : null);
 }
 function tegnRækker() {
   const el = $("raekker");
@@ -964,13 +1033,14 @@ async function godkend(ja) {
   const job = S.job, mig = S, noegle = jobNøgle(job);
   const linjer = Object.values(S.l).filter(l => l.antal > 0)
     .map(l => ({udstyr: l.udstyr, antal: l.antal, ...(l.note?.trim() ? {note: l.note.trim()} : {})}));
-  const krav = ja ? {type: "godkend", job: job.navn, dato: job.dato, transport: S.transport, linjer, udgangspunkt: S.base?.navn || null, godkendt: true}
+  const anlaeg = anlægGem();
+  const krav = ja ? {type: "godkend", job: job.navn, dato: job.dato, transport: S.transport, linjer, udgangspunkt: S.base?.navn || null, godkendt: true, anlaeg}
                   : {type: "godkend", job: job.navn, dato: job.dato, godkendt: false};
   const før = (D.jobpl || []).map(r => ({...r})), førS = {godk: S.godk, snap: S.snap, rørt: S.rørt};
   // med det samme
   const r = D.jobpl.find(x => x.job_noegle === noegle);
   if (ja) {
-    const ny = {job_noegle: noegle, job: job.navn, dato: job.dato, transport: S.transport, linjer, godkendt: iDag()};
+    const ny = {job_noegle: noegle, job: job.navn, dato: job.dato, transport: S.transport, linjer, godkendt: iDag(), anlaeg};
     if (r) Object.assign(r, ny); else D.jobpl.push(ny);
   } else if (r) r.godkendt = null;
   S.godk = ja ? iDag() : null;
@@ -1043,13 +1113,14 @@ async function gemSomListe() {
   const linjer = Object.values(S.l).filter(l => l.antal > 0)
     .map(l => ({udstyr: l.udstyr, antal: l.antal, ...(l.note?.trim() ? {note: l.note.trim()} : {})}));
   const krav = {type: "pakkeliste", job: (S.jobNavn || gemNavn).trim(), dato: S.job?.dato || null, transport: S.transport, linjer, pdf: false,
-    udgangspunkt: S.base?.navn || null,
+    udgangspunkt: S.base?.navn || null, anlaeg: anlægGem(),
     ...(findes ? {gem: "opdater", liste: findes.navn} : {gem: "ny", ny_navn: gemNavn, ny_type: "Skabelon"})};
   const mig = S, før = D.lister.map(p => ({...p})), førS = {base: S.base, egen: S.egen, rørt: S.rørt};
   // med det samme
   let liste;
-  if (findes) { liste = {...findes, linjer, transport: S.transport}; D.lister = D.lister.map(p => p === findes ? liste : p); }
-  else { liste = {navn: gemNavn, type: "Skabelon", transport: S.transport, linjer}; D.lister = [...D.lister, liste]; }
+  const anl = anlægGem(), anlSæt = anl.valgte.length || Object.keys(anl.antal).length;
+  if (findes) { liste = {...findes, linjer, transport: S.transport}; if (anlSæt) liste.anlaeg = anl; else delete liste.anlaeg; D.lister = D.lister.map(p => p === findes ? liste : p); }
+  else { liste = {navn: gemNavn, type: "Skabelon", transport: S.transport, linjer, ...(anlSæt ? {anlaeg: anl} : {})}; D.lister = [...D.lister, liste]; }
   S.base = liste; S.egen = true;
   if (!S.job) S.rørt = false;
   tegnListe();
