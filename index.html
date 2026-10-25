@@ -2406,7 +2406,7 @@ function salgMaal() {
 }
 const moMaaneder = () => (D.mo && Array.isArray(D.mo.maaneder)) ? D.mo.maaneder : [];
 function salgTop() {
-  return h("div", {class: "sk-top"}, ugeKort(), maanedKort(), pengeKort(), vejKort());
+  return h("div", {class: "sk-top"}, ugeKort(), maanedKort(), pengeKort(), tilDigKort(), vejKort());
 }
 function ugeKort() {
   const idag = iDag(), maal = salgMaal(), log = D.salgslog || [];
@@ -2514,6 +2514,35 @@ function pengeKort() {   // Penge ude: ubetalte fakturaer fra Dinero (data/maane
     depLinjer.length ? h("div", {class: "overskrift", style: "margin-top:14px"}, "Depositum på kommende private jobs") : null,
     depLinjer.length ? h("div", {class: "liste"}, depLinjer) : null,
     h("div", {class: "lille muted", style: "margin-top:10px"}, "Ubetalt = bogført i Dinero uden betaling. Depositum læses fra ØKONOMI i kalenderen (Depositum: betalt / faktura sendt / ingen)."));
+}
+function tilDigKort() {   // Til dig: overskud i firmaet (Dinero-posteringer) + B-indkomst/kontant, groft skatteoverslag, mod privatbehovet (strategi)
+  const td = (D.mo || {}).til_dig;
+  const kr = v => (v < 0 ? "−" : "") + krKort(Math.abs(v));
+  if (!td) return h("div", {class: "kort2 sk"}, h("div", {class: "overskrift"}, "Til dig · overskud og privatbehov"),
+    h("div", {class: "muted"}, "Udgifterne kommer med næste Dinero-hentning (hver morgen kl. 7)."));
+  const nu = td.nu, behov = td.behov, pct = td.skat_pct;
+  const sidste = td.maaneder[td.maaneder.length - 1];
+  const sjovKl = v => v == null ? "" : v >= 0 ? "g" : "rd";
+  const raekke = (m, lab) => h("div", {class: "l", style: "flex-wrap:wrap;row-gap:2px"},
+    h("span", {}, h("b", {}, lab || m.navn), h("span", {class: "muted lille"}, ` · oms. ${kr(m.oms)} · udg. ${kr(m.udgifter)}` + (m.registreret ? ` · +${kr(m.registreret)} B/kontant` : "") + (m.haevet ? ` · hævet ${kr(m.haevet)}` : ""))),
+    h("span", {style: "display:flex;gap:6px;align-items:center;flex-wrap:wrap"},
+      h("span", {class: "pill " + (m.overskud >= 0 ? "g" : "rd")}, `overskud ${kr(m.overskud)}`),
+      h("span", {class: "pill gr"}, `efter skat ${kr(m.efter_skat)}`),
+      behov != null ? h("span", {class: "pill " + sjovKl(m.sjov)}, (m.sjov >= 0 ? "til sjov/opsparing " : "mangler ") + kr(m.sjov)) : null));
+  const kat = Object.entries(nu.kategorier || {}).length ? nu.kategorier : (sidste || {}).kategorier || {};
+  const katTekst = Object.entries(kat).slice(0, 4).map(([k, v]) => `${k} ${kr(v)}`).join(" · ");
+  return h("div", {class: "kort2 sk"},
+    h("div", {class: "r1 sk-hoved"}, h("div", {class: "overskrift", style: "margin:0"}, "Til dig · overskud og privatbehov, ekskl. moms"),
+      h("span", {class: "muted lille"}, `Skat groft ${pct} %` + (behov != null ? ` · behov ${krKort(behov)} kr./md.` : ""))),
+    h("div", {class: "sk-k4"},
+      h("div", {class: "sk-k " + (nu.overskud >= 0 ? "g" : "rd")}, h("b", {}, kr(nu.overskud)), h("span", {}, `kr. overskud i ${nu.navn.toLowerCase()} indtil nu (${kr(nu.oms)} − ${kr(nu.udgifter)})`)),
+      h("div", {class: "sk-k b"}, h("b", {}, kr(nu.efter_skat)), h("span", {}, `kr. til dig efter skat i ${nu.navn.toLowerCase()}` + (nu.registreret ? ` (inkl. ${kr(nu.registreret)} B/kontant)` : ""))),
+      h("div", {class: "sk-k " + sjovKl(nu.sjov)}, h("b", {}, behov != null ? kr(nu.sjov) : "–"), h("span", {}, behov != null ? `kr. ${nu.sjov >= 0 ? "til sjov/opsparing" : "mangler til behovet"} i ${nu.navn.toLowerCase()}` : "sæt privatbehov: strategi-ret privatbehov_md 10000")),
+      h("div", {class: "sk-k " + (td.snit_udgifter != null && behov != null && td.snit_udgifter > 0 ? "" : "")}, h("b", {}, td.snit_udgifter != null ? kr(td.snit_udgifter) : "–"), h("span", {}, `kr. udgifter i firmaet i snit pr. md. (${td.snit_maaneder} mdr.)`))),
+    katTekst ? h("div", {class: "muted lille", style: "margin-top:8px"}, "Største udgifter: " + katTekst) : null,
+    td.maaneder.length ? h("div", {class: "overskrift", style: "margin-top:14px"}, "Afsluttede måneder") : null,
+    td.maaneder.length ? h("div", {class: "liste"}, [...td.maaneder].reverse().map(m => raekke(m))) : null,
+    h("div", {class: "lille muted", style: "margin-top:10px"}, "Overskud = Dineros resultatkonti pr. måned (fakturadato, ikke betaling). Skatten er et groft overslag, ikke en beregning: spørg revisor/SKAT om, hvad du skal sætte til side. Ret med strategi-ret privatbehov_md / skat_pct."));
 }
 function vejKort() {
   const ms = moMaaneder(), mo = D.mo || {};
