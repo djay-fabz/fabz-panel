@@ -187,7 +187,13 @@ a.btn{display:inline-block;text-decoration:none}
 .pakker{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
 .pakkechip{display:inline-flex;align-items:center;gap:2px;padding:2px 4px 2px 9px;border-radius:99px;background:var(--accent-blid);color:var(--accent);font-size:12.5px;font-weight:500;white-space:nowrap}
 .pakkefjern{border:0;background:none;color:inherit;font-size:14px;line-height:1;width:20px;height:20px;border-radius:99px;cursor:pointer}.pakkefjern:hover{background:var(--accent);color:var(--accent-tekst)}
-.pakkevalg{width:auto;min-width:0;max-width:140px;color:var(--svag);padding:4px 6px}
+.pakker{position:relative}
+.pakkeknap{border:1px dashed var(--linje);background:none;color:var(--svag);border-radius:99px;padding:3px 10px;font-size:12.5px;white-space:nowrap}.pakkeknap:hover{color:var(--tekst);border-color:var(--tekst)}
+.pakkeliste{position:fixed;z-index:15;min-width:240px;max-height:min(460px,calc(100vh - 24px));overflow:auto;background:var(--flade);border:1px solid var(--linje);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.18);padding:6px;display:flex;flex-direction:column;gap:1px;font-weight:400}
+.pakkelistehoved{display:flex;align-items:center;justify-content:space-between;padding:2px 2px 4px 8px}
+.pakkeliste label{display:flex;gap:10px;align-items:center;padding:6px 8px;border-radius:8px;cursor:pointer;min-height:32px;white-space:nowrap}.pakkeliste label:hover{background:var(--hover)}
+.pakkeliste input[type=checkbox]{width:16px;height:16px;margin:0}
+.pakkeny{display:flex;gap:6px;margin-top:6px;padding-top:8px;border-top:1px solid var(--linje)}.pakkeny .input{padding:6px 9px}
 .lhd{font-size:11.5px;color:var(--svagere);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-top:20px}
 .lr{border-top:1px solid var(--linje)}
 .kort .lr:first-child{border-top:0}
@@ -302,7 +308,9 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
   .lhd{display:none}
   .lr{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;grid-template-areas:"navn navn antal" "kat status x" "note note note" "pakke pakke pakke";row-gap:4px;padding:10px 8px}
   .lr>:nth-child(1){grid-area:navn}.lr>:nth-child(2){grid-area:kat}.lr>:nth-child(3){grid-area:antal}.lr>:nth-child(4){grid-area:status}.lr>:nth-child(5){grid-area:note}.lr>:nth-child(6){grid-area:pakke}.lr>:nth-child(7){grid-area:x}
-  .pakkechip{min-height:40px;padding-left:12px}.pakkefjern{width:36px;height:36px}.pakkevalg{max-width:none;min-height:40px}
+  .pakkechip{min-height:40px;padding-left:12px}.pakkefjern{width:36px;height:36px}.pakkeknap{min-height:40px;padding:0 14px}
+  .pakkeliste{left:8px;right:8px;top:auto;bottom:calc(64px + env(safe-area-inset-bottom));max-height:60vh;z-index:14;box-shadow:0 -8px 28px rgba(0,0,0,.22)}
+  .pakkeliste label{min-height:44px}.pakkeliste input[type=checkbox]{width:22px;height:22px}
   .felt,.input,select.input{min-height:40px}
   .nyform{grid-template-columns:1fr 1fr}
   .planpunkt:not([style]){grid-template-columns:1fr 64px 40px;grid-template-areas:"tekst min x" "flyt flyt flyt"}
@@ -1232,7 +1240,7 @@ function visLager() {
     h("div", {class: "lagertop"},
       h("h1", {}, "Lager"), h("span", {class: "muted"}, `${aktive} ting`),
       h("div", {class: "spacer"}), søg,
-      h("select", {class: "input", style: "width:auto", title: "Vis kun én pakke", onchange: e => { L.pakke = e.target.value; filtrér(); }},
+      h("select", {class: "input", id: "pakkefilter", style: "width:auto", title: "Vis kun én pakke", onchange: e => { L.pakke = e.target.value; filtrér(); }},
         h("option", {value: ""}, "Alle pakker"), allePakker().map(p => h("option", {value: p, selected: L.pakke === p}, p))),
       h("label", {class: "muted lille"}, h("input", {type: "checkbox", checked: L.udgaaede, onchange: e => { L.udgaaede = e.target.checked; visLager(); }}), " Vis udgået"),
       h("button", {class: "btn primaer", type: "button", onclick: () => { L.visNy = true; visLager(); $("nyNavn")?.focus(); }}, "+ Nyt udstyr")),
@@ -1278,26 +1286,61 @@ function allePakker() {
     if (n && !ud.some(x => nøgle(x) === nøgle(n))) ud.push(n);
   return ud;
 }
-function pakkeCelle(w, ændret) {
+function pakkeCelle(w, ændret) {   // chips + knap, der åbner en tjekliste: sæt flueben ved flere pakker på én gang
   const celle = h("div", {class: "pakker"});
+  let liste = null;
+  const luk = () => { if (liste) { liste.remove(); liste = null; } if (PK_AABEN === luk) { PK_AABEN = null; PK_PLACER = null; } };
+  const placer = () => {   // PC: fast position under knappen (kortet klipper ellers listen); telefon: bundark via CSS
+    if (!liste || window.innerWidth <= 700) return;
+    const k = celle.querySelector(".pakkeknap"), r = k ? k.getBoundingClientRect() : celle.getBoundingClientRect();
+    const hø = Math.min(460, window.innerHeight - 24), over = r.bottom + 6 + hø > window.innerHeight && r.top - 6 - hø > 0;
+    Object.assign(liste.style, {left: Math.min(r.left, window.innerWidth - 260) + "px", top: over ? "" : r.bottom + 6 + "px", bottom: over ? window.innerHeight - r.top + 6 + "px" : ""});
+  };
+  const tegnListe = () => {
+    if (!liste) return;
+    const valgt = w.pakker || [];
+    const ny = h("input", {class: "input", placeholder: "Ny pakke …", "aria-label": "Ny pakke"});
+    const tilføj = () => {
+      const n = ny.value.trim().replace(/\s+/g, " ");
+      if (!n) { ny.focus(); return; }
+      const kendt = allePakker().find(x => nøgle(x) === nøgle(n)) || n, nu = w.pakker || [];   // w.pakker læses frisk: flueben kan være sat siden listen blev tegnet
+      if (!nu.some(x => nøgle(x) === nøgle(kendt))) { w.pakker = [...nu, kendt]; ændret(); }
+      tegnPakkefilter(); tegn(); tegnListe(); liste.querySelector("input.input")?.focus();
+    };
+    ny.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); tilføj(); } });
+    liste.replaceChildren(
+      h("div", {class: "pakkelistehoved"}, h("span", {class: "etiket", style: "margin:0"}, "Pakker"), h("button", {type: "button", class: "x", title: "Luk", onclick: luk}, "×")),
+      ...allePakker().map(p => h("label", {}, h("input", {type: "checkbox", checked: valgt.some(x => nøgle(x) === nøgle(p)),
+        onchange: e => { w.pakker = e.target.checked ? [...(w.pakker || []), p] : (w.pakker || []).filter(x => nøgle(x) !== nøgle(p)); ændret(); tegn(); }}), h("span", {}, p))),
+      h("div", {class: "pakkeny"}, ny, h("button", {class: "btn lille", type: "button", onclick: tilføj}, "Tilføj")));
+  };
+  const åbn = () => {
+    if (liste) return luk();
+    if (PK_AABEN) PK_AABEN();
+    PK_AABEN = luk; PK_PLACER = placer;
+    liste = h("div", {class: "pakkeliste", onclick: e => e.stopPropagation()});
+    celle.append(liste);
+    tegnListe();
+    placer();
+  };
   const tegn = () => {
     const valgt = w.pakker || [];
-    const sel = h("select", {class: "felt pakkevalg", "aria-label": "Læg i pakke", onchange: e => {
-      let n = e.target.value;
-      if (n === "__ny") { n = (prompt("Navn på den nye pakke (fx RCF 2 toppe):") || "").trim().replace(/\s+/g, " "); }
-      const kendt = allePakker().find(x => nøgle(x) === nøgle(n));
-      if (n && !valgt.some(x => nøgle(x) === nøgle(n))) { w.pakker = [...valgt, kendt || n]; ændret(); }
-      if (n && !kendt) visLager();   // ny pakke: hele tabellen tegnes igen, så den kan vælges på de andre rækker og i filteret
-      else tegn();
-    }},
-      h("option", {value: ""}, valgt.length ? "+ pakke" : "+ Læg i pakke"),
-      allePakker().filter(p => !valgt.some(x => nøgle(x) === nøgle(p))).map(p => h("option", {value: p}, p)),
-      h("option", {value: "__ny"}, "Ny pakke …"));
     celle.replaceChildren(...valgt.map(p => h("span", {class: "pakkechip"}, p,
-      h("button", {type: "button", class: "pakkefjern", title: "Tag ud af " + p, "aria-label": "Tag ud af " + p, onclick: () => { w.pakker = valgt.filter(x => x !== p); ændret(); tegn(); }}, "×"))), sel);
+      h("button", {type: "button", class: "pakkefjern", title: "Tag ud af " + p, "aria-label": "Tag ud af " + p, onclick: () => { w.pakker = valgt.filter(x => x !== p); ændret(); tegn(); tegnListe(); }}, "×"))),
+      h("button", {type: "button", class: "pakkeknap", "aria-label": "Vælg pakker", onclick: e => { e.stopPropagation(); åbn(); }}, valgt.length ? "+ pakke" : "+ Læg i pakke"),
+      ...(liste ? [liste] : []));
+    placer();
   };
   tegn();
   return celle;
+}
+let PK_AABEN = null;   // den åbne tjekliste (kun én ad gangen); lukkes ved klik udenfor
+document.addEventListener("click", () => { if (PK_AABEN) PK_AABEN(); });
+window.addEventListener("scroll", () => { if (PK_PLACER) PK_PLACER(); }, {passive: true});   // den fast placerede liste følger med, når siden scroller
+let PK_PLACER = null;
+function tegnPakkefilter() {   // filteret øverst følger med, når der kommer en ny pakke
+  const sel = $("pakkefilter");
+  if (sel) sel.replaceChildren(h("option", {value: ""}, "Alle pakker"), ...allePakker().map(p => h("option", {value: p, selected: L.pakke === p}, p)));
 }
 function filtrér() {
   const q = nøgle(L.q);
