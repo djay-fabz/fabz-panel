@@ -1644,6 +1644,12 @@ function visIDag() {
           return sideKort(`Salg: følg op i dag (${due.length}) · uge ${ugeN}/${ugeM} kontakter`, due.length ? due.map(s => h("button", {class: "mini link", type: "button",
             onclick: () => { fane = "salg"; SG.vis = "s"; SG.valgt = s.navn; SG.k = {naeste: s.naeste || ""}; tegn(); }},
             h("span", {class: "lille tid " + (s.naeste_opfoelgning < iDag() ? "rød" : "muted")}, kortDato(s.naeste_opfoelgning)), h("span", {}, s.navn))) : h("div", {class: "muted lille"}, "Ingen")); })(),
+        (() => { const ub = D.mo?.ubetalt, dm = (D.mo?.depositum || []).filter(j => j.status === "mangler");   // Penge ude: kun når noget haster
+          if (!ub || (!ub.forfaldne && !dm.length)) return null;
+          return sideKort("Penge ude", h("div", {}, ub.forfaldne ? h("button", {class: "mini link", type: "button", onclick: () => { fane = "salg"; tegn(); }},
+              h("span", {class: "pill rd"}, `${ub.forfaldne} over forfald`), h("span", {}, `${krKort(ub.forfaldne_kr)} kr. · send rykker i Dinero`)) : null,
+            dm.map(j => h("button", {class: "mini link", type: "button", onclick: () => { fane = "salg"; tegn(); }},
+              h("span", {class: "pill rd"}, "depositum"), h("span", {}, `${j.navn} · ${kortDato(j.dato)} · intet depositum sendt`))))); })(),
         sideKort("Næste jobs", næste.length ? næste.map(j => {
           const jp = jobplTilJob(j), klar = !!jp?.godkendt || opgaveTilJob(j)?.status === "Færdig";
           return h("button", {class: "mini link", type: "button", onclick: () => { fane = "pakkelister"; åbnJob(j); }},
@@ -2400,7 +2406,7 @@ function salgMaal() {
 }
 const moMaaneder = () => (D.mo && Array.isArray(D.mo.maaneder)) ? D.mo.maaneder : [];
 function salgTop() {
-  return h("div", {class: "sk-top"}, ugeKort(), maanedKort(), vejKort());
+  return h("div", {class: "sk-top"}, ugeKort(), maanedKort(), pengeKort(), vejKort());
 }
 function ugeKort() {
   const idag = iDag(), maal = salgMaal(), log = D.salgslog || [];
@@ -2476,6 +2482,38 @@ function maanedKort() {
         h("div", {class: "muted", style: "margin-top:4px"}, `${krKort(m.faktureret)} faktureret` + (m.registreret ? ` · ${krKort(m.registreret)} B-indkomst/kontant` : "") + ` · ${krKort(m.jobs_kr)} booket frem` + (m.uden_pris ? ` · ${m.uden_pris} job uden pris` : "")),
         afholdt.length ? h("div", {class: "lille", style: "margin-top:4px;color:var(--adv)"}, "Fakturér eller registrér: " + afholdt.map(j => `${j.navn} ${kortDato(j.dato)}`).join(", ")) : null,
         h("div", {class: "r1", style: "margin-top:10px"}, naeste))));
+}
+function pengeKort() {   // Penge ude: ubetalte fakturaer fra Dinero (data/maanedsoversigt.json) og depositum på kommende private jobs (ØKONOMI i kalenderen)
+  const mo = D.mo || {}, dep = mo.depositum || [];
+  const ub = mo.ubetalt || {antal: 0, kr: 0, forfaldne: 0, forfaldne_kr: 0, liste: [], mangler: true};   // før første Dinero-hentning med betalingsstatus
+  const navnOrd = n => (n || "").toLowerCase().split(/[^a-zæøå]+/).filter(o => o.length >= 3);
+  const aabenFaktura = j => ub.liste.some(u => navnOrd(u.kunde).some(o => navnOrd(j.navn).includes(o)));
+  const DEP = {mangler: ["rd", "depositum mangler"], sendt: ["y", "faktura sendt"], betalt: ["g", "depositum betalt"], ingen: ["", "intet depositum"]};
+  const mangler = dep.filter(j => j.status === "mangler"), sendt = dep.filter(j => j.status === "sendt");
+  const linjer = ub.liste.map(u => h("div", {class: "l"},
+    h("span", {}, `${u.kunde} · nr. ${u.nr} · ${kortDato(u.dato)}`,
+      u.dage_over ? h("span", {class: "pill rd", style: "margin-left:6px"}, `${u.dage_over} dage over`) : h("span", {class: "muted lille", style: "margin-left:6px"}, u.forfald ? `forfalder ${kortDato(u.forfald)}` : "")),
+      h("span", {class: "ub-spacer", style: "flex:1"}),
+    h("b", {style: "margin-left:8px"}, krKort(u.kr))));
+  const depLinjer = dep.filter(j => j.status !== "ingen").map(j => {
+    const [c, t] = DEP[j.status];
+    const note = j.status === "sendt" ? (aabenFaktura(j) ? "står som ubetalt i Dinero" : "ikke blandt de ubetalte, så nok betalt: skriv det i kalenderen") : "";
+    return h("div", {class: "l", style: "flex-wrap:wrap;row-gap:2px"}, h("span", {}, `${j.navn} · ${kortDato(j.dato)}`),
+      h("span", {style: "display:flex;gap:6px;align-items:center;flex-wrap:wrap;min-width:0"}, h("span", {class: "pill " + c}, t), note ? h("span", {class: "muted lille"}, note) : null));
+  });
+  return h("div", {class: "kort2 sk"},
+    h("div", {class: "r1 sk-hoved"}, h("div", {class: "overskrift", style: "margin:0"}, "Penge ude · inkl. moms"),
+      h("span", {class: "muted lille"}, `Dinero pr. ${mo.dinero_pr ? visDato(mo.dinero_pr) : "?"}`)),
+    h("div", {class: "sk-k4"},
+      h("div", {class: "sk-k " + (ub.antal ? "y" : "g")}, h("b", {}, krKort(ub.kr)), h("span", {}, `kr. ubetalt (${ub.antal} ${ub.antal === 1 ? "faktura" : "fakturaer"})`)),
+      h("div", {class: "sk-k " + (ub.forfaldne ? "rd" : "g")}, h("b", {}, krKort(ub.forfaldne_kr)), h("span", {}, `kr. over forfald (${ub.forfaldne})`)),
+      h("div", {class: "sk-k " + (mangler.length ? "rd" : "g")}, h("b", {}, mangler.length), h("span", {}, "private jobs uden depositum")),
+      h("div", {class: "sk-k " + (sendt.length ? "y" : "")}, h("b", {}, sendt.length), h("span", {}, "depositum sendt, venter"))),
+    linjer.length ? h("div", {class: "liste", style: "margin-top:12px"}, linjer) : h("div", {class: "muted", style: "margin-top:12px"}, ub.mangler ? "Betalingsstatus kommer med næste Dinero-hentning (hver morgen kl. 7)." : "Alle fakturaer er betalt."),
+    ub.forfaldne ? h("div", {class: "lille", style: "margin-top:6px;color:var(--adv)"}, "Send rykker fra Dinero (Salg → Fakturaer → Send påmindelse).") : null,
+    depLinjer.length ? h("div", {class: "overskrift", style: "margin-top:14px"}, "Depositum på kommende private jobs") : null,
+    depLinjer.length ? h("div", {class: "liste"}, depLinjer) : null,
+    h("div", {class: "lille muted", style: "margin-top:10px"}, "Ubetalt = bogført i Dinero uden betaling. Depositum læses fra ØKONOMI i kalenderen (Depositum: betalt / faktura sendt / ingen)."));
 }
 function vejKort() {
   const ms = moMaaneder(), mo = D.mo || {};
