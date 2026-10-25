@@ -625,7 +625,7 @@ const jobStatus = j => {
   const kortO = opg.some(o => o.job_opgave === "festkort" && o.status !== "Færdig");
   const dage = Math.round((dag(j.dato) - dag(iDag())) / 864e5);
   return {key, klar, pak: klar ? "Klar" : liste || jp ? "Skal godkendes" : "Skal laves", kort, kortTekst: kort ? "Lavet" : kortO ? "Skal laves" : "Ingen skilte oprettet",
-    skilteRel: kort || kortO || erKlub(j),   // skilte vises kun, når jobbet har dem, har en skilte-opgave eller er et klubjob
+    skilteRel: true,   // Oscar 25/10: skilte-status vises på alle jobs, så han kan se, hvor hvert job er i processen (før: kun klubjobs, jobs med skilte-opgave eller lavede skilte)
     dage, kørsel: !!(D.jobrute || {})[key], åbne: opg.filter(o => o.status !== "Færdig")};
 };
 const jobTider = j => {   // linjerne under TIDER i bookingen (kun læsning)
