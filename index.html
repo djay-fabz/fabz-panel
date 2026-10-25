@@ -2560,11 +2560,11 @@ function privatKort() {   // Privat: Danske Bank via GoCardless (data/privat.jso
   const behovKl = sat != null && pv.behov_uden_sjov != null ? (pv.behov_uden_sjov <= sat ? "g" : "rd") : "";
   const knapBehov = v => h("button", {class: "btn lille", type: "button", onclick: () => kør("strategi-ret", ["privatbehov_md", String(v)], {tekst: `Privatbehov ${krKort(v)}`, efter: ["strategi", "mo"],
     med: () => { (D.strategi ||= {}).privatbehov_md = v; }})}, `Brug ${krKort(v)} som behov`);
-  const gridStil = `display:grid;grid-template-columns:1fr repeat(${fulde.length},64px);gap:6px;align-items:center;padding:4px 0;border-bottom:1px solid var(--linje)`;
+  const gridStil = `display:grid;grid-template-columns:minmax(0,1fr) repeat(${fulde.length},${window.innerWidth <= 700 ? 58 : 64}px);gap:6px;align-items:center;padding:4px 0;border-bottom:1px solid var(--linje)`;
   const celle = (m, k) => h("b", {style: "text-align:right"}, m.kategorier[k] ? krKort(m.kategorier[k]) : "–");
   const tabel = fulde.length ? h("div", {style: "margin-top:12px"},
     h("div", {class: "muted lille", style: gridStil}, h("span", {}, "Kategori"), fulde.map(m => h("b", {style: "text-align:right"}, m.navn))),
-    kats.map(k => h("div", {style: gridStil}, h("span", {}, k, sjovKat.has(k) ? h("span", {class: "pill y", style: "margin-left:6px"}, "sjov") : null), fulde.map(m => celle(m, k)))),
+    kats.map(k => h("div", {style: gridStil}, h("span", {style: "white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0"}, k, sjovKat.has(k) ? h("span", {class: "pill y", style: "margin-left:6px"}, "sjov") : null), fulde.map(m => celle(m, k)))),
     h("div", {style: gridStil}, h("span", {}, h("b", {}, "I alt ud")), fulde.map(m => h("b", {style: "text-align:right"}, krKort(m.ialt))))) : null;
   const regel = (u) => {
     const sel = h("select", {class: "input lille", style: "max-width:150px"}, h("option", {value: ""}, "Kategori …"), (pv.kategorier || []).filter(k => k !== "Andet").map(k => h("option", {value: k}, k)));
