@@ -473,6 +473,8 @@ async function hentData() {
   D.setups = su ? await su.json() : {grupper: [], setups: []};
   const mo = await laesFil("data/maanedsoversigt.json");   // omsætning pr. måned med trafiklys, regnet af fabz.py maanedsoversigt --gem
   D.mo = mo ? await mo.json() : null;
+  const pv = await laesFil("data/privat.json");   // privatøkonomi fra banken (bank.yml: tools/bank_sync.py + fabz.py privat)
+  D.privat = pv ? await pv.json() : null;
 }
 async function laesKkTekster() {   // Oscars rettede tekster, ellers standardteksterne fra tools/klubkort
   const r = await laesFil("data/klubkort_tekster.json");
@@ -1460,7 +1462,7 @@ async function gemLager() {
 
 // ---------- fælles: kør fabz.py-kommandoer fra panelet ----------
 const FILER = {henvendelser: "data/henvendelser.json", opgaver: "data/opgaver.json", dagsplaner: "data/dagsplaner.json",
-               ideer: "data/ideer.json", indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json", salgslog: "data/salgslog.json", mo: "data/maanedsoversigt.json"};
+               ideer: "data/ideer.json", indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json", salgslog: "data/salgslog.json", mo: "data/maanedsoversigt.json", privat: "data/privat.json", strategi: "data/strategi.json"};
 async function laesValgfri(p) { const r = await laesFil(p); return r ? r.json() : []; }
 async function genindlæs(navne) { await Promise.all(navne.map(async n => { D[n] = n === "kkTekster" ? await laesKkTekster() : await laesValgfri(FILER[n]); })); }
 const plusDage = (iso, n) => { const d = dag(iso); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
@@ -2406,7 +2408,7 @@ function salgMaal() {
 }
 const moMaaneder = () => (D.mo && Array.isArray(D.mo.maaneder)) ? D.mo.maaneder : [];
 function salgTop() {
-  return h("div", {class: "sk-top"}, ugeKort(), maanedKort(), pengeKort(), tilDigKort(), vejKort());
+  return h("div", {class: "sk-top"}, ugeKort(), maanedKort(), pengeKort(), tilDigKort(), privatKort(), vejKort());
 }
 function ugeKort() {
   const idag = iDag(), maal = salgMaal(), log = D.salgslog || [];
@@ -2543,6 +2545,47 @@ function tilDigKort() {   // Til dig: overskud i firmaet (Dinero-posteringer) + 
     td.maaneder.length ? h("div", {class: "overskrift", style: "margin-top:14px"}, "Afsluttede måneder") : null,
     td.maaneder.length ? h("div", {class: "liste"}, [...td.maaneder].reverse().map(m => raekke(m))) : null,
     h("div", {class: "lille muted", style: "margin-top:10px"}, "Overskud = Dineros resultatkonti pr. måned (fakturadato, ikke betaling). Skatten er et groft overslag, ikke en beregning: spørg revisor/SKAT om, hvad du skal sætte til side. Ret med strategi-ret privatbehov_md / skat_pct."));
+}
+function privatKort() {   // Privat: Danske Bank via GoCardless (data/privat.json). Behov = median af de sidste 3 fulde måneder, uden og med sjov (Byen, Shopping)
+  const pv = D.privat, sat = (D.strategi || {}).privatbehov_md;
+  const titel = h("div", {class: "overskrift", style: "margin:0"}, "Privat · hvad livet koster, fra banken");
+  if (!pv || pv.status === "ingen") return h("div", {class: "kort2 sk"}, titel,
+    h("div", {class: "muted", style: "margin-top:8px"}, "Banken er ikke koblet på endnu. Opret en gratis konto på bankaccountdata.gocardless.com, læg Secret ID og Secret Key i GitHub som GOCARDLESS_SECRET_ID og GOCARDLESS_SECRET_KEY, så laver den daglige hentning et tilslutningslink her."));
+  if (pv.status === "tilslut") return h("div", {class: "kort2 sk"}, titel,
+    h("div", {class: "muted", style: "margin:8px 0"}, "Banken venter på dit samtykke (MitID). Linket holder kort tid, så åbn det nu. Bagefter henter panelet transaktionerne hver morgen."),
+    pv.link ? h("a", {class: "btn primaer", href: pv.link, target: "_blank", rel: "noopener"}, "Tilslut Danske Bank med MitID") : h("span", {class: "muted lille"}, "Intet link endnu, vent på næste hentning."));
+  const ms = pv.maaneder || [], fulde = ms.filter(m => !m.nu).slice(-3), nu = ms.find(m => m.nu);
+  const kats = [...new Set(fulde.flatMap(m => Object.keys(m.kategorier)))].sort((a, b) => fulde.reduce((s, m) => s + (m.kategorier[b] || 0), 0) - fulde.reduce((s, m) => s + (m.kategorier[a] || 0), 0));
+  const sjovKat = new Set(pv.sjov || []);
+  const behovKl = sat != null && pv.behov_uden_sjov != null ? (pv.behov_uden_sjov <= sat ? "g" : "rd") : "";
+  const knapBehov = v => h("button", {class: "btn lille", type: "button", onclick: () => kør("strategi-ret", ["privatbehov_md", String(v)], {tekst: `Privatbehov ${krKort(v)}`, efter: ["strategi", "mo"],
+    med: () => { (D.strategi ||= {}).privatbehov_md = v; }})}, `Brug ${krKort(v)} som behov`);
+  const tabel = fulde.length ? h("div", {class: "liste", style: "margin-top:12px"},
+    h("div", {class: "l muted lille"}, h("span", {}, "Kategori"), h("span", {style: "display:flex;gap:14px"}, fulde.map(m => h("b", {style: "min-width:52px;text-align:right"}, m.navn)))),
+    kats.map(k => h("div", {class: "l"}, h("span", {}, k, sjovKat.has(k) ? h("span", {class: "pill y", style: "margin-left:6px"}, "sjov") : null),
+      h("span", {style: "display:flex;gap:14px"}, fulde.map(m => h("b", {style: "min-width:52px;text-align:right"}, m.kategorier[k] ? krKort(m.kategorier[k]) : "–"))))),
+    h("div", {class: "l"}, h("span", {}, h("b", {}, "I alt ud")), h("span", {style: "display:flex;gap:14px"}, fulde.map(m => h("b", {style: "min-width:52px;text-align:right"}, krKort(m.ialt)))))) : null;
+  const regel = (u) => {
+    const sel = h("select", {class: "input lille", style: "max-width:150px"}, h("option", {value: ""}, "Kategori …"), (pv.kategorier || []).filter(k => k !== "Andet").map(k => h("option", {value: k}, k)));
+    sel.onchange = () => { if (!sel.value) return; const ord = u.tekst.split(/\s+/).slice(0, 2).join(" ");
+      kør("privat-regel", ["--", ord, sel.value], {tekst: `Regel: ${ord} → ${sel.value}`, efter: ["privat"]}); };
+    return h("div", {class: "l", style: "flex-wrap:wrap;row-gap:4px"}, h("span", {}, u.tekst, h("span", {class: "muted lille"}, ` · ${u.antal} gange · ${krKort(u.kr)}`)), sel);
+  };
+  return h("div", {class: "kort2 sk"},
+    h("div", {class: "r1 sk-hoved"}, titel, h("span", {class: "muted lille"}, `Danske Bank pr. ${pv.hentet ? visDato(pv.hentet) : "?"} · ${pv.antal} posteringer`)),
+    h("div", {class: "sk-k4"},
+      h("div", {class: "sk-k " + behovKl}, h("b", {}, pv.behov_uden_sjov != null ? krKort(pv.behov_uden_sjov) : "–"), h("span", {}, `kr./md. uden sjov (median ${fulde.length} mdr.)` + (sat != null ? ` · sat til ${krKort(sat)}` : ""))),
+      h("div", {class: "sk-k"}, h("b", {}, pv.behov_med_sjov != null ? krKort(pv.behov_med_sjov) : "–"), h("span", {}, "kr./md. med sjov (byen, shopping)")),
+      h("div", {class: "sk-k"}, h("b", {}, krKort(pv.faste_kr || 0)), h("span", {}, `kr. faste udgifter (${(pv.faste || []).length} stk.)`)),
+      h("div", {class: "sk-k " + (nu && pv.behov_med_sjov != null && nu.ialt > pv.behov_med_sjov ? "rd" : "")}, h("b", {}, nu ? krKort(nu.ialt) : "–"), h("span", {}, nu ? `kr. brugt i ${nu.navn.toLowerCase()} indtil nu` : "ingen posteringer i denne måned"))),
+    pv.behov_uden_sjov != null && sat !== pv.behov_uden_sjov ? h("div", {class: "r1", style: "margin-top:10px;gap:8px;flex-wrap:wrap"}, knapBehov(pv.behov_uden_sjov), pv.behov_med_sjov !== pv.behov_uden_sjov ? knapBehov(pv.behov_med_sjov) : null,
+      h("span", {class: "muted lille"}, "Behovet bruges i Til dig-kortet.")) : null,
+    tabel,
+    (pv.faste || []).length ? h("div", {class: "overskrift", style: "margin-top:14px"}, "Faste udgifter (samme beløb hver måned)") : null,
+    (pv.faste || []).length ? h("div", {class: "liste"}, pv.faste.slice(0, 10).map(f => h("div", {class: "l"}, h("span", {}, f.tekst, h("span", {class: "muted lille"}, ` · ${f.kategori}`)), h("b", {}, krKort(f.kr))))) : null,
+    (pv.ukendte || []).length ? h("div", {class: "overskrift", style: "margin-top:14px"}, "Ukendte poster: vælg kategori, så husker panelet det") : null,
+    (pv.ukendte || []).length ? h("div", {class: "liste"}, pv.ukendte.slice(0, 6).map(regel)) : null,
+    h("div", {class: "lille muted", style: "margin-top:10px"}, "Kun læseadgang til banken (GoCardless, Open Banking). Overførsler til egne konti og Fabz tæller ikke med. Samtykket fornys ca. hver 90. dag, så kommer der et nyt link her."));
 }
 function vejKort() {
   const ms = moMaaneder(), mo = D.mo || {};
