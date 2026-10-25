@@ -287,6 +287,35 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .opsaet h2{margin-top:0}
 .fejltekst{color:var(--fejl)}
 @media (max-width:900px){.ed{grid-template-columns:1fr;height:auto}.liste{border-left:0;border-top:1px solid var(--linje)}}
+/* salg: statuskort (uge, måned, vejen) */
+.sk-top{display:grid;gap:14px}
+.r1{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.sk .sk-hoved{justify-content:space-between}
+.sk-titel{font-size:17px;font-weight:600}
+.sk-k4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px}
+.sk-k{border-radius:12px;padding:12px 14px;background:var(--bg);border-left:5px solid var(--linje)}
+.sk-k b{display:block;font-size:24px;letter-spacing:-.02em;line-height:1.1}.sk-k span{font-size:11.5px;color:var(--svag)}
+.sk-k.g{border-left-color:var(--ok)}.sk-k.rd{border-left-color:var(--fejl)}.sk-k.y{border-left-color:#d97706}.sk-k.b{border-left-color:var(--accent)}
+.sk-dage{display:flex;gap:8px}.sk-dag{flex:1;border-radius:10px;padding:8px 6px;text-align:center;background:var(--bg);font-size:12px;color:var(--svag)}.sk-dag b{display:block;font-size:16px;color:var(--tekst)}
+.sk-dag.rutine{border:1px dashed var(--linje)}.sk-dag.g{background:var(--ok-blid);color:var(--ok);border-color:var(--ok)}.sk-dag.g b{color:var(--ok)}.sk-dag.rd{background:var(--fejl-blid);color:var(--fejl);border-color:#f3b4b4}.sk-dag.rd b{color:var(--fejl)}.sk-dag.nu{outline:2px solid var(--accent)}
+.sk-log{margin-top:12px;padding-top:12px;border-top:1px solid var(--linje)}
+.sk-md{display:flex;gap:22px;align-items:center}
+.sk-ring{width:120px;height:120px;border-radius:50%;display:grid;place-items:center;flex:none;background:var(--svagere)}
+.sk-ring.g{background:var(--ok)}.sk-ring.y{background:#d97706}.sk-ring.rd{background:var(--fejl)}
+.sk-ring>div{width:96px;height:96px;border-radius:50%;background:var(--flade);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.sk-ring b{font-size:21px;letter-spacing:-.02em;line-height:1}.sk-ring small{color:var(--svag);font-size:11px;margin-top:3px}
+.pill.g{background:var(--ok-blid);color:var(--ok)}.pill.y{background:var(--adv-blid);color:var(--adv)}.pill.rd{background:var(--fejl-blid);color:var(--fejl)}.pill.gr{background:var(--bg);color:var(--svag)}
+.sk-hz{display:flex;gap:6px}.sk-hz button{padding:5px 12px;border-radius:99px;border:1px solid var(--linje);background:none;font-size:12.5px;color:var(--svag)}.sk-hz button.aktiv{background:var(--tekst);color:var(--flade);border-color:var(--tekst)}
+.sk-graf{position:relative;height:200px;margin-top:22px;border-bottom:1px solid var(--linje)}
+.sk-linje{position:absolute;left:0;right:0;border-top:2px solid var(--ok);font-size:11px;color:var(--ok);z-index:1;pointer-events:none}.sk-linje span{position:absolute;right:0;top:-16px}
+.sk-linje.kar{border-top:2px dashed var(--accent);color:var(--accent)}
+.sk-soejler{position:absolute;inset:0;display:flex;align-items:flex-end;gap:6px}
+.sk-soejler button{flex:1;height:100%;border:0;background:none;padding:0;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;font-size:11px;color:var(--svag);border-radius:8px}
+.sk-soejler button:hover{background:var(--hover)}.sk-soejler button.valgt{background:var(--accent-blid)}
+.sk-soejler i{display:block;width:72%;border-radius:6px 6px 0 0;background:var(--linje)}.sk-soejler i.g{background:var(--ok)}.sk-soejler i.y{background:#d97706}.sk-soejler i.rd{background:var(--fejl)}.sk-soejler i.gr{background:var(--linje);border:1px dashed var(--svagere)}
+.sk-soejler em{font-style:normal;font-size:10.5px;color:var(--tekst);font-weight:600;margin-bottom:2px}.sk-soejler .nu em{color:var(--accent)}
+.sk-detalje{margin-top:14px;padding:12px 14px;background:var(--bg);border-radius:12px}.sk-detalje .liste .l{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--linje)}.sk-detalje .liste .l:first-child{border-top:0}
+@media (max-width:900px){.sk-k4{grid-template-columns:1fr 1fr}.sk-md{flex-direction:column;text-align:center}.sk-md .r1{justify-content:center}.sk-graf{height:160px}.sk-soejler{gap:3px}.sk-soejler em{font-size:9px}}
 /* telefon: ligger sidst, så reglerne vinder over grundreglerne ovenfor */
 @media (max-width:700px){
   /* telefon: berøringsflader mindst 40 px, og intet må være bredere end skærmen (ellers vokser visningen, og bundfanerne ryger ud af billedet) */
@@ -442,6 +471,8 @@ async function hentData() {
   D.jobrute = jr ? await jr.json() : {};
   const su = await laesFil("data/setups.json");
   D.setups = su ? await su.json() : {grupper: [], setups: []};
+  const mo = await laesFil("data/maanedsoversigt.json");   // omsætning pr. måned med trafiklys, regnet af fabz.py maanedsoversigt --gem
+  D.mo = mo ? await mo.json() : null;
 }
 async function laesKkTekster() {   // Oscars rettede tekster, ellers standardteksterne fra tools/klubkort
   const r = await laesFil("data/klubkort_tekster.json");
@@ -586,8 +617,8 @@ function tegnTop() {
   }
   const aktiv = v => fane === v || (v === "pakkelister" && (fane === "kort" || fane === "rute"));
   const gå = v => { fane = v; MERE = false; if (v === "pakkelister") { JH = null; S = null; } tegn(); window.scrollTo(0, 0); };
-  const hoved = [["idag", "I dag"], ["opgaver", "Opgaver"], ["pakkelister", "Jobs"], ["foresp", "Forespørgsler"]];
-  const mere = [["salg", "Salg"], ["lager", "Lager"], ["ideer", "Idéer"], ["indtaegter", "Indtægter"]];
+  const hoved = [["idag", "I dag"], ["opgaver", "Opgaver"], ["pakkelister", "Jobs"], ["foresp", "Forespørgsler"], ["salg", "Salg"]];   // Salg i hovedbjælken (Oscar 25/10)
+  const mere = [["lager", "Lager"], ["ideer", "Idéer"], ["indtaegter", "Indtægter"]];
   top.replaceChildren(
     h("span", {class: "brand"}, "Fabz"),
     h("nav", {class: "tabs"},
@@ -1429,7 +1460,7 @@ async function gemLager() {
 
 // ---------- fælles: kør fabz.py-kommandoer fra panelet ----------
 const FILER = {henvendelser: "data/henvendelser.json", opgaver: "data/opgaver.json", dagsplaner: "data/dagsplaner.json",
-               ideer: "data/ideer.json", indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json", salgslog: "data/salgslog.json"};
+               ideer: "data/ideer.json", indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json", salgslog: "data/salgslog.json", mo: "data/maanedsoversigt.json"};
 async function laesValgfri(p) { const r = await laesFil(p); return r ? r.json() : []; }
 async function genindlæs(navne) { await Promise.all(navne.map(async n => { D[n] = n === "kkTekster" ? await laesKkTekster() : await laesValgfri(FILER[n]); })); }
 const plusDage = (iso, n) => { const d = dag(iso); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
@@ -2350,7 +2381,6 @@ function visSalg() {
   const venstre = h("div", {class: "liste-kol"},
     h("div", {class: "kh"}, h("h1", {}, "Salg"), h("div", {class: "spacer"}),
       h("button", {class: "btn primaer", type: "button", onclick: () => { SG.vis = "ny"; SG.ny = {type: "Ny virksomhed", status: "Ikke kontaktet"}; tegn(); }}, "+ Ny kunde")),
-    salgDashboard(),
     gruppe("Følg op i dag", iDagL, "Ingen at følge op på i dag."),
     uden.length ? [h("div", {class: "overskrift gul-t", style: "margin-top:16px"}, `Uden opfølgningsdato (${uden.length})`), h("div", {class: "kort"}, uden.map(række))] : null,
     gruppe("Senere", senere, "Ingen planlagte opfølgninger."),
@@ -2359,59 +2389,127 @@ function visSalg() {
     SG.lukkede && lukket.length ? h("div", {class: "kort"}, lukket.map(række)) : null);
   const højre = h("div", {class: "detalje-kol"},
     SG.vis === "ny" ? nySalgForm() : SG.vis === "s" ? salgDetalje((D.salg || []).find(s => s.navn === SG.valgt)) : tom("Vælg en kunde, eller tilføj en ny."));
-  $("rod").replaceChildren(h("div", {class: "to"}, venstre, højre));
+  $("rod").replaceChildren(h("div", {class: "side bred", style: "padding-bottom:0"}, salgTop()), h("div", {class: "to", style: "padding-top:0"}, venstre, højre));
 }
-// Salgsdashboard: alt bygges af data/salgslog.json (hver kontakt), henvendelser (tilbud, booket), salg (pipeline) og kalenderen (bookede måneder).
-function salgDashboard() {
-  const idag = iDag(), log = D.salgslog || [], maal = {kontakter_uge: 9, samtaler_uge: 2, tilbud_md: 2, ...((D.strategi || {}).salgsmaal || {})};
-  const mandag = iso => { const d = dag(iso); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return d.toISOString().slice(0, 10); };
-  const ugeStart = mandag(idag), mdStart = idag.slice(0, 7) + "-01";
+// ---------- Salg: statuskort (Oscar 25/10, skitse C): denne uge, denne måned, vejen. Tal fra data/maanedsoversigt.json (fabz.py) og salgslog ----------
+const MO_FARVE = {groen: "g", gul: "y", roed: "rd", graa: "gr"};   // rd/gr, fordi .r og .x er optaget af andre regler
+const MO_TEKST = {groen: "grøn", gul: "gul", roed: "rød", graa: "tom"};
+const krKort = v => Math.round(Number(v) || 0).toLocaleString("da-DK");
+function salgMaal() {
+  return {kontakter_uge: 9, samtaler_uge: 2, tilbud_md: 2, kontakter_dag: 3, rutinedage: ["Ti", "On", "To"], ...((D.strategi || {}).salgsmaal || {})};
+}
+const moMaaneder = () => (D.mo && Array.isArray(D.mo.maaneder)) ? D.mo.maaneder : [];
+function salgTop() {
+  return h("div", {class: "sk-top"}, ugeKort(), maanedKort(), vejKort());
+}
+function ugeKort() {
+  const idag = iDag(), maal = salgMaal(), log = D.salgslog || [];
+  const mandag = plusDage(idag, -((dag(idag).getDay() + 6) % 7));
+  const uge = log.filter(x => x.dato >= mandag && x.dato < plusDage(mandag, 7));
   const samtale = x => ["Telefon", "Møde"].includes(x.kanal);
-  const uge = log.filter(x => x.dato >= ugeStart), md = log.filter(x => x.dato >= mdStart);
-  const h_ = D.henvendelser || [];
-  const tilbudMd = h_.filter(x => (x.status_dato || "") >= mdStart && ["Tilbud sendt", "Booket"].includes(x.status)).length;
-  const booket = h_.filter(x => x.status === "Booket"), oms = booket.reduce((a, x) => a + (Number(x.pris) || 0), 0);
-  const pipeline = (D.salg || []).filter(s => !["Booket", "Ikke nu"].includes(s.status));
-  // streak: uger i træk (bagud fra sidste hele uge) med kontaktmålet nået
-  let streak = 0;
-  for (let u = plusDage(ugeStart, -7); ; u = plusDage(u, -7)) {
-    const n = log.filter(x => x.dato >= u && x.dato < plusDage(u, 7)).length;
-    if (n >= maal.kontakter_uge) streak++; else break;
-    if (streak > 200) break;
-  }
-  const bar = (titel, n, m, {ok = n >= m, tom = false} = {}) => h("div", {class: "pb" + (ok ? " ok" : "") + (tom ? " tom" : "")},
-    h("div", {class: "l"}, h("span", {}, titel), h("b", {}, `${n} / ${m}`)),
-    h("div", {class: "s"}, h("i", {style: `width:${Math.min(100, m ? 100 * n / m : 0)}%`})));
-  // pipeline-tragt
-  const trin = ["Ikke kontaktet", "Kontaktet", "Møde aftalt", "Tilbud sendt", "Booket"];
-  const antal = trin.map(t => (D.salg || []).filter(s => s.status === t).length);
-  const funnel = h("div", {class: "funnel"}, trin.map((t, i) => h("div", {}, h("b", {}, antal[i]), t.replace("Ikke kontaktet", "Ny").replace(" aftalt", "").replace(" sendt", ""),
-    h("i", {class: antal[i] ? "f" : ""}))));
-  // bookede jobs pr. måned, de næste 6
-  const book = ((D.kalender || {}).begivenheder || []).filter(e => e.kalender === "bookinger");
-  const mdr = [], d0 = dag(idag);
-  for (let i = 0; i < 6; i++) {
-    const d = new Date(d0.getFullYear(), d0.getMonth() + i, 1), ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    mdr.push({navn: d.toLocaleDateString("da-DK", {month: "short"}), n: book.filter(e => (e.start || "").slice(0, 7) === ym).length});
-  }
-  const maks = Math.max(1, ...mdr.map(m => m.n));
-  const mdrEl = h("div", {class: "mdr"}, mdr.map(m => h("div", {}, h("i", {class: m.n ? "" : "ingen", style: `height:${m.n ? Math.max(6, 44 * m.n / maks) : 6}px`}), `${m.navn} ${m.n}`)));
-  return h("div", {class: "dash"},
-    h("div", {class: "tal"},
-      h("div", {class: "t"}, h("b", {}, log.length), h("span", {}, "kontakter i alt")),
-      h("div", {class: "t"}, h("b", {}, pipeline.length), h("span", {}, "i pipeline")),
-      h("div", {class: "t"}, h("b", {}, booket.length), h("span", {}, "booket i alt")),
-      h("div", {class: "t"}, h("b", {}, kr(oms).replace(" kr.", "")), h("span", {}, "kr. booket")),
-    ),
-    h("div", {class: "overskrift"}, "Denne uge"),
-    bar("Kontakter", uge.length, maal.kontakter_uge),
-    bar("Samtaler (telefon og møde)", uge.filter(samtale).length, maal.samtaler_uge),
-    h("div", {class: "overskrift", style: "margin-top:10px"}, "Denne måned"),
-    bar("Tilbud sendt", tilbudMd, maal.tilbud_md),
-    bar("Kontakter", md.length, maal.kontakter_uge * 4),
-    h("div", {class: "overskrift", style: "margin-top:12px"}, "Pipeline"), funnel,
-    h("div", {class: "overskrift", style: "margin-top:12px"}, "Bookede jobs de næste 6 måneder"), mdrEl,
-    h("div", {class: "streak"}, streak ? ["Målet nået ", h("b", {}, `${streak} uge${streak === 1 ? "" : "r"} i træk`), "."] : "Første hele uge med 9 kontakter starter en stime."));
+  const mdStart = idag.slice(0, 7) + "-01";
+  const tilbudMd = (D.henvendelser || []).filter(x => (x.status_dato || "") >= mdStart && ["Tilbud sendt", "Booket"].includes(x.status)).length;
+  const opf = (D.salg || []).filter(x => x.naeste_opfoelgning && x.naeste_opfoelgning <= idag && !["Booket", "Ikke nu"].includes(x.status));
+  const kl = (n, m) => n >= m ? "g" : n > 0 ? "y" : "rd";
+  const ugeNr = (() => { const d = dag(idag); d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7)); const f = new Date(d.getFullYear(), 0, 4); return 1 + Math.round(((d - f) / 864e5 - 3 + ((f.getDay() + 6) % 7)) / 7); })();
+  const DK = ["Ma", "Ti", "On", "To", "Fr"];
+  const dage = DK.map((navn, i) => {
+    const dato = plusDage(mandag, i), n = uge.filter(x => x.dato === dato).length, rutine = maal.rutinedage.includes(navn);
+    const c = n >= maal.kontakter_dag ? "g" : rutine && dato < idag && n < maal.kontakter_dag ? "rd" : "";
+    return h("div", {class: "sk-dag " + c + (dato === idag ? " nu" : "") + (rutine ? " rutine" : ""), title: rutine ? `Rutinedag: ${maal.kontakter_dag} kontakter` : ""},
+      h("b", {}, n || (rutine && dato >= idag ? "·" : "–")), navn);
+  });
+  return h("div", {class: "kort2 sk"},
+    h("div", {class: "r1 sk-hoved"}, h("div", {class: "overskrift", style: "margin:0"}, `Denne uge · uge ${ugeNr}`),
+      h("span", {class: "muted lille"}, `Mål: ${maal.kontakter_uge} kontakter, ${maal.samtaler_uge} samtaler`)),
+    h("div", {class: "sk-k4"},
+      h("div", {class: "sk-k " + kl(uge.length, maal.kontakter_uge)}, h("b", {}, `${uge.length} / ${maal.kontakter_uge}`), h("span", {}, "kontakter")),
+      h("div", {class: "sk-k " + kl(uge.filter(samtale).length, maal.samtaler_uge)}, h("b", {}, `${uge.filter(samtale).length} / ${maal.samtaler_uge}`), h("span", {}, "samtaler")),
+      h("div", {class: "sk-k " + kl(tilbudMd, maal.tilbud_md)}, h("b", {}, `${tilbudMd} / ${maal.tilbud_md}`), h("span", {}, "tilbud i md.")),
+      h("div", {class: "sk-k b"}, h("b", {}, opf.length), h("span", {}, "følg op i dag"))),
+    h("div", {class: "overskrift", style: "margin-top:14px"}, `${maal.kontakter_dag} kontakter om dagen, ${maal.rutinedage.join(", ")}`),
+    h("div", {class: "sk-dage"}, dage),
+    h("div", {class: "r1", style: "margin-top:12px"},
+      h("button", {class: "btn primaer", type: "button", onclick: () => { SG.log = SG.log ? null : {navn: opf[0]?.navn || "", kanal: "Telefon", tekst: "", opf: ""}; tegn(); }}, SG.log ? "Luk" : "+ Log en kontakt"),
+      opf.length ? h("span", {class: "muted lille"}, opf.map(x => x.navn).join(" og ") + (opf.length === 1 ? " venter på dig i dag" : " venter på dig i dag")) : h("span", {class: "muted lille"}, "Ingen opfølgninger i dag")),
+    SG.log ? logKontaktForm() : null);
+}
+function logKontaktForm() {   // kører fabz.py salg-kontakt: logger kontakten og flytter opfølgningen
+  const st = SG.log, kunder = (D.salg || []).map(x => x.navn).sort((a, b) => a.localeCompare(b, "da"));
+  const opfTekst = h("span", {class: "muted lille"}, st.opf ? "Næste opfølgning " + visDato(st.opf) : "Ingen ny opfølgningsdato");
+  const chips = h("div", {class: "rk", style: "gap:6px;flex-wrap:wrap"},
+    [["+3 dage", 3], ["+1 uge", 7], ["+2 uger", 14], ["+1 md.", 30]].map(([t, n]) => h("button", {class: "chip" + (st.opf === plusDage(iDag(), n) ? " aktiv" : ""), type: "button",
+      onclick: () => { st.opf = st.opf === plusDage(iDag(), n) ? "" : plusDage(iDag(), n); opfTekst.textContent = st.opf ? "Næste opfølgning " + visDato(st.opf) : "Ingen ny opfølgningsdato"; }}, t)));
+  return h("div", {class: "sk-log"},
+    h("div", {class: "felter3"},
+      felt("Kunde", h("select", {class: "input", onchange: e => { st.navn = e.target.value; }}, h("option", {value: ""}, "Vælg kunde …"), kunder.map(n => h("option", {value: n, selected: st.navn === n}, n)))),
+      felt("Kanal", seg(["Telefon", "Besked", "Mail", "Møde", "LinkedIn"], st.kanal, v => { st.kanal = v; tegn(); })),
+      felt("Hvad skete der", inp(st, "tekst", {placeholder: "Fx talte med Felix, sender tilbud fredag"}))),
+    h("div", {class: "r1", style: "margin-top:6px"}, chips, opfTekst),
+    h("div", {class: "r1", style: "margin-top:10px"},
+      h("button", {class: "btn primaer", type: "button", onclick: () => {
+        if (!st.navn) { alert("Vælg en kunde. Er det en ny, så brug + Ny kunde først."); return; }
+        if (!st.tekst.trim()) { alert("Skriv kort, hvad der skete."); return; }
+        const navn = st.navn, tekst = st.tekst.trim(), kanal = st.kanal, opf = st.opf;
+        kør("salg-kontakt", ["--kanal", kanal, ...(opf ? ["--opfoelgning", opf] : []), "--", navn, tekst], {tekst: `Kontakt: ${navn}`, efter: ["salg", "salgslog"],
+          med: () => { (D.salgslog ||= []).push({dato: iDag(), navn, kanal, tekst}); const k = (D.salg || []).find(x => x.navn === navn); if (k && opf) k.naeste_opfoelgning = opf; SG.log = null; }});
+      }}, "Gem kontakten"),
+      h("button", {class: "btn ghost", type: "button", onclick: () => { SG.log = null; tegn(); }}, "Fortryd")));
+}
+function maanedKort() {
+  const ms = moMaaneder(), m = ms.find(x => x.nu);
+  if (!m) return h("div", {class: "kort2 sk"}, h("div", {class: "overskrift"}, "Denne måned"), h("div", {class: "muted"}, "Ingen månedsoversigt endnu. Den laves af kalender-synkroniseringen (Hent alle jobs)."));
+  const mo = D.mo, mn = mo.min || 20000, mangler = Math.max(0, mn - m.kr);
+  const navn = MDL[Number(m.ym.slice(5, 7)) - 1].replace(/^./, c => c.toUpperCase());
+  const afholdt = m.jobs.filter(j => !j.talt);
+  const naeste = ms.filter(x => !x.fortid && !x.nu).slice(0, 3).map(x => {
+    const t = x.farve === "graa" ? "tom" : x.farve === "groen" ? "i mål" : `mangler ${krKort(mn - x.kr)}`;
+    return h("span", {class: "pill " + MO_FARVE[x.farve]}, `${x.navn}: ${t}`);
+  });
+  return h("div", {class: "kort2 sk"},
+    h("div", {class: "sk-md"},
+      h("div", {class: "sk-ring " + MO_FARVE[m.farve], title: `Gul fra ${krKort(mo.gul)}, grøn fra ${krKort(mn)} kr. ekskl. moms`},
+        h("div", {}, h("b", {}, krKort(m.kr)), h("small", {}, `kr. i ${navn.toLowerCase()}`))),
+      h("div", {style: "flex:1;min-width:0"},
+        h("div", {class: "overskrift"}, "Denne måned"),
+        h("div", {class: "sk-titel"}, `${navn}: ${MO_TEKST[m.farve]}` + (m.farve === "groen" ? "" : `, mangler ${krKort(mangler)} kr.`)),
+        h("div", {class: "muted", style: "margin-top:4px"}, `${krKort(m.faktureret)} faktureret · ${krKort(m.jobs_kr)} booket frem` + (m.uden_pris ? ` · ${m.uden_pris} job uden pris` : "")),
+        afholdt.length ? h("div", {class: "lille", style: "margin-top:4px;color:var(--adv)"}, "Fakturér: " + afholdt.map(j => `${j.navn} ${kortDato(j.dato)}`).join(", ")) : null,
+        h("div", {class: "r1", style: "margin-top:10px"}, naeste))));
+}
+function vejKort() {
+  const ms = moMaaneder(), mo = D.mo || {};
+  if (!ms.length) return h("div", {hidden: true});
+  if (!SG.hz) SG.hz = window.innerWidth <= 700 ? 6 : 12;
+  const i0 = ms.findIndex(x => x.nu);
+  const [fra, til] = SG.hz === 1 ? [i0, i0] : SG.hz === 6 ? [i0 - 2, i0 + 3] : [i0 - 5, i0 + 6];
+  const vis = ms.slice(Math.max(0, fra), til + 1);
+  const mn = mo.min || 20000, kar = mo.karriere_md || 0;
+  const maks = Math.max(kar * 1.04, mn * 1.3, ...vis.map(x => x.kr));
+  const pct = v => Math.round(100 * v / maks);
+  const valgt = vis.find(x => x.ym === SG.hzValgt) || (SG.hz === 1 ? vis[0] : null);
+  const detalje = valgt ? h("div", {class: "sk-detalje"},
+    h("div", {class: "overskrift"}, `${valgt.navn} ${valgt.aar} · ${krKort(valgt.kr)} kr. · ${MO_TEKST[valgt.farve]}`),
+    h("div", {class: "liste"},
+      valgt.faktureret ? h("div", {class: "l"}, h("span", {}, "Faktureret i Dinero"), h("b", {}, krKort(valgt.faktureret))) : null,
+      valgt.jobs.map(j => h("div", {class: "l"}, h("span", {}, `${j.navn} · ${kortDato(j.dato)}` + (j.talt ? "" : " · afholdt, fakturér")), h("b", {}, j.kr == null ? "?" : krKort(j.kr)))),
+      !valgt.faktureret && !valgt.jobs.length ? h("div", {class: "l muted"}, "Intet booket endnu.") : null)) : null;
+  const tal = h("div", {class: "sk-k4", style: "margin-top:14px"},
+    h("div", {class: "sk-k b"}, h("b", {}, mo.snit_fuldtid ? krKort(mo.snit_fuldtid.kr) : "–"), h("span", {}, mo.snit_fuldtid ? `kr. i snit pr. md. siden fuldtid (${MDL[Number(mo.fuldtid_fra.slice(5, 7)) - 1].slice(0, 3)} ${mo.fuldtid_fra.slice(0, 4)})` : "snit siden fuldtid")),
+    h("div", {class: "sk-k " + (mo.frem6_kr >= 6 * mn ? "g" : "y")}, h("b", {}, krKort(mo.frem6_kr)), h("span", {}, "kr. booket de næste 6 mdr.")),
+    h("div", {class: "sk-k " + (mo.frem6_under_min ? "rd" : "g")}, h("b", {}, `${mo.frem6_under_min} af 6`), h("span", {}, "kommende måneder under minimum")),
+    h("div", {class: "sk-k"}, h("b", {}, kar ? Math.round(100 * (ms[i0]?.kr || 0) / kar) + " %" : "–"), h("span", {}, `af karrieremålet (${krKort(kar)}) denne måned`)));
+  return h("div", {class: "kort2 sk"},
+    h("div", {class: "r1 sk-hoved"}, h("div", {class: "overskrift", style: "margin:0"}, "Vejen · omsætning pr. måned, ekskl. moms"),
+      h("div", {class: "sk-hz"}, [[1, "1 md."], [6, "6 mdr."], [12, "12 mdr."]].map(([n, t]) => h("button", {type: "button", class: SG.hz === n ? "aktiv" : "", onclick: () => { SG.hz = n; SG.hzValgt = null; tegn(); }}, t)))),
+    h("div", {class: "sk-graf"},
+      kar ? h("div", {class: "sk-linje kar", style: `bottom:${pct(kar)}%`}, h("span", {}, `${krKort(kar)} karrieremål`)) : null,
+      h("div", {class: "sk-linje", style: `bottom:${pct(mn)}%`}, h("span", {}, `${krKort(mn)} minimum`)),
+      h("div", {class: "sk-soejler"}, vis.map(x => h("button", {type: "button", class: (x.nu ? "nu" : "") + (valgt && valgt.ym === x.ym ? " valgt" : ""), title: `${x.navn} ${x.aar}: ${krKort(x.kr)} kr.`,
+        onclick: () => { SG.hzValgt = SG.hzValgt === x.ym ? null : x.ym; tegn(); }},
+        h("em", {}, x.kr ? krKort(x.kr) : "–"), h("i", {class: MO_FARVE[x.farve], style: `height:${Math.max(3, pct(x.kr))}%`}), x.navn + (x.navn === "Jan" || vis[0] === x ? ` ${String(x.aar).slice(2)}` : ""))))),
+    detalje, tal,
+    h("div", {class: "lille muted", style: "margin-top:10px"}, `Bagud: Dinero (pr. ${mo.dinero_pr ? visDato(mo.dinero_pr) : "?"}). Frem: faktureret + pris på bookede jobs. Grå = intet booket. Tryk på en søjle for jobs og fakturaer.`));
 }
 function datoKnapper(st, k, felt) {
   const sæt = n => { st[k] = plusDage(iDag(), n); if (felt) felt.value = visDato(st[k]); };
