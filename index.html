@@ -234,6 +234,19 @@ button.r:disabled{cursor:default;opacity:.7}
 .r.valgt{background:var(--accent-blid)}
 .r .titel{color:var(--tekst);font-weight:500}
 .meta{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12.5px;color:var(--svag);margin-top:2px}
+.dash{background:var(--flade);border:1px solid var(--linje);border-radius:12px;padding:16px 16px 12px;margin-bottom:16px}
+.dash .tal{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.dash .t{background:var(--bg);border-radius:10px;padding:10px 12px}.dash .t b{display:block;font-size:26px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+.dash .t span{font-size:11.5px;color:var(--svag);text-transform:uppercase;letter-spacing:.06em}
+.pb{margin:8px 0}.pb .l{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px}.pb .l b{font-weight:600}
+.pb .s{height:10px;background:var(--bg);border-radius:99px;overflow:hidden}.pb .s i{display:block;height:100%;border-radius:99px;background:var(--accent);transition:width .6s ease}
+.pb.ok .s i{background:var(--ok)}.pb.tom .s i{background:var(--fejl)}
+.funnel{display:flex;gap:4px;margin-top:10px}.funnel div{flex:1;text-align:center;font-size:11.5px;color:var(--svag)}.funnel div b{display:block;font-size:17px;color:var(--tekst)}
+.funnel div i{display:block;height:5px;border-radius:99px;background:var(--accent-blid);margin-top:5px}.funnel div i.f{background:var(--accent)}
+.mdr{display:flex;gap:6px;align-items:flex-end;height:64px;margin-top:8px}.mdr div{flex:1;text-align:center;font-size:11px;color:var(--svag)}
+.mdr div i{display:block;background:var(--accent);border-radius:4px 4px 0 0;margin:0 auto 4px;width:70%}.mdr div i.ingen{background:var(--fejl-blid);border:1px dashed var(--fejl)}
+.streak{font-size:12.5px;color:var(--svag);margin-top:10px}.streak b{color:var(--tekst)}
+@media (max-width:700px){.dash .tal{grid-template-columns:repeat(2,1fr)}.dash .t b{font-size:22px}}
 .pill{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:99px;background:var(--bg);color:var(--svag);white-space:nowrap;font-weight:500}
 .pill.blå{background:var(--accent-blid);color:var(--accent)}.pill.gul{background:var(--adv-blid);color:var(--adv)}
 .pill.grøn{background:var(--ok-blid);color:var(--ok)}.pill.rød-pill{background:var(--fejl-blid);color:var(--fejl)}
@@ -259,7 +272,7 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .idé button.r{border-top:0}
 .tal3{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
 .stort{font-size:26px;font-weight:700;margin:4px 0}
-@media (max-width:900px){.idag,.to,.tal3{grid-template-columns:1fr}.detalje-kol{position:static;max-height:none;order:-1}.detalje-kol:has(>.tom){display:none}}
+@media (max-width:900px){.idag,.to,.tal3{grid-template-columns:minmax(0,1fr)}.liste-kol,.detalje-kol{min-width:0}.detalje-kol{position:static;max-height:none;order:-1}.detalje-kol:has(>.tom){display:none}}
 .opsaet{max-width:520px;margin:60px auto;background:var(--flade);border:1px solid var(--linje);border-radius:14px;padding:24px}
 .opsaet h2{margin-top:0}
 .fejltekst{color:var(--fejl)}
@@ -403,11 +416,13 @@ function skrivFil(p, obj, besked) {
   return job;
 }
 async function hentData() {
-  const [kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, ideer, indtaegter, typer, salg, festkort, klubkort, kkTekster] = await Promise.all([
+  const [kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, ideer, indtaegter, typer, salg, festkort, klubkort, salgslog, kkTekster] = await Promise.all([
     ...["data/kalender.json", "data/udstyr.json", "data/pakkelister.json", "data/opgaver.json"].map(laesJson), laesJobpl(),
-    ...["data/henvendelser.json", "data/dagsplaner.json", "data/ideer.json", "data/indtaegter.json", "data/typer.json", "data/salg.json", "data/festkort.json", "data/klubkort.json"].map(p => laesFil(p).then(r => r ? r.json() : [])),
+    ...["data/henvendelser.json", "data/dagsplaner.json", "data/ideer.json", "data/indtaegter.json", "data/typer.json", "data/salg.json", "data/festkort.json", "data/klubkort.json", "data/salgslog.json"].map(p => laesFil(p).then(r => r ? r.json() : [])),
     laesKkTekster()]);
-  D = {kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, ideer, indtaegter, typer, salg, festkort, klubkort, kkTekster};
+  D = {kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, ideer, indtaegter, typer, salg, festkort, klubkort, salgslog, kkTekster};
+  const st = await laesFil("data/strategi.json");
+  D.strategi = st ? await st.json() : {};
   const jr = await laesFil("data/jobrute.json");
   D.jobrute = jr ? await jr.json() : {};
   const su = await laesFil("data/setups.json");
@@ -1330,7 +1345,7 @@ async function gemLager() {
 
 // ---------- fælles: kør fabz.py-kommandoer fra panelet ----------
 const FILER = {henvendelser: "data/henvendelser.json", opgaver: "data/opgaver.json", dagsplaner: "data/dagsplaner.json",
-               ideer: "data/ideer.json", indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json"};
+               ideer: "data/ideer.json", indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json", salgslog: "data/salgslog.json"};
 async function laesValgfri(p) { const r = await laesFil(p); return r ? r.json() : []; }
 async function genindlæs(navne) { await Promise.all(navne.map(async n => { D[n] = n === "kkTekster" ? await laesKkTekster() : await laesValgfri(FILER[n]); })); }
 const plusDage = (iso, n) => { const d = dag(iso); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
@@ -1510,7 +1525,8 @@ function visIDag() {
           onclick: () => { fane = "foresp"; FQ.vis = "h"; FQ.valgt = x.id; tegn(); }},
           h("span", {class: "pill " + pillKlasse(x.status)}, x.status), h("span", {}, x.kunde))) : h("div", {class: "muted lille"}, "Ingen")),
         (() => { const due = (D.salg || []).filter(s => s.naeste_opfoelgning && s.naeste_opfoelgning <= iDag());
-          return sideKort(`Salg: følg op i dag (${due.length})`, due.length ? due.map(s => h("button", {class: "mini link", type: "button",
+          const ugeN = (D.salgslog || []).filter(x => x.dato >= plusDage(iDag(), -((dag(iDag()).getDay() + 6) % 7))).length, ugeM = ((D.strategi || {}).salgsmaal || {}).kontakter_uge || 9;
+          return sideKort(`Salg: følg op i dag (${due.length}) · uge ${ugeN}/${ugeM} kontakter`, due.length ? due.map(s => h("button", {class: "mini link", type: "button",
             onclick: () => { fane = "salg"; SG.vis = "s"; SG.valgt = s.navn; SG.k = {naeste: s.naeste || ""}; tegn(); }},
             h("span", {class: "lille tid " + (s.naeste_opfoelgning < iDag() ? "rød" : "muted")}, kortDato(s.naeste_opfoelgning)), h("span", {}, s.navn))) : h("div", {class: "muted lille"}, "Ingen")); })(),
         sideKort("Næste jobs", næste.length ? næste.map(j => {
@@ -2227,6 +2243,7 @@ function visRute() {
 // ---------- Salg ----------
 const S_TYPE = ["Eksisterende kunde", "Venue", "Ny virksomhed"];
 const S_STATUS = ["Ikke kontaktet", "Kontaktet", "Møde aftalt", "Tilbud sendt", "Booket", "Ikke nu"];
+const S_KANAL = ["Telefon", "Besked", "Mail", "Møde", "LinkedIn"];
 const SG = {vis: null, valgt: null, lukkede: false, ny: {}, k: {}};
 const salgPill = s => ({"Kontaktet": "blå", "Møde aftalt": "blå", "Tilbud sendt": "gul", "Booket": "grøn"})[s] || "";
 function visSalg() {
@@ -2249,6 +2266,7 @@ function visSalg() {
   const venstre = h("div", {class: "liste-kol"},
     h("div", {class: "kh"}, h("h1", {}, "Salg"), h("div", {class: "spacer"}),
       h("button", {class: "btn primaer", type: "button", onclick: () => { SG.vis = "ny"; SG.ny = {type: "Ny virksomhed", status: "Ikke kontaktet"}; tegn(); }}, "+ Ny kunde")),
+    salgDashboard(),
     gruppe("Følg op i dag", iDagL, "Ingen at følge op på i dag."),
     uden.length ? [h("div", {class: "overskrift gul-t", style: "margin-top:16px"}, `Uden opfølgningsdato (${uden.length})`), h("div", {class: "kort"}, uden.map(række))] : null,
     gruppe("Senere", senere, "Ingen planlagte opfølgninger."),
@@ -2258,6 +2276,58 @@ function visSalg() {
   const højre = h("div", {class: "detalje-kol"},
     SG.vis === "ny" ? nySalgForm() : SG.vis === "s" ? salgDetalje((D.salg || []).find(s => s.navn === SG.valgt)) : tom("Vælg en kunde, eller tilføj en ny."));
   $("rod").replaceChildren(h("div", {class: "to"}, venstre, højre));
+}
+// Salgsdashboard: alt bygges af data/salgslog.json (hver kontakt), henvendelser (tilbud, booket), salg (pipeline) og kalenderen (bookede måneder).
+function salgDashboard() {
+  const idag = iDag(), log = D.salgslog || [], maal = {kontakter_uge: 9, samtaler_uge: 2, tilbud_md: 2, ...((D.strategi || {}).salgsmaal || {})};
+  const mandag = iso => { const d = dag(iso); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return d.toISOString().slice(0, 10); };
+  const ugeStart = mandag(idag), mdStart = idag.slice(0, 7) + "-01";
+  const samtale = x => ["Telefon", "Møde"].includes(x.kanal);
+  const uge = log.filter(x => x.dato >= ugeStart), md = log.filter(x => x.dato >= mdStart);
+  const h_ = D.henvendelser || [];
+  const tilbudMd = h_.filter(x => (x.status_dato || "") >= mdStart && ["Tilbud sendt", "Booket"].includes(x.status)).length;
+  const booket = h_.filter(x => x.status === "Booket"), oms = booket.reduce((a, x) => a + (Number(x.pris) || 0), 0);
+  const pipeline = (D.salg || []).filter(s => !["Booket", "Ikke nu"].includes(s.status));
+  // streak: uger i træk (bagud fra sidste hele uge) med kontaktmålet nået
+  let streak = 0;
+  for (let u = plusDage(ugeStart, -7); ; u = plusDage(u, -7)) {
+    const n = log.filter(x => x.dato >= u && x.dato < plusDage(u, 7)).length;
+    if (n >= maal.kontakter_uge) streak++; else break;
+    if (streak > 200) break;
+  }
+  const bar = (titel, n, m, {ok = n >= m, tom = false} = {}) => h("div", {class: "pb" + (ok ? " ok" : "") + (tom ? " tom" : "")},
+    h("div", {class: "l"}, h("span", {}, titel), h("b", {}, `${n} / ${m}`)),
+    h("div", {class: "s"}, h("i", {style: `width:${Math.min(100, m ? 100 * n / m : 0)}%`})));
+  // pipeline-tragt
+  const trin = ["Ikke kontaktet", "Kontaktet", "Møde aftalt", "Tilbud sendt", "Booket"];
+  const antal = trin.map(t => (D.salg || []).filter(s => s.status === t).length);
+  const funnel = h("div", {class: "funnel"}, trin.map((t, i) => h("div", {}, h("b", {}, antal[i]), t.replace("Ikke kontaktet", "Ny").replace(" aftalt", "").replace(" sendt", ""),
+    h("i", {class: antal[i] ? "f" : ""}))));
+  // bookede jobs pr. måned, de næste 6
+  const book = ((D.kalender || {}).begivenheder || []).filter(e => e.kalender === "bookinger");
+  const mdr = [], d0 = dag(idag);
+  for (let i = 0; i < 6; i++) {
+    const d = new Date(d0.getFullYear(), d0.getMonth() + i, 1), ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    mdr.push({navn: d.toLocaleDateString("da-DK", {month: "short"}), n: book.filter(e => (e.start || "").slice(0, 7) === ym).length});
+  }
+  const maks = Math.max(1, ...mdr.map(m => m.n));
+  const mdrEl = h("div", {class: "mdr"}, mdr.map(m => h("div", {}, h("i", {class: m.n ? "" : "ingen", style: `height:${m.n ? Math.max(6, 44 * m.n / maks) : 6}px`}), `${m.navn} ${m.n}`)));
+  return h("div", {class: "dash"},
+    h("div", {class: "tal"},
+      h("div", {class: "t"}, h("b", {}, log.length), h("span", {}, "kontakter i alt")),
+      h("div", {class: "t"}, h("b", {}, pipeline.length), h("span", {}, "i pipeline")),
+      h("div", {class: "t"}, h("b", {}, booket.length), h("span", {}, "booket i alt")),
+      h("div", {class: "t"}, h("b", {}, kr(oms).replace(" kr.", "")), h("span", {}, "kr. booket")),
+    ),
+    h("div", {class: "overskrift"}, "Denne uge"),
+    bar("Kontakter", uge.length, maal.kontakter_uge),
+    bar("Samtaler (telefon og møde)", uge.filter(samtale).length, maal.samtaler_uge),
+    h("div", {class: "overskrift", style: "margin-top:10px"}, "Denne måned"),
+    bar("Tilbud sendt", tilbudMd, maal.tilbud_md),
+    bar("Kontakter", md.length, maal.kontakter_uge * 4),
+    h("div", {class: "overskrift", style: "margin-top:12px"}, "Pipeline"), funnel,
+    h("div", {class: "overskrift", style: "margin-top:12px"}, "Bookede jobs de næste 6 måneder"), mdrEl,
+    h("div", {class: "streak"}, streak ? ["Målet nået ", h("b", {}, `${streak} uge${streak === 1 ? "" : "r"} i træk`), "."] : "Første hele uge med 9 kontakter starter en stime."));
 }
 function datoKnapper(st, k, felt) {
   const sæt = n => { st[k] = plusDage(iDag(), n); if (felt) felt.value = visDato(st[k]); };
@@ -2275,9 +2345,10 @@ function salgDetalje(s) {
         && !confirm("Ingen ny opfølgningsdato. Så falder kunden ud af listen over opfølgninger. Fortsæt?")) return;
     const args = [...((k.naeste || "").trim() ? [`--naeste=${k.naeste.trim()}`] : []),
       ...(k.opfoelgning ? [`--opfoelgning=${k.opfoelgning}`] : k.ingen ? ["--ingen-opfoelgning"] : []),
-      ...(k.status && k.status !== s.status ? [`--status=${k.status}`] : []), "--", s.navn, tekst];
-    kør("salg-kontakt", args, {tekst: `${s.navn}: kontakt`, efter, med: () => {
+      ...(k.status && k.status !== s.status ? [`--status=${k.status}`] : []), `--kanal=${k.kanal || "Besked"}`, "--", s.navn, tekst];
+    kør("salg-kontakt", args, {tekst: `${s.navn}: kontakt`, efter: [...efter, "salgslog"], med: () => {
       s.senest_kontakt = iDag(); s.historik = ((s.historik || "") + ` ${iDag()}: ${tekst}`).trim();
+      (D.salgslog ||= []).push({dato: iDag(), navn: s.navn, kanal: k.kanal || "Besked", tekst});
       if ((k.naeste || "").trim()) s.naeste = k.naeste.trim();
       if (k.opfoelgning) s.naeste_opfoelgning = k.opfoelgning; else if (k.ingen) delete s.naeste_opfoelgning;
       if (k.status) s.status = k.status;
@@ -2295,6 +2366,7 @@ function salgDetalje(s) {
     h("div", {class: "afslut"},
       h("div", {class: "etiket", style: "font-weight:600;color:var(--tekst)"}, "Registrér kontakt"),
       felt("Hvad skete der?", tekstfelt(k, "tekst", {rows: 2, placeholder: "Fx Ringede til Felix. Han sender navnet på bestyrelsen."})),
+      felt("Hvordan?", seg(S_KANAL, k.kanal || "Besked", v => { k.kanal = v; })),
       felt("Næste skridt", inp(k, "naeste")),
       h("div", {class: "felter3", style: "margin:4px 0 0"},
         h("div", {}, felt("Ny opfølgning", opf), datoKnapper(k, "opfoelgning", opf)),
