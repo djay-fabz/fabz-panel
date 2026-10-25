@@ -2473,8 +2473,8 @@ function maanedKort() {
       h("div", {style: "flex:1;min-width:0"},
         h("div", {class: "overskrift"}, "Denne måned"),
         h("div", {class: "sk-titel"}, `${navn}: ${MO_TEKST[m.farve]}` + (m.farve === "groen" ? "" : `, mangler ${krKort(mangler)} kr.`)),
-        h("div", {class: "muted", style: "margin-top:4px"}, `${krKort(m.faktureret)} faktureret · ${krKort(m.jobs_kr)} booket frem` + (m.uden_pris ? ` · ${m.uden_pris} job uden pris` : "")),
-        afholdt.length ? h("div", {class: "lille", style: "margin-top:4px;color:var(--adv)"}, "Fakturér: " + afholdt.map(j => `${j.navn} ${kortDato(j.dato)}`).join(", ")) : null,
+        h("div", {class: "muted", style: "margin-top:4px"}, `${krKort(m.faktureret)} faktureret` + (m.registreret ? ` · ${krKort(m.registreret)} B-indkomst/kontant` : "") + ` · ${krKort(m.jobs_kr)} booket frem` + (m.uden_pris ? ` · ${m.uden_pris} job uden pris` : "")),
+        afholdt.length ? h("div", {class: "lille", style: "margin-top:4px;color:var(--adv)"}, "Fakturér eller registrér: " + afholdt.map(j => `${j.navn} ${kortDato(j.dato)}`).join(", ")) : null,
         h("div", {class: "r1", style: "margin-top:10px"}, naeste))));
 }
 function vejKort() {
@@ -2492,7 +2492,8 @@ function vejKort() {
     h("div", {class: "overskrift"}, `${valgt.navn} ${valgt.aar} · ${krKort(valgt.kr)} kr. · ${MO_TEKST[valgt.farve]}`),
     h("div", {class: "liste"},
       valgt.faktureret ? h("div", {class: "l"}, h("span", {}, "Faktureret i Dinero"), h("b", {}, krKort(valgt.faktureret))) : null,
-      valgt.jobs.map(j => h("div", {class: "l"}, h("span", {}, `${j.navn} · ${kortDato(j.dato)}` + (j.talt ? "" : " · afholdt, fakturér")), h("b", {}, j.kr == null ? "?" : krKort(j.kr)))),
+      valgt.registreret ? h("div", {class: "l"}, h("span", {}, "B-indkomst og kontant (registreret)"), h("b", {}, krKort(valgt.registreret))) : null,
+      valgt.jobs.map(j => h("div", {class: "l"}, h("span", {}, `${j.navn} · ${kortDato(j.dato)}` + (j.talt ? "" : " · afholdt, fakturér eller registrér")), h("b", {}, j.kr == null ? "?" : krKort(j.kr)))),
       !valgt.faktureret && !valgt.jobs.length ? h("div", {class: "l muted"}, "Intet booket endnu.") : null)) : null;
   const tal = h("div", {class: "sk-k4", style: "margin-top:14px"},
     h("div", {class: "sk-k b"}, h("b", {}, mo.snit_fuldtid ? krKort(mo.snit_fuldtid.kr) : "–"), h("span", {}, mo.snit_fuldtid ? `kr. i snit pr. md. siden fuldtid (${MDL[Number(mo.fuldtid_fra.slice(5, 7)) - 1].slice(0, 3)} ${mo.fuldtid_fra.slice(0, 4)})` : "snit siden fuldtid")),
