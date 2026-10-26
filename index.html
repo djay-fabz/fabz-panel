@@ -486,6 +486,7 @@ async function hentData() {
   D.mo = mo ? await mo.json() : null;
   const pv = await laesFil("data/privat.json");   // privatøkonomi fra banken (bank.yml: tools/bank_sync.py + fabz.py privat)
   D.privat = pv ? await pv.json() : null;
+  D.leads = await laesValgfri("data/leads.json");   // leadlisten (Træk en kontakt)
 }
 async function laesKkTekster() {   // Oscars rettede tekster, ellers standardteksterne fra tools/klubkort
   const r = await laesFil("data/klubkort_tekster.json");
@@ -1473,7 +1474,7 @@ async function gemLager() {
 
 // ---------- fælles: kør fabz.py-kommandoer fra panelet ----------
 const FILER = {henvendelser: "data/henvendelser.json", opgaver: "data/opgaver.json", dagsplaner: "data/dagsplaner.json",
-               ideer: "data/ideer.json", indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json", salgslog: "data/salgslog.json", mo: "data/maanedsoversigt.json", privat: "data/privat.json", strategi: "data/strategi.json"};
+               ideer: "data/ideer.json", indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json", salgslog: "data/salgslog.json", mo: "data/maanedsoversigt.json", privat: "data/privat.json", strategi: "data/strategi.json", leads: "data/leads.json"};
 async function laesValgfri(p) { const r = await laesFil(p); return r ? r.json() : []; }
 async function genindlæs(navne) { await Promise.all(navne.map(async n => { D[n] = n === "kkTekster" ? await laesKkTekster() : await laesValgfri(FILER[n]); })); }
 const plusDage = (iso, n) => { const d = dag(iso); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
@@ -2399,7 +2400,8 @@ function visSalg() {
   const gruppe = (titel, l) => l.length ? [h("div", {class: "overskrift", style: "margin-top:18px"}, titel), h("div", {class: "kort ap"}, l.map(række))] : null;
   const venstre = h("div", {class: "liste-kol"},
     h("div", {class: "kh"}, h("h1", {}, "Kunder"), h("div", {class: "spacer"}),
-      h("button", {class: "btn primaer", type: "button", onclick: () => { SG.vis = "ny"; SG.ny = {type: "Ny virksomhed", status: "Ikke kontaktet"}; tegn(); }}, "+ Ny kunde")),
+      traekKnap(),
+      h("button", {class: "btn", type: "button", onclick: () => { SG.vis = "ny"; SG.ny = {type: "Ny virksomhed", status: "Ikke kontaktet"}; tegn(); }}, "+ Ny kunde")),
     iDagL.length ? gruppe(`I dag (${iDagL.length})`, iDagL) : h("div", {class: "muted", style: "margin-top:18px"}, "Ingen at følge op på i dag."),
     gruppe("Uden dato", uden),
     gruppe("Senere", senere),
@@ -2409,6 +2411,26 @@ function visSalg() {
   const højre = h("div", {class: "detalje-kol"},
     SG.vis === "ny" ? nySalgForm() : SG.vis === "s" ? salgDetalje((D.salg || []).find(s => s.navn === SG.valgt)) : tom("Vælg en kunde, eller tilføj en ny."));
   $("rod").replaceChildren(h("div", {class: "side bred", style: "padding-bottom:0"}, salgTop()), h("div", {class: "to", style: "padding-top:0"}, venstre, højre));
+}
+function naesteLead() {   // samme regel som fabz.py salg-traek: ikke trukket, ikke i salg, A før B, nærmest først
+  const iSalg = new Set((D.salg || []).map(s => nøgle(s.navn)));
+  const navn = r => (r.firma || "").replace(/\s*\(.*?\)\s*/g, " ").trim();
+  const km = r => { const v = parseFloat(String(r.km || "999").replace(",", ".")); return isNaN(v) ? 999 : v; };
+  return (D.leads || []).filter(r => !r.trukket && !iSalg.has(nøgle(navn(r))) && !iSalg.has(nøgle(r.firma)))
+    .sort((a, b) => (a.prioritet || "Z").localeCompare(b.prioritet || "Z") || km(a) - km(b))[0] || null;
+}
+function traekKnap() {   // Træk en kontakt (Oscar 26/10): næste firma fra leadlisten bliver en kunde, og åbner i detaljen
+  const r = naesteLead(), tilbage = (D.leads || []).filter(x => !x.trukket).length;
+  if (!r) return h("span", {class: "muted lille"}, "Leadlisten er tom");
+  const navn = (r.firma || "").replace(/\s*\(.*?\)\s*/g, " ").trim();
+  return h("button", {class: "btn primaer", type: "button", title: `Næste: ${navn}, ${r.by || ""} (${r.prioritet || "?"}, ${r.km || "?"} km). ${tilbage} tilbage i listen`,
+    onclick: () => kør("salg-traek", [`--id=${r.id}`], {tekst: `Trukket: ${navn}`, efter: ["salg", "leads"], med: () => {
+      r.trukket = iDag();
+      const ny = {navn, type: "Ny virksomhed", status: "Ikke kontaktet", naeste: r.aabner || "", kontakt: [r.rolle_navn, r.rolle, r.telefon].filter(Boolean).join(" · "),
+        naeste_opfoelgning: iDag(), telefon: r.telefon || "", linkedin_side: r.linkedin_side || "", kontaktside: r.kontaktside || "",
+        historik: `${iDag()}: trukket fra leadlisten (${r.prioritet}). ${[r.by + (r.km ? ", " + r.km + " km" : ""), r.ansatte ? r.ansatte + " ansatte" : "", r.branche, r.personaleforening ? "Personaleforening: " + r.personaleforening : "", r.tegn ? "Tegn: " + r.tegn : ""].filter(Boolean).join(" | ")}`};
+      (D.salg ||= []).push(ny); SG.vis = "s"; SG.valgt = navn; SG.k = {naeste: ny.naeste};
+    }})}, `Træk en kontakt (${tilbage})`);
 }
 const OK = {detaljer: false};   // Økonomi-fanen: detaljerne er foldet væk, til Oscar trykker "Vis detaljer"
 function visOekonomi() {
@@ -2675,13 +2697,14 @@ function salgDetalje(s) {
         && !confirm("Ingen ny opfølgningsdato. Så falder kunden ud af listen over opfølgninger. Fortsæt?")) return;
     const args = [...((k.naeste || "").trim() ? [`--naeste=${k.naeste.trim()}`] : []),
       ...(k.opfoelgning ? [`--opfoelgning=${k.opfoelgning}`] : k.ingen ? ["--ingen-opfoelgning"] : []),
-      ...(k.status && k.status !== s.status ? [`--status=${k.status}`] : []), `--kanal=${k.kanal || "Besked"}`, "--", s.navn, tekst];
+      ...(k.status && k.status !== s.status ? [`--status=${k.status}`] : []), ...((k.kontaktperson || "").trim() ? [`--kontaktperson=${k.kontaktperson.trim()}`] : []), `--kanal=${k.kanal || "Besked"}`, "--", s.navn, tekst];
     kør("salg-kontakt", args, {tekst: `${s.navn}: kontakt`, efter: [...efter, "salgslog"], med: () => {
       s.senest_kontakt = iDag(); s.historik = ((s.historik || "") + ` ${iDag()}: ${tekst}`).trim();
       (D.salgslog ||= []).push({dato: iDag(), navn: s.navn, kanal: k.kanal || "Besked", tekst});
       if ((k.naeste || "").trim()) s.naeste = k.naeste.trim();
       if (k.opfoelgning) s.naeste_opfoelgning = k.opfoelgning; else if (k.ingen) delete s.naeste_opfoelgning;
       if (k.status) s.status = k.status;
+      if ((k.kontaktperson || "").trim()) s.kontakt = k.kontaktperson.trim();
       SG.k = {naeste: s.naeste || ""};
     }});
   };
@@ -2691,13 +2714,18 @@ function salgDetalje(s) {
     h("div", {class: "felter3", style: "margin-top:12px"},
       felt("Næste opfølgning", h("div", {class: "muted"}, s.naeste_opfoelgning ? dagNavnLang(s.naeste_opfoelgning) : "ingen dato")),
       felt("Senest kontakt", h("div", {class: "muted"}, s.senest_kontakt ? kortDatoÅr(s.senest_kontakt) : "–"))),
-    s.kontakt ? h("div", {class: "info"}, h("div", {class: "etiket"}, "Kontaktperson"), h("div", {class: "pre"}, s.kontakt)) : null,
-    s.naeste ? h("div", {class: "info"}, h("div", {class: "etiket"}, "Næste skridt"), h("div", {class: "pre"}, s.naeste)) : null,
+    s.kontakt || s.telefon ? h("div", {class: "info"}, h("div", {class: "etiket"}, "Kontaktperson"), h("div", {class: "pre"}, s.kontakt || ""),
+      s.telefon ? h("a", {class: "btn lille", style: "margin-top:6px;display:inline-block", href: "tel:" + String(s.telefon).replace(/\s+/g, "")}, "Ring " + s.telefon) : null) : null,
+    s.naeste ? h("div", {class: "info"}, h("div", {class: "etiket"}, "Næste skridt"), h("div", {class: "pre", style: "font-size:15px"}, s.naeste)) : null,
+    s.linkedin_side || s.kontaktside ? h("div", {class: "rk", style: "gap:8px;flex-wrap:wrap;margin-top:6px"},
+      s.linkedin_side ? h("a", {class: "btn lille", href: s.linkedin_side, target: "_blank", rel: "noopener"}, "LinkedIn-side") : null,
+      s.kontaktside ? h("a", {class: "btn lille", href: s.kontaktside, target: "_blank", rel: "noopener"}, "Kontaktside") : null) : null,
     h("div", {class: "afslut"},
       h("div", {class: "etiket", style: "font-weight:600;color:var(--tekst)"}, "Registrér kontakt"),
       felt("Hvad skete der?", tekstfelt(k, "tekst", {rows: 2, placeholder: "Fx Ringede til Felix. Han sender navnet på bestyrelsen."})),
       felt("Hvordan?", seg(S_KANAL, k.kanal || "Besked", v => { k.kanal = v; })),
       felt("Næste skridt", inp(k, "naeste")),
+      felt("Kontaktperson (ret, fx Louise, HR, 20 12 34 56)", inp(k, "kontaktperson", {placeholder: s.kontakt || "navn, rolle, telefon"})),
       h("div", {class: "felter3", style: "margin:4px 0 0"},
         h("div", {}, felt("Ny opfølgning", opf), datoKnapper(k, "opfoelgning", opf)),
         felt("Ny status (valgfri)", sel([["", "Uændret"], ...S_STATUS], k, "status"))),
