@@ -191,7 +191,7 @@ a.btn{display:inline-block;text-decoration:none}
 .pakkeknap{border:1px dashed var(--linje);background:none;color:var(--svag);border-radius:99px;padding:3px 10px;font-size:12.5px;white-space:nowrap}.pakkeknap:hover{color:var(--tekst);border-color:var(--tekst)}
 .pakkeliste{position:fixed;z-index:15;min-width:240px;max-height:min(460px,calc(100vh - 24px));overflow:auto;background:var(--flade);border:1px solid var(--linje);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.18);padding:6px;display:flex;flex-direction:column;gap:1px;font-weight:400}
 .pakkelistehoved{display:flex;align-items:center;justify-content:space-between;padding:2px 2px 4px 8px}
-.pakkeliste label{display:flex;gap:10px;align-items:center;padding:6px 8px;border-radius:8px;cursor:pointer;min-height:32px;white-space:nowrap}.pakkeliste label:hover{background:var(--hover)}
+.pakkeliste label{display:flex;gap:10px;align-items:center;padding:6px 8px;border-radius:8px;cursor:pointer;min-height:32px;white-space:nowrap}.pakkeantal{width:62px;padding:3px 6px;font-size:13px;border:1px solid var(--linje);border-radius:7px;background:var(--flade);color:var(--tekst)}.pakkeliste label:hover{background:var(--hover)}
 .pakkeliste input[type=checkbox]{width:16px;height:16px;margin:0}
 .pakkeny{display:flex;gap:6px;margin-top:6px;padding-top:8px;border-top:1px solid var(--linje)}.pakkeny .input{padding:6px 9px}
 .lhd{font-size:11.5px;color:var(--svagere);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-top:20px}
@@ -1254,9 +1254,12 @@ async function lukOpgave(o) {
 }
 
 // ---------- lager-fanen ----------
-const FELTER = ["navn", "kategori", "antal", "status", "note", "pakker"];   // pakker: liste af navne, kun i Lager-fanen
+const FELTER = ["navn", "kategori", "antal", "status", "note", "pakker", "pakke_antal"];   // pakker: liste af navne; pakke_antal: hvor mange af tingen hver pakke bruger (Oscar 26/10)
+// pakke_antal sammenlignes og sendes som "Pakke=antal"-linjer; uden tal bruger pakken alt på lager (som før)
+const paListe = u => (u.pakker || []).map(p => `${p}=${(u.pakke_antal || {})[p] ?? u.antal ?? 1}`);
+const feltVaerdi = (u, k) => k === "pakke_antal" ? paListe(u).join("; ") : k === "pakker" ? (u.pakker || []).join("; ") : k === "navn" ? String(u.navn || "").trim() : String(u[k] ?? (k === "status" ? "På lager" : ""));
 function nulstilLager() {
-  L = {w: D.udstyr.map(u => ({...u, status: u.status || "På lager", note: u.note || "", pakker: [...(u.pakker || [])], _orig: u.navn})), ny: [], q: "", pakke: "", udgaaede: false, visNy: false, svar: null};
+  L = {w: D.udstyr.map(u => ({...u, status: u.status || "På lager", note: u.note || "", pakker: [...(u.pakker || [])], pakke_antal: {...(u.pakke_antal || {})}, _orig: u.navn})), ny: [], q: "", pakke: "", udgaaede: false, visNy: false, svar: null};
 }
 function ændringer() {
   const ud = [];
@@ -1265,14 +1268,13 @@ function ændringer() {
     if (!o) continue;
     const f = {};
     for (const k of FELTER) {
-      const a = o[k] ?? (k === "status" ? "På lager" : ""), b = k === "navn" ? w.navn.trim() : w[k];
-      if (String(a) !== String(b ?? "")) f[k] = b;
+      if (feltVaerdi(o, k) !== feltVaerdi(w, k)) f[k] = k === "pakke_antal" ? paListe(w) : k === "navn" ? w.navn.trim() : w[k];
     }
     if (Object.keys(f).length) ud.push({navn: w._orig, felter: f});
   }
   return ud;
 }
-const erÆndret = w => { const o = D.udstyr.find(u => u.navn === w._orig); return !!o && FELTER.some(k => String(o[k] ?? (k === "status" ? "På lager" : "")) !== String(k === "navn" ? w.navn.trim() : (w[k] ?? ""))); };
+const erÆndret = w => { const o = D.udstyr.find(u => u.navn === w._orig); return !!o && FELTER.some(k => feltVaerdi(o, k) !== feltVaerdi(w, k)); };
 function vælg(valg, v, f) {
   return h("select", {class: "felt", onchange: e => f(e.target.value)}, valg.map(x => h("option", {value: x, selected: x === v}, x)));
 }
@@ -1355,8 +1357,12 @@ function pakkeCelle(w, ændret) {   // chips + knap, der åbner en tjekliste: s�
     ny.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); tilføj(); } });
     liste.replaceChildren(
       h("div", {class: "pakkelistehoved"}, h("span", {class: "etiket", style: "margin:0"}, "Pakker"), h("button", {type: "button", class: "x", title: "Luk", onclick: luk}, "×")),
-      ...allePakker().map(p => h("label", {}, h("input", {type: "checkbox", checked: valgt.some(x => nøgle(x) === nøgle(p)),
-        onchange: e => { w.pakker = e.target.checked ? [...(w.pakker || []), p] : (w.pakker || []).filter(x => nøgle(x) !== nøgle(p)); ændret(); tegn(); }}), h("span", {}, p))),
+      ...allePakker().map(p => { const med = valgt.some(x => nøgle(x) === nøgle(p));
+        return h("label", {}, h("input", {type: "checkbox", checked: med,
+          onchange: e => { w.pakker = e.target.checked ? [...(w.pakker || []), p] : (w.pakker || []).filter(x => nøgle(x) !== nøgle(p)); if (!e.target.checked) delete (w.pakke_antal ||= {})[p]; ændret(); tegn(); tegnListe(); }}),
+          h("span", {style: "flex:1"}, p),
+          med ? h("input", {class: "pakkeantal", type: "number", min: "1", max: String(w.antal || 99), value: (w.pakke_antal || {})[p] ?? w.antal ?? 1, title: `Antal i pakken (${w.antal ?? "?"} på lager)`, "aria-label": "Antal i " + p,
+            onclick: e => e.stopPropagation(), oninput: e => { const n = Math.max(1, parseInt(e.target.value, 10) || 1); (w.pakke_antal ||= {})[p] = n; ændret(); tegn(); }}) : null); }),
       h("div", {class: "pakkeny"}, ny, h("button", {class: "btn lille", type: "button", onclick: tilføj}, "Tilføj")));
   };
   const åbn = () => {
@@ -1370,7 +1376,7 @@ function pakkeCelle(w, ændret) {   // chips + knap, der åbner en tjekliste: s�
   };
   const tegn = () => {
     const valgt = w.pakker || [];
-    celle.replaceChildren(...valgt.map(p => h("span", {class: "pakkechip"}, p,
+    celle.replaceChildren(...valgt.map(p => h("span", {class: "pakkechip"}, `${p} ×${(w.pakke_antal || {})[p] ?? w.antal ?? 1}`,
       h("button", {type: "button", class: "pakkefjern", title: "Tag ud af " + p, "aria-label": "Tag ud af " + p, onclick: () => { w.pakker = valgt.filter(x => x !== p); ændret(); tegn(); tegnListe(); }}, "×"))),
       h("button", {type: "button", class: "pakkeknap", "aria-label": "Vælg pakker", onclick: e => { e.stopPropagation(); åbn(); }}, valgt.length ? "+ pakke" : "+ Læg i pakke"),
       ...(liste ? [liste] : []));
@@ -1440,6 +1446,7 @@ function anvendLager(us, ret, ny) {   // samme regler som fabz.py lager_ret/lage
     for (const [k, v] of Object.entries(r.felter)) {
       if (k === "note") { if (String(v || "").trim()) u.note = String(v).trim(); else delete u.note; }
       else if (k === "pakker") { if ((v || []).length) u.pakker = [...v]; else delete u.pakker; }
+      else if (k === "pakke_antal") { const pa = {}; for (const x of v || []) { const i = x.lastIndexOf("="); if (i > 0) pa[x.slice(0, i)] = Number(x.slice(i + 1)); } if (Object.keys(pa).length) u.pakke_antal = pa; else delete u.pakke_antal; }
       else if (k === "antal") u.antal = Number(v);
       else u[k] = k === "navn" ? String(v).trim() : v;
     }
