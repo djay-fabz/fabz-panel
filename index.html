@@ -2398,16 +2398,27 @@ function visSalg() {
     h("span", {class: "ap-hoejre" + (s.naeste_opfoelgning && s.naeste_opfoelgning < idag ? " rød" : "")},
       s.naeste_opfoelgning ? (s.naeste_opfoelgning === idag ? "i dag" : kortDato(s.naeste_opfoelgning)) : "", h("span", {class: "ap-chev"}, "›")));
   const gruppe = (titel, l) => l.length ? [h("div", {class: "overskrift", style: "margin-top:18px"}, titel), h("div", {class: "kort ap"}, l.map(række))] : null;
+  // Oscar 26/10: kun 3-4 kunder ad gangen. Standard: dagens opfølgninger (højst 4), ellers de næste 3. Resten bag "Vis alle".
+  const fokus = iDagL.length ? iDagL.slice(0, 4) : [...uden, ...senere].slice(0, 3);
+  const fokusTitel = iDagL.length ? `I dag (${iDagL.length})` : "Næste";
+  const skjult = rows.length - fokus.length;
   const venstre = h("div", {class: "liste-kol"},
     h("div", {class: "kh"}, h("h1", {}, "Kunder"), h("div", {class: "spacer"}),
       traekKnap(),
       h("button", {class: "btn", type: "button", onclick: () => { SG.vis = "ny"; SG.ny = {type: "Ny virksomhed", status: "Ikke kontaktet"}; tegn(); }}, "+ Ny kunde")),
-    iDagL.length ? gruppe(`I dag (${iDagL.length})`, iDagL) : h("div", {class: "muted", style: "margin-top:18px"}, "Ingen at følge op på i dag."),
-    gruppe("Uden dato", uden),
-    gruppe("Senere", senere),
-    h("button", {class: "btn ghost lille", type: "button", style: "margin-top:14px", onclick: () => { SG.lukkede = !SG.lukkede; tegn(); }},
-      SG.lukkede ? "Skjul Booket og Ikke nu" : `Vis Booket og Ikke nu (${lukket.length})`),
-    SG.lukkede && lukket.length ? h("div", {class: "kort ap", style: "margin-top:8px"}, lukket.map(række)) : null);
+    SG.alle ? [
+      iDagL.length ? gruppe(`I dag (${iDagL.length})`, iDagL) : h("div", {class: "muted", style: "margin-top:18px"}, "Ingen at følge op på i dag."),
+      gruppe("Uden dato", uden),
+      gruppe("Senere", senere),
+      h("div", {class: "r1", style: "margin-top:14px"},
+        h("button", {class: "btn ghost lille", type: "button", onclick: () => { SG.alle = false; tegn(); }}, "Vis kun de næste"),
+        h("button", {class: "btn ghost lille", type: "button", onclick: () => { SG.lukkede = !SG.lukkede; tegn(); }},
+          SG.lukkede ? "Skjul Booket og Ikke nu" : `Vis Booket og Ikke nu (${lukket.length})`)),
+      SG.lukkede && lukket.length ? h("div", {class: "kort ap", style: "margin-top:8px"}, lukket.map(række)) : null]
+    : [
+      fokus.length ? gruppe(fokusTitel, fokus) : h("div", {class: "muted", style: "margin-top:18px"}, "Ingen kunder i salg. Tryk Træk en kontakt."),
+      iDagL.length > 4 ? h("div", {class: "muted lille", style: "margin-top:6px"}, `+ ${iDagL.length - 4} mere i dag`) : null,
+      skjult > 0 ? h("button", {class: "btn ghost lille", type: "button", style: "margin-top:14px", onclick: () => { SG.alle = true; tegn(); }}, `Vis alle kunder (${rows.length})`) : null]);
   const højre = h("div", {class: "detalje-kol"},
     SG.vis === "ny" ? nySalgForm() : SG.vis === "s" ? salgDetalje((D.salg || []).find(s => s.navn === SG.valgt)) : tom("Vælg en kunde, eller tilføj en ny."));
   $("rod").replaceChildren(h("div", {class: "side bred", style: "padding-bottom:0"}, salgTop()), h("div", {class: "to", style: "padding-top:0"}, venstre, højre));
