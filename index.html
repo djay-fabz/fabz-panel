@@ -2313,20 +2313,23 @@ function ruteKort(e) {   // ét kort pr. stop og pr. kørsel (kan printes)
       e.venter ? h("div", {class: "muted", style: "margin-top:4px"}, `Tid til overs ${e.venter} min`) : null,
       e.note ? h("div", {class: "rnote"}, "Husk: " + e.note) : null));
 }
-function koerelisteKnap() {   // Køreliste (PDF) fra den gemte plan på jobbet: samme design som side 2 i pakkelisten (Oscar 26/10: browserens print duede ikke)
-  const r = RU;
-  if (!r.job || !(D.jobrute || {})[r.job]) return r.job ? h("div", {class: "muted lille", style: "margin-top:8px"}, "Beregn ruten, så kan du hente kørelisten som PDF.") : null;
+function koerelisteKnap(vedTidsplan) {   // Køreliste (PDF): samme design som side 2 i pakkelisten (Oscar 26/10: browserens print duede ikke; knappen skal stå ved tidsplanen)
+  const r = RU, d = r.svar?.data;
+  if (vedTidsplan ? !d : !(r.job && (D.jobrute || {})[r.job] && !d)) return null;   // ved tidsplanen: når ruten er beregnet. Øverst: kun en gemt plan, der ikke er beregnet igen
   const lav = async () => {
     r.pdfArbejder = true; r.pdf = null; tegn();
     try {
-      const sv = await kørOgVent("koereliste-pdf", [r.job]);   // uden "--": panelet lægger --mappe bagefter
+      const jobNavn = r.job ? (jobs().find(j => jobRuteNøgle(j) === r.job) || {}).navn : "";
+      const json = d ? {titel: jobNavn || (r.stop[r.stop.length - 1]?.navn || "").trim() || "Køreliste", ...(r.job ? {dato: r.job.slice(0, 10)} : {}),
+        stop: r.stop.filter(x => x.adr.trim()).map(x => ({navn: x.navn.trim(), adresse: x.adr.trim()})), linjer: d.linjer} : null;
+      const sv = d ? await kørOgVent("koereliste-pdf", ["--json", "@json"], json) : await kørOgVent("koereliste-pdf", [r.job]);   // uden "--": panelet lægger --mappe bagefter
       if (!sv) r.pdf = {fejl: "Intet svar efter 4 minutter."};
       else if (sv.status === "FEJL") r.pdf = {fejl: sv.fejl};
       else r.pdf = sv.pdf ? {link: await hentPdf(sv.pdf), navn: decodeURIComponent(sv.pdf.split("/").pop()), adv: sv.advarsler || []} : {fejl: "Ingen PDF kom tilbage."};
     } catch (e) { r.pdf = {fejl: e.message}; }
     r.pdfArbejder = false; if (fane === "rute") tegn();
   };
-  return h("div", {style: "margin-top:10px"},
+  return h("div", {style: vedTidsplan ? "margin-top:12px" : "margin-top:10px"},
     h("button", {class: "btn primaer", type: "button", disabled: r.arbejder || r.pdfArbejder, onclick: lav}, r.pdfArbejder ? "Laver køreliste … typisk under et minut" : "Køreliste (PDF)"),
     r.pdf?.fejl ? h("div", {class: "svar fejl", style: "margin-top:8px"}, r.pdf.fejl) : null,
     r.pdf?.link ? pdfKnapper(r.pdf.link, r.pdf.navn) : null,
@@ -2379,7 +2382,7 @@ function visRute() {
       h("select", {class: "input", style: "margin-top:8px", disabled: r.arbejder, onchange: e => { vælgRuteJob(e.target.value); tegn(); }},
         h("option", {value: ""}, "Intet job (kun beregning)"),
         jobs().map(j => h("option", {value: jobRuteNøgle(j), selected: r.job === jobRuteNøgle(j)}, `${visDato(j.dato)} ${j.navn}${(D.jobrute || {})[jobRuteNøgle(j)] ? " (plan gemt)" : ""}`))),
-      koerelisteKnap(),
+      koerelisteKnap(false),
       h("div", {class: "muted lille", style: "margin-top:6px"}, r.job ? "Adresse og ankomsttid er hentet fra bookingen i kalenderen. Du kan rette dem. Når ruten er beregnet, gemmes den på jobbet og kommer på side 2 i pakkelisten i stedet for kalenderens tidsplan. Kalenderen ændres ikke." : "Vælg et job for at hente adresse og ankomsttid fra kalenderen og gemme planen på jobbet.")),
     h("div", {class: "gruppe", style: "margin-top:16px"}, h("div", {class: "overskrift"}, "Køretøj"),
       h("div", {style: "display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"}, knap("trailer", "Trailer (højst 80 km/t)"), knap("bil", "Bil (normal hastighed)"))),
@@ -2394,6 +2397,7 @@ function visRute() {
     d ? h("div", {class: "rute-resultat", style: "margin-top:20px"},
       h("div", {style: "display:flex;align-items:center;gap:8px;flex-wrap:wrap"}, h("h1", {style: "margin:0"}, "Tidsplan"), h("div", {class: "spacer"}),
         h("button", {class: "btn lille ikke-print", type: "button", onclick: kopiér}, "Kopiér tekst")),
+      koerelisteKnap(true),
       h("div", {class: "chips"},
         h("span", {class: "pill blå"}, d.koeretoej === "trailer" ? "Trailer, højst 80 km/t" : "Bil"),
         h("span", {class: "pill"}, `${km1(d.km)} km`), h("span", {class: "pill"}, `${d.min} min køretid`)),
