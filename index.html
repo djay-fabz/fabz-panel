@@ -293,12 +293,23 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .sk .sk-hoved{justify-content:space-between}
 .sk-titel{font-size:17px;font-weight:600}
 .sk-k4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px}
-.sk-k{border-radius:12px;padding:12px 14px;background:var(--bg);border-left:5px solid var(--linje)}
+.sk-k{border-radius:12px;padding:12px 14px;background:var(--bg);border-left:5px solid var(--linje);min-width:0;overflow-wrap:anywhere}
 .sk-k b{display:block;font-size:24px;letter-spacing:-.02em;line-height:1.1}.sk-k span{font-size:11.5px;color:var(--svag)}
 .sk-k.g{border-left-color:var(--ok)}.sk-k.rd{border-left-color:var(--fejl)}.sk-k.y{border-left-color:#d97706}.sk-k.b{border-left-color:var(--accent)}
 .sk-dage{display:flex;gap:8px}.sk-dag{flex:1;border-radius:10px;padding:8px 6px;text-align:center;background:var(--bg);font-size:12px;color:var(--svag)}.sk-dag b{display:block;font-size:16px;color:var(--tekst)}
 .sk-dag.rutine{border:1px dashed var(--linje)}.sk-dag.g{background:var(--ok-blid);color:var(--ok);border-color:var(--ok)}.sk-dag.g b{color:var(--ok)}.sk-dag.rd{background:var(--fejl-blid);color:var(--fejl);border-color:#f3b4b4}.sk-dag.rd b{color:var(--fejl)}.sk-dag.nu{outline:2px solid var(--accent)}
 .sk-log{margin-top:12px;padding-top:12px;border-top:1px solid var(--linje)}
+.sk-k3{grid-template-columns:repeat(3,1fr)}.sk-k2{grid-template-columns:repeat(2,1fr)}
+/* kundeliste i Apple-stil (Oscar 26/10) */
+.kort.ap{border-radius:14px}
+.ap-row{display:flex;align-items:center;gap:12px;width:100%;min-height:58px;padding:11px 14px 11px 16px;border:0;border-top:1px solid var(--linje);background:var(--flade);text-align:left;color:var(--tekst)}
+.ap-row:first-child{border-top:0}.ap-row:hover{background:var(--hover)}.ap-row.valgt{background:var(--accent-blid)}.ap-row:disabled{opacity:.6}
+.ap-dot{width:10px;height:10px;border-radius:50%;flex:none;background:var(--svagere)}.ap-dot.blaa{background:var(--accent)}.ap-dot.gul{background:#d97706}.ap-dot.groen{background:var(--ok)}
+.ap-tekst{flex:1;min-width:0;display:flex;flex-direction:column}
+.ap-navn{font-size:16px;font-weight:600;letter-spacing:-.01em;line-height:1.25}
+.ap-sub{font-size:13px;color:var(--svag);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ap-hoejre{flex:none;display:flex;align-items:center;gap:6px;font-size:13px;color:var(--svag)}.ap-hoejre.rød{color:var(--fejl);font-weight:600}
+.ap-chev{font-size:22px;line-height:1;color:var(--svagere);font-weight:300}
 .sk-md{display:flex;gap:22px;align-items:center}
 .sk-ring{width:120px;height:120px;border-radius:50%;display:grid;place-items:center;flex:none;background:var(--svagere)}
 .sk-ring.g{background:var(--ok)}.sk-ring.y{background:#d97706}.sk-ring.rd{background:var(--fejl)}
@@ -315,7 +326,7 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .sk-soejler i{display:block;width:72%;border-radius:6px 6px 0 0;background:var(--linje)}.sk-soejler i.g{background:var(--ok)}.sk-soejler i.y{background:#d97706}.sk-soejler i.rd{background:var(--fejl)}.sk-soejler i.gr{background:var(--linje);border:1px dashed var(--svagere)}
 .sk-soejler em{font-style:normal;font-size:10.5px;color:var(--tekst);font-weight:600;margin-bottom:2px}.sk-soejler .nu em{color:var(--accent)}
 .sk-detalje{margin-top:14px;padding:12px 14px;background:var(--bg);border-radius:12px}.sk-detalje .liste .l{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--linje)}.sk-detalje .liste .l:first-child{border-top:0}
-@media (max-width:900px){.sk-k4{grid-template-columns:1fr 1fr}.sk-md{flex-direction:column;text-align:center}.sk-md .r1{justify-content:center}.sk-graf{height:160px}.sk-soejler{gap:3px}.sk-soejler em{font-size:9px}}
+@media (max-width:900px){.sk-k4{grid-template-columns:1fr 1fr}.sk-k3{grid-template-columns:1fr 1fr}.sk-k2{grid-template-columns:1fr 1fr}.sk-md{flex-direction:column;text-align:center}.sk-md .r1{justify-content:center}.sk-graf{height:160px}.sk-soejler{gap:3px}.sk-soejler em{font-size:9px}}
 /* telefon: ligger sidst, så reglerne vinder over grundreglerne ovenfor */
 @media (max-width:700px){
   /* telefon: berøringsflader mindst 40 px, og intet må være bredere end skærmen (ellers vokser visningen, og bundfanerne ryger ud af billedet) */
@@ -620,7 +631,7 @@ function tegnTop() {
   const aktiv = v => fane === v || (v === "pakkelister" && (fane === "kort" || fane === "rute"));
   const gå = v => { fane = v; MERE = false; if (v === "pakkelister") { JH = null; S = null; } tegn(); window.scrollTo(0, 0); };
   const hoved = [["idag", "I dag"], ["opgaver", "Opgaver"], ["pakkelister", "Jobs"], ["foresp", "Forespørgsler"], ["salg", "Salg"]];   // Salg i hovedbjælken (Oscar 25/10)
-  const mere = [["lager", "Lager"], ["ideer", "Idéer"], ["indtaegter", "Indtægter"]];
+  const mere = [["oekonomi", "Økonomi"], ["lager", "Lager"], ["ideer", "Idéer"], ["indtaegter", "Indtægter"]];   // Økonomi: penge ude, til dig, privat (Oscar 26/10: Salg skal kun være salg)
   top.replaceChildren(
     h("span", {class: "brand"}, "Fabz"),
     h("nav", {class: "tabs"},
@@ -638,7 +649,7 @@ document.addEventListener("click", () => { if (MERE) { MERE = false; tegnTop(); 
 function tegn() {
   document.body.classList.remove("bar-synlig");
   tegnTop();
-  const vis = {idag: visIDag, opgaver: visOpgaver, foresp: visForesp, salg: visSalg, ideer: visIdeer, indtaegter: visIndtaegter, lager: visLager, kort: visKort, rute: visRute}[fane];
+  const vis = {idag: visIDag, opgaver: visOpgaver, foresp: visForesp, salg: visSalg, oekonomi: visOekonomi, ideer: visIdeer, indtaegter: visIndtaegter, lager: visLager, kort: visKort, rute: visRute}[fane];
   if (vis) vis();
   else if (S) visEditor();
   else visJobs();
@@ -1648,9 +1659,9 @@ function visIDag() {
             h("span", {class: "lille tid " + (s.naeste_opfoelgning < iDag() ? "rød" : "muted")}, kortDato(s.naeste_opfoelgning)), h("span", {}, s.navn))) : h("div", {class: "muted lille"}, "Ingen")); })(),
         (() => { const ub = D.mo?.ubetalt, dm = (D.mo?.depositum || []).filter(j => j.status === "mangler");   // Penge ude: kun når noget haster
           if (!ub || (!ub.forfaldne && !dm.length)) return null;
-          return sideKort("Penge ude", h("div", {}, ub.forfaldne ? h("button", {class: "mini link", type: "button", onclick: () => { fane = "salg"; tegn(); }},
+          return sideKort("Penge ude", h("div", {}, ub.forfaldne ? h("button", {class: "mini link", type: "button", onclick: () => { fane = "oekonomi"; OK.detaljer = true; tegn(); }},
               h("span", {class: "pill rd"}, `${ub.forfaldne} over forfald`), h("span", {}, `${krKort(ub.forfaldne_kr)} kr. · send rykker i Dinero`)) : null,
-            dm.map(j => h("button", {class: "mini link", type: "button", onclick: () => { fane = "salg"; tegn(); }},
+            dm.map(j => h("button", {class: "mini link", type: "button", onclick: () => { fane = "oekonomi"; OK.detaljer = true; tegn(); }},
               h("span", {class: "pill rd"}, "depositum"), h("span", {}, `${j.navn} · ${kortDato(j.dato)} · intet depositum sendt`))))); })(),
         sideKort("Næste jobs", næste.length ? næste.map(j => {
           const jp = jobplTilJob(j), klar = !!jp?.godkendt || opgaveTilJob(j)?.status === "Færdig";
@@ -2376,28 +2387,48 @@ function visSalg() {
   const senere = rows.filter(s => s.naeste_opfoelgning && s.naeste_opfoelgning > idag).sort((a, b) => a.naeste_opfoelgning.localeCompare(b.naeste_opfoelgning));
   const uden = rows.filter(s => !s.naeste_opfoelgning && åben(s));
   const lukket = rows.filter(s => !s.naeste_opfoelgning && !åben(s));
-  const række = s => h("button", {type: "button", class: "r række" + (SG.vis === "s" && SG.valgt === s.navn ? " valgt" : ""), disabled: !!s._ny,
+  const prik = st => ({"Kontaktet": "blaa", "Møde aftalt": "blaa", "Tilbud sendt": "gul", "Booket": "groen"})[st] || "graa";
+  // Apple-stil (Oscar 26/10): navn stort, én grå linje under, dato til højre, pil. Status som farvet prik, ikke som pille.
+  const række = s => h("button", {type: "button", class: "ap-row" + (SG.vis === "s" && SG.valgt === s.navn ? " valgt" : ""), disabled: !!s._ny, title: s.status,
     onclick: () => { SG.vis = "s"; SG.valgt = s.navn; SG.k = {naeste: s.naeste || ""}; tegn(); }},
-    h("div", {class: "n"}, h("div", {class: "titel"}, s.navn, s._ny ? h("span", {class: "muted lille"}, "  gemmes …") : null),
-      h("div", {class: "meta"}, h("span", {}, s.type),
-        s.naeste_opfoelgning ? h("span", {class: s.naeste_opfoelgning < idag ? "rød" : ""}, "følg op " + kortDato(s.naeste_opfoelgning)) : null,
-        s.naeste ? h("span", {style: "overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:320px"}, s.naeste) : null)),
-    h("span", {class: "pill " + salgPill(s.status)}, s.status));
-  const gruppe = (titel, l, tomTekst) => l.length
-    ? [h("div", {class: "overskrift", style: "margin-top:16px"}, `${titel} (${l.length})`), h("div", {class: "kort"}, l.map(række))]
-    : [h("div", {class: "overskrift", style: "margin-top:16px"}, `${titel} (0)`), h("div", {class: "muted lille", style: "padding:2px 0 0"}, tomTekst)];
+    h("span", {class: "ap-dot " + prik(s.status)}),
+    h("span", {class: "ap-tekst"}, h("span", {class: "ap-navn"}, s.navn, s._ny ? h("span", {class: "muted lille"}, "  gemmes …") : null),
+      h("span", {class: "ap-sub"}, s.naeste || s.status + (s.type ? " · " + s.type : ""))),
+    h("span", {class: "ap-hoejre" + (s.naeste_opfoelgning && s.naeste_opfoelgning < idag ? " rød" : "")},
+      s.naeste_opfoelgning ? (s.naeste_opfoelgning === idag ? "i dag" : kortDato(s.naeste_opfoelgning)) : "", h("span", {class: "ap-chev"}, "›")));
+  const gruppe = (titel, l) => l.length ? [h("div", {class: "overskrift", style: "margin-top:18px"}, titel), h("div", {class: "kort ap"}, l.map(række))] : null;
   const venstre = h("div", {class: "liste-kol"},
-    h("div", {class: "kh"}, h("h1", {}, "Salg"), h("div", {class: "spacer"}),
+    h("div", {class: "kh"}, h("h1", {}, "Kunder"), h("div", {class: "spacer"}),
       h("button", {class: "btn primaer", type: "button", onclick: () => { SG.vis = "ny"; SG.ny = {type: "Ny virksomhed", status: "Ikke kontaktet"}; tegn(); }}, "+ Ny kunde")),
-    gruppe("Følg op i dag", iDagL, "Ingen at følge op på i dag."),
-    uden.length ? [h("div", {class: "overskrift gul-t", style: "margin-top:16px"}, `Uden opfølgningsdato (${uden.length})`), h("div", {class: "kort"}, uden.map(række))] : null,
-    gruppe("Senere", senere, "Ingen planlagte opfølgninger."),
-    h("button", {class: "btn ghost lille", type: "button", style: "margin-top:12px", onclick: () => { SG.lukkede = !SG.lukkede; tegn(); }},
+    iDagL.length ? gruppe(`I dag (${iDagL.length})`, iDagL) : h("div", {class: "muted", style: "margin-top:18px"}, "Ingen at følge op på i dag."),
+    gruppe("Uden dato", uden),
+    gruppe("Senere", senere),
+    h("button", {class: "btn ghost lille", type: "button", style: "margin-top:14px", onclick: () => { SG.lukkede = !SG.lukkede; tegn(); }},
       SG.lukkede ? "Skjul Booket og Ikke nu" : `Vis Booket og Ikke nu (${lukket.length})`),
-    SG.lukkede && lukket.length ? h("div", {class: "kort"}, lukket.map(række)) : null);
+    SG.lukkede && lukket.length ? h("div", {class: "kort ap", style: "margin-top:8px"}, lukket.map(række)) : null);
   const højre = h("div", {class: "detalje-kol"},
     SG.vis === "ny" ? nySalgForm() : SG.vis === "s" ? salgDetalje((D.salg || []).find(s => s.navn === SG.valgt)) : tom("Vælg en kunde, eller tilføj en ny."));
   $("rod").replaceChildren(h("div", {class: "side bred", style: "padding-bottom:0"}, salgTop()), h("div", {class: "to", style: "padding-top:0"}, venstre, højre));
+}
+const OK = {detaljer: false};   // Økonomi-fanen: detaljerne er foldet væk, til Oscar trykker "Vis detaljer"
+function visOekonomi() {
+  const mo = D.mo || {}, ms = moMaaneder(), m = ms.find(x => x.nu), ub = mo.ubetalt, td = mo.til_dig;
+  const mn = mo.min || 20000, behov = (D.strategi || {}).privatbehov_md;
+  const navn = m ? MDL[Number(m.ym.slice(5, 7)) - 1].replace(/^./, c => c.toUpperCase()) : "";
+  const ligeNu = h("div", {class: "kort2 sk"},
+    h("div", {class: "r1 sk-hoved"}, h("div", {class: "overskrift", style: "margin:0"}, "Lige nu"),
+      h("span", {class: "muted lille"}, `Dinero pr. ${mo.dinero_pr ? visDato(mo.dinero_pr) : "?"}`)),
+    h("div", {class: "sk-k4 sk-k3"},
+      m ? h("div", {class: "sk-k " + MO_FARVE[m.farve]}, h("b", {}, krKort(m.kr)), h("span", {}, `kr. i ${navn.toLowerCase()} ekskl. moms` + (m.farve === "groen" ? " · i mål" : ` · mangler ${krKort(Math.max(0, mn - m.kr))}`)))
+        : h("div", {class: "sk-k"}, h("b", {}, "–"), h("span", {}, "ingen månedsoversigt endnu")),
+      h("div", {class: "sk-k " + (ub && ub.forfaldne ? "rd" : "g")}, h("b", {}, ub ? krKort(ub.forfaldne_kr) : "–"), h("span", {}, ub && ub.forfaldne ? `kr. over forfald (${ub.forfaldne}) · send rykker` : "kr. over forfald · alt er betalt")),
+      td ? h("div", {class: "sk-k " + (td.nu.sjov == null ? "b" : td.nu.sjov >= 0 ? "g" : "rd")}, h("b", {}, krKort(td.nu.efter_skat)), h("span", {}, `kr. til dig efter skat i ${td.nu.navn.toLowerCase()}` + (behov != null ? ` · behov ${krKort(behov)}` : "")))
+        : h("div", {class: "sk-k"}, h("b", {}, "–"), h("span", {}, "til dig: venter på Dinero-posteringer"))),
+    h("div", {class: "r1", style: "margin-top:14px"},
+      h("button", {class: "btn", type: "button", onclick: () => { OK.detaljer = !OK.detaljer; tegn(); }}, OK.detaljer ? "Skjul detaljer" : "Vis detaljer"),
+      h("span", {class: "muted lille"}, "Fakturaer, depositum, udgifter, privatøkonomi og månederne bagud.")));
+  $("rod").replaceChildren(h("div", {class: "side bred"}, h("div", {class: "kh"}, h("h1", {}, "Økonomi")),
+    h("div", {class: "sk-top"}, ligeNu, OK.detaljer ? [maanedKort(), pengeKort(), tilDigKort(), privatKort(), vejKort(false)] : null)));
 }
 // ---------- Salg: statuskort (Oscar 25/10, skitse C): denne uge, denne måned, vejen. Tal fra data/maanedsoversigt.json (fabz.py) og salgslog ----------
 const MO_FARVE = {groen: "g", gul: "y", roed: "rd", graa: "gr"};   // rd/gr, fordi .r og .x er optaget af andre regler
@@ -2408,7 +2439,7 @@ function salgMaal() {
 }
 const moMaaneder = () => (D.mo && Array.isArray(D.mo.maaneder)) ? D.mo.maaneder : [];
 function salgTop() {
-  return h("div", {class: "sk-top"}, ugeKort(), maanedKort(), pengeKort(), tilDigKort(), privatKort(), vejKort());
+  return h("div", {class: "sk-top"}, ugeKort(), vejKort(true));
 }
 function ugeKort() {
   const idag = iDag(), maal = salgMaal(), log = D.salgslog || [];
@@ -2430,11 +2461,10 @@ function ugeKort() {
   return h("div", {class: "kort2 sk"},
     h("div", {class: "r1 sk-hoved"}, h("div", {class: "overskrift", style: "margin:0"}, `Denne uge · uge ${ugeNr}`),
       h("span", {class: "muted lille"}, `Mål: ${maal.kontakter_uge} kontakter, ${maal.samtaler_uge} samtaler`)),
-    h("div", {class: "sk-k4"},
+    h("div", {class: "sk-k4 sk-k3"},
       h("div", {class: "sk-k " + kl(uge.length, maal.kontakter_uge)}, h("b", {}, `${uge.length} / ${maal.kontakter_uge}`), h("span", {}, "kontakter")),
       h("div", {class: "sk-k " + kl(uge.filter(samtale).length, maal.samtaler_uge)}, h("b", {}, `${uge.filter(samtale).length} / ${maal.samtaler_uge}`), h("span", {}, "samtaler")),
-      h("div", {class: "sk-k " + kl(tilbudMd, maal.tilbud_md)}, h("b", {}, `${tilbudMd} / ${maal.tilbud_md}`), h("span", {}, "tilbud i md.")),
-      h("div", {class: "sk-k b"}, h("b", {}, opf.length), h("span", {}, "følg op i dag"))),
+      h("div", {class: "sk-k " + (opf.length ? "b" : "")}, h("b", {}, opf.length), h("span", {}, opf.length ? "venter på dig i dag" : "ingen venter i dag · " + tilbudMd + " tilbud i md."))),
     h("div", {class: "overskrift", style: "margin-top:14px"}, `${maal.kontakter_dag} kontakter om dagen, ${maal.rutinedage.join(", ")}`),
     h("div", {class: "sk-dage"}, dage),
     h("div", {class: "r1", style: "margin-top:12px"},
@@ -2588,17 +2618,19 @@ function privatKort() {   // Privat: Danske Bank via GoCardless (data/privat.jso
     (pv.ukendte || []).length ? h("div", {class: "liste"}, pv.ukendte.slice(0, 6).map(regel)) : null,
     h("div", {class: "lille muted", style: "margin-top:10px"}, "Kun læseadgang til banken (GoCardless, Open Banking). Overførsler til egne konti og Fabz tæller ikke med. Samtykket fornys ca. hver 90. dag, så kommer der et nyt link her."));
 }
-function vejKort() {
+function vejKort(kunFrem) {   // kunFrem (Salg): denne måned + de næste 6/12, uden karrieremål og fortid (Oscar 26/10). Ellers (Økonomi) som før.
   const ms = moMaaneder(), mo = D.mo || {};
   if (!ms.length) return h("div", {hidden: true});
   if (!SG.hz) SG.hz = window.innerWidth <= 700 ? 6 : 12;
+  if (!SG.fz) SG.fz = 6;
   const i0 = ms.findIndex(x => x.nu);
-  const [fra, til] = SG.hz === 1 ? [i0, i0] : SG.hz === 6 ? [i0 - 2, i0 + 3] : [i0 - 5, i0 + 6];
+  const hz = kunFrem ? SG.fz : SG.hz;
+  const [fra, til] = kunFrem ? [i0, i0 + hz] : hz === 1 ? [i0, i0] : hz === 6 ? [i0 - 2, i0 + 3] : [i0 - 5, i0 + 6];
   const vis = ms.slice(Math.max(0, fra), til + 1);
-  const mn = mo.min || 20000, kar = mo.karriere_md || 0;
+  const mn = mo.min || 20000, kar = kunFrem ? 0 : (mo.karriere_md || 0);
   const maks = Math.max(kar * 1.04, mn * 1.3, ...vis.map(x => x.kr));
   const pct = v => Math.round(100 * v / maks);
-  const valgt = vis.find(x => x.ym === SG.hzValgt) || (SG.hz === 1 ? vis[0] : null);
+  const valgt = vis.find(x => x.ym === SG.hzValgt) || (!kunFrem && hz === 1 ? vis[0] : null);
   const detalje = valgt ? h("div", {class: "sk-detalje"},
     h("div", {class: "overskrift"}, `${valgt.navn} ${valgt.aar} · ${krKort(valgt.kr)} kr. · ${MO_TEKST[valgt.farve]}`),
     h("div", {class: "liste"},
@@ -2606,14 +2638,17 @@ function vejKort() {
       valgt.registreret ? h("div", {class: "l"}, h("span", {}, "B-indkomst og kontant (registreret)"), h("b", {}, krKort(valgt.registreret))) : null,
       valgt.jobs.map(j => h("div", {class: "l"}, h("span", {}, `${j.navn} · ${kortDato(j.dato)}` + (j.talt ? "" : " · afholdt, fakturér eller registrér")), h("b", {}, j.kr == null ? "?" : krKort(j.kr)))),
       !valgt.faktureret && !valgt.jobs.length ? h("div", {class: "l muted"}, "Intet booket endnu.") : null)) : null;
-  const tal = h("div", {class: "sk-k4", style: "margin-top:14px"},
+  const tal = kunFrem ? h("div", {class: "sk-k4 sk-k2", style: "margin-top:14px"},
+    h("div", {class: "sk-k " + (mo.frem6_kr >= 6 * mn ? "g" : "y")}, h("b", {}, krKort(mo.frem6_kr)), h("span", {}, "kr. booket de næste 6 mdr.")),
+    h("div", {class: "sk-k " + (mo.frem6_under_min ? "rd" : "g")}, h("b", {}, `${mo.frem6_under_min} af 6`), h("span", {}, "kommende måneder under minimum")))
+  : h("div", {class: "sk-k4", style: "margin-top:14px"},
     h("div", {class: "sk-k b"}, h("b", {}, mo.snit_fuldtid ? krKort(mo.snit_fuldtid.kr) : "–"), h("span", {}, mo.snit_fuldtid ? `kr. i snit pr. md. siden fuldtid (${MDL[Number(mo.fuldtid_fra.slice(5, 7)) - 1].slice(0, 3)} ${mo.fuldtid_fra.slice(0, 4)})` : "snit siden fuldtid")),
     h("div", {class: "sk-k " + (mo.frem6_kr >= 6 * mn ? "g" : "y")}, h("b", {}, krKort(mo.frem6_kr)), h("span", {}, "kr. booket de næste 6 mdr.")),
     h("div", {class: "sk-k " + (mo.frem6_under_min ? "rd" : "g")}, h("b", {}, `${mo.frem6_under_min} af 6`), h("span", {}, "kommende måneder under minimum")),
     h("div", {class: "sk-k"}, h("b", {}, kar ? Math.round(100 * (ms[i0]?.kr || 0) / kar) + " %" : "–"), h("span", {}, `af karrieremålet (${krKort(kar)}) denne måned`)));
   return h("div", {class: "kort2 sk"},
-    h("div", {class: "r1 sk-hoved"}, h("div", {class: "overskrift", style: "margin:0"}, "Vejen · omsætning pr. måned, ekskl. moms"),
-      h("div", {class: "sk-hz"}, [[1, "1 md."], [6, "6 mdr."], [12, "12 mdr."]].map(([n, t]) => h("button", {type: "button", class: SG.hz === n ? "aktiv" : "", onclick: () => { SG.hz = n; SG.hzValgt = null; tegn(); }}, t)))),
+    h("div", {class: "r1 sk-hoved"}, h("div", {class: "overskrift", style: "margin:0"}, kunFrem ? "Fremtiden · booket pr. måned, ekskl. moms" : "Vejen · omsætning pr. måned, ekskl. moms"),
+      h("div", {class: "sk-hz"}, (kunFrem ? [[6, "6 mdr."], [12, "12 mdr."]] : [[1, "1 md."], [6, "6 mdr."], [12, "12 mdr."]]).map(([n, t]) => h("button", {type: "button", class: hz === n ? "aktiv" : "", onclick: () => { if (kunFrem) SG.fz = n; else SG.hz = n; SG.hzValgt = null; tegn(); }}, t)))),
     h("div", {class: "sk-graf"},
       kar ? h("div", {class: "sk-linje kar", style: `bottom:${pct(kar)}%`}, h("span", {}, `${krKort(kar)} karrieremål`)) : null,
       h("div", {class: "sk-linje", style: `bottom:${pct(mn)}%`}, h("span", {}, `${krKort(mn)} minimum`)),
@@ -2621,7 +2656,7 @@ function vejKort() {
         onclick: () => { SG.hzValgt = SG.hzValgt === x.ym ? null : x.ym; tegn(); }},
         h("em", {}, x.kr ? krKort(x.kr) : "–"), h("i", {class: MO_FARVE[x.farve], style: `height:${Math.max(3, pct(x.kr))}%`}), x.navn + (x.navn === "Jan" || vis[0] === x ? ` ${String(x.aar).slice(2)}` : ""))))),
     detalje, tal,
-    h("div", {class: "lille muted", style: "margin-top:10px"}, `Bagud: Dinero (pr. ${mo.dinero_pr ? visDato(mo.dinero_pr) : "?"}). Frem: faktureret + pris på bookede jobs. Grå = intet booket. Tryk på en søjle for jobs og fakturaer.`));
+    kunFrem ? null : h("div", {class: "lille muted", style: "margin-top:10px"}, `Bagud: Dinero (pr. ${mo.dinero_pr ? visDato(mo.dinero_pr) : "?"}). Frem: faktureret + pris på bookede jobs. Grå = intet booket. Tryk på en søjle for jobs og fakturaer.`));
 }
 function datoKnapper(st, k, felt) {
   const sæt = n => { st[k] = plusDage(iDag(), n); if (felt) felt.value = visDato(st[k]); };
