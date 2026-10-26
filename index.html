@@ -2459,12 +2459,12 @@ function ugeKort() {
       h("b", {}, n || (rutine && dato >= idag ? "·" : "–")), navn);
   });
   return h("div", {class: "kort2 sk"},
-    h("div", {class: "r1 sk-hoved"}, h("div", {class: "overskrift", style: "margin:0"}, `Denne uge · uge ${ugeNr}`),
-      h("span", {class: "muted lille"}, `Mål: ${maal.kontakter_uge} kontakter, ${maal.samtaler_uge} samtaler`)),
-    h("div", {class: "sk-k4 sk-k3"},
-      h("div", {class: "sk-k " + kl(uge.length, maal.kontakter_uge)}, h("b", {}, `${uge.length} / ${maal.kontakter_uge}`), h("span", {}, "kontakter")),
-      h("div", {class: "sk-k " + kl(uge.filter(samtale).length, maal.samtaler_uge)}, h("b", {}, `${uge.filter(samtale).length} / ${maal.samtaler_uge}`), h("span", {}, "samtaler")),
-      h("div", {class: "sk-k " + (opf.length ? "b" : "")}, h("b", {}, opf.length), h("span", {}, opf.length ? "venter på dig i dag" : "ingen venter i dag · " + tilbudMd + " tilbud i md."))),
+    h("div", {class: "r1 sk-hoved"}, h("div", {class: "overskrift", style: "margin:0"}, `Salg i denne uge · uge ${ugeNr}`),
+      h("span", {class: "muted lille"}, "Mål pr. uge: " + maal.kontakter_uge + " kontakter, " + maal.samtaler_uge + " samtaler")),
+    h("div", {class: "sk-k4 sk-k3"},   // tydelige tekster (Oscar 26/10): hvad tallet er, og hvad målet er
+      h("div", {class: "sk-k " + kl(uge.length, maal.kontakter_uge)}, h("b", {}, `${uge.length} af ${maal.kontakter_uge}`), h("span", {}, "firmaer kontaktet i denne uge (opkald, besked, mail)")),
+      h("div", {class: "sk-k " + kl(uge.filter(samtale).length, maal.samtaler_uge)}, h("b", {}, `${uge.filter(samtale).length} af ${maal.samtaler_uge}`), h("span", {}, "rigtige samtaler i denne uge (telefon eller møde)")),
+      h("div", {class: "sk-k " + (opf.length ? "b" : "")}, h("b", {}, opf.length), h("span", {}, opf.length ? `${opf.length === 1 ? "kunde" : "kunder"} du skal følge op på i dag` : "ingen opfølgninger i dag · " + tilbudMd + " tilbud sendt i md."))),
     h("div", {class: "overskrift", style: "margin-top:14px"}, `${maal.kontakter_dag} kontakter om dagen, ${maal.rutinedage.join(", ")}`),
     h("div", {class: "sk-dage"}, dage),
     h("div", {class: "r1", style: "margin-top:12px"},
