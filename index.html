@@ -120,6 +120,7 @@ a.btn{display:inline-block;text-decoration:none}
 .anl .an{font-size:13px;font-weight:600;line-height:1.2}.anl .as{font-size:11.5px;color:var(--svag);line-height:1.2}
 .anl.aktiv{border-color:var(--accent);background:var(--accent-blid);box-shadow:0 0 0 1px var(--accent) inset}.anl.aktiv .ik{color:var(--accent)}
 .anl.aktiv::after{content:"✓";position:absolute;top:6px;right:8px;font-size:12px;color:var(--accent);font-weight:700}
+.anl.plejer::before{content:"";position:absolute;top:8px;left:8px;width:8px;height:8px;border-radius:50%;background:var(--accent)}   /* diskret prik: "du plejer" (lært af tidligere lister) */
 .anl.frosset{opacity:.45;border-style:dashed;cursor:not-allowed}
 .chip.aktiv{background:var(--tekst);border-color:var(--tekst);color:var(--flade)}
 .gruppe{margin-top:20px}
@@ -797,6 +798,9 @@ const IKON = {   // 24x24, streger i tekstfarven
   pult: '<rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="8" cy="12" r="2.6"/><circle cx="16" cy="12" r="2.6"/><path d="M11 9h2M11 12h2M11 15h2"/>',
   lysbar: '<rect x="2.5" y="9" width="19" height="4.5" rx="1.5"/><circle cx="6" cy="11.2" r="1"/><circle cx="10" cy="11.2" r="1"/><circle cx="14" cy="11.2" r="1"/><circle cx="18" cy="11.2" r="1"/><path d="M12 13.5v5M8 21.5l4-3 4 3"/>',
   xlr: '<circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="8.5" r="1.2"/><circle cx="9" cy="13.5" r="1.2"/><circle cx="15" cy="13.5" r="1.2"/>',
+  stativ: '<path d="M4 7h16"/><path d="M6 7l-2 12M18 7l2 12"/><path d="M7 13h10"/>',
+  bord: '<rect x="3" y="6" width="18" height="4" rx="1"/><path d="M5 10v9M19 10v9M5 15h14"/>',
+  bowl: '<path d="M3 5h8a4 4 0 0 1-8 0zM13 5h8a4 4 0 0 1-8 0z"/><path d="M7 9v11M17 9v11"/><path d="M4 21h6M14 21h6"/>',
 };
 const ikonEl = (nøgle, tekst) => {
   const e = document.createElement("span"); e.className = "ik";
@@ -830,9 +834,10 @@ function anlægUdregn(valgte, antal) {
   if (valg.some(x => !x.altid)) for (const x of o.setups) if (x.altid && !valg.includes(x)) valg.push(x);
   const ud = new Map();
   const læg = (l, n) => {
+    const r = l.pr != null ? (n ? l.antal * Math.ceil(n / l.pr) + (l.plus || 0) : 0) : l.antal + (l.plus || 0), a = l.maks ? Math.min(r, l.maks) : r;
+    if (!a) return;   // 0 stk: hverken tal eller note (ellers står "1 pr. Helix" på listen uden Helix)
     const k = nøgle(l.udstyr), e = ud.get(k) || {udstyr: l.udstyr, antal: 0, note: []};
-    const r = l.pr != null ? (n ? l.antal * Math.ceil(n / l.pr) + (l.plus || 0) : 0) : l.antal + (l.plus || 0);
-    e.antal += l.maks ? Math.min(r, l.maks) : r;
+    e.antal += a;
     if (l.note && !e.note.includes(l.note)) e.note.push(l.note);
     ud.set(k, e);
   };
@@ -904,15 +909,28 @@ function optagetPaa(dato, egetJob) {   // udstyr på andre jobs' godkendte pakke
   }
   return ud;
 }
+function plejer(g) {   // hvilken pakke i trinnet plejer Oscar at vælge til dette job (samme navn), ellers til samme slags job (Bryllup:/DJ:)? Ren optælling, ingen AI
+  const job = S.job; if (!job) return null;
+  const slags = n => (/bryllup/i.test(n) ? "bryllup" : "dj");
+  const navne = new Set((D.setups?.setups || []).filter(x => x.gruppe === g.navn).map(x => x.navn));
+  const tæl = rows => { const c = {}; for (const r of rows) for (const n of r.anlaeg?.valgte || []) if (navne.has(n)) c[n] = (c[n] || 0) + 1; return Object.entries(c).sort((a, b) => b[1] - a[1])[0] || null; };
+  const alle = (D.jobpl || []).filter(r => r.godkendt && r.job_noegle !== jobNøgle(job));
+  const samme = tæl(alle.filter(r => nøgle(r.job) === nøgle(job.navn)));
+  if (samme) return {navn: samme[0], hvorfor: `Du plejer at vælge denne til ${job.navn} (${samme[1]} gang${samme[1] === 1 ? "" : "e"})`};
+  const titel = (D.kalender?.begivenheder || []).find(e => e.kalender === "bookinger" && e.start?.slice(0, 10) === job.dato && (e.titel || "").includes(job.navn))?.titel || "";
+  const s = slags(titel);
+  const type = tæl(alle.filter(r => slags((D.kalender?.begivenheder || []).find(e => e.kalender === "bookinger" && e.start?.slice(0, 10) === r.dato && (e.titel || "").includes(r.job))?.titel || "") === s));
+  return type ? {navn: type[0], hvorfor: `Du plejer at vælge denne til ${s === "bryllup" ? "bryllupper" : "DJ-jobs"} (${type[1]} gang${type[1] === 1 ? "" : "e"})`} : null;
+}
 function anlægStribe() {   // trin for trin (Oscar 27/10): hvert valg låser og låser op for det næste; stativer og kabler regnes ud
   const o = D.setups || {setups: []};
   if (!o.setups.length) return h("div", {hidden: true});
   const altid = o.setups.filter(x => x.altid);
   const grupper = (o.grupper || []).filter(g => o.setups.some(x => !x.altid && x.gruppe === g.navn));
-  const kort = x => {
-    const frys = anlægGyldig(x), på = S.anlæg.includes(x.navn), n = x.antal ? S.antal[x.navn] || 0 : 0;
+  const kort = (x, pl) => {
+    const frys = anlægGyldig(x), på = S.anlæg.includes(x.navn), n = x.antal ? S.antal[x.navn] || 0 : 0, anb = pl && pl.navn === x.navn;
     return h("div", {class: "anlw" + (på ? " aktiv" : "")},
-      h("button", {type: "button", class: "anl" + (på ? " aktiv" : "") + (frys && !på ? " frosset" : ""), disabled: !!frys && !på, title: frys || `${x.linjer.length} linjer`,
+      h("button", {type: "button", class: "anl" + (på ? " aktiv" : "") + (frys && !på ? " frosset" : "") + (anb ? " plejer" : ""), disabled: !!frys && !på, title: frys || (anb ? pl.hvorfor : `${x.linjer.length} linjer`),
         "aria-pressed": på ? "true" : "false", onclick: () => sætAnlæg(x.navn)},
         ikonEl(x.ikon), h("span", {class: "an"}, x.navn), h("span", {class: "as"}, frys && !på ? frys : x.antal && på ? `${n} stk` : x.antal ? `${x.antal.min}-${x.antal.max} stk` : `${x.linjer.length} linjer`)),
       x.antal && på ? h("div", {class: "asantal"}, stepper(n, d => sætAnlægAntal(x, d), x.navn)) : null,
@@ -924,7 +942,7 @@ function anlægStribe() {   // trin for trin (Oscar 27/10): hvert valg låser og
       h("div", {class: "agh"}, h("span", {class: "agnr"}, String(i + 1)), h("span", {class: "agn"}, g.navn), h("span", {class: "muted lille"}, g.eksklusiv ? "vælg én" : "vælg flere"),
         g.antal ? h("span", {class: "agantal"}, h("span", {class: "muted lille"}, "Antal " + g.antal.navn),
           stepper(S.antal[g.navn] || "–", d => sætAnlægAntal(g, d), g.antal.navn)) : null),
-      h("div", {class: "agrid"}, o.setups.filter(x => !x.altid && x.gruppe === g.navn).map(kort)),
+      h("div", {class: "agrid"}, (pl => o.setups.filter(x => !x.altid && x.gruppe === g.navn).map(x => kort(x, pl)))(plejer(g))),
       i === grupper.length - 1 && sum.length ? h("div", {class: "asum"}, sum.map(t => h("div", {}, t))) : null)),
     altid.length ? h("div", {class: "muted lille", style: "margin-top:8px"}, "Kommer altid med: " + altid.map(x => x.navn).join(", ") + ". Ret pakkerne under Mere → Pakker.") : null);
 }
