@@ -109,7 +109,7 @@ a.btn{display:inline-block;text-decoration:none}
 .asum{margin-top:10px;padding:10px 12px;background:var(--bg);border-radius:10px;font-size:12.5px;color:var(--svag);display:grid;gap:3px}
 .optaget{color:var(--adv);font-weight:600}
 .pkg{margin-bottom:14px}.pkp{border-top:1px solid var(--linje);padding:8px 0}.pkp .ik{height:24px}.pkf{padding:8px 0 4px 34px}
-.pkll{display:grid;gap:6px}.pkl{display:grid;grid-template-columns:minmax(160px,2fr) 64px 56px minmax(110px,1fr) 52px minmax(120px,1.4fr) 28px;gap:6px;align-items:center}
+.pkll{display:grid;gap:6px}.pkl{display:grid;grid-template-columns:minmax(160px,2fr) 64px 56px minmax(110px,1fr) 52px 60px minmax(120px,1.4fr) 28px;gap:6px;align-items:center}
 .chip.aktiv{background:var(--accent-blid);color:var(--accent);border-color:var(--accent)}
 @media (max-width:700px){.pkl{grid-template-columns:1fr 1fr 1fr;}.pkf{padding-left:0}}
 .anl{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 8px 10px;border:1px solid var(--linje);border-radius:12px;background:var(--flade);color:var(--tekst);text-align:center;cursor:pointer;transition:background .12s,border-color .12s}
@@ -829,7 +829,8 @@ function anlægUdregn(valgte, antal) {
   const ud = new Map();
   const læg = (l, n) => {
     const k = nøgle(l.udstyr), e = ud.get(k) || {udstyr: l.udstyr, antal: 0, note: []};
-    e.antal += l.pr != null ? (n ? l.antal * Math.ceil(n / l.pr) + (l.plus || 0) : 0) : l.antal + (l.plus || 0);
+    const r = l.pr != null ? (n ? l.antal * Math.ceil(n / l.pr) + (l.plus || 0) : 0) : l.antal + (l.plus || 0);
+    e.antal += l.maks ? Math.min(r, l.maks) : r;
     if (l.note && !e.note.includes(l.note)) e.note.push(l.note);
     ud.set(k, e);
   };
@@ -839,7 +840,7 @@ function anlægUdregn(valgte, antal) {
 }
 function anlægBidrag(x, antal) {   // hvad ét anlæg lægger på (til opsummeringen under Signal)
   const n = anlægTal(x, antal);
-  return (x.linjer || []).map(l => { const m = l.af ? antal[l.af] || 0 : n; return {udstyr: l.udstyr, antal: l.pr != null ? (m ? l.antal * Math.ceil(m / l.pr) + (l.plus || 0) : 0) : l.antal + (l.plus || 0)}; }).filter(b => b.antal > 0);
+  return (x.linjer || []).map(l => { const m = l.af ? antal[l.af] || 0 : n; const r = l.pr != null ? (m ? l.antal * Math.ceil(m / l.pr) + (l.plus || 0) : 0) : l.antal + (l.plus || 0); return {udstyr: l.udstyr, antal: l.maks ? Math.min(r, l.maks) : r}; }).filter(b => b.antal > 0);
 }
 function anlægRens(valgte, antal) {   // vælger alt fra, der ikke længere kan vælges (kræver, fra/til), til der ikke sker mere
   let v = [...valgte];
@@ -2482,6 +2483,7 @@ function visPakker() {
       h("input", {class: "input", type: "number", min: "0", value: l.pr ?? "", placeholder: "pr", title: "pr. så mange (tomt = fast antal)", oninput: e => { if (e.target.value) l.pr = Number(e.target.value); else delete l.pr; }}),
       h("select", {class: "input", title: "regnes af", onchange: e => { if (e.target.value) l.af = e.target.value; else delete l.af; }}, h("option", {value: ""}, "af: egen"), talNavne.map(n => h("option", {value: n, selected: l.af === n}, "af: " + n))),
       h("input", {class: "input", type: "number", min: "0", value: l.plus ?? "", placeholder: "+", title: "plus (lægges til én gang)", oninput: e => { if (e.target.value) l.plus = Number(e.target.value); else delete l.plus; }}),
+      h("input", {class: "input", type: "number", min: "0", value: l.maks ?? "", placeholder: "maks", title: "højst så mange", oninput: e => { if (e.target.value) l.maks = Number(e.target.value); else delete l.maks; }}),
       h("input", {class: "input", value: l.note || "", placeholder: "note", oninput: e => { l.note = e.target.value; }}),
       h("button", {class: "x", type: "button", title: "Fjern linjen", onclick: () => { x.linjer.splice(li, 1); tegn(); }}, "×"));
     return h("div", {class: "pkp" + (åben ? " aaben" : "")},
@@ -2501,7 +2503,7 @@ function visPakker() {
           felt("Kræver (skal være valgt først)", h("div", {class: "rk", style: "flex-wrap:wrap;gap:6px"}, navne.filter(n => n !== x.navn).map(n => h("label", {class: "chip" + ((x.kraever || []).includes(n) ? " aktiv" : "")}, h("input", {type: "checkbox", style: "display:none", checked: (x.kraever || []).includes(n), onchange: e => { x.kraever = e.target.checked ? [...(x.kraever || []), n] : (x.kraever || []).filter(k => k !== n); if (!x.kraever.length) delete x.kraever; tegn(); }}), n)))),
           felt("Udelukker", h("div", {class: "rk", style: "flex-wrap:wrap;gap:6px"}, navne.filter(n => n !== x.navn).map(n => h("label", {class: "chip" + ((x.udelukker || []).includes(n) ? " aktiv" : "")}, h("input", {type: "checkbox", style: "display:none", checked: (x.udelukker || []).includes(n), onchange: e => { x.udelukker = e.target.checked ? [...(x.udelukker || []), n] : (x.udelukker || []).filter(k => k !== n); if (!x.udelukker.length) delete x.udelukker; tegn(); }}), n)))),
           felt("Altid med", h("label", {class: "cb", style: "border:0;padding:4px 0"}, h("input", {type: "checkbox", checked: !!x.altid, onchange: e => { if (e.target.checked) x.altid = true; else delete x.altid; }}), h("span", {class: "t"}, "kommer altid med, når noget er valgt")))),
-        h("div", {class: "overskrift", style: "margin-top:10px"}, "Linjer: udstyr · antal · pr · af · plus · note"),
+        h("div", {class: "overskrift", style: "margin-top:10px"}, "Linjer: udstyr · antal · pr · af · plus · maks · note"),
         h("div", {class: "pkll"}, (x.linjer || []).map(linje)),
         h("button", {class: "btn lille", type: "button", style: "margin-top:6px", onclick: () => { (x.linjer ||= []).push({udstyr: lager[0] || "", antal: 1}); tegn(); }}, "+ Linje")) : null);
   };
