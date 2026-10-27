@@ -106,6 +106,7 @@ a.btn{display:inline-block;text-decoration:none}
 .agrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
 .agnr{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--tekst);color:var(--flade);font-size:12px;font-weight:700}
 .anlw{display:flex;flex-direction:column;gap:4px}.anlw .anl{flex:1}.asantal{display:flex;justify-content:center}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}.blink{animation:blink 1s step-start infinite;font-weight:700}
 .abem{font-size:12px;color:var(--adv);font-weight:600;text-align:center;padding:0 4px}
 .asum{margin-top:10px;padding:10px 12px;background:var(--bg);border-radius:10px;font-size:12.5px;color:var(--svag);display:grid;gap:3px}
 .optaget{color:var(--adv);font-weight:600}
@@ -1633,7 +1634,7 @@ function visIDag() {
           h("span", {}, e.titel, e.sted ? h("span", {class: "muted lille"}, " · " + e.sted) : null))) : h("div", {class: "muted lille"}, "Intet i kalenderen")),
         sideKort(`Deadlines de næste 7 dage (${dl.length})`, dl.length ? dl.slice(0, 8).map(o => h("button", {class: "mini link", type: "button", disabled: o.id === "…",
           onclick: () => { fane = "opgaver"; OP.vis = "opgave"; OP.valgt = o.id; tegn(); }},
-          h("span", {class: "lille tid " + (o.deadline < idag ? "rød" : "muted")}, kortDato(o.deadline)), h("span", {}, o.titel))) : h("div", {class: "muted lille"}, "Ingen")),
+          h("span", {class: "lille tid " + (o.deadline < idag ? "rød" : "muted") + (o.prioritet === "Høj" && o.deadline <= idag ? " blink" : "")}, kortDato(o.deadline)), h("span", {class: o.prioritet === "Høj" && o.deadline <= idag ? "rød" : ""}, o.titel))) : h("div", {class: "muted lille"}, "Ingen")),
         sideKort(`Forespørgsler der venter (${henv.length})`, henv.length ? henv.slice(0, 6).map(x => h("button", {class: "mini link", type: "button", disabled: x.id === "…",
           onclick: () => { fane = "foresp"; FQ.vis = "h"; FQ.valgt = x.id; tegn(); }},
           h("span", {class: "pill " + pillKlasse(x.status)}, x.status), h("span", {}, x.kunde))) : h("div", {class: "muted lille"}, "Ingen")),
@@ -2505,6 +2506,9 @@ function visPakker() {
           felt("Kræver (skal være valgt først)", h("div", {class: "rk", style: "flex-wrap:wrap;gap:6px"}, navne.filter(n => n !== x.navn).map(n => h("label", {class: "chip" + ((x.kraever || []).includes(n) ? " aktiv" : "")}, h("input", {type: "checkbox", style: "display:none", checked: (x.kraever || []).includes(n), onchange: e => { x.kraever = e.target.checked ? [...(x.kraever || []), n] : (x.kraever || []).filter(k => k !== n); if (!x.kraever.length) delete x.kraever; tegn(); }}), n)))),
           felt("Udelukker", h("div", {class: "rk", style: "flex-wrap:wrap;gap:6px"}, navne.filter(n => n !== x.navn).map(n => h("label", {class: "chip" + ((x.udelukker || []).includes(n) ? " aktiv" : "")}, h("input", {type: "checkbox", style: "display:none", checked: (x.udelukker || []).includes(n), onchange: e => { x.udelukker = e.target.checked ? [...(x.udelukker || []), n] : (x.udelukker || []).filter(k => k !== n); if (!x.udelukker.length) delete x.udelukker; tegn(); }}), n)))),
           felt("Altid med", h("label", {class: "cb", style: "border:0;padding:4px 0"}, h("input", {type: "checkbox", checked: !!x.altid, onchange: e => { if (e.target.checked) x.altid = true; else delete x.altid; }}), h("span", {class: "t"}, "kommer altid med, når noget er valgt")))),
+        h("div", {class: "felter3"},
+          felt("Opgave når pakken vælges (tomt = ingen)", h("input", {class: "input", value: x.opgave?.tekst || "", placeholder: "fx Bestil scene hos Claus Olluv", oninput: e => { if (e.target.value.trim()) x.opgave = {tekst: e.target.value, dage_foer: x.opgave?.dage_foer || 14}; else delete x.opgave; }})),
+          felt("Deadline: dage før jobbet", h("input", {class: "input", type: "number", min: "0", value: x.opgave?.dage_foer ?? 14, oninput: e => { if (x.opgave) x.opgave.dage_foer = Number(e.target.value) || 0; }}))),
         h("div", {class: "felter3"},
           felt("Bemærk (advarsel på listen)", h("input", {class: "input", value: x.bemaerk || "", placeholder: "fx Stort job: gennemgå kabler manuelt", oninput: e => { if (e.target.value.trim()) x.bemaerk = e.target.value; else { delete x.bemaerk; delete x.bemaerk_fra; } }})),
           felt("Bemærk fra antal (tomt = altid)", h("input", {class: "input", type: "number", min: "1", value: x.bemaerk_fra ?? "", placeholder: "6", oninput: e => { if (e.target.value) x.bemaerk_fra = Number(e.target.value); else delete x.bemaerk_fra; }}))),
