@@ -267,6 +267,9 @@ button.r:disabled{cursor:default;opacity:.7}
 .rk .fl{margin:0;flex:1}
 textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .info{margin-top:12px}.pre{white-space:pre-wrap}
+.tb-linje{display:grid;grid-template-columns:minmax(0,1fr) 110px 36px;gap:8px;margin-bottom:8px}
+.tb-r{display:flex;justify-content:space-between;gap:12px;padding:2px 0}
+.tb-adv{margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--adv-blid);color:var(--adv)}
 .note{font-size:13px;color:var(--svag);padding:4px 0;border-top:1px solid var(--linje)}
 .planpunkt{display:grid;grid-template-columns:1fr 70px 130px 28px;gap:6px;align-items:center;margin:4px 0}
 .planpunkt .input{padding:6px 9px}
@@ -632,7 +635,7 @@ function tegnTop() {
   const aktiv = v => fane === v || (v === "pakkelister" && (fane === "kort" || fane === "rute"));
   const gå = v => { fane = v; MERE = false; if (v === "pakkelister") { JH = null; S = null; } tegn(); window.scrollTo(0, 0); };
   const hoved = [["idag", "I dag"], ["opgaver", "Opgaver"], ["pakkelister", "Jobs"], ["foresp", "Forespørgsler"], ["salg", "Salg"]];   // Salg i hovedbjælken (Oscar 25/10)
-  const mere = [["oekonomi", "Økonomi"], ["lager", "Lager"], ["pakker", "Pakker"], ["ideer", "Idéer"], ["indtaegter", "Indtægter"]];   // Pakker: trin og regler til "Pak jobbet" (Oscar 27/10)   // Økonomi: penge ude, til dig, privat (Oscar 26/10: Salg skal kun være salg)
+  const mere = [["tilbud", "Tilbud"], ["oekonomi", "Økonomi"], ["lager", "Lager"], ["pakker", "Pakker"], ["ideer", "Idéer"], ["indtaegter", "Indtægter"]];   // Pakker: trin og regler til "Pak jobbet" (Oscar 27/10)   // Økonomi: penge ude, til dig, privat (Oscar 26/10: Salg skal kun være salg)
   top.replaceChildren(
     h("span", {class: "brand"}, "Fabz"),
     h("nav", {class: "tabs"},
@@ -650,7 +653,7 @@ document.addEventListener("click", () => { if (MERE) { MERE = false; tegnTop(); 
 function tegn() {
   document.body.classList.remove("bar-synlig");
   tegnTop();
-  const vis = {idag: visIDag, opgaver: visOpgaver, foresp: visForesp, salg: visSalg, oekonomi: visOekonomi, pakker: visPakker, ideer: visIdeer, indtaegter: visIndtaegter, lager: visLager, kort: visKort, rute: visRute}[fane];
+  const vis = {idag: visIDag, tilbud: visTilbud, opgaver: visOpgaver, foresp: visForesp, salg: visSalg, oekonomi: visOekonomi, pakker: visPakker, ideer: visIdeer, indtaegter: visIndtaegter, lager: visLager, kort: visKort, rute: visRute}[fane];
   if (vis) vis();
   else if (S) visEditor();
   else visJobs();
@@ -2098,6 +2101,220 @@ function ideRække(i) {
       ...Object.entries(i.sektioner || {}).map(([n, t]) => h("div", {class: "info"}, h("div", {class: "etiket"}, n), h("div", {class: "pre"}, t))),
       h("div", {class: "etiket", style: "margin-top:10px"}, "Status"),
       seg(I_STATUS, i.status, s => { if (s !== i.status) sætStatus(s); })) : null);
+}
+
+// ---------- Tilbud (Oscar 27/10) ----------
+// Samme design, tekster og beregning som fabz-tilbud/lav_tilbud.py. PDF: siden åbnes i et nyt vindue, og Udskriv > Gem som PDF.
+// Kundedata gemmes kun i browseren (kladde i localStorage), aldrig i repoet.
+const TB_KEY = "fabz-tilbud-kladde";
+const TB_INDHOLD = {
+  erhverv: ["Kort online formøde, hvor vi gennemgår aftenen og musikken", "6 timers musik, fra velkomst og middag til sidste dans",
+    "Professionelt og stilrent lyd- og lyssetup, tilpasset lokalet", "Trådløs mikrofon til velkomst og taler",
+    "Jeg koordinerer det praktiske direkte med feststedet", "Kørsel inkluderet (inden for 50 km fra Silkeborg)"],
+  privat: ["Kort online formøde, hvor vi gennemgår aftenen og musikken", "Professionelt og stilrent lyd- og lyssetup, tilpasset lokalet",
+    "Musikprofil skræddersyet til jeres fest", "Kørsel inkluderet (inden for 50 km fra Silkeborg)"]
+};
+const tbNy = () => ({type: "tilbud", kundetype: "erhverv", dato: iDag(), firma: "", navn: "", mail: "", tlf: "",
+  anledning: "", evdato: "", sted: "", tider: "", gaester: "", indhold: TB_INDHOLD.erhverv.join("\n"),
+  linjer: [{tekst: "", beloeb: ""}], km: "", bro: "", intro: "", noter: "", gaester_ok: false});
+let TB = null;
+const tbGem = () => lager.set(TB_KEY, JSON.stringify(TB));
+const tbKr = n => { const f = Math.floor(n), r = n - f === 0.5 ? (f % 2 ? f + 1 : f) : Math.round(n); return String(r).replace(/\B(?=(\d{3})+(?!\d))/g, ".") + " kr."; };   // som Pythons round()
+const tbDato = iso => { const d = dag(iso); return `${d.getDate()}. ${MDL[d.getMonth()]} ${d.getFullYear()}`; };
+const tbMinus = (iso, n) => plusDage(iso, -n);
+const tbEsc = s => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;");
+const tbTal = s => { const t = String(s ?? "").replace(/\s|kr\.?/gi, "").replace(/\./g, "").replace(",", "."); return t === "" ? 0 : Number(t); };
+
+function tbBeregn(T) {   // samme regler som lav_tilbud.py. Giver {fejl} eller alle tal og tekster
+  const erhverv = T.kundetype === "erhverv", ob = T.type === "ordrebekraeftelse";
+  const idag = T.dato || iDag(), ev = T.evdato;
+  if (!ev) return {fejl: "Skriv arrangementets dato."};
+  if (!(T.firma || T.navn).trim()) return {fejl: "Skriv kundens firma eller navn."};
+  const gyldig = ob ? null : plusDage(idag, 14);
+  const linjer = [];
+  for (const l of T.linjer) {
+    if (!l.tekst.trim() && !String(l.beloeb).trim()) continue;
+    const b = tbTal(l.beloeb);
+    if (!l.tekst.trim() || !Number.isFinite(b)) return {fejl: "Hver prislinje skal have tekst og beløb."};
+    linjer.push({tekst: l.tekst.trim(), beloeb: b});
+  }
+  const km = tbTal(T.km), bro = tbTal(T.bro);
+  if (!Number.isFinite(km) || !Number.isFinite(bro)) return {fejl: "Kørsel og bro/færge skal være tal."};
+  if (km) linjer.push({tekst: `Kørsel, ${km} km tur/retur à 4 kr.`, beloeb: km * 4});
+  if (bro) linjer.push({tekst: "Bro/færge", beloeb: bro});
+  if (!linjer.length) return {fejl: "Skriv mindst én prislinje."};
+  const g = (String(T.gaester || "").match(/\d+/g) || []).map(Number);
+  const mange = g.length && Math.max(...g) > 100;
+  const s = linjer.reduce((a, l) => a + l.beloeb, 0);
+  const moms = erhverv ? s * 0.25 : s * 0.2, total = erhverv ? s + moms : s, dep = erhverv ? 0 : total * 0.2;
+  let afl;
+  if (erhverv) {
+    const d60 = tbMinus(ev, 60), d30 = tbMinus(ev, 30);
+    afl = idag < d60 ? `Aflysning skal ske skriftligt. Aflyser I før ${tbDato(d60)}, betales 20 %. Fra ${tbDato(d60)} til ${tbDato(d30)} betales 50 %, og derefter 100 % af honoraret ekskl. moms.`
+      : idag < d30 ? `Aflysning skal ske skriftligt. Aflyser I før ${tbDato(d30)}, betales 50 %, og derefter 100 % af honoraret ekskl. moms.`
+      : "Aflysning skal ske skriftligt. Da der er under 30 dage til arrangementet, betales 100 % af honoraret ekskl. moms ved aflysning.";
+  } else {
+    const d30 = tbMinus(ev, 30);
+    afl = idag < d30 ? `Aflysning skal ske skriftligt senest ${tbDato(d30)}. Senere aflysning: 100 % af honoraret.` : "Da der er under 30 dage til festen, betales 100 % af honoraret ved aflysning.";
+  }
+  const betaling = erhverv ? [
+    `Der betales ikke depositum. Aftalen er bindende, og datoen er jeres, når I har bekræftet ${ob ? "denne ordrebekræftelse" : "ordrebekræftelsen"} skriftligt.`,
+    "Det fulde beløb faktureres efter arrangementet med betaling netto 8 dage.", afl,
+    "Forlængelse på aftenen: 3.000 kr. ekskl. moms pr. påbegyndt time.",
+    "KODA og Gramex ved firmafester er kundens eller feststedets ansvar."] : [
+    `Depositum på 20 % (${tbKr(dep)}) faktureres ved bekræftelse. Datoen er jeres, når depositum er betalt. Depositum refunderes ikke.`,
+    `Restbeløbet (${tbKr(total - dep)}) betales senest ${tbDato(tbMinus(ev, 14))}.`, afl,
+    "Forlængelse på aftenen: 3.000 kr. pr. påbegyndt time."];
+  const navn = T.firma || T.navn || "";
+  const nr = idag.replace(/-/g, "") + "-" + navn.replace(/[^A-Za-zÆØÅæøå0-9]/g, "").slice(0, 12);
+  return {erhverv, ob, idag, ev, gyldig, linjer, s, moms, total, dep, betaling, nr, mange, restDato: tbMinus(ev, 14)};
+}
+
+function tbHtml(T, R) {   // HTML'en fra lav_tilbud.py, linje for linje
+  const {erhverv, ob, idag, ev, linjer, s, moms, total, betaling, nr} = R;
+  const titel = ob ? "Ordrebekræftelse" : "Tilbud";
+  const kunde = [T.firma, T.navn, T.mail, T.tlf].map(x => (x || "").trim()).filter(Boolean).map(tbEsc).join("<br>");
+  const evRows = [["Anledning", T.anledning], ["Dato", tbDato(ev)], ["Sted", T.sted], ["Tider", T.tider], ["Gæster", T.gaester]]
+    .filter(([, b]) => (b || "").trim()).map(([a, b]) => `<tr><td>${a}</td><td>${tbEsc(b.trim())}</td></tr>`).join("");
+  let pris = linjer.map(l => `<tr><td>${tbEsc(l.tekst)}</td><td class="n">${tbKr(l.beloeb)}</td></tr>`).join("");
+  pris += erhverv ? `<tr class="sub"><td>I alt ekskl. moms</td><td class="n">${tbKr(s)}</td></tr><tr><td>Moms 25 %</td><td class="n">${tbKr(moms)}</td></tr><tr class="tot"><td>I alt inkl. moms</td><td class="n">${tbKr(total)}</td></tr>`
+    : `<tr class="tot"><td>I alt inkl. moms</td><td class="n">${tbKr(total)}</td></tr><tr class="sm"><td>Heraf moms</td><td class="n">${tbKr(moms)}</td></tr>`;
+  const intro = T.intro.trim() || (ob ? "Hermed bekræfter jeg aftalen. Herunder står alt, vi har aftalt, så I kan sende det direkte videre internt."
+    : "Her er mit tilbud ud fra vores snak. Herunder står præcis, hvad I får, og hvad det koster.");
+  const slut = ob ? (erhverv ? "Bekræft venligst aftalen ved at svare ja på mailen." : "Når depositum er betalt, er datoen jeres.")
+    : "Lad mig høre, om det lyder som den rigtige plan for jer, så sætter jeg et endeligt kryds i kalenderen.";
+  const meta = `${titel} nr. ${tbEsc(nr)}<br>${tbDato(idag)}` + (ob ? "" : `<br>Gælder til ${tbDato(R.gyldig)}`);
+  const overskrift = titel + (T.anledning.trim() ? ` på DJ til ${tbEsc(T.anledning.trim().toLowerCase())}` : "");
+  const indhold = T.indhold.split("\n").map(x => x.trim()).filter(Boolean).map(x => `<li>${tbEsc(x)}</li>`).join("");
+  return `<!doctype html><html lang="da"><head><meta charset="utf-8"><title>${titel} ${tbEsc(nr)}</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+@page{size:A4;margin:0}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:#E8E0CD}
+body{background:#F3E9D2;color:#281316;font:400 9.5pt/1.45 Poppins,sans-serif;width:210mm;min-height:297mm;margin:0 auto;padding:12mm 18mm 9mm;display:flex;flex-direction:column;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.top{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid #54272E;padding-bottom:5mm}
+.logo{font:400 34pt/1 "Instrument Serif",serif;letter-spacing:.06em}
+.meta{text-align:right;font-size:9pt;line-height:1.6}
+h1{font:400 36pt/1.05 "Instrument Serif",serif;margin:7mm 0 1.5mm}
+.lead{font-size:10pt;max-width:140mm;margin-bottom:6mm}
+.grid{display:grid;grid-template-columns:42mm 1fr;border-top:1px solid rgba(84,39,46,.35)}
+.grid>div{padding:3.2mm 0;border-bottom:1px solid rgba(84,39,46,.35)}
+.lbl{font:400 15pt/1.2 "Instrument Serif",serif}
+table{width:100%;border-collapse:collapse}
+td{padding:.7mm 0;vertical-align:top}
+.ev td:first-child{width:28mm;color:#54272E}
+.n{text-align:right;white-space:nowrap}
+.sub td{border-top:1px solid rgba(84,39,46,.35);padding-top:2.5mm}
+.tot td{font:400 17pt/1.3 "Instrument Serif",serif;border-top:1px solid #281316;padding-top:2.5mm}
+.sm td{font-size:9pt;color:#54272E}
+ul{padding-left:4.5mm}li{margin:.2mm 0}
+.vilk li{font-size:8.6pt}
+.ok{margin-top:5mm;font-size:9.5pt}
+.ok:last-of-type{margin-bottom:4mm}
+.foot{margin-top:auto;border-top:1px solid #54272E;padding-top:3mm;font-size:8pt;display:flex;justify-content:space-between}
+a{color:#54272E}
+@media screen{html{padding:6mm 0}}
+@media print{html{background:none}}
+</style></head><body>
+<div class="top"><div class="logo">FABZ</div><div class="meta">${meta}</div></div>
+<h1>${overskrift}</h1>
+<p class="lead">${tbEsc(intro)}</p>
+<div class="grid">
+<div class="lbl">Kunde</div><div>${kunde}</div>
+<div class="lbl">Arrangement</div><div><table class="ev">${evRows}</table></div>
+<div class="lbl">I får</div><div><ul>${indhold}</ul></div>
+<div class="lbl">Pris</div><div><table>${pris}</table></div>
+<div class="lbl">Betaling og vilkår</div><div><ul class="vilk">${betaling.map(x => `<li>${tbEsc(x)}</li>`).join("")}</ul>
+<p style="font-size:9pt;margin-top:2mm">Fulde handelsbetingelser: <a href="https://www.fabz.dk/handelsbetingelser">fabz.dk/handelsbetingelser</a></p></div>
+</div>
+${T.noter.trim() ? `<p class="ok">${tbEsc(T.noter.trim())}</p>` : ""}
+<p class="ok">${slut}</p>
+<div class="foot"><span>Fabz, CVR 45663531<br>Vejlsøvej 51, 8600 Silkeborg</span><span style="text-align:right">Oscar Faaborg Kristensen, +45 91 48 57 35<br>Oscar@fabz.dk, fabz.dk</span></div>
+</body></html>`;
+}
+
+function tbPdf() {
+  const R = tbBeregn(TB);
+  if (R.fejl) { alert(R.fejl); return; }
+  if (R.mange && !TB.gaester_ok) { alert("Over 100 gæster: sæt selv prisen for ekstra udstyr og sæt flueben i \"Prisen er sat til gæsterne\"."); return; }
+  // tilbuddet henter selv skrifterne og åbner så udskriften (ellers kommer PDF'en ud med en reserveskrift)
+  const tryk = `<script>Promise.all(['400 12px "Instrument Serif"', "400 12px Poppins", "500 12px Poppins"].map(f => document.fonts.load(f)))
+  .then(() => document.fonts.ready).catch(() => {}).then(() => setTimeout(() => { document.body.dataset.klar = "1"; print(); }, 200));<\/script>`;   // scriptet venter selv på stylesheetet over det
+  const url = URL.createObjectURL(new Blob([tbHtml(TB, R).replace("</body>", tryk + "</body>")], {type: "text/html;charset=utf-8"}));
+  if (!window.open(url, "_blank")) alert("Browseren blokerede vinduet. Tillad pop op-vinduer for siden og prøv igen.");
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
+function visTilbud() {
+  if (!TB) { try { TB = JSON.parse(lager.get(TB_KEY) || "null"); } catch { TB = null; } }
+  if (!TB) TB = tbNy();
+  const sæt = (k, v) => { TB[k] = v; tbGem(); opdater(); };
+  const t = (k, attr = {}) => h("input", {class: "input", value: TB[k] ?? "", ...attr, oninput: e => sæt(k, e.target.value)});
+  const tf = (k, rows, ph) => h("textarea", {class: "input", rows, placeholder: ph || "", value: TB[k] ?? "", oninput: e => sæt(k, e.target.value)});
+  const sum = h("div", {class: "kort2 tb-sum"});
+  const advBoks = h("div");
+  function opdater() {
+    const R = tbBeregn(TB);
+    advBoks.replaceChildren(R.mange ? h("div", {class: "tb-adv"},
+      h("b", {}, "Over 100 gæster. "), "Pakkeprisen gælder op til 100 gæster. Du sætter selv prisen for det ekstra udstyr i prislinjerne.",
+      h("label", {style: "display:flex;gap:8px;align-items:center;margin-top:8px"},
+        h("input", {type: "checkbox", checked: !!TB.gaester_ok, onchange: e => { TB.gaester_ok = e.target.checked; tbGem(); }}), "Prisen er sat til gæsterne")) : null);
+    if (R.fejl) { sum.replaceChildren(h("div", {class: "muted"}, R.fejl)); return; }
+    const r = (a, b, st) => h("div", {class: "tb-r", style: st || ""}, h("span", {}, a), h("span", {}, b));
+    sum.replaceChildren(h("div", {},
+      h("div", {class: "overskrift"}, `${R.ob ? "Ordrebekræftelse" : "Tilbud"} nr. ${R.nr}`),
+      ...R.linjer.map(l => r(l.tekst, tbKr(l.beloeb))),
+      R.erhverv ? [r("I alt ekskl. moms", tbKr(R.s), "border-top:1px solid var(--linje);padding-top:6px;margin-top:4px"), r("Moms 25 %", tbKr(R.moms)), r(h("b", {}, "I alt inkl. moms"), h("b", {}, tbKr(R.total)))]
+        : [r(h("b", {}, "I alt inkl. moms"), h("b", {}, tbKr(R.total)), "border-top:1px solid var(--linje);padding-top:6px;margin-top:4px"), r("Heraf moms", tbKr(R.moms)),
+          r("Depositum 20 %", tbKr(R.dep)), r(`Rest senest ${tbDato(R.restDato)}`, tbKr(R.total - R.dep))],
+      R.gyldig ? h("div", {class: "muted lille", style: "margin-top:8px"}, `Gælder til ${tbDato(R.gyldig)}`) : null));
+  }
+  const linjeRk = (l, i) => h("div", {class: "tb-linje"},
+    h("input", {class: "input", placeholder: "DJ til julefrokost, 6 timer inkl. lyd, lys og mikrofon", value: l.tekst, oninput: e => { l.tekst = e.target.value; tbGem(); opdater(); }}),
+    h("input", {class: "input", inputmode: "numeric", placeholder: "19000", value: l.beloeb, oninput: e => { l.beloeb = e.target.value; tbGem(); opdater(); }}),
+    h("button", {class: "btn ghost", type: "button", title: "Fjern linjen", disabled: TB.linjer.length < 2, onclick: () => { TB.linjer.splice(i, 1); tbGem(); tegn(); }}, "✕"));
+  const skiftType = v => {
+    const std = TB_INDHOLD[TB.kundetype].join("\n");
+    if (TB.indhold.trim() === std || !TB.indhold.trim()) TB.indhold = TB_INDHOLD[v].join("\n");   // skift standardpunkterne, hvis de ikke er rettet
+    TB.kundetype = v; tbGem(); tegn();
+  };
+  $("rod").replaceChildren(h("div", {class: "side"},
+    h("h1", {}, "Tilbud"),
+    h("p", {class: "muted", style: "margin:0 0 16px"}, "Udfyld og tryk Hent PDF. Vælg Gem som PDF i udskriftsvinduet, og vedhæft filen i mailen. Kladden gemmes kun i denne browser."),
+    h("div", {class: "kort2"},
+      h("div", {class: "rk", style: "margin-top:0;flex-wrap:wrap"},
+        seg([["erhverv", "Erhverv"], ["privat", "Privat"]], TB.kundetype, skiftType),
+        seg([["tilbud", "Tilbud"], ["ordrebekraeftelse", "Ordrebekræftelse"]], TB.type, v => { TB.type = v; tbGem(); tegn(); })),
+      h("div", {class: "overskrift", style: "margin-top:18px"}, "Kunde"),
+      h("div", {class: "felter3"}, felt("Firma", t("firma")), felt("Navn", t("navn")), felt("Mail", t("mail", {type: "email"})), felt("Telefon", t("tlf", {inputmode: "tel"}))),
+      h("div", {class: "overskrift", style: "margin-top:18px"}, "Arrangement"),
+      h("div", {class: "felter3"},
+        felt("Anledning", t("anledning", {placeholder: "Julefrokost"})),
+        felt("Dato", datoInput(TB.evdato, iso => sæt("evdato", iso))),
+        felt("Gæster", t("gaester", {placeholder: "80"}))),
+      felt("Sted", t("sted", {placeholder: "Marselis Hotel, Strandvejen 25, 8000 Aarhus"})),
+      felt("Tider", t("tider", {placeholder: "Opstilling fra 17.00, musik 19.00-01.00"})),
+      advBoks,
+      h("div", {class: "overskrift", style: "margin-top:18px"}, "I får"),
+      felt("Ét punkt pr. linje", tf("indhold", 7)),
+      h("div", {class: "overskrift", style: "margin-top:18px"}, "Pris"),
+      h("div", {class: "etiket"}, TB.kundetype === "erhverv" ? "Beløb i kr. ekskl. moms" : "Beløb i kr. inkl. moms"),
+      TB.linjer.map(linjeRk),
+      h("button", {class: "btn ghost lille", type: "button", onclick: () => { TB.linjer.push({tekst: "", beloeb: ""}); tbGem(); tegn(); }}, "+ Prislinje"),
+      h("div", {class: "felter3"},
+        felt("Kørsel uden for 50 km (km tur/retur)", t("km", {inputmode: "numeric", placeholder: "0"})),
+        felt("Bro/færge (kr.)", t("bro", {inputmode: "numeric", placeholder: "0"})),
+        felt("Tilbudsdato", datoInput(TB.dato, iso => sæt("dato", iso || iDag())))),
+      h("div", {class: "overskrift", style: "margin-top:18px"}, "Tekst (valgfri)"),
+      felt("Indledning (tom = standard)", tf("intro", 2, "Her er mit tilbud ud fra vores snak. Herunder står præcis, hvad I får, og hvad det koster.")),
+      felt("Note før afslutningen", tf("noter", 2))),
+    h("div", {style: "margin-top:16px"}, sum),
+    h("div", {class: "rk", style: "margin-top:16px"},
+      h("button", {class: "btn primaer", type: "button", onclick: tbPdf}, "Hent PDF"),
+      h("div", {class: "spacer"}),
+      h("button", {class: "btn ghost", type: "button", onclick: () => { if (confirm("Ryd formularen og start forfra?")) { TB = tbNy(); tbGem(); tegn(); } }}, "Ryd"))));
+  opdater();
 }
 
 // ---------- Indtægter ----------
