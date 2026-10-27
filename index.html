@@ -104,6 +104,14 @@ a.btn{display:inline-block;text-decoration:none}
 .anlaeg{margin-bottom:14px;padding:14px;border:1px solid var(--linje);border-radius:14px;background:var(--flade)}
 .agr{margin-top:12px}.agh{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}.agn{font-weight:600}.agantal{margin-left:auto;display:flex;align-items:center;gap:8px}
 .agrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
+.agnr{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--tekst);color:var(--flade);font-size:12px;font-weight:700}
+.anlw{display:flex;flex-direction:column;gap:4px}.anlw .anl{flex:1}.asantal{display:flex;justify-content:center}
+.asum{margin-top:10px;padding:10px 12px;background:var(--bg);border-radius:10px;font-size:12.5px;color:var(--svag);display:grid;gap:3px}
+.optaget{color:var(--adv);font-weight:600}
+.pkg{margin-bottom:14px}.pkp{border-top:1px solid var(--linje);padding:8px 0}.pkp .ik{height:24px}.pkf{padding:8px 0 4px 34px}
+.pkll{display:grid;gap:6px}.pkl{display:grid;grid-template-columns:minmax(160px,2fr) 64px 56px minmax(110px,1fr) 52px minmax(120px,1.4fr) 28px;gap:6px;align-items:center}
+.chip.aktiv{background:var(--accent-blid);color:var(--accent);border-color:var(--accent)}
+@media (max-width:700px){.pkl{grid-template-columns:1fr 1fr 1fr;}.pkf{padding-left:0}}
 .anl{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 8px 10px;border:1px solid var(--linje);border-radius:12px;background:var(--flade);color:var(--tekst);text-align:center;cursor:pointer;transition:background .12s,border-color .12s}
 .anl:hover:not(:disabled){background:var(--hover)}
 .anl .ik{display:flex;height:32px;align-items:center;justify-content:center;font-size:24px;color:var(--svag)}
@@ -183,17 +191,7 @@ a.btn{display:inline-block;text-decoration:none}
 .lagertop{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .lagertop h1{font-size:22px;margin:0}
 .lagertop .input{width:240px}
-.lhd,.lr{display:grid;grid-template-columns:minmax(180px,2.2fr) 140px 112px 112px minmax(120px,1.4fr) minmax(170px,2fr) 32px;gap:8px;align-items:center;padding:6px 12px}
-.pakker{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
-.pakkechip{display:inline-flex;align-items:center;gap:2px;padding:2px 4px 2px 9px;border-radius:99px;background:var(--accent-blid);color:var(--accent);font-size:12.5px;font-weight:500;white-space:nowrap}
-.pakkefjern{border:0;background:none;color:inherit;font-size:14px;line-height:1;width:20px;height:20px;border-radius:99px;cursor:pointer}.pakkefjern:hover{background:var(--accent);color:var(--accent-tekst)}
-.pakker{position:relative}
-.pakkeknap{border:1px dashed var(--linje);background:none;color:var(--svag);border-radius:99px;padding:3px 10px;font-size:12.5px;white-space:nowrap}.pakkeknap:hover{color:var(--tekst);border-color:var(--tekst)}
-.pakkeliste{position:fixed;z-index:15;min-width:240px;max-height:min(460px,calc(100vh - 24px));overflow:auto;background:var(--flade);border:1px solid var(--linje);border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,.18);padding:6px;display:flex;flex-direction:column;gap:1px;font-weight:400}
-.pakkelistehoved{display:flex;align-items:center;justify-content:space-between;padding:2px 2px 4px 8px}
-.pakkeliste label{display:flex;gap:10px;align-items:center;padding:6px 8px;border-radius:8px;cursor:pointer;min-height:32px;white-space:nowrap}.pakkeantal{width:62px;padding:3px 6px;font-size:13px;border:1px solid var(--linje);border-radius:7px;background:var(--flade);color:var(--tekst)}.pakkeliste label:hover{background:var(--hover)}
-.pakkeliste input[type=checkbox]{width:16px;height:16px;margin:0}
-.pakkeny{display:flex;gap:6px;margin-top:6px;padding-top:8px;border-top:1px solid var(--linje)}.pakkeny .input{padding:6px 9px}
+.lhd,.lr{display:grid;grid-template-columns:minmax(180px,2.2fr) 140px 112px 112px minmax(160px,2fr) 32px;gap:8px;align-items:center;padding:6px 12px}
 .lhd{font-size:11.5px;color:var(--svagere);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-top:20px}
 .lr{border-top:1px solid var(--linje)}
 .kort .lr:first-child{border-top:0}
@@ -348,9 +346,6 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
   .lhd{display:none}
   .lr{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;grid-template-areas:"navn navn antal" "kat status x" "note note note" "pakke pakke pakke";row-gap:4px;padding:10px 8px}
   .lr>:nth-child(1){grid-area:navn}.lr>:nth-child(2){grid-area:kat}.lr>:nth-child(3){grid-area:antal}.lr>:nth-child(4){grid-area:status}.lr>:nth-child(5){grid-area:note}.lr>:nth-child(6){grid-area:pakke}.lr>:nth-child(7){grid-area:x}
-  .pakkechip{min-height:40px;padding-left:12px}.pakkefjern{width:36px;height:36px}.pakkeknap{min-height:40px;padding:0 14px}
-  .pakkeliste{left:8px;right:8px;top:auto;bottom:calc(64px + env(safe-area-inset-bottom));max-height:60vh;z-index:14;box-shadow:0 -8px 28px rgba(0,0,0,.22)}
-  .pakkeliste label{min-height:44px}.pakkeliste input[type=checkbox]{width:22px;height:22px}
   .felt,.input,select.input{min-height:40px}
   .nyform{grid-template-columns:1fr 1fr}
   .planpunkt:not([style]){grid-template-columns:1fr 64px 40px;grid-template-areas:"tekst min x" "flyt flyt flyt"}
@@ -632,7 +627,7 @@ function tegnTop() {
   const aktiv = v => fane === v || (v === "pakkelister" && (fane === "kort" || fane === "rute"));
   const gå = v => { fane = v; MERE = false; if (v === "pakkelister") { JH = null; S = null; } tegn(); window.scrollTo(0, 0); };
   const hoved = [["idag", "I dag"], ["opgaver", "Opgaver"], ["pakkelister", "Jobs"], ["foresp", "Forespørgsler"], ["salg", "Salg"]];   // Salg i hovedbjælken (Oscar 25/10)
-  const mere = [["oekonomi", "Økonomi"], ["lager", "Lager"], ["ideer", "Idéer"], ["indtaegter", "Indtægter"]];   // Økonomi: penge ude, til dig, privat (Oscar 26/10: Salg skal kun være salg)
+  const mere = [["oekonomi", "Økonomi"], ["lager", "Lager"], ["pakker", "Pakker"], ["ideer", "Idéer"], ["indtaegter", "Indtægter"]];   // Pakker: trin og regler til "Pak jobbet" (Oscar 27/10)   // Økonomi: penge ude, til dig, privat (Oscar 26/10: Salg skal kun være salg)
   top.replaceChildren(
     h("span", {class: "brand"}, "Fabz"),
     h("nav", {class: "tabs"},
@@ -650,7 +645,7 @@ document.addEventListener("click", () => { if (MERE) { MERE = false; tegnTop(); 
 function tegn() {
   document.body.classList.remove("bar-synlig");
   tegnTop();
-  const vis = {idag: visIDag, opgaver: visOpgaver, foresp: visForesp, salg: visSalg, oekonomi: visOekonomi, ideer: visIdeer, indtaegter: visIndtaegter, lager: visLager, kort: visKort, rute: visRute}[fane];
+  const vis = {idag: visIDag, opgaver: visOpgaver, foresp: visForesp, salg: visSalg, oekonomi: visOekonomi, pakker: visPakker, ideer: visIdeer, indtaegter: visIndtaegter, lager: visLager, kort: visKort, rute: visRute}[fane];
   if (vis) vis();
   else if (S) visEditor();
   else visJobs();
@@ -749,7 +744,7 @@ function åbnListe(navn) {
   nyEditor({job: null, base: p, egen: true, jobNavn: p.navn, gemNavn: p.navn, visGem: true});
 }
 function nyEditor(o) {
-  S = {...o, l: {}, transport: o.base?.transport || "", svar: null, rørt: false, godk: null, snap: null, fk: null, anlæg: [], antal: {}, bidrag: {}};
+  S = {...o, l: {}, transport: o.base?.transport || "", svar: null, rørt: false, godk: null, snap: null, fk: null, anlæg: [], antal: {}, bidrag: {}, optaget: o.job ? optagetPaa(o.job.dato, o.job.navn) : {}};
   indlæs(o.base);
   P = {q: "", kat: "Alle"};
   tegn();
@@ -797,6 +792,9 @@ const IKON = {   // 24x24, streger i tekstfarven
   haze: '<path d="M7 18.5h10.5a3.5 3.5 0 0 0 .4-7 5 5 0 0 0-9.6-1.3A4.2 4.2 0 0 0 7 18.5z"/><path d="M8 21.5h8" opacity=".5"/>',
   scene: '<path d="M3 13l6-4.5h12L15 13z"/><path d="M3 13h12v5.5H3z"/><path d="M15 13l6-4.5v5.5l-6 4.5"/>',
   lys: '<circle cx="12" cy="9" r="4.5"/><path d="M12 13.5V18M8 21h8M12 18v3"/>',
+  pult: '<rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="8" cy="12" r="2.6"/><circle cx="16" cy="12" r="2.6"/><path d="M11 9h2M11 12h2M11 15h2"/>',
+  lysbar: '<rect x="2.5" y="9" width="19" height="4.5" rx="1.5"/><circle cx="6" cy="11.2" r="1"/><circle cx="10" cy="11.2" r="1"/><circle cx="14" cy="11.2" r="1"/><circle cx="18" cy="11.2" r="1"/><path d="M12 13.5v5M8 21.5l4-3 4 3"/>',
+  xlr: '<circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="8.5" r="1.2"/><circle cx="9" cy="13.5" r="1.2"/><circle cx="15" cy="13.5" r="1.2"/>',
 };
 const ikonEl = (nøgle, tekst) => {
   const e = document.createElement("span"); e.className = "ik";
@@ -805,14 +803,23 @@ const ikonEl = (nøgle, tekst) => {
   return e;
 };
 const anlægGruppe = x => (D.setups?.grupper || []).find(g => g.navn === x.gruppe);
-function anlægGyldig(x) {   // null = kan vælges, ellers hvorfor det er frosset
+const anlægAf = x => x.navn && D.setups?.setups.find(y => y.navn === x);   // (ubrugt hjælper beholdt for læsbarhed)
+function anlægTal(x, antal) {   // tallet et anlægs linjer og fra/til regnes på: eget antal, ellers "af", ellers gruppens antal
+  if (x.antal) return antal[x.navn] || 0;
+  if (x.af) return antal[x.af] || 0;
+  const g = anlægGruppe(x);
+  return g?.antal ? antal[g.navn] || 0 : 0;
+}
+function anlægGyldig(x, valgte = S.anlæg, antal = S.antal) {   // null = kan vælges, ellers hvorfor det er låst (samme regler som fabz_setups.udregn)
   const g = anlægGruppe(x);
   if (!(x.linjer || []).length) return "Ikke sat op endnu";
-  if (g?.antal) {
-    const n = S.antal[g.navn] || 0;
-    if (!n) return `Vælg antal ${g.antal.navn} først`;
-    if ((x.fra != null && n < x.fra) || (x.til != null && n > x.til)) return `Kun ${x.fra ?? g.antal.min}-${x.til ?? g.antal.max} stk`;
-  }
+  for (const k of x.kraever || []) if (!valgte.includes(k)) return `Kræver ${k}`;
+  for (const k of x.udelukker || []) if (valgte.includes(k)) return `Ikke sammen med ${k}`;
+  const n = x.af ? antal[x.af] || 0 : g?.antal ? antal[g.navn] || 0 : antal[x.navn] || 0;
+  if (x.fra != null || x.til != null) {
+    if (!n && !x.antal) return x.af ? `Vælg antal ${x.af} først` : `Vælg antal ${g?.antal?.navn || ""} først`;
+    if ((x.fra != null && n < x.fra) || (x.til != null && n > x.til)) return `Kun ved ${x.fra ?? 1}-${x.til ?? "∞"} ${x.af || g?.antal?.navn || "stk"}`;
+  } else if (g?.antal && !x.antal && !x.af && !(antal[g.navn] || 0) && (x.linjer || []).some(l => l.pr)) return `Vælg antal ${g.antal.navn} først`;
   return null;
 }
 function anlægUdregn(valgte, antal) {
@@ -822,15 +829,31 @@ function anlægUdregn(valgte, antal) {
   const ud = new Map();
   const læg = (l, n) => {
     const k = nøgle(l.udstyr), e = ud.get(k) || {udstyr: l.udstyr, antal: 0, note: []};
-    e.antal += l.pr != null ? l.antal * Math.ceil(n / l.pr) : l.antal;
+    e.antal += l.pr != null ? (n ? l.antal * Math.ceil(n / l.pr) + (l.plus || 0) : 0) : l.antal + (l.plus || 0);
     if (l.note && !e.note.includes(l.note)) e.note.push(l.note);
     ud.set(k, e);
   };
   for (const g of o.grupper) if (g.antal && antal[g.navn]) for (const l of g.linjer || []) læg(l, antal[g.navn]);
-  for (const x of valg) { const g = o.grupper.find(y => y.navn === x.gruppe); for (const l of x.linjer || []) læg(l, g?.antal ? antal[g.navn] || 0 : 0); }
+  for (const x of valg) { const n = anlægTal(x, antal); for (const l of x.linjer || []) læg(l, l.af ? antal[l.af] || 0 : n); }
   return ud;
 }
+function anlægBidrag(x, antal) {   // hvad ét anlæg lægger på (til opsummeringen under Signal)
+  const n = anlægTal(x, antal);
+  return (x.linjer || []).map(l => { const m = l.af ? antal[l.af] || 0 : n; return {udstyr: l.udstyr, antal: l.pr != null ? (m ? l.antal * Math.ceil(m / l.pr) + (l.plus || 0) : 0) : l.antal + (l.plus || 0)}; }).filter(b => b.antal > 0);
+}
+function anlægRens(valgte, antal) {   // vælger alt fra, der ikke længere kan vælges (kræver, fra/til), til der ikke sker mere
+  let v = [...valgte];
+  for (let i = 0; i < 10; i++) {
+    const væk = v.filter(n => { const x = D.setups.setups.find(y => y.navn === n); return x && !x.altid && anlægGyldig(x, v, antal); });
+    if (!væk.length) break;
+    v = v.filter(n => !væk.includes(n));
+  }
+  const a = {...antal};
+  for (const k of Object.keys(a)) { const x = D.setups.setups.find(y => y.navn === k); if (x && x.antal && !v.includes(k)) delete a[k]; }
+  return [v, a];
+}
 function anvendAnlæg(valgte, antal) {   // trækker det forrige valg fra listen og lægger det nye på; manuelle linjer bliver stående
+  [valgte, antal] = anlægRens(valgte, antal);
   for (const [k, b] of Object.entries(S.bidrag)) {
     const l = S.l[k]; if (!l) continue;
     l.antal -= b.antal;
@@ -852,41 +875,68 @@ function sætAnlæg(navn) {
   const x = D.setups.setups.find(y => y.navn === navn), g = anlægGruppe(x);
   let valgte = S.anlæg.includes(navn) ? S.anlæg.filter(n => n !== navn) : [...S.anlæg, navn];
   if (g?.eksklusiv && valgte.includes(navn)) valgte = valgte.filter(n => n === navn || D.setups.setups.find(y => y.navn === n)?.gruppe !== x.gruppe);
-  anvendAnlæg(valgte, S.antal);
+  const antal = {...S.antal};
+  if (x.antal) { if (valgte.includes(navn)) antal[navn] = antal[navn] || x.antal.min; else delete antal[navn]; }   // eget antal: starter på min
+  anvendAnlæg(valgte, antal);
 }
-function sætAnlægAntal(g, d) {
+function sætAnlægAntal(g, d) {   // gruppens antal (fx gammel Lys-gruppe) eller et anlægs eget antal (g = anlægget)
   const a = g.antal, nu = S.antal[g.navn] || 0;
   let n = nu + d;
   if (nu === 0 && d > 0) n = a.min;
-  else if (n < a.min) n = 0;
+  else if (n < a.min) n = g.gruppe ? a.min : 0;   // et anlægs eget tal kan ikke gå under min (vælg anlægget fra i stedet)
   else if (n > a.max) n = a.max;
   if (n === nu) return;
   const antal = {...S.antal, [g.navn]: n};
   if (!n) delete antal[g.navn];
-  const gl = S.anlæg;
-  S.antal = antal;   // gyldighed regnes på det nye antal: anlæg, der ikke passer mere, vælges fra
-  const valgte = gl.filter(nv => { const x = D.setups.setups.find(y => y.navn === nv); return !x || x.gruppe !== g.navn || !anlægGyldig(x); });
-  anvendAnlæg(valgte, antal);
+  anvendAnlæg(S.anlæg, antal);
 }
 function anlægGem() {   // det der huskes sammen med listen, så knapperne står som sidst
   return {valgte: S.anlæg, antal: S.antal, bidrag: Object.values(S.bidrag).map(b => ({udstyr: b.udstyr, antal: b.antal, ...(b.note ? {note: b.note} : {})}))};
 }
-function anlægStribe() {
+function optagetPaa(dato, egetJob) {   // udstyr på andre jobs' godkendte pakkelister samme dag: {udstyr: [{job, antal}]}
+  const ud = {};
+  for (const r of D.jobpl || []) {
+    if (!r.godkendt || r.dato !== dato || (egetJob && nøgle(r.job) === nøgle(egetJob))) continue;
+    for (const l of r.linjer || []) (ud[nøgle(l.udstyr)] ||= []).push({job: r.job, antal: l.antal});
+  }
+  return ud;
+}
+function anlægStribe() {   // trin for trin (Oscar 27/10): hvert valg låser og låser op for det næste; stativer og kabler regnes ud
   const o = D.setups || {setups: []};
   if (!o.setups.length) return h("div", {hidden: true});
   const altid = o.setups.filter(x => x.altid);
   const grupper = (o.grupper || []).filter(g => o.setups.some(x => !x.altid && x.gruppe === g.navn));
-  return h("div", {class: "anlaeg"}, h("div", {class: "overskrift"}, "Vælg anlæg"),
-    grupper.map(g => h("div", {class: "agr"},
-      h("div", {class: "agh"}, h("span", {class: "agn"}, g.navn), g.eksklusiv ? h("span", {class: "muted lille"}, "vælg ét") : h("span", {class: "muted lille"}, "vælg flere"),
+  const kort = x => {
+    const frys = anlægGyldig(x), på = S.anlæg.includes(x.navn), n = x.antal ? S.antal[x.navn] || 0 : 0;
+    return h("div", {class: "anlw" + (på ? " aktiv" : "")},
+      h("button", {type: "button", class: "anl" + (på ? " aktiv" : "") + (frys && !på ? " frosset" : ""), disabled: !!frys && !på, title: frys || `${x.linjer.length} linjer`,
+        "aria-pressed": på ? "true" : "false", onclick: () => sætAnlæg(x.navn)},
+        ikonEl(x.ikon), h("span", {class: "an"}, x.navn), h("span", {class: "as"}, frys && !på ? frys : x.antal && på ? `${n} stk` : x.antal ? `${x.antal.min}-${x.antal.max} stk` : `${x.linjer.length} linjer`)),
+      x.antal && på ? h("div", {class: "asantal"}, stepper(n, d => sætAnlægAntal(x, d), x.navn)) : null);
+  };
+  const sum = signalOpsummering();
+  return h("div", {class: "anlaeg"}, h("div", {class: "overskrift"}, "Pak jobbet: vælg trin for trin"),
+    grupper.map((g, i) => h("div", {class: "agr"},
+      h("div", {class: "agh"}, h("span", {class: "agnr"}, String(i + 1)), h("span", {class: "agn"}, g.navn), h("span", {class: "muted lille"}, g.eksklusiv ? "vælg én" : "vælg flere"),
         g.antal ? h("span", {class: "agantal"}, h("span", {class: "muted lille"}, "Antal " + g.antal.navn),
           stepper(S.antal[g.navn] || "–", d => sætAnlægAntal(g, d), g.antal.navn)) : null),
-      h("div", {class: "agrid"}, o.setups.filter(x => !x.altid && x.gruppe === g.navn).map(x => {
-        const frys = anlægGyldig(x), på = S.anlæg.includes(x.navn);
-        return h("button", {type: "button", class: "anl" + (på ? " aktiv" : "") + (frys && !på ? " frosset" : ""), disabled: !!frys && !på, title: frys || `${x.linjer.length} linjer`,
-          "aria-pressed": på ? "true" : "false", onclick: () => sætAnlæg(x.navn)},
-          ikonEl(x.ikon), h("span", {class: "an"}, x.navn), h("span", {class: "as"}, frys && !på ? frys : `${x.linjer.length} linjer`)); })))),
-    altid.length ? h("div", {class: "muted lille", style: "margin-top:8px"}, "Kommer altid med: " + altid.map(x => x.navn).join(", ")) : null);
+      h("div", {class: "agrid"}, o.setups.filter(x => !x.altid && x.gruppe === g.navn).map(kort)),
+      i === grupper.length - 1 && sum.length ? h("div", {class: "asum"}, sum.map(t => h("div", {}, t))) : null)),
+    altid.length ? h("div", {class: "muted lille", style: "margin-top:8px"}, "Kommer altid med: " + altid.map(x => x.navn).join(", ") + ". Ret pakkerne under Mere → Pakker.") : null);
+}
+function signalOpsummering() {   // "Der er nu 7 XLR med: 2 fra Pioneer XDJ RX2, ..." under sidste trin, så Oscar kan se, om der mangler nogen
+  const o = D.setups || {setups: []}, linjer = [];
+  const pr = {};
+  for (const n of [...S.anlæg, ...o.setups.filter(x => x.altid).map(x => x.navn)]) {
+    const x = o.setups.find(y => y.navn === n); if (!x) continue;
+    for (const b of anlægBidrag(x, S.antal)) if (/xlr|kombi|speakon|powercon|apparatkabel/i.test(b.udstyr)) (pr[b.udstyr] ||= []).push(`${b.antal} fra ${x.navn}`);
+  }
+  for (const [u, kilder] of Object.entries(pr)) {
+    const ialt = S.l[nøgle(u)]?.antal || 0, lager = lagerMap().get(nøgle(u))?.antal;
+    linjer.push(`${u}: ${ialt} på listen (${kilder.join(", ")})` + (lager != null && ialt > lager ? ` · kun ${lager} på lager` : ""));
+  }
+  if (linjer.length) linjer.push("Mangler der nogen? Læg flere på med + i listen til venstre.");
+  return linjer;
 }
 function tegnRækker() {
   const el = $("raekker");
@@ -905,7 +955,7 @@ function vælgerRække(u) {
   const key = nøgle(u.navn), a = S.l[key]?.antal || 0;
   return h("div", {class: "r" + (a ? " paa" : "")},
     h("div", {class: "n"}, u.navn, u.status !== "På lager" ? h("span", {class: "tag"}, u.status) : null),
-    h("span", {class: "lagertal"}, `${u.antal} på lager`),
+    h("span", {class: "lagertal"}, `${u.antal} på lager`, (S.optaget || {})[key] ? h("span", {class: "optaget", title: (S.optaget[key] || []).map(x => `${x.antal} på ${x.job}`).join(", ")}, ` · ${S.optaget[key].reduce((t, x) => t + x.antal, 0)} optaget (${S.optaget[key][0].job})`) : null),
     a ? stepper(a, d => sætAntal(key, u.navn, a + d), u.navn)
       : h("button", {type: "button", class: "plus", title: "Læg på listen", "aria-label": "Læg på listen: " + u.navn, onclick: () => sætAntal(key, u.navn, 1)}, "+"));
 }
@@ -1254,12 +1304,10 @@ async function lukOpgave(o) {
 }
 
 // ---------- lager-fanen ----------
-const FELTER = ["navn", "kategori", "antal", "status", "note", "pakker", "pakke_antal"];   // pakker: liste af navne; pakke_antal: hvor mange af tingen hver pakke bruger (Oscar 26/10)
-// pakke_antal sammenlignes og sendes som "Pakke=antal"-linjer; uden tal bruger pakken alt på lager (som før)
-const paListe = u => (u.pakker || []).map(p => `${p}=${(u.pakke_antal || {})[p] ?? u.antal ?? 1}`);
-const feltVaerdi = (u, k) => k === "pakke_antal" ? paListe(u).join("; ") : k === "pakker" ? (u.pakker || []).join("; ") : k === "navn" ? String(u.navn || "").trim() : String(u[k] ?? (k === "status" ? "På lager" : ""));
+const FELTER = ["navn", "kategori", "antal", "status", "note"];   // pakker ligger nu i Mere → Pakker (setups), ikke på lageret (Oscar 27/10)
+const feltVaerdi = (u, k) => k === "navn" ? String(u.navn || "").trim() : String(u[k] ?? (k === "status" ? "På lager" : ""));
 function nulstilLager() {
-  L = {w: D.udstyr.map(u => ({...u, status: u.status || "På lager", note: u.note || "", pakker: [...(u.pakker || [])], pakke_antal: {...(u.pakke_antal || {})}, _orig: u.navn})), ny: [], q: "", pakke: "", udgaaede: false, visNy: false, svar: null};
+  L = {w: D.udstyr.map(u => ({...u, status: u.status || "På lager", note: u.note || "", _orig: u.navn})), ny: [], q: "", pakke: "", udgaaede: false, visNy: false, svar: null};
 }
 function ændringer() {
   const ud = [];
@@ -1268,7 +1316,7 @@ function ændringer() {
     if (!o) continue;
     const f = {};
     for (const k of FELTER) {
-      if (feltVaerdi(o, k) !== feltVaerdi(w, k)) f[k] = k === "pakke_antal" ? paListe(w) : k === "navn" ? w.navn.trim() : w[k];
+      if (feltVaerdi(o, k) !== feltVaerdi(w, k)) f[k] = k === "navn" ? w.navn.trim() : w[k];
     }
     if (Object.keys(f).length) ud.push({navn: w._orig, felter: f});
   }
@@ -1287,16 +1335,14 @@ function visLager() {
     h("div", {class: "lagertop"},
       h("h1", {}, "Lager"), h("span", {class: "muted"}, `${aktive} ting`),
       h("div", {class: "spacer"}), søg,
-      h("select", {class: "input", id: "pakkefilter", style: "width:auto", title: "Vis kun én pakke", onchange: e => { L.pakke = e.target.value; filtrér(); }},
-        h("option", {value: ""}, "Alle pakker"), allePakker().map(p => h("option", {value: p, selected: L.pakke === p}, p))),
       h("label", {class: "muted lille"}, h("input", {type: "checkbox", checked: L.udgaaede, onchange: e => { L.udgaaede = e.target.checked; visLager(); }}), " Vis udgået"),
       h("button", {class: "btn primaer", type: "button", onclick: () => { L.visNy = true; visLager(); $("nyNavn")?.focus(); }}, "+ Nyt udstyr")),
     L.visNy ? nyForm() : null,
-    h("div", {class: "lhd"}, h("span", {}, "Navn"), h("span", {}, "Kategori"), h("span", {}, "Antal"), h("span", {}, "Status"), h("span", {}, "Fast note"), h("span", {}, "Pakker"), h("span", {})),
+    h("div", {class: "lhd"}, h("span", {}, "Navn"), h("span", {}, "Kategori"), h("span", {}, "Antal"), h("span", {}, "Status"), h("span", {}, "Fast note"), h("span", {})),
     L.ny.length ? h("div", {class: "gruppe", "data-gruppe": ""}, h("div", {class: "overskrift"}, "Nyt, gemmes når du trykker Gem"),
       h("div", {class: "kort"}, L.ny.map((n, i) => h("div", {class: "lr aendret", "data-navn": nøgle(n.navn)},
         h("span", {style: "padding:0 7px;font-weight:600"}, n.navn), h("span", {}, n.kategori), h("span", {}, n.antal + " stk"), h("span", {}, "På lager"),
-        h("span", {class: "muted"}, n.note || ""), h("span", {class: "muted lille"}, "pakker efter gem"),
+        h("span", {class: "muted"}, n.note || ""),
         h("button", {class: "x", type: "button", title: "Fjern", onclick: () => { L.ny.splice(i, 1); visLager(); }}, "×"))))) : null,
     kategorier().map(kat => {
       const ws = L.w.filter(w => w.kategori === kat && (L.udgaaede || w.status !== "Udgået" || erÆndret(w))).sort((a, b) => a._orig.localeCompare(b._orig, "da"));
@@ -1320,85 +1366,15 @@ function lagerRække(w) {
       h("button", {type: "button", "aria-label": "En mere", onclick: () => skift(1)}, "+")),
     vælg(STATUS, w.status, v => { w.status = v; L.svar = null; visLager(); }),
     h("input", {class: "felt", value: w.note || "", placeholder: "–", "aria-label": "Note", oninput: e => { w.note = e.target.value; markér(); }}),
-    pakkeCelle(w, () => { r.dataset.pakker = w.pakker.map(nøgle).join("|"); markér(); }),
     h("span", {}));
-  r.dataset.pakker = w.pakker.map(nøgle).join("|");
   r.classList.toggle("aendret", erÆndret(w));
   return r;
-}
-// pakker: hvilke anlæg/pakker tingen hører til. Kendte navne = anlæggene i setups + alt, der allerede er sat på lageret.
-function allePakker() {
-  const ud = [];
-  for (const n of [...(D.setups?.setups || []).map(x => x.navn), ...(L ? L.w.flatMap(w => w.pakker || []) : D.udstyr.flatMap(u => u.pakker || []))])
-    if (n && !ud.some(x => nøgle(x) === nøgle(n))) ud.push(n);
-  return ud;
-}
-function pakkeCelle(w, ændret) {   // chips + knap, der åbner en tjekliste: sæt flueben ved flere pakker på én gang
-  const celle = h("div", {class: "pakker"});
-  let liste = null;
-  const luk = () => { if (liste) { liste.remove(); liste = null; } if (PK_AABEN === luk) { PK_AABEN = null; PK_PLACER = null; } };
-  const placer = () => {   // PC: fast position under knappen (kortet klipper ellers listen); telefon: bundark via CSS
-    if (!liste || window.innerWidth <= 700) return;
-    const k = celle.querySelector(".pakkeknap"), r = k ? k.getBoundingClientRect() : celle.getBoundingClientRect();
-    const hø = Math.min(460, window.innerHeight - 24), over = r.bottom + 6 + hø > window.innerHeight && r.top - 6 - hø > 0;
-    Object.assign(liste.style, {left: Math.min(r.left, window.innerWidth - 260) + "px", top: over ? "" : r.bottom + 6 + "px", bottom: over ? window.innerHeight - r.top + 6 + "px" : ""});
-  };
-  const tegnListe = () => {
-    if (!liste) return;
-    const valgt = w.pakker || [];
-    const ny = h("input", {class: "input", placeholder: "Ny pakke …", "aria-label": "Ny pakke"});
-    const tilføj = () => {
-      const n = ny.value.trim().replace(/\s+/g, " ");
-      if (!n) { ny.focus(); return; }
-      const kendt = allePakker().find(x => nøgle(x) === nøgle(n)) || n, nu = w.pakker || [];   // w.pakker læses frisk: flueben kan være sat siden listen blev tegnet
-      if (!nu.some(x => nøgle(x) === nøgle(kendt))) { w.pakker = [...nu, kendt]; ændret(); }
-      tegnPakkefilter(); tegn(); tegnListe(); liste.querySelector("input.input")?.focus();
-    };
-    ny.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); tilføj(); } });
-    liste.replaceChildren(
-      h("div", {class: "pakkelistehoved"}, h("span", {class: "etiket", style: "margin:0"}, "Pakker"), h("button", {type: "button", class: "x", title: "Luk", onclick: luk}, "×")),
-      ...allePakker().map(p => { const med = valgt.some(x => nøgle(x) === nøgle(p));
-        return h("label", {}, h("input", {type: "checkbox", checked: med,
-          onchange: e => { w.pakker = e.target.checked ? [...(w.pakker || []), p] : (w.pakker || []).filter(x => nøgle(x) !== nøgle(p)); if (!e.target.checked) delete (w.pakke_antal ||= {})[p]; ændret(); tegn(); tegnListe(); }}),
-          h("span", {style: "flex:1"}, p),
-          med ? h("input", {class: "pakkeantal", type: "number", min: "1", max: String(w.antal || 99), value: (w.pakke_antal || {})[p] ?? w.antal ?? 1, title: `Antal i pakken (${w.antal ?? "?"} på lager)`, "aria-label": "Antal i " + p,
-            onclick: e => e.stopPropagation(), oninput: e => { const n = Math.max(1, parseInt(e.target.value, 10) || 1); (w.pakke_antal ||= {})[p] = n; ændret(); tegn(); }}) : null); }),
-      h("div", {class: "pakkeny"}, ny, h("button", {class: "btn lille", type: "button", onclick: tilføj}, "Tilføj")));
-  };
-  const åbn = () => {
-    if (liste) return luk();
-    if (PK_AABEN) PK_AABEN();
-    PK_AABEN = luk; PK_PLACER = placer;
-    liste = h("div", {class: "pakkeliste", onclick: e => e.stopPropagation()});
-    celle.append(liste);
-    tegnListe();
-    placer();
-  };
-  const tegn = () => {
-    const valgt = w.pakker || [];
-    celle.replaceChildren(...valgt.map(p => h("span", {class: "pakkechip"}, `${p} ×${(w.pakke_antal || {})[p] ?? w.antal ?? 1}`,
-      h("button", {type: "button", class: "pakkefjern", title: "Tag ud af " + p, "aria-label": "Tag ud af " + p, onclick: () => { w.pakker = valgt.filter(x => x !== p); ændret(); tegn(); tegnListe(); }}, "×"))),
-      h("button", {type: "button", class: "pakkeknap", "aria-label": "Vælg pakker", onclick: e => { e.stopPropagation(); åbn(); }}, valgt.length ? "+ pakke" : "+ Læg i pakke"),
-      ...(liste ? [liste] : []));
-    placer();
-  };
-  tegn();
-  return celle;
-}
-let PK_AABEN = null;   // den åbne tjekliste (kun én ad gangen); lukkes ved klik udenfor
-document.addEventListener("click", () => { if (PK_AABEN) PK_AABEN(); });
-window.addEventListener("scroll", () => { if (PK_PLACER) PK_PLACER(); }, {passive: true});   // den fast placerede liste følger med, når siden scroller
-let PK_PLACER = null;
-function tegnPakkefilter() {   // filteret øverst følger med, når der kommer en ny pakke
-  const sel = $("pakkefilter");
-  if (sel) sel.replaceChildren(h("option", {value: ""}, "Alle pakker"), ...allePakker().map(p => h("option", {value: p, selected: L.pakke === p}, p)));
 }
 function filtrér() {
   const q = nøgle(L.q);
   for (const g of document.querySelectorAll("[data-gruppe]")) {
     let n = 0;
-    const pk = nøgle(L.pakke);
-    for (const r of g.querySelectorAll(".lr")) { const vis = (!q || r.dataset.navn.includes(q)) && (!pk || (r.dataset.pakker || "").split("|").includes(pk)); r.style.display = vis ? "" : "none"; if (vis) n++; }
+    for (const r of g.querySelectorAll(".lr")) { const vis = !q || r.dataset.navn.includes(q); r.style.display = vis ? "" : "none"; if (vis) n++; }
     g.style.display = n ? "" : "none";
   }
 }
@@ -1445,8 +1421,6 @@ function anvendLager(us, ret, ny) {   // samme regler som fabz.py lager_ret/lage
     if (!u) continue;
     for (const [k, v] of Object.entries(r.felter)) {
       if (k === "note") { if (String(v || "").trim()) u.note = String(v).trim(); else delete u.note; }
-      else if (k === "pakker") { if ((v || []).length) u.pakker = [...v]; else delete u.pakker; }
-      else if (k === "pakke_antal") { const pa = {}; for (const x of v || []) { const i = x.lastIndexOf("="); if (i > 0) pa[x.slice(0, i)] = Number(x.slice(i + 1)); } if (Object.keys(pa).length) u.pakke_antal = pa; else delete u.pakke_antal; }
       else if (k === "antal") u.antal = Number(v);
       else u[k] = k === "navn" ? String(v).trim() : v;
     }
@@ -2474,6 +2448,72 @@ function traekKnap() {   // Træk en kontakt (Oscar 26/10): næste firma fra lea
     }})}, `Træk en kontakt (${tilbage})`);
 }
 const OK = {detaljer: false};   // Økonomi-fanen: detaljerne er foldet væk, til Oscar trykker "Vis detaljer"
+// ---------- Pakker (indstillinger): trin, regler og linjer. Gemmes samlet med fabz.py setup-gem ----------
+const PK = {o: null, svar: null, arbejder: false};
+function pakkerStart() { PK.o = JSON.parse(JSON.stringify(D.setups || {grupper: [], setups: []})); PK.o.grupper.forEach(g => { g.eksklusiv = !!g.eksklusiv; }); PK.svar = null; }
+function visPakker() {
+  if (!PK.o) pakkerStart();
+  const o = PK.o, lager = D.udstyr.map(u => u.navn).sort((a, b) => a.localeCompare(b, "da"));
+  const navne = o.setups.map(x => x.navn), talNavne = [...o.setups.filter(x => x.antal).map(x => x.navn), ...o.grupper.filter(g => g.antal).map(g => g.navn)];
+  const flyt = (arr, i, d) => { const j = i + d; if (j < 0 || j >= arr.length) return; [arr[i], arr[j]] = [arr[j], arr[i]]; tegn(); };
+  const gem = async () => {
+    PK.arbejder = true; PK.svar = null; tegn();
+    const sv = await kørOgVent("setup-gem", ["@json"], o).catch(e => ({status: "FEJL", fejl: e.message}));
+    PK.arbejder = false;
+    if (!sv) PK.svar = {klasse: "fejl", titel: "Intet svar efter 4 minutter."};
+    else if (sv.status === "FEJL") PK.svar = {klasse: "fejl", titel: "Ikke gemt", fejl: sv.fejl};
+    else { PK.svar = {klasse: "ok", titel: "Pakkerne er gemt", info: sv.advarsler || []}; const su = await laesFil("data/setups.json"); D.setups = su ? await su.json() : D.setups; PK.o = JSON.parse(JSON.stringify(D.setups)); }
+    if (fane === "pakker") tegn();
+  };
+  const trinKort = (g, gi) => h("div", {class: "kort2 pkg"},
+    h("div", {class: "r1"}, h("span", {class: "agnr"}, String(gi + 1)),
+      h("input", {class: "input", style: "max-width:220px", value: g.navn, "aria-label": "Trin", oninput: e => { const gl = g.navn; g.navn = e.target.value; o.setups.forEach(x => { if (x.gruppe === gl) x.gruppe = g.navn; }); }}),
+      seg([["en", "vælg én"], ["flere", "vælg flere"]].map(x => x[1]), g.eksklusiv ? "vælg én" : "vælg flere", v => { g.eksklusiv = v === "vælg én"; tegn(); }),
+      h("div", {class: "spacer"}),
+      h("button", {class: "btn lille", type: "button", title: "Op", onclick: () => flyt(o.grupper, gi, -1)}, "↑"), h("button", {class: "btn lille", type: "button", title: "Ned", onclick: () => flyt(o.grupper, gi, 1)}, "↓"),
+      h("button", {class: "btn lille", type: "button", onclick: () => { o.setups.push({navn: "Ny pakke", gruppe: g.navn, linjer: []}); tegn(); }}, "+ Pakke"),
+      !o.setups.some(x => x.gruppe === g.navn) ? h("button", {class: "x", type: "button", title: "Fjern trinnet", onclick: () => { o.grupper.splice(gi, 1); tegn(); }}, "×") : null),
+    o.setups.filter(x => x.gruppe === g.navn).map(x => pakkeKort(x)));
+  const pakkeKort = x => {
+    const si = o.setups.indexOf(x), åben = PK.aaben === x.navn;
+    const linje = (l, li) => h("div", {class: "pkl"},
+      h("select", {class: "input", onchange: e => { l.udstyr = e.target.value; }}, h("option", {value: l.udstyr, selected: true}, l.udstyr), lager.filter(n => n !== l.udstyr).map(n => h("option", {value: n}, n)), h("option", {value: "LEJE: "}, "LEJE: (skriv i note)")),
+      h("input", {class: "input", type: "number", min: "0", value: l.antal, title: "Antal", oninput: e => { l.antal = Number(e.target.value); }}),
+      h("input", {class: "input", type: "number", min: "0", value: l.pr ?? "", placeholder: "pr", title: "pr. så mange (tomt = fast antal)", oninput: e => { if (e.target.value) l.pr = Number(e.target.value); else delete l.pr; }}),
+      h("select", {class: "input", title: "regnes af", onchange: e => { if (e.target.value) l.af = e.target.value; else delete l.af; }}, h("option", {value: ""}, "af: egen"), talNavne.map(n => h("option", {value: n, selected: l.af === n}, "af: " + n))),
+      h("input", {class: "input", type: "number", min: "0", value: l.plus ?? "", placeholder: "+", title: "plus (lægges til én gang)", oninput: e => { if (e.target.value) l.plus = Number(e.target.value); else delete l.plus; }}),
+      h("input", {class: "input", value: l.note || "", placeholder: "note", oninput: e => { l.note = e.target.value; }}),
+      h("button", {class: "x", type: "button", title: "Fjern linjen", onclick: () => { x.linjer.splice(li, 1); tegn(); }}, "×"));
+    return h("div", {class: "pkp" + (åben ? " aaben" : "")},
+      h("div", {class: "r1"}, h("button", {type: "button", class: "btn ghost lille", onclick: () => { PK.aaben = åben ? null : x.navn; tegn(); }}, åben ? "▾" : "▸"),
+        ikonEl(x.ikon), h("b", {}, x.navn), h("span", {class: "muted lille"}, `${(x.linjer || []).length} linjer` + (x.antal ? ` · ${x.antal.min}-${x.antal.max} stk` : "") + (x.kraever?.length ? ` · kræver ${x.kraever.join(", ")}` : "") + (x.altid ? " · altid med" : "")),
+        h("div", {class: "spacer"}), h("button", {class: "x", type: "button", title: "Slet pakken", onclick: () => { if (confirm(`Slet pakken ${x.navn}?`)) { o.setups.splice(si, 1); tegn(); } }}, "×")),
+      åben ? h("div", {class: "pkf"},
+        h("div", {class: "felter3"},
+          felt("Navn", h("input", {class: "input", value: x.navn, oninput: e => { const gl = x.navn; x.navn = e.target.value; o.setups.forEach(y => { (y.kraever || []).forEach((k, i) => { if (k === gl) y.kraever[i] = x.navn; }); if (y.af === gl) y.af = x.navn; (y.linjer || []).forEach(l => { if (l.af === gl) l.af = x.navn; }); }); PK.aaben = x.navn; }})),
+          felt("Ikon", h("select", {class: "input", onchange: e => { x.ikon = e.target.value; tegn(); }}, h("option", {value: ""}, "ingen"), Object.keys(IKON).map(k => h("option", {value: k, selected: x.ikon === k}, k)))),
+          felt("Trin", h("select", {class: "input", onchange: e => { x.gruppe = e.target.value; tegn(); }}, o.grupper.map(g => h("option", {value: g.navn, selected: x.gruppe === g.navn}, g.navn))))),
+        h("div", {class: "felter3"},
+          felt("Eget antal (fx 2-8, tomt = nej)", h("input", {class: "input", value: x.antal ? `${x.antal.min}-${x.antal.max}` : "", placeholder: "2-8", oninput: e => { const m = e.target.value.match(/^\s*(\d+)\s*-\s*(\d+)\s*$/); if (m) x.antal = {min: Number(m[1]), max: Number(m[2])}; else if (!e.target.value.trim()) delete x.antal; }})),
+          felt("Kun ved antal fra-til (tomt = altid)", h("input", {class: "input", value: x.fra != null || x.til != null ? `${x.fra ?? ""}-${x.til ?? ""}` : "", placeholder: "4-8", oninput: e => { const m = e.target.value.match(/^\s*(\d*)\s*-\s*(\d*)\s*$/); if (m) { if (m[1]) x.fra = Number(m[1]); else delete x.fra; if (m[2]) x.til = Number(m[2]); else delete x.til; } else if (!e.target.value.trim()) { delete x.fra; delete x.til; } }})),
+          felt("Tallet regnes af", h("select", {class: "input", onchange: e => { if (e.target.value) x.af = e.target.value; else delete x.af; }}, h("option", {value: ""}, "egen / trinnets"), talNavne.filter(n => n !== x.navn).map(n => h("option", {value: n, selected: x.af === n}, n))))),
+        h("div", {class: "felter3"},
+          felt("Kræver (skal være valgt først)", h("div", {class: "rk", style: "flex-wrap:wrap;gap:6px"}, navne.filter(n => n !== x.navn).map(n => h("label", {class: "chip" + ((x.kraever || []).includes(n) ? " aktiv" : "")}, h("input", {type: "checkbox", style: "display:none", checked: (x.kraever || []).includes(n), onchange: e => { x.kraever = e.target.checked ? [...(x.kraever || []), n] : (x.kraever || []).filter(k => k !== n); if (!x.kraever.length) delete x.kraever; tegn(); }}), n)))),
+          felt("Udelukker", h("div", {class: "rk", style: "flex-wrap:wrap;gap:6px"}, navne.filter(n => n !== x.navn).map(n => h("label", {class: "chip" + ((x.udelukker || []).includes(n) ? " aktiv" : "")}, h("input", {type: "checkbox", style: "display:none", checked: (x.udelukker || []).includes(n), onchange: e => { x.udelukker = e.target.checked ? [...(x.udelukker || []), n] : (x.udelukker || []).filter(k => k !== n); if (!x.udelukker.length) delete x.udelukker; tegn(); }}), n)))),
+          felt("Altid med", h("label", {class: "cb", style: "border:0;padding:4px 0"}, h("input", {type: "checkbox", checked: !!x.altid, onchange: e => { if (e.target.checked) x.altid = true; else delete x.altid; }}), h("span", {class: "t"}, "kommer altid med, når noget er valgt")))),
+        h("div", {class: "overskrift", style: "margin-top:10px"}, "Linjer: udstyr · antal · pr · af · plus · note"),
+        h("div", {class: "pkll"}, (x.linjer || []).map(linje)),
+        h("button", {class: "btn lille", type: "button", style: "margin-top:6px", onclick: () => { (x.linjer ||= []).push({udstyr: lager[0] || "", antal: 1}); tegn(); }}, "+ Linje")) : null);
+  };
+  $("rod").replaceChildren(h("div", {class: "side bred"},
+    h("div", {class: "kh"}, h("h1", {}, "Pakker"), h("div", {class: "spacer"}),
+      h("button", {class: "btn", type: "button", onclick: () => { o.grupper.push({navn: "Nyt trin", eksklusiv: true}); tegn(); }}, "+ Trin"),
+      h("button", {class: "btn ghost", type: "button", onclick: () => { pakkerStart(); tegn(); }}, "Fortryd"),
+      h("button", {class: "btn primaer", type: "button", disabled: PK.arbejder, onclick: gem}, PK.arbejder ? "Gemmer …" : "Gem pakkerne")),
+    h("div", {class: "muted", style: "margin-bottom:12px"}, "Trinnene vises i denne rækkefølge, når et job pakkes. \"Vælg én\" låser de andre i trinnet. En pakke med \"kræver\" kan først vælges, når det krævede er valgt, og vælges fra igen, hvis det forsvinder. Linjer med \"pr\" regnes af pakkens eget antal eller af den pakke, der står i \"af\" (fx 1 XLR pr. Helix + 1)."),
+    PK.svar ? h("div", {class: "svar " + PK.svar.klasse, style: "margin-bottom:12px"}, h("b", {}, PK.svar.titel), PK.svar.fejl ? h("div", {}, PK.svar.fejl) : null, (PK.svar.info || []).map(t => h("div", {class: "lille"}, "Advarsel: " + t))) : null,
+    o.grupper.map(trinKort)));
+}
 function visOekonomi() {
   const mo = D.mo || {}, ms = moMaaneder(), m = ms.find(x => x.nu), ub = mo.ubetalt, td = mo.til_dig;
   const mn = mo.min || 20000, behov = (D.strategi || {}).privatbehov_md;
