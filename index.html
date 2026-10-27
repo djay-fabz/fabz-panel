@@ -106,6 +106,7 @@ a.btn{display:inline-block;text-decoration:none}
 .agrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
 .agnr{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--tekst);color:var(--flade);font-size:12px;font-weight:700}
 .anlw{display:flex;flex-direction:column;gap:4px}.anlw .anl{flex:1}.asantal{display:flex;justify-content:center}
+.abem{font-size:12px;color:var(--adv);font-weight:600;text-align:center;padding:0 4px}
 .asum{margin-top:10px;padding:10px 12px;background:var(--bg);border-radius:10px;font-size:12.5px;color:var(--svag);display:grid;gap:3px}
 .optaget{color:var(--adv);font-weight:600}
 .pkg{margin-bottom:14px}.pkp{border-top:1px solid var(--linje);padding:8px 0}.pkp .ik{height:24px}.pkf{padding:8px 0 4px 34px}
@@ -835,7 +836,7 @@ function anlægUdregn(valgte, antal) {
     ud.set(k, e);
   };
   for (const g of o.grupper) if (g.antal && antal[g.navn]) for (const l of g.linjer || []) læg(l, antal[g.navn]);
-  for (const x of valg) { const n = anlægTal(x, antal); for (const l of x.linjer || []) læg(l, l.af ? antal[l.af] || 0 : n); }
+  for (const x of valg) { const n = anlægTal(x, antal); (x.linjer || []).forEach((l, i) => læg(i === 0 && x.bemaerk && n >= (x.bemaerk_fra || 1) ? {...l, note: (l.note ? l.note + ". " : "") + "BEMÆRK: " + x.bemaerk} : l, l.af ? antal[l.af] || 0 : n)); }
   return ud;
 }
 function anlægBidrag(x, antal) {   // hvad ét anlæg lægger på (til opsummeringen under Signal)
@@ -913,7 +914,8 @@ function anlægStribe() {   // trin for trin (Oscar 27/10): hvert valg låser og
       h("button", {type: "button", class: "anl" + (på ? " aktiv" : "") + (frys && !på ? " frosset" : ""), disabled: !!frys && !på, title: frys || `${x.linjer.length} linjer`,
         "aria-pressed": på ? "true" : "false", onclick: () => sætAnlæg(x.navn)},
         ikonEl(x.ikon), h("span", {class: "an"}, x.navn), h("span", {class: "as"}, frys && !på ? frys : x.antal && på ? `${n} stk` : x.antal ? `${x.antal.min}-${x.antal.max} stk` : `${x.linjer.length} linjer`)),
-      x.antal && på ? h("div", {class: "asantal"}, stepper(n, d => sætAnlægAntal(x, d), x.navn)) : null);
+      x.antal && på ? h("div", {class: "asantal"}, stepper(n, d => sætAnlægAntal(x, d), x.navn)) : null,
+      på && x.bemaerk && anlægTal(x, S.antal) >= (x.bemaerk_fra || 1) ? h("div", {class: "abem"}, "Bemærk: " + x.bemaerk) : null);
   };
   const sum = signalOpsummering();
   return h("div", {class: "anlaeg"}, h("div", {class: "overskrift"}, "Pak jobbet: vælg trin for trin"),
@@ -2503,6 +2505,9 @@ function visPakker() {
           felt("Kræver (skal være valgt først)", h("div", {class: "rk", style: "flex-wrap:wrap;gap:6px"}, navne.filter(n => n !== x.navn).map(n => h("label", {class: "chip" + ((x.kraever || []).includes(n) ? " aktiv" : "")}, h("input", {type: "checkbox", style: "display:none", checked: (x.kraever || []).includes(n), onchange: e => { x.kraever = e.target.checked ? [...(x.kraever || []), n] : (x.kraever || []).filter(k => k !== n); if (!x.kraever.length) delete x.kraever; tegn(); }}), n)))),
           felt("Udelukker", h("div", {class: "rk", style: "flex-wrap:wrap;gap:6px"}, navne.filter(n => n !== x.navn).map(n => h("label", {class: "chip" + ((x.udelukker || []).includes(n) ? " aktiv" : "")}, h("input", {type: "checkbox", style: "display:none", checked: (x.udelukker || []).includes(n), onchange: e => { x.udelukker = e.target.checked ? [...(x.udelukker || []), n] : (x.udelukker || []).filter(k => k !== n); if (!x.udelukker.length) delete x.udelukker; tegn(); }}), n)))),
           felt("Altid med", h("label", {class: "cb", style: "border:0;padding:4px 0"}, h("input", {type: "checkbox", checked: !!x.altid, onchange: e => { if (e.target.checked) x.altid = true; else delete x.altid; }}), h("span", {class: "t"}, "kommer altid med, når noget er valgt")))),
+        h("div", {class: "felter3"},
+          felt("Bemærk (advarsel på listen)", h("input", {class: "input", value: x.bemaerk || "", placeholder: "fx Stort job: gennemgå kabler manuelt", oninput: e => { if (e.target.value.trim()) x.bemaerk = e.target.value; else { delete x.bemaerk; delete x.bemaerk_fra; } }})),
+          felt("Bemærk fra antal (tomt = altid)", h("input", {class: "input", type: "number", min: "1", value: x.bemaerk_fra ?? "", placeholder: "6", oninput: e => { if (e.target.value) x.bemaerk_fra = Number(e.target.value); else delete x.bemaerk_fra; }}))),
         h("div", {class: "overskrift", style: "margin-top:10px"}, "Linjer: udstyr · antal · pr · af · plus · maks · note"),
         h("div", {class: "pkll"}, (x.linjer || []).map(linje)),
         h("button", {class: "btn lille", type: "button", style: "margin-top:6px", onclick: () => { (x.linjer ||= []).push({udstyr: lager[0] || "", antal: 1}); tegn(); }}, "+ Linje")) : null);
