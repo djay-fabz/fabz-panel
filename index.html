@@ -485,6 +485,8 @@ async function hentData() {
   const pv = await laesFil("data/privat.json");   // privatøkonomi fra banken (bank.yml: tools/bank_sync.py + fabz.py privat)
   D.privat = pv ? await pv.json() : null;
   D.leads = await laesValgfri("data/leads.json");   // leadlisten (Træk en kontakt)
+  const mo2 = await laesFil("data/mailoversigt.json");   // dagens mailoversigt (tools/mailoversigt.py via panel.yml ved Mødt ind)
+  D.mailoversigt = mo2 ? await mo2.json() : null;
 }
 async function laesKkTekster() {   // Oscars rettede tekster, ellers standardteksterne fra tools/klubkort
   const r = await laesFil("data/klubkort_tekster.json");
@@ -1477,7 +1479,7 @@ async function gemLager() {
 
 // ---------- fælles: kør fabz.py-kommandoer fra panelet ----------
 const FILER = {henvendelser: "data/henvendelser.json", opgaver: "data/opgaver.json", dagsplaner: "data/dagsplaner.json",
-               ideer: "data/ideer.json", indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json", salgslog: "data/salgslog.json", mo: "data/maanedsoversigt.json", privat: "data/privat.json", strategi: "data/strategi.json", leads: "data/leads.json"};
+               ideer: "data/ideer.json", indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json", salgslog: "data/salgslog.json", mo: "data/maanedsoversigt.json", privat: "data/privat.json", strategi: "data/strategi.json", leads: "data/leads.json", mailoversigt: "data/mailoversigt.json"};
 async function laesValgfri(p) { const r = await laesFil(p); return r ? r.json() : []; }
 async function genindlæs(navne) { await Promise.all(navne.map(async n => { D[n] = n === "kkTekster" ? await laesKkTekster() : await laesValgfri(FILER[n]); })); }
 const plusDage = (iso, n) => { const d = dag(iso); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
@@ -1604,6 +1606,7 @@ function visIDag() {
         const link = await hentPdf("pdf/" + navn);
         if (link) window.open(link, "_blank"); else alert(`Der er ingen printliste for i dag endnu (${navn}). Planlæg dagen under Opgaver, så laves den.`);
       }}, "Print listen") : null,
+      mailStatus(idag),
       dp?.moedt_ind ? h("span", {class: "muted lille"}, `Mødt ind ${dp.moedt_ind}` + (dp.moedetid ? ` · aftalt ${dp.moedetid}` : ""))
         : h("button", {class: "btn lille", type: "button", onclick: () => kør("moedt-ind", [nuHHMM()], {tekst: "Mødt ind", efter: ["dagsplaner"],
             med: () => { const x = (D.dagsplaner ||= []).find(x => x.dato === idag); if (x) x.moedt_ind = nuHHMM(); else D.dagsplaner.push({dato: idag, moedt_ind: nuHHMM()}); }})}, "Mødt ind nu")),
@@ -2313,6 +2316,14 @@ function ruteKort(e) {   // ét kort pr. stop og pr. kørsel (kan printes)
       e.ophold ? h("div", {class: "muted", style: "margin-top:6px"}, `Ophold ${e.ophold} min`) : null,
       e.venter ? h("div", {class: "muted", style: "margin-top:4px"}, `Tid til overs ${e.venter} min`) : null,
       e.note ? h("div", {class: "rnote"}, "Husk: " + e.note) : null));
+}
+function mailStatus(idag) {   // Mailoversigten (Oscar 27/10): kører i panel.yml ved Mødt ind; status fra data/mailoversigt.json, knap til at bestille igen
+  const m = D.mailoversigt, iDagM = m && m.dato === idag;
+  const bestil = () => kør("mailoversigt", [], {tekst: "Mailoversigt", efter: ["mailoversigt"], med: () => { D.mailoversigt = {dato: idag, status: "bestilt"}; }});
+  if (iDagM && m.status === "sendt") return h("span", {class: "pill g", title: m.overskrift || ""}, `Mailoversigt sendt ${m.tid} · ${m.kraever} kræver dig`);
+  if (iDagM && m.status === "bestilt") return h("span", {class: "pill y"}, "Mailoversigt kører … ca. 2 min");
+  if (iDagM && m.status === "fejl") return h("span", {class: "rk", style: "gap:6px"}, h("span", {class: "pill rd", title: m.fejl || ""}, "Mailoversigt fejlede"), h("button", {class: "btn lille", type: "button", onclick: bestil}, "Prøv igen"));
+  return h("button", {class: "btn lille", type: "button", title: "Sorterer indbakken og sender dig oversigten (kører også automatisk ved Mødt ind)", onclick: bestil}, "Lav mailoversigt");
 }
 function koerelisteKnap(vedTidsplan) {   // Køreliste (PDF): samme design som side 2 i pakkelisten (Oscar 26/10: browserens print duede ikke; knappen skal stå ved tidsplanen)
   const r = RU, d = r.svar?.data;
