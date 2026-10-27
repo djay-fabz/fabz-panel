@@ -106,7 +106,6 @@ a.btn{display:inline-block;text-decoration:none}
 .agrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
 .agnr{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--tekst);color:var(--flade);font-size:12px;font-weight:700}
 .anlw{display:flex;flex-direction:column;gap:4px}.anlw .anl{flex:1}.asantal{display:flex;justify-content:center}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}.blink{animation:blink 1s step-start infinite;font-weight:700}
 .abem{font-size:12px;color:var(--adv);font-weight:600;text-align:center;padding:0 4px}
 .asum{margin-top:10px;padding:10px 12px;background:var(--bg);border-radius:10px;font-size:12.5px;color:var(--svag);display:grid;gap:3px}
 .optaget{color:var(--adv);font-weight:600}
@@ -270,6 +269,10 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .tb-linje{display:grid;grid-template-columns:minmax(0,1fr) 110px 36px;gap:8px;margin-bottom:8px}
 .tb-r{display:flex;justify-content:space-between;gap:12px;padding:2px 0}
 .tb-adv{margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--adv-blid);color:var(--adv)}
+.jo{margin-top:8px}.jo-r{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;border:0;border-top:1px solid var(--linje);background:none;padding:10px 14px}
+.jo-r:first-child{border-top:0}.jo-r:hover{background:var(--hover)}
+.jo-m{flex:none;width:18px;color:var(--svag)}.jo-m.ok{color:var(--ok);font-weight:700}
+.jo-t{display:flex;flex-direction:column;gap:2px;min-width:0}.jo-t b{font-weight:600}
 .note{font-size:13px;color:var(--svag);padding:4px 0;border-top:1px solid var(--linje)}
 .planpunkt{display:grid;grid-template-columns:1fr 70px 130px 28px;gap:6px;align-items:center;margin:4px 0}
 .planpunkt .input{padding:6px 9px}
@@ -728,11 +731,34 @@ function visJobSide(j) {   // alt til ét job samlet: pakkeliste, kort, kørsel,
     h("h1", {style: "margin-top:10px"}, j.navn),
     h("div", {class: "muted"}, [`${DAGE[d.getDay()]} ${visDato(j.dato)}`, j.sted].filter(Boolean).join(" · ")),
     tider.length ? h("div", {class: "muted lille", style: "margin-top:6px"}, tider.join(" · ")) : null,
+    jobOpgaver(j, st),
     afsnit("Pakkeliste", st.pak, st.klar, h("button", {class: "btn primaer lille", type: "button", onclick: () => åbnJob(j)}, "Åbn pakkeliste")),
     afsnit("Skilte", st.kortTekst, st.kort, h("button", {class: "btn lille", type: "button", onclick: () => { KT.job = st.key; KT.slags = null; KT.fk = KT.kk = null; fane = "kort"; tegn(); window.scrollTo(0, 0); }}, "Åbn skilte")),
-    afsnit("Kørsel", st.kørsel ? "Plan gemt, kommer på side 2" : "Ikke lavet", st.kørsel, h("button", {class: "btn lille", type: "button", onclick: () => { vælgRuteJob(st.key); fane = "rute"; tegn(); window.scrollTo(0, 0); }}, st.kørsel ? "Åbn kørsel" : "Lav kørsel")),
-    afsnit("Opgaver", st.åbne.length ? `${st.åbne.length} åbne` : "Ingen åbne", !st.åbne.length, h("button", {class: "btn lille", type: "button", onclick: () => { fane = "opgaver"; tegn(); window.scrollTo(0, 0); }}, "Gå til Opgaver"),
-      st.åbne.length ? h("div", {class: "muted", style: "margin-top:8px;display:grid;gap:4px"}, st.åbne.map(o => h("div", {}, `${o.titel}${o.deadline ? " (frist " + visDato(o.deadline) + ")" : ""}`))) : null)));
+    afsnit("Kørsel", st.kørsel ? "Plan gemt, kommer på side 2" : "Ikke lavet", st.kørsel, h("button", {class: "btn lille", type: "button", onclick: () => { vælgRuteJob(st.key); fane = "rute"; tegn(); window.scrollTo(0, 0); }}, st.kørsel ? "Åbn kørsel" : "Lav kørsel"))));
+}
+// Opgaver og konklusioner på jobbet (Oscar 27/10: "hvilket karaokesystem var det?"). Færdige opgaver viser konklusionen, åbne deres frist.
+// Pakkeliste- og skilteopgaverne står i deres egne afsnit, så de vises kun her, mens de er åbne.
+function jobOpgaver(j, st) {
+  const alle = D.opgaver.filter(o => o.job_noegle === st.key);
+  const færdige = alle.filter(o => o.status === "Færdig" && !o.job_opgave).sort((a, b) => (b.faerdig_dato || "").localeCompare(a.faerdig_dato || ""));
+  const åbn = o => { fane = "opgaver"; OP.vis = "opgave"; OP.valgt = o.id; OP.filter = o.status === "Færdig" ? "Færdige" : OP.filter; tegn(); window.scrollTo(0, 0); };
+  const række = (o, færdig) => h("button", {type: "button", class: "jo-r", onclick: () => åbn(o)},
+    h("span", {class: "jo-m" + (færdig ? " ok" : "")}, færdig ? "✓" : "○"),
+    h("span", {class: "jo-t"}, h("b", {}, o.titel),
+      færdig ? h("span", {class: o.konklusion ? "" : "muted"}, o.konklusion || "Ingen konklusion skrevet")
+        : o.deadline ? h("span", {class: "muted"}, "Frist " + visDato(o.deadline)) : null));
+  return h("div", {class: "gruppe", style: "margin-top:16px"},
+    h("div", {style: "display:flex;align-items:center;gap:8px"}, h("div", {class: "overskrift", style: "margin:0"}, "Opgaver og konklusioner"),
+      h("span", {class: "pill" + (st.åbne.length ? "" : " grøn")}, st.åbne.length ? `${st.åbne.length} åbne` : "Ingen åbne"), h("div", {class: "spacer"}),
+      h("button", {class: "btn lille", type: "button", onclick: () => { fane = "opgaver"; OP.vis = "ny"; OP.ny = {job_noegle: st.key}; tegn(); window.scrollTo(0, 0); }}, "+ Opgave til jobbet")),
+    alle.length ? h("div", {class: "kort jo"}, færdige.map(o => række(o, true)), st.åbne.map(o => række(o, false)))
+      : h("div", {class: "muted lille", style: "margin-top:6px"}, "Ingen opgaver på jobbet endnu."));
+}
+// valg af job til en opgave: kommende jobs, plus det job opgaven allerede har (også når det er passeret)
+function jobValg(nu) {
+  const v = [["", "Intet job"], ...jobs().map(j => [jobNøgle(j), `${kortDato(j.dato)} ${j.navn}`])];
+  if (nu && !v.some(([k]) => k === nu)) v.splice(1, 0, [nu, `${kortDato(nu.slice(0, 10))} ${nu.slice(11)}`]);
+  return v;
 }
 
 // ---------- editor (fuld skærm) ----------
@@ -1663,7 +1689,7 @@ function visIDag() {
           h("span", {}, e.titel, e.sted ? h("span", {class: "muted lille"}, " · " + e.sted) : null))) : h("div", {class: "muted lille"}, "Intet i kalenderen")),
         sideKort(`Deadlines de næste 7 dage (${dl.length})`, dl.length ? dl.slice(0, 8).map(o => h("button", {class: "mini link", type: "button", disabled: o.id === "…",
           onclick: () => { fane = "opgaver"; OP.vis = "opgave"; OP.valgt = o.id; tegn(); }},
-          h("span", {class: "lille tid " + (o.deadline < idag ? "rød" : "muted") + (o.prioritet === "Høj" && o.deadline <= idag ? " blink" : "")}, kortDato(o.deadline)), h("span", {class: o.prioritet === "Høj" && o.deadline <= idag ? "rød" : ""}, o.titel))) : h("div", {class: "muted lille"}, "Ingen")),
+          h("span", {class: "lille tid " + (o.deadline < idag || o.prioritet === "Høj" && o.deadline <= idag ? "rød" : "muted")}, kortDato(o.deadline)), h("span", {class: o.prioritet === "Høj" && o.deadline <= idag ? "rød" : ""}, o.titel))) : h("div", {class: "muted lille"}, "Ingen")),
         sideKort(`Forespørgsler der venter (${henv.length})`, henv.length ? henv.slice(0, 6).map(x => h("button", {class: "mini link", type: "button", disabled: x.id === "…",
           onclick: () => { fane = "foresp"; FQ.vis = "h"; FQ.valgt = x.id; tegn(); }},
           h("span", {class: "pill " + pillKlasse(x.status)}, x.status), h("span", {}, x.kunde))) : h("div", {class: "muted lille"}, "Ingen")),
@@ -1758,7 +1784,7 @@ function opgaveDetalje(o) {
   const efter = ["opgaver"];
   const ret = (felt, v, tekst) => kør("ret", [String(o.id), `${felt}=${v ?? ""}`], {tekst: tekst || `#${o.id} ${felt}`, efter,
     med: () => { if (v === "" || v == null) delete o[felt]; else o[felt] = felt === "estimat" ? Number(v) : v; }});
-  const st = {krav: "", note: "", faktisk: o.estimat ?? ""};
+  const st = {krav: "", note: "", faktisk: o.estimat ?? "", konklusion: o.konklusion || ""};
   const infoLinje = (navn, v) => v ? h("div", {class: "info"}, h("div", {class: "etiket"}, navn), h("div", {class: "pre"}, v)) : null;
   return h("div", {class: "kort2"},
     h("div", {class: "kh"}, h("h2", {}, `#${o.id} ${o.titel}`)),
@@ -1769,6 +1795,11 @@ function opgaveDetalje(o) {
       felt("Planlagt", datoInput(o.planlagt, v => ret("planlagt", v))),
       felt("Prioritet", sel(["", ...PRIO].map(p => [p, p || "–"]), {v: o.prioritet || ""}, "v", v => ret("prioritet", v))),
       felt("Estimat (min)", h("input", {class: "input", type: "number", min: "0", value: o.estimat ?? "", onchange: e => ret("estimat", e.target.value)}))),
+    o.job_opgave ? null : felt("Job", sel(jobValg(o.job_noegle), {v: o.job_noegle || ""}, "v", v => ret("job_noegle", v, v ? `#${o.id} koblet til jobbet` : `#${o.id} uden job`))),
+    o.status === "Færdig" ? h("div", {class: "info"}, h("div", {class: "etiket"}, "Konklusion (vises på jobbet)"),
+      h("div", {class: "rk", style: "margin-top:0"}, inp(st, "konklusion", {placeholder: "Fx Singa til karaoke, aftalt med Christoffer"}),
+        h("button", {class: "btn", type: "button", onclick: () => { const k = st.konklusion.trim(); if (k === (o.konklusion || "")) return;
+          ret("konklusion", k, `#${o.id} konklusion`); }}, "Gem"))) : null,
     infoLinje("Formål", o.formaal), infoLinje("Første skridt", o.foerste_skridt), infoLinje("Kontekst", o.kontekst), infoLinje("Venter på", o.venter_paa),
     h("div", {class: "etiket", style: "margin-top:16px"}, "Færdig når"),
     krav.map((k, i) => h("label", {class: "cb" + (k.ok ? " gjort" : "")},
@@ -1785,10 +1816,12 @@ function opgaveDetalje(o) {
         kør("note", ["--", String(o.id), st.note.trim()], {tekst: `#${o.id} note`, efter, med: () => { (o.noter ||= []).push(`${iDag()}: ${st.note.trim()}`); }}); }}, "Gem")),
     o.status !== "Færdig" ? h("div", {class: "afslut"},
       h("div", {class: "etiket"}, alleOk ? "Marker som færdig" : "Kryds alle krav af for at markere færdig"),
+      felt("Konklusion: hvad blev resultatet? (én linje, vises på jobbet)", inp(st, "konklusion", {placeholder: "Fx Singa til karaoke, aftalt med Christoffer"})),
       h("div", {class: "rk"}, felt("Faktisk tid (min)", inp(st, "faktisk", {type: "number", min: "0"})),
-        h("button", {class: "btn primaer", type: "button", disabled: !alleOk, style: "align-self:end", onclick: () =>
-          kør("faerdig", [String(o.id), ...(String(st.faktisk).trim() ? [`--faktisk=${st.faktisk}`] : [])], {tekst: `#${o.id} færdig`, efter,
-            med: () => { o.status = "Færdig"; o.faerdig_dato = iDag(); }})}, "✓ Færdig"))) : null);
+        h("button", {class: "btn primaer", type: "button", disabled: !alleOk, style: "align-self:end", onclick: () => {
+          const k = st.konklusion.trim();
+          kør("faerdig", [String(o.id), ...(String(st.faktisk).trim() ? [`--faktisk=${st.faktisk}`] : []), ...(k ? [`--konklusion=${k}`] : [])], {tekst: `#${o.id} færdig`, efter,
+            med: () => { o.status = "Færdig"; o.faerdig_dato = iDag(); if (k) o.konklusion = k; }}); }}, "✓ Færdig"))) : null);
 }
 function nyOpgaveForm() {
   const n = OP.ny;
@@ -1805,11 +1838,12 @@ function nyOpgaveForm() {
       felt("Kategori", sel(KATEGORI_O, n, "kategori")),
       felt("Type", sel([["", "–"], ...typer], n, "type"))),
     felt("Første skridt (valgfrit)", inp(n, "foerste_skridt")),
+    felt("Job (valgfrit)", sel(jobValg(n.job_noegle), n, "job_noegle")),
     h("button", {class: "btn primaer stor", type: "button", style: "margin-top:12px", onclick: () => {
       const krav = (n.krav || "").split("\n").map(x => x.trim()).filter(Boolean);
       if (!(n.titel || "").trim() || !(n.formaal || "").trim() || !krav.length) { alert("Titel, formål og mindst ét krav skal udfyldes."); return; }
       const j = {titel: n.titel.trim(), formaal: n.formaal.trim(), faerdig_naar: krav.map(k => ({krav: k})),
-        ...Object.fromEntries(["deadline", "prioritet", "estimat", "kategori", "type", "foerste_skridt"].filter(k => String(n[k] ?? "").trim()).map(k => [k, String(n[k]).trim()]))};
+        ...Object.fromEntries(["deadline", "prioritet", "estimat", "kategori", "type", "foerste_skridt", "job_noegle"].filter(k => String(n[k] ?? "").trim()).map(k => [k, String(n[k]).trim()]))};
       kør("opret", ["@json"], {json: j, tekst: `Ny opgave '${j.titel}'`, efter: ["opgaver"], med: () => {
         D.opgaver.push({...j, id: "…", status: "Ikke startet", faerdig_naar: j.faerdig_naar.map(k => ({...k, ok: false})), estimat: j.estimat ? Number(j.estimat) : undefined});
         OP.vis = null; OP.ny = {};
