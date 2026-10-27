@@ -881,7 +881,7 @@ function sætAnlæg(navn) {
 }
 function sætAnlægAntal(g, d) {   // gruppens antal (fx gammel Lys-gruppe) eller et anlægs eget antal (g = anlægget)
   const a = g.antal, nu = S.antal[g.navn] || 0;
-  let n = nu + d;
+  let n = nu + d * (a.trin || 1);   // trin: fx Helix 2 ad gangen
   if (nu === 0 && d > 0) n = a.min;
   else if (n < a.min) n = g.gruppe ? a.min : 0;   // et anlægs eget tal kan ikke gå under min (vælg anlægget fra i stedet)
   else if (n > a.max) n = a.max;
@@ -2494,7 +2494,7 @@ function visPakker() {
           felt("Ikon", h("select", {class: "input", onchange: e => { x.ikon = e.target.value; tegn(); }}, h("option", {value: ""}, "ingen"), Object.keys(IKON).map(k => h("option", {value: k, selected: x.ikon === k}, k)))),
           felt("Trin", h("select", {class: "input", onchange: e => { x.gruppe = e.target.value; tegn(); }}, o.grupper.map(g => h("option", {value: g.navn, selected: x.gruppe === g.navn}, g.navn))))),
         h("div", {class: "felter3"},
-          felt("Eget antal (fx 2-8, tomt = nej)", h("input", {class: "input", value: x.antal ? `${x.antal.min}-${x.antal.max}` : "", placeholder: "2-8", oninput: e => { const m = e.target.value.match(/^\s*(\d+)\s*-\s*(\d+)\s*$/); if (m) x.antal = {min: Number(m[1]), max: Number(m[2])}; else if (!e.target.value.trim()) delete x.antal; }})),
+          felt("Eget antal (fx 2-8, eller 2-8/2 = spring på 2; tomt = nej)", h("input", {class: "input", value: x.antal ? `${x.antal.min}-${x.antal.max}` + (x.antal.trin > 1 ? `/${x.antal.trin}` : "") : "", placeholder: "2-8/2", oninput: e => { const m = e.target.value.match(/^\s*(\d+)\s*-\s*(\d+)\s*(?:\/\s*(\d+))?\s*$/); if (m) x.antal = {min: Number(m[1]), max: Number(m[2]), ...(m[3] && Number(m[3]) > 1 ? {trin: Number(m[3])} : {})}; else if (!e.target.value.trim()) delete x.antal; }})),
           felt("Kun ved antal fra-til (tomt = altid)", h("input", {class: "input", value: x.fra != null || x.til != null ? `${x.fra ?? ""}-${x.til ?? ""}` : "", placeholder: "4-8", oninput: e => { const m = e.target.value.match(/^\s*(\d*)\s*-\s*(\d*)\s*$/); if (m) { if (m[1]) x.fra = Number(m[1]); else delete x.fra; if (m[2]) x.til = Number(m[2]); else delete x.til; } else if (!e.target.value.trim()) { delete x.fra; delete x.til; } }})),
           felt("Tallet regnes af", h("select", {class: "input", onchange: e => { if (e.target.value) x.af = e.target.value; else delete x.af; }}, h("option", {value: ""}, "egen / trinnets"), talNavne.filter(n => n !== x.navn).map(n => h("option", {value: n, selected: x.af === n}, n))))),
         h("div", {class: "felter3"},
