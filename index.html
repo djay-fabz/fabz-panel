@@ -591,8 +591,8 @@ function opfrisk() {
 }
 
 // ---------- jobs ----------
-function jobs() {
-  const idag = iDag();
+function jobs(fortid = false) {   // fortid: også passerede jobs (link fra påmindelsen dagen efter festen)
+  const idag = fortid ? "0000" : iDag();
   return (D.kalender?.begivenheder || []).filter(e => e.kalender === "bookinger").map(e => {
     const m = /^\s*DJ\s*:\s*(.+)/i.exec(e.titel || "");
     return m ? {navn: m[1].trim(), dato: e.start.slice(0, 10), sted: e.sted || "", besk: e.beskrivelse || ""} : null;
@@ -690,8 +690,12 @@ const jobTider = j => {   // linjerne under TIDER i bookingen (kun læsning)
 const FILTRE = [["alle", "Alle jobs"], ["pak", "Pakkeliste mangler"], ["kort", "Skilte mangler"], ["koersel", "Kørsel mangler"], ["opg", "Har åbne opgaver"]];
 function visJobs() {
   const js = jobs();
-  const j0 = JH ? js.find(x => jobNøgle(x) === JH) : null;
-  if (JH && !j0) JH = null;
+  const j0 = JH ? jobs(true).find(x => jobNøgle(x) === JH) : null;
+  if (JH && !j0) {   // jobbet er gledet ud af kalenderen (den gemmer kun fra i går): vis opgaven om sangene i stedet
+    const so = D.opgaver.find(o => o.job_noegle === JH && o.job_opgave === "sangene" && o.status !== "Færdig");
+    JH = null;
+    if (so) { fane = "opgaver"; OP.vis = "opgave"; OP.valgt = so.id; return tegn(); }
+  }
   if (j0) return visJobSide(j0);
   const valg = h("select", {class: "input", onchange: e => { if (e.target.value) åbnListe(e.target.value); }},
     h("option", {value: ""}, "Åbn en gemt liste …"), D.lister.map(p => h("option", {value: p.navn}, p.navn)));
@@ -740,9 +744,15 @@ function visJobSide(j) {   // alt til ét job samlet: pakkeliste, kort, kørsel,
 // Pakkeliste- og skilteopgaverne står i deres egne afsnit, så de vises kun her, mens de er åbne.
 function jobOpgaver(j, st) {
   const alle = D.opgaver.filter(o => o.job_noegle === st.key);
-  const færdige = alle.filter(o => o.status === "Færdig" && !o.job_opgave).sort((a, b) => (b.faerdig_dato || "").localeCompare(a.faerdig_dato || ""));
+  const færdige = alle.filter(o => o.status === "Færdig" && !["pakkeliste", "festkort"].includes(o.job_opgave)).sort((a, b) => (b.faerdig_dato || "").localeCompare(a.faerdig_dato || ""));
   const åbn = o => { fane = "opgaver"; OP.vis = "opgave"; OP.valgt = o.id; OP.filter = o.status === "Færdig" ? "Færdige" : OP.filter; tegn(); window.scrollTo(0, 0); };
-  const række = (o, færdig) => h("button", {type: "button", class: "jo-r", onclick: () => åbn(o)},
+  const sendt = o => kør("sangene-sendt", [`--dato=${j.dato}`, `--job=${j.navn}`], {tekst: "Sangene sendt", efter: ["opgaver"],
+    med: () => { o.status = "Færdig"; o.faerdig_dato = iDag(); o.konklusion = `Linket er sendt ${kortDato(iDag())}`; (o.faerdig_naar || []).forEach(k => { k.ok = true; }); }});
+  const række = (o, færdig) => !færdig && o.job_opgave === "sangene" ? h("div", {class: "jo-r"},
+    h("span", {class: "jo-m"}, "○"),
+    h("span", {class: "jo-t", style: "flex:1"}, h("b", {}, o.titel), h("span", {class: "pre muted"}, (o.kontekst || "").split("\n").filter(l => /^(Link|Mail|Telefon):/.test(l)).join("\n"))),
+    h("button", {class: "btn godkend lille", type: "button", disabled: o.id === "…", onclick: () => { if (confirm("Har du sendt linket til kunden? Så stopper påmindelserne.")) sendt(o); }}, "✓ Sendt"))
+  : h("button", {type: "button", class: "jo-r", onclick: () => åbn(o)},
     h("span", {class: "jo-m" + (færdig ? " ok" : "")}, færdig ? "✓" : "○"),
     h("span", {class: "jo-t"}, h("b", {}, o.titel),
       færdig ? h("span", {class: o.konklusion ? "" : "muted"}, o.konklusion || "Ingen konklusion skrevet")
@@ -1165,6 +1175,14 @@ function festkortBlok(j, st, gentegn) {
   return h("div", {class: "godk" + (rec ? " ok" : ""), style: "flex-direction:column;align-items:stretch"},
     h("div", {style: "display:flex;align-items:center;gap:10px"},
       h("span", {class: "fyld"}, rec ? `✓ Festkort lavet ${kortDato(rec.lavet)} · kampagne ${rec.kampagne}` : "Festkort og barskilt"),
+      rec ? h("button", {class: "btn ghost lille", type: "button", onclick: () => {
+        if (!confirm(`Fjern festkortene til ${j.navn}? Opgaven "Send sangene fra i aften" fjernes også, så du ikke bliver mindet om den.`)) return;
+        kør("festkort-slet", [`--dato=${j.dato}`, `--job=${j.navn}`], {tekst: `Festkort fjernet: ${j.navn}`, efter: ["festkort", "opgaver"], med: () => {
+          const k = jobNøgle(j);
+          D.festkort = (D.festkort || []).filter(r => r.job_noegle !== k);
+          D.opgaver = D.opgaver.filter(o => !(o.job_noegle === k && o.job_opgave === "sangene" && o.status !== "Færdig"));
+          fk.svar = null; gentegn();
+        }}); }}, "Fjern kortene") : null,
       h("button", {class: "btn " + (rec ? "ghost lille" : "godkend"), type: "button", onclick: () => { fk.åben = !fk.åben; gentegn(); }},
         fk.åben ? "Luk" : rec ? "Lav igen" : "Lav kort")),
     fk.åben ? h("div", {style: "margin-top:10px;color:var(--tekst);font-weight:400"},
@@ -3184,6 +3202,8 @@ async function start() {
   $("rod").replaceChildren(h("div", {class: "tom"}, "Henter data …"));
   try { await hentData(); } catch (e) { visOpsaet(e.message); return; }
   S = null; L = null;
+  const hj = /^#job=(.+)$/.exec(location.hash);
+  if (hj) { fane = "pakkelister"; JH = decodeURIComponent(hj[1]); history.replaceState(null, "", location.pathname + location.search); }
   tegn();
 }
 window.addEventListener("beforeunload", e => {
