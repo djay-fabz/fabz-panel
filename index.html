@@ -490,9 +490,13 @@ async function hentData() {
   D.mo = mo ? await mo.json() : null;
   const pv = await laesFil("data/privat.json");   // privatøkonomi fra banken (bank.yml: tools/bank_sync.py + fabz.py privat)
   D.privat = pv ? await pv.json() : null;
+  const pr = await laesFil("data/priser.json");   // pakkerne i Tilbud (samme priser som fabz-tilbud/priser.md, tjekkes med tools/priser.py)
+  D.priser = pr ? await pr.json() : null;
   D.leads = await laesValgfri("data/leads.json");   // leadlisten (Træk en kontakt)
   const mo2 = await laesFil("data/mailoversigt.json");   // dagens mailoversigt (tools/mailoversigt.py via panel.yml ved Mødt ind)
   D.mailoversigt = mo2 ? await mo2.json() : null;
+  const vg = await laesFil("data/vagter.json");   // vagter fra Planday/Deltaplan (tools/vagter.py i kalender.yml)
+  D.vagter = vg ? await vg.json() : null;
 }
 async function laesKkTekster() {   // Oscars rettede tekster, ellers standardteksterne fra tools/klubkort
   const r = await laesFil("data/klubkort_tekster.json");
@@ -735,6 +739,7 @@ function visJobSide(j) {   // alt til ét job samlet: pakkeliste, kort, kørsel,
     h("h1", {style: "margin-top:10px"}, j.navn),
     h("div", {class: "muted"}, [`${DAGE[d.getDay()]} ${visDato(j.dato)}`, j.sted].filter(Boolean).join(" · ")),
     tider.length ? h("div", {class: "muted lille", style: "margin-top:6px"}, tider.join(" · ")) : null,
+    h("button", {class: "btn lille", type: "button", style: "margin-top:10px", onclick: () => tbStart(tbFraJob(j))}, "Lav tilbud"),
     jobOpgaver(j, st),
     afsnit("Pakkeliste", st.pak, st.klar, h("button", {class: "btn primaer lille", type: "button", onclick: () => åbnJob(j)}, "Åbn pakkeliste")),
     afsnit("Skilte", st.kortTekst, st.kort, h("button", {class: "btn lille", type: "button", onclick: () => { KT.job = st.key; KT.slags = null; KT.fk = KT.kk = null; fane = "kort"; tegn(); window.scrollTo(0, 0); }}, "Åbn skilte")),
@@ -1526,7 +1531,7 @@ async function gemLager() {
 
 // ---------- fælles: kør fabz.py-kommandoer fra panelet ----------
 const FILER = {henvendelser: "data/henvendelser.json", opgaver: "data/opgaver.json", dagsplaner: "data/dagsplaner.json",
-               ideer: "data/ideer.json", indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json", salgslog: "data/salgslog.json", mo: "data/maanedsoversigt.json", privat: "data/privat.json", strategi: "data/strategi.json", leads: "data/leads.json", mailoversigt: "data/mailoversigt.json"};
+               ideer: "data/ideer.json", indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json", salgslog: "data/salgslog.json", mo: "data/maanedsoversigt.json", privat: "data/privat.json", strategi: "data/strategi.json", leads: "data/leads.json", mailoversigt: "data/mailoversigt.json", vagter: "data/vagter.json"};
 async function laesValgfri(p) { const r = await laesFil(p); return r ? r.json() : []; }
 async function genindlæs(navne) { await Promise.all(navne.map(async n => { D[n] = n === "kkTekster" ? await laesKkTekster() : await laesValgfri(FILER[n]); })); }
 const plusDage = (iso, n) => { const d = dag(iso); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
@@ -1705,6 +1710,7 @@ function visIDag() {
         sideKort("Kalender i dag", kal.length ? kal.map(e => h("div", {class: "mini"},
           h("span", {class: "muted lille tid"}, e.heldag ? "Hele dagen" : e.start.slice(11, 16).replace(":", ".")),
           h("span", {}, e.titel, e.sted ? h("span", {class: "muted lille"}, " · " + e.sted) : null))) : h("div", {class: "muted lille"}, "Intet i kalenderen")),
+        vagterKort(idag, sideKort),
         sideKort(`Deadlines de næste 7 dage (${dl.length})`, dl.length ? dl.slice(0, 8).map(o => h("button", {class: "mini link", type: "button", disabled: o.id === "…",
           onclick: () => { fane = "opgaver"; OP.vis = "opgave"; OP.valgt = o.id; tegn(); }},
           h("span", {class: "lille tid " + (o.deadline < idag || o.prioritet === "Høj" && o.deadline <= idag ? "rød" : "muted")}, kortDato(o.deadline)), h("span", {class: o.prioritet === "Høj" && o.deadline <= idag ? "rød" : ""}, o.titel))) : h("div", {class: "muted lille"}, "Ingen")),
@@ -2060,6 +2066,7 @@ function forespDetalje(x) {
   const ændret = Object.keys(r).filter(k => String(r[k] ?? "") !== String(x[k] ?? ""));
   return h("div", {class: "kort2"},
     h("div", {class: "kh"}, h("h2", {}, x.kunde || "?"), h("span", {class: "muted lille"}, `H${x.id} · modtaget ${x.modtaget ? kortDatoÅr(x.modtaget) : "?"}`)),
+    h("button", {class: "btn lille", type: "button", style: "margin-bottom:10px", onclick: () => tbStart(tbFraForesp(x))}, "Lav tilbud"),
     seg(H_STATUS, x.status, s => { if (s !== x.status) sætStatus(s); }),
     x.status === "Booket" ? h("div", {class: "godk ok", style: "margin-top:12px"},
       h("span", {class: "fyld"}, x.eventdato ? `Booket ${kortDatoÅr(x.eventdato)}` : "Booket, men uden eventdato"),
@@ -2181,7 +2188,8 @@ function tbBeregn(T) {   // samme regler som lav_tilbud.py. Giver {fejl} eller a
   const erhverv = T.kundetype === "erhverv", ob = T.type === "ordrebekraeftelse";
   const idag = T.dato || iDag(), ev = T.evdato;
   if (!ev) return {fejl: "Skriv arrangementets dato."};
-  if (!(T.firma || T.navn).trim()) return {fejl: "Skriv kundens firma eller navn."};
+  const firma = T.kundetype === "erhverv" ? (T.firma || "") : "";   // privat har intet firma (feltet er skjult)
+  if (!(firma || T.navn).trim()) return {fejl: T.kundetype === "erhverv" ? "Skriv kundens firma eller navn." : "Skriv kundens navn."};
   const gyldig = ob ? null : plusDage(idag, 14);
   const linjer = [];
   for (const l of T.linjer) {
@@ -2217,7 +2225,7 @@ function tbBeregn(T) {   // samme regler som lav_tilbud.py. Giver {fejl} eller a
     `Depositum på 20 % (${tbKr(dep)}) faktureres ved bekræftelse. Datoen er jeres, når depositum er betalt. Depositum refunderes ikke.`,
     `Restbeløbet (${tbKr(total - dep)}) betales senest ${tbDato(tbMinus(ev, 14))}.`, afl,
     "Forlængelse på aftenen: 3.000 kr. pr. påbegyndt time."];
-  const navn = T.firma || T.navn || "";
+  const navn = firma || T.navn || "";
   const nr = idag.replace(/-/g, "") + "-" + navn.replace(/[^A-Za-zÆØÅæøå0-9]/g, "").slice(0, 12);
   return {erhverv, ob, idag, ev, gyldig, linjer, s, moms, total, dep, betaling, nr, mange, restDato: tbMinus(ev, 14)};
 }
@@ -2225,7 +2233,7 @@ function tbBeregn(T) {   // samme regler som lav_tilbud.py. Giver {fejl} eller a
 function tbHtml(T, R) {   // HTML'en fra lav_tilbud.py, linje for linje
   const {erhverv, ob, idag, ev, linjer, s, moms, total, betaling, nr} = R;
   const titel = ob ? "Ordrebekræftelse" : "Tilbud";
-  const kunde = [T.firma, T.navn, T.mail, T.tlf].map(x => (x || "").trim()).filter(Boolean).map(tbEsc).join("<br>");
+  const kunde = [erhverv ? T.firma : "", T.navn, T.mail, T.tlf].map(x => (x || "").trim()).filter(Boolean).map(tbEsc).join("<br>");
   const evRows = [["Anledning", T.anledning], ["Dato", tbDato(ev)], ["Sted", T.sted], ["Tider", T.tider], ["Gæster", T.gaester]]
     .filter(([, b]) => (b || "").trim()).map(([a, b]) => `<tr><td>${a}</td><td>${tbEsc(b.trim())}</td></tr>`).join("");
   let pris = linjer.map(l => `<tr><td>${tbEsc(l.tekst)}</td><td class="n">${tbKr(l.beloeb)}</td></tr>`).join("");
@@ -2286,6 +2294,76 @@ ${T.noter.trim() ? `<p class="ok">${tbEsc(T.noter.trim())}</p>` : ""}
 </body></html>`;
 }
 
+// ---- udfyld fra en forespørgsel eller et job (kun data panelet har i forvejen) ----
+function tbStart(felter) {
+  if (!TB) { try { TB = JSON.parse(lager.get(TB_KEY) || "null"); } catch { TB = null; } }
+  if (TB && (TB.firma || TB.navn || "").trim() && !confirm("Erstat det tilbud, der allerede er i gang i Tilbud-fanen?")) return;
+  TB = {...tbNy(), ...felter};
+  TB.indhold = TB_INDHOLD[TB.kundetype].join("\n");
+  if (TB.pakke) tbVælgPakke(TB.pakke);
+  tbGem(); fane = "tilbud"; JH = null; tegn(); window.scrollTo(0, 0);
+}
+const tbKontakt = t => ({mail: ((t || "").match(/[\w.+-]+@[\w-]+(\.[\w-]+)+/) || [""])[0],
+  tlf: ((t || "").replace(/[\w.+-]+@\S+/g, "").match(/(\+45)?[\d ]{8,}/) || [""])[0].trim()});
+function tbTypeFelter(type, dato) {   // forespørgslens/jobbets type -> kundetype, anledning og pakke
+  const t = (type || "").toLowerCase();
+  if (/bryllup/.test(t)) return {kundetype: "privat", anledning: "Bryllup"};
+  if (/privat|fødselsdag|fest$/.test(t)) return {kundetype: "privat", anledning: "Fest"};
+  if (/erhverv|firma|julefrokost/.test(t)) { const jul = /julefrokost/.test(t) || (dato || "").slice(5, 7) === "12" || (dato || "").slice(5, 7) === "11";
+    return {kundetype: "erhverv", anledning: jul ? "Julefrokost" : "Firmafest", pakke: "firmafest"}; }
+  return {kundetype: "erhverv", anledning: ""};
+}
+function tbFraForesp(x) {
+  const k = tbKontakt(x.kontakt), sted = ((x.note || "").match(/[^.\n]*\b\d{4} [A-ZÆØÅ][\wæøå]+/) || [""])[0].trim();
+  return {navn: x.kunde || "", mail: k.mail, tlf: k.tlf, evdato: x.eventdato || "", gaester: x.gaester ? String(x.gaester) : "", sted,
+    ...tbTypeFelter(x.type, x.eventdato)};
+}
+function tbFraJob(j) {
+  const t = (j.besk || "").replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "");
+  const kunde = (t.split(/\n\s*KUNDE\s*\n/)[1] || t).split(/\n\s*[A-ZÆØÅ ]{3,}\s*\n/)[0];
+  const f = n => ((kunde.match(new RegExp(`^\\s*${n}\\s*:[ \\t]*(.*)$`, "mi")) || [])[1] || "").trim();
+  const kundeNavn = f("Kunde").replace(/\s*\(.*$/, ""), parentes = (f("Kunde").match(/\(([^)]*)\)/) || [])[1] || "";
+  const tf = tbTypeFelter(f("Jobtype") || parentes, j.dato);
+  const anl = parentes.split(",").map(x => x.trim()).find(x => x && !/^(privat|erhverv)$/i.test(x));
+  const erhverv = tf.kundetype === "erhverv";
+  return {...tf, ...(anl ? {anledning: anl[0].toUpperCase() + anl.slice(1)} : {}),
+    firma: erhverv ? kundeNavn : "", navn: f("Kontaktperson") || (erhverv ? "" : kundeNavn), mail: f("Mail"), tlf: f("Telefon"),
+    evdato: j.dato, sted: j.sted || "", tider: jobTider(j).filter(l => !/:\s*$|ikke aftalt|skal aftales/i.test(l)).join(", ")};
+}
+// ---- faste pakker fra data/priser.json ----
+const tbPakke = id => (D.priser?.pakker || []).find(p => p.id === id);
+function tbVælgPakke(id) {
+  const p = tbPakke(id), før = TB.pakke;
+  TB.pakke = p ? id : "";
+  TB.linjer = TB.linjer.filter(l => !l.kilde);   // pakkens og tilkøbenes gamle linjer ud, Oscars egne ekstra linjer bliver
+  if (p && !før && TB.linjer.length) TB.linjer.shift();   // første pakke: den håndskrevne hovedlinje erstattes af pakken
+  if (!p) { if (!TB.linjer.length) TB.linjer = [{tekst: "", beloeb: ""}]; return; }
+  TB.kundetype = p.kundetype;
+  TB.indhold = p.indhold.join("\n");
+  const anl = (TB.anledning || "").trim().toLowerCase() || p.navn.split(" ")[0].toLowerCase();
+  TB.linjer = [{tekst: p.linje.replace("{anledning}", anl), beloeb: String(p.pris), kilde: "pakke"}, ...TB.linjer.filter(l => l.tekst.trim() || String(l.beloeb).trim())];
+}
+function tbTilkøb(t, til) {
+  TB.linjer = TB.linjer.filter(l => l.kilde !== "tk:" + t.id);
+  if (til) TB.linjer.push({tekst: t.navn, beloeb: String(t.pris), kilde: "tk:" + t.id});
+}
+function tbPakkeVælger() {
+  const P = D.priser;
+  if (!P) return null;
+  const grupper = [...new Set(P.pakker.map(p => p.gruppe))];
+  const vælg = h("select", {class: "input", onchange: e => { tbVælgPakke(e.target.value); tbGem(); tegn(); }},
+    h("option", {value: "", selected: !TB.pakke}, "Ingen pakke (skriv selv)"),
+    grupper.map(g => h("optgroup", {label: g}, P.pakker.filter(p => p.gruppe === g).map(p =>
+      h("option", {value: p.id, selected: TB.pakke === p.id}, `${p.navn}, ${p.fra ? "fra " : ""}${tbKr(p.pris)} ${p.kundetype === "erhverv" ? "ekskl." : "inkl."} moms`)))));
+  const tk = P.tilkoeb.filter(t => t.til.includes(TB.pakke));
+  return h("div", {},
+    felt("Pakke fra fabz.dk (udfylder indhold og pris, ret bagefter)", vælg),
+    tk.length ? h("div", {style: "display:grid;gap:6px;margin:-2px 0 10px"}, tk.map(t => h("label", {style: "display:flex;gap:8px;align-items:center"},
+      h("input", {type: "checkbox", checked: TB.linjer.some(l => l.kilde === "tk:" + t.id), onchange: e => { tbTilkøb(t, e.target.checked); tbGem(); tegn(); }}),
+      h("span", {}, `+ ${t.navn}, ${tbKr(t.pris)}`, t.note ? h("span", {class: "muted lille"}, ` (${t.note})`) : null)))) : null,
+    tbPakke(TB.pakke)?.fra ? h("div", {class: "muted lille", style: "margin:-4px 0 10px"}, "Fra-pris: ret beløbet, hvis aftalen er større end standarden.") : null);
+}
+
 function tbPdf() {
   const R = tbBeregn(TB);
   if (R.fejl) { alert(R.fejl); return; }
@@ -2329,7 +2407,9 @@ function visTilbud() {
   const skiftType = v => {
     const std = TB_INDHOLD[TB.kundetype].join("\n");
     if (TB.indhold.trim() === std || !TB.indhold.trim()) TB.indhold = TB_INDHOLD[v].join("\n");   // skift standardpunkterne, hvis de ikke er rettet
-    TB.kundetype = v; tbGem(); tegn();
+    TB.kundetype = v;
+    if (tbPakke(TB.pakke) && tbPakke(TB.pakke).kundetype !== v) tbVælgPakke("");
+    tbGem(); tegn();
   };
   $("rod").replaceChildren(h("div", {class: "side"},
     h("h1", {}, "Tilbud"),
@@ -2338,8 +2418,9 @@ function visTilbud() {
       h("div", {class: "rk", style: "margin-top:0;flex-wrap:wrap"},
         seg([["erhverv", "Erhverv"], ["privat", "Privat"]], TB.kundetype, skiftType),
         seg([["tilbud", "Tilbud"], ["ordrebekraeftelse", "Ordrebekræftelse"]], TB.type, v => { TB.type = v; tbGem(); tegn(); })),
+      h("div", {style: "margin-top:14px"}, tbPakkeVælger()),
       h("div", {class: "overskrift", style: "margin-top:18px"}, "Kunde"),
-      h("div", {class: "felter3"}, felt("Firma", t("firma")), felt("Navn", t("navn")), felt("Mail", t("mail", {type: "email"})), felt("Telefon", t("tlf", {inputmode: "tel"}))),
+      h("div", {class: "felter3"}, TB.kundetype === "erhverv" ? felt("Firma", t("firma")) : null, felt("Navn", t("navn")), felt("Mail", t("mail", {type: "email"})), felt("Telefon", t("tlf", {inputmode: "tel"}))),
       h("div", {class: "overskrift", style: "margin-top:18px"}, "Arrangement"),
       h("div", {class: "felter3"},
         felt("Anledning", t("anledning", {placeholder: "Julefrokost"})),
@@ -2585,6 +2666,32 @@ function ruteKort(e) {   // ét kort pr. stop og pr. kørsel (kan printes)
       e.ophold ? h("div", {class: "muted", style: "margin-top:6px"}, `Ophold ${e.ophold} min`) : null,
       e.venter ? h("div", {class: "muted", style: "margin-top:4px"}, `Tid til overs ${e.venter} min`) : null,
       e.note ? h("div", {class: "rnote"}, "Husk: " + e.note) : null));
+}
+// Vagter (Oscar 27/10): kollisioner med bookinger, de næste vagter, ændringer de sidste 3 dage og listen over datoer,
+// hvor han skal gøre sig utilgængelig i Planday/Deltaplan. Data fra tools/vagter.py (dagligt i kalender.yml, Pushover ved nyt).
+const VG = {liste: false};
+function vagterKort(idag, sideKort) {
+  const v = D.vagter, kilder = v?.kilder || [];
+  const navn = k => ({planday: "Planday", deltaplan: "Deltaplan"})[k] || k;
+  const tid = x => kortDato(x.start.slice(0, 10)) + (x.heldag ? "" : ` ${x.start.slice(11, 16).replace(":", ".")}-${x.slut.slice(11, 16).replace(":", ".")}`);
+  if (!kilder.length) return sideKort("Vagter", h("div", {class: "muted lille"}, "Planday og Deltaplan er ikke koblet på endnu."));
+  const kol = (v.kollisioner || []);
+  const næste = (v.vagter || []).filter(x => x.slut.slice(0, 10) >= idag).slice(0, 6);
+  const nyt = (v.aendringer || []).filter(x => x.tid.slice(0, 10) >= plusDage(idag, -3)).slice(-6).reverse();
+  const utilg = v.utilgaengelig || [];
+  const tekst = utilg.map(x => `${kortDato(x.dato)} ${x.dato.slice(0, 4)}: ${x.bookinger.join(", ")}`).join("\n");
+  return h("div", {class: "kort2", id: "vagter"},
+    h("div", {class: "kh"}, h("h3", {}, "Vagter · " + kilder.map(navn).join(" og ")),
+      h("button", {class: "btn lille", type: "button", title: "Datoer med bookinger de næste 6 måneder", onclick: () => { VG.liste = !VG.liste; tegn(); }}, VG.liste ? "Skjul listen" : `Utilgængelig (${utilg.length})`)),
+    kol.map(x => h("div", {class: "mini"}, h("span", {class: "pill rd"}, "kollision"), h("span", {class: "rød"}, `${kortDato(x.dato)}: ${navn(x.vagt.kalender)}-vagt og ${x.booking}`))),
+    nyt.map(x => h("div", {class: "mini"}, h("span", {class: "pill " + (x.type === "ny" ? "g" : "y")}, x.type), h("span", {class: x.type === "aflyst" ? "muted" : ""}, `${navn(x.vagt.kalender)} ${tid(x.vagt)}`))),
+    næste.length ? næste.map(x => h("div", {class: "mini"}, h("span", {class: "muted lille tid"}, tid(x)), h("span", {}, navn(x.kalender) + (x.titel ? " · " + x.titel : ""), x.sted ? h("span", {class: "muted lille"}, " · " + x.sted) : null)))
+      : h("div", {class: "muted lille"}, "Ingen kommende vagter"),
+    VG.liste ? h("div", {style: "margin-top:10px"},
+      h("div", {class: "muted lille", style: "margin-bottom:6px"}, "Gør dig utilgængelig på disse datoer i " + kilder.map(navn).join(" og ") + ":"),
+      utilg.length ? h("pre", {class: "lille", style: "white-space:pre-wrap;margin:0 0 8px"}, tekst) : h("div", {class: "muted lille"}, "Ingen bookinger de næste 6 måneder"),
+      utilg.length ? h("button", {class: "btn lille", type: "button", onclick: e => { navigator.clipboard?.writeText(tekst); e.target.textContent = "Kopieret"; }}, "Kopiér datoer") : null) : null,
+    h("div", {class: "muted lille", style: "margin-top:6px"}, "Tjekket " + (v.opdateret || "").replace("T", " kl. ")));
 }
 function mailStatus(idag) {   // Mailoversigten (Oscar 27/10): kører i panel.yml ved Mødt ind; status fra data/mailoversigt.json, knap til at bestille igen
   const m = D.mailoversigt, iDagM = m && m.dato === idag;
