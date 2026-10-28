@@ -95,6 +95,7 @@ a.btn{display:inline-block;text-decoration:none}
 .andre select{max-width:280px}
 
 /* editor (fuld skærm) */
+.agr.markeret{outline:2px solid var(--adv);outline-offset:6px;border-radius:10px}
 .vaelg.låst,.liste.låst .lkrop .step,.liste.låst .lkrop .ekstra,.liste.låst .lkrop .notefelt,.liste.låst .lhoved .felter,.liste.låst .lhoved .startfra,.liste.låst .anlaeg{pointer-events:none}
 .vaelg.låst{opacity:.45}.liste.låst .lkrop .step,.liste.låst .lkrop .ekstra{opacity:.4}
 .ed{display:grid;grid-template-columns:minmax(0,1fr) minmax(380px,460px);height:calc(100vh - var(--top))}
@@ -742,7 +743,8 @@ function visJobs() {
         return h("button", {class: "job", type: "button", onclick: () => { JH = st.key; tegn(); window.scrollTo(0, 0); }},
           h("div", {class: "dato"}, h("b", {}, d.getDate()), h("span", {}, MD[d.getMonth()])),
           h("div", {class: "t"}, h("b", {}, j.navn), h("span", {class: "muted lille"}, [DAGE[d.getDay()], j.sted].filter(Boolean).join(" · ")),
-            h("div", {class: "chips", style: "margin-top:6px"}, chip("Pakkeliste: " + st.pak, st.klar, st.dage),
+            h("div", {class: "chips", style: "margin-top:6px"}, (j.sted || "").trim() ? null : h("span", {class: "pill rød-pill"}, "Ingen adresse"),   // Oscar 28/10
+              chip("Pakkeliste: " + st.pak, st.klar, st.dage),
               st.skilteRel ? chip("Skilte: " + st.kortTekst, st.kort, st.dage) : null, chip("Kørsel: " + (st.kørsel ? "gemt" : "ikke lavet"), st.kørsel),
               st.åbne.length ? chip(st.åbne.length + (st.åbne.length === 1 ? " åben opgave" : " åbne opgaver")) : null)),
           h("div", {class: st.dage <= 1 ? "" : "muted lille", style: st.dage <= 1 ? "font-weight:600;white-space:nowrap" : "white-space:nowrap"}, nårTekst(st.dage)));
@@ -759,7 +761,8 @@ function visJobSide(j) {   // alt til ét job samlet: pakkeliste, kort, kørsel,
   $("rod").replaceChildren(h("div", {class: "side"},
     h("button", {class: "btn ghost lille", type: "button", onclick: () => { JH = null; tegn(); window.scrollTo(0, 0); }}, "← Alle jobs"),
     h("h1", {style: "margin-top:10px"}, j.navn),
-    h("div", {class: "muted"}, [`${DAGE[d.getDay()]} ${visDato(j.dato)}`, j.sted].filter(Boolean).join(" · ")),
+    h("div", {class: "muted"}, [`${DAGE[d.getDay()]} ${visDato(j.dato)}`, j.sted].filter(Boolean).join(" · "),
+      (j.sted || "").trim() ? null : h("span", {class: "pill rød-pill", style: "margin-left:8px"}, "Ingen adresse")),
     tider.length ? h("div", {class: "muted lille", style: "margin-top:6px"}, tider.join(" · ")) : null,
     h("button", {class: "btn lille", type: "button", style: "margin-top:10px", onclick: () => tbStart(tbFraJob(j))}, "Lav tilbud"),
     jobOpgaver(j, st),
@@ -819,9 +822,12 @@ function jobValg(nu) {
 }
 
 // ---------- editor (fuld skærm) ----------
+// Transport fra jobbets gemte kørsel (Oscar 28/10: "den skal definere hvad standard er"): "trailer" -> Trailer, "bil" -> Kun bil
+const ruteTransport = j => ({trailer: "Trailer", bil: "Kun bil"})[(D.jobrute || {})[jobNøgle(j)]?.koeretoej] || null;
 function åbnJob(j) {
   const liste = listeTilJob(j), jp = jobplTilJob(j);
   nyEditor({job: j, base: liste, egen: !!liste, jobNavn: j.navn, gemNavn: liste?.navn || j.navn, visGem: false});
+  if (ruteTransport(j)) { S.transport = ruteTransport(j); tegn(); }   // kørslen går forud for standardlistens transport
   if (jp) {   // jobbets egen (godkendte) liste går forud for standardlisten
     indlæs(jp);
     S.transport = jp.transport || S.transport;
@@ -1032,6 +1038,14 @@ function anlægStribe() {   // trin for trin (Oscar 27/10): hvert valg låser og
           stepper(S.antal[g.navn] || "–", d => sætAnlægAntal(g, d), g.antal.navn)) : null),
       h("div", {class: "agrid"}, (pl => o.setups.filter(x => !x.altid && x.gruppe === g.navn).map(x => kort(x, pl)))(plejer(g))),
       i === grupper.length - 1 && sum.length ? h("div", {class: "asum"}, sum.map(t => h("div", {}, t))) : null)),
+    // sidste trin: transport (Oscar 28/10), samme valg som øverst i listen
+    h("div", {class: "agr", id: "trin-transport"},
+      h("div", {class: "agh"}, h("span", {class: "agnr"}, String(grupper.length + 1)), h("span", {class: "agn"}, "Transport"), h("span", {class: "muted lille"}, "vælg én"),
+        S.transport ? null : h("span", {class: "abem", style: "text-align:left"}, "Skal vælges for at lave PDF")),
+      h("div", {class: "agrid"}, ["Trailer", "Kun bil"].map(v => h("div", {class: "anlw" + (S.transport === v ? " aktiv" : "")},
+        h("button", {type: "button", class: "anl" + (S.transport === v ? " aktiv" : ""), "aria-pressed": S.transport === v ? "true" : "false",
+          onclick: () => sætTransport(v)}, h("span", {class: "an"}, v),
+          h("span", {class: "as"}, S.job && ruteTransport(S.job) === v ? "Som i kørslen" : v === "Trailer" ? "Med trailer" : "Alt i bilen")))))),
     altid.length ? h("div", {class: "muted lille", style: "margin-top:8px"}, "Kommer altid med: " + altid.map(x => x.navn).join(", ") + ". Ret pakkerne under Mere → Pakker.") : null);
 }
 function signalOpsummering() {   // "Der er nu 7 XLR med: 2 fra Pioneer XDJ RX2, ..." under sidste trin, så Oscar kan se, om der mangler nogen
@@ -1115,7 +1129,8 @@ function tegnListe() {
     h("div", {class: "felter"},
       h("label", {}, h("span", {class: "etiket"}, "Navn på PDF"),
         h("input", {class: "input", value: S.jobNavn, oninput: e => { S.jobNavn = e.target.value; }})),
-      h("div", {}, h("span", {class: "etiket"}, "Transport"), seg(["Trailer", "Kun bil"], S.transport, v => { S.transport = v; S.rørt = true; tegnListe(); }))),
+      h("div", {}, h("span", {class: "etiket"}, "Transport"), seg(["Trailer", "Kun bil"], S.transport, sætTransport))),
+    transportKonflikt(),
     S.egen ? null : h("label", {class: "startfra", style: "display:block;margin-top:12px"}, h("span", {class: "etiket"}, "Start fra"), startFra),
     S.job ? godkendBlok(linjer) : null,
     S.job && !erKlub(S.job) ? festkortBlok(S.job, S, tegnListe) : null,
@@ -1186,8 +1201,12 @@ function tegnListe() {
     h("div", {class: "resume lille", style: advN ? "color:var(--adv)" : "color:var(--svag)"},
       `${linjer.length} linjer · ${stk} stk` + (advN ? ` · ${advN} advarsler` : "") + (S.transport ? "" : " · vælg transport")),
     låst ? h("button", {class: "btn primaer stor", type: "button", onclick: hentGodkendtPdf}, "Hent PDF")
-      : h("button", {class: "btn primaer stor", type: "button", disabled: !kan, onclick: () => send("pdf")},
-        optaget ? "Arbejder …" : "Lav pakkeliste (PDF)"),
+      : linjer.length && !S.transport && !optaget
+        ? h("button", {class: "btn stor", type: "button", style: "border-color:var(--adv);color:var(--adv)",   // tydeligt hvad der mangler (Oscar 28/10)
+            onclick: () => { const el = $("trin-transport"); if (el) { el.scrollIntoView({behavior: "smooth", block: "center"}); el.classList.add("markeret"); setTimeout(() => el.classList.remove("markeret"), 1200); } }},
+            "Vælg transport for at lave PDF ↑")
+        : h("button", {class: "btn primaer stor", type: "button", disabled: !kan, onclick: () => send("pdf")},
+          optaget ? "Arbejder …" : "Lav pakkeliste (PDF)"),
     låst ? h("div", {class: "lille muted", style: "margin-top:6px"}, "Listen er godkendt og låst. Tryk Genåbn liste øverst for at rette den.") : gemBlok,
     h("div", {id: "svar"}));
   k.replaceChildren(hoved, krop, fod);
@@ -1195,6 +1214,21 @@ function tegnListe() {
   tegnSvar();
 }
 let gemKnap = null, gemHjælp = null;
+function transportKonflikt() {   // pakkeliste og kørsel må ikke stride mod hinanden
+  const rt = S.job && ruteTransport(S.job);
+  if (!rt || !S.transport || S.transport === rt) return null;
+  const låst = S.godk && signatur(Object.values(S.l)) === S.snap;   // en godkendt liste rettes ikke herfra
+  return h("div", {class: "advl", style: "margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center"},
+    h("span", {}, `Kørslen er regnet med ${rt === "Trailer" ? "trailer (højst 80 km/t)" : "bil uden trailer"}, men listen siger ${S.transport}.`),
+    låst ? null : h("button", {class: "btn lille", type: "button", onclick: () => sætTransport(rt)}, `Brug ${rt}`),
+    h("button", {class: "btn ghost lille", type: "button", onclick: () => {
+      if (S.rørt && !confirm("Gå til Kørsel uden at gemme listen? Dine ændringer på listen forsvinder.")) return;
+      const k = jobNøgle(S.job); S = null; vælgRuteJob(k); fane = "rute"; tegn(); window.scrollTo(0, 0); }}, "Lav kørslen om"));
+}
+function sætTransport(v) {   // fra toppen af listen eller fra sidste trin i "Pak jobbet"; listens linjer røres ikke
+  S.transport = v; S.rørt = true;
+  tegnVælger(); tegnListe();
+}
 async function hentGodkendtPdf() {   // den PDF, der blev lavet til jobbet (pdf/<navn> - dd.mm.åååå.pdf), uden at lave en ny
   const j = S.job, navn = (S.jobNavn || j.navn).trim(), fil = `${navn} - ${j.dato.slice(8, 10)}.${j.dato.slice(5, 7)}.${j.dato.slice(0, 4)}.pdf`;
   const r = await laesFil("pdf/" + fil);
