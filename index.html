@@ -228,7 +228,7 @@ body.bar-synlig .beskeder{bottom:84px}
 .kh + .mini,.mini:first-of-type{border-top:0}
 .mini.link:hover{color:var(--accent)}
 .tid{min-width:52px;flex:none}
-.rød{color:var(--fejl)}.gul-t{color:var(--adv)}
+.rød{color:var(--fejl)}.gul-t{color:var(--adv)}.fed{font-weight:600}
 .cb{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-top:1px solid var(--linje);cursor:pointer}
 .lg .cb:first-of-type{border-top:0}
 .cb input{margin-top:3px;width:16px;height:16px;accent-color:var(--accent);flex:none}
@@ -1752,7 +1752,7 @@ function visIDag() {
         vagterKort(idag, sideKort),
         sideKort(`Deadlines de næste 7 dage (${dl.length})`, dl.length ? dl.slice(0, 8).map(o => h("button", {class: "mini link", type: "button", disabled: o.id === "…",
           onclick: () => { fane = "opgaver"; OP.vis = "opgave"; OP.valgt = o.id; tegn(); }},
-          h("span", {class: "lille tid " + (o.deadline < idag || o.prioritet === "Høj" && o.deadline <= idag ? "rød" : "muted")}, kortDato(o.deadline)), h("span", {class: o.prioritet === "Høj" && o.deadline <= idag ? "rød" : ""}, o.titel))) : h("div", {class: "muted lille"}, "Ingen")),
+          h("span", {class: "lille tid " + (prioKlasse(o, idag) ? "rød" : dlKlasse(o, idag) || "muted")}, kortDato(o.deadline)), h("span", {class: prioKlasse(o, idag)}, o.titel))) : h("div", {class: "muted lille"}, "Ingen")),
         sideKort(`Forespørgsler der venter (${henv.length})`, henv.length ? henv.slice(0, 6).map(x => h("button", {class: "mini link", type: "button", disabled: x.id === "…",
           onclick: () => { fane = "foresp"; FQ.vis = "h"; FQ.valgt = x.id; tegn(); }},
           h("span", {class: "pill " + pillKlasse(x.status)}, x.status), h("span", {}, x.kunde))) : h("div", {class: "muted lille"}, "Ingen")),
@@ -1828,8 +1828,8 @@ function visOpgaver() {
         onclick: () => { if (planlægger) { if (!iPlanen) { planTilføj(o); tegn(); } return; } OP.vis = "opgave"; OP.valgt = o.id; tegn(); if (window.innerWidth <= 900) window.scrollTo(0, 0); }},   // telefon: detaljen ligger øverst
         h("div", {class: "n"}, h("div", {class: "titel"}, o.titel, o.id === "…" ? h("span", {class: "muted lille"}, "  gemmes …") : null),
           h("div", {class: "meta"},
-            o.deadline ? h("span", {class: o.deadline < idag && o.status !== "Færdig" ? "rød" : ""}, "dl " + kortDato(o.deadline)) : null,
-            o.prioritet ? h("span", {}, o.prioritet) : null,
+            o.deadline ? h("span", {class: prioKlasse(o, idag) || dlKlasse(o, idag)}, "dl " + kortDato(o.deadline)) : null,
+            o.prioritet ? h("span", {class: prioKlasse(o, idag)}, o.prioritet) : null,
             o.estimat != null ? h("span", {}, o.estimat + " min") : null,
             krav.length ? h("span", {}, `${ok}/${krav.length} krav`) : null,
             o.status === "I gang" || o.status === "Venter" ? h("span", {class: "pill " + (o.status === "I gang" ? "blå" : "")}, o.status) : null,
@@ -1914,6 +1914,10 @@ function nyOpgaveForm() {
     }}, "Opret opgave"));
 }
 const PRIO = ["Høj", "Mellem", "Lav"];
+// Farver på frist og prioritet (Oscar 28/10): overskredet = rød frist, i dag = gul frist. Høj prioritet med frist i dag eller overskredet:
+// både frist og prioritet røde (to røde). Kun den kombination; ellers har prioriteten sin normale farve. Ingen blink.
+const dlKlasse = (o, dato = iDag()) => !o.deadline || o.status === "Færdig" ? "" : o.deadline < dato ? "rød" : o.deadline === dato ? "gul-t" : "";
+const prioKlasse = (o, dato = iDag()) => o.prioritet === "Høj" && o.deadline && o.deadline <= dato && o.status !== "Færdig" ? "rød fed" : "";
 const KATEGORI_O = ["Internet opgave", "Ingen internet", "Deep work / ingen AI", "Møde online", "Møde fysisk"];
 function planTilføj(o, hv) {   // lægger en opgave ind i den åbne plan (klik eller træk fra opgavelisten)
   const p = OP.plan;
@@ -2000,7 +2004,9 @@ function planlægPanel() {
         h("summary", {class: "overskrift", style: "cursor:pointer"}, `Tilføj fra åbne opgaver (${ledigeOpg.length})`),
         ledigeOpg.length ? ledigeOpg.map(o => h("div", {class: "planpunkt", style: "grid-template-columns:1fr auto"},
           h("div", {}, h("span", {}, (o.deadline && o.deadline < p.dato ? "! " : "") + o.titel), " ",
-            h("span", {class: "muted lille"}, `${o.estimat != null ? o.estimat + " min" : "intet estimat"}${o.deadline ? " · frist " + visDato(o.deadline) : ""}`)),
+            h("span", {class: "muted lille"}, o.estimat != null ? o.estimat + " min" : "intet estimat",
+              o.deadline ? [" · ", h("span", {class: prioKlasse(o, p.dato) || dlKlasse(o, p.dato)}, "frist " + visDato(o.deadline))] : null,
+              prioKlasse(o, p.dato) ? [" · ", h("span", {class: prioKlasse(o, p.dato)}, "Høj")] : null)),
           h("div", {style: "display:flex;gap:4px"}, halvdele.map(([hv, navn]) => h("button", {class: "btn ghost lille", type: "button", title: "Læg i " + navn, onclick: () => tilføj(o, hv)}, "+ " + (hv === "hvis_tid" ? "Hvis tid" : enkelt ? "Plan" : hv === "foer_frokost" ? "Før" : "Efter")))))) : h("div", {class: "muted lille"}, "Ingen flere åbne opgaver.")),
       felt("Noter til planen (valgfrit)", tekstfelt(p, "noter", {rows: 2})),
       h("button", {class: "btn primaer stor", type: "button", style: "margin-top:12px", disabled: OP.planArbejder, onclick: godkend}, OP.planArbejder ? "Arbejder …" : "Godkend og print")
