@@ -657,7 +657,7 @@ function tegnTop() {
     top.replaceChildren(
       h("button", {class: "tilbage", type: "button", onclick: lukEditor}, "← Jobs"),
       h("div", {class: "spacer"}),
-      h("span", {class: "muted lille"}, S.job ? "PDF husker listen på jobbet. Godkend gør den klar (grøn)" : "Ændringer gemmes, når du trykker Opdater"));
+      h("span", {class: "muted lille"}, S.job ? "PDF husker listen på jobbet. Godkend gør den færdig (grøn)" : "Ændringer gemmes, når du trykker Opdater"));
     return;
   }
   const aktiv = v => fane === v || (v === "pakkelister" && (fane === "kort" || fane === "rute"));
@@ -700,7 +700,7 @@ const jobStatus = j => {
   const kort = !!(festkortTilJob(j) || klubkortTilJob(j));
   const kortO = opg.some(o => o.job_opgave === "festkort" && o.status !== "Færdig");
   const dage = Math.round((dag(j.dato) - dag(iDag())) / 864e5);
-  return {key, klar, pak: klar ? "Klar" : liste || jp ? "Skal godkendes" : "Skal laves", kort, kortTekst: kort ? "Lavet" : kortO ? "Skal laves" : "Ingen skilte oprettet",
+  return {key, klar, pak: klar ? "færdig" : liste || jp ? "mangler godkendelse" : "mangler", kort, kortTekst: kort ? "Lavet" : kortO ? "Skal laves" : "Ingen skilte oprettet",
     skilteRel: true,   // Oscar 25/10: skilte-status vises på alle jobs, så han kan se, hvor hvert job er i processen (før: kun klubjobs, jobs med skilte-opgave eller lavede skilte)
     dage, kørsel: !!(D.jobrute || {})[key], åbne: opg.filter(o => o.status !== "Færdig")};
 };
@@ -747,7 +747,7 @@ function visJobs() {
           h("div", {class: "dato"}, h("b", {}, d.getDate()), h("span", {}, MD[d.getMonth()])),
           h("div", {class: "t"}, h("b", {}, j.navn), h("span", {class: "muted lille"}, [DAGE[d.getDay()], j.sted].filter(Boolean).join(" · ")),
             h("div", {class: "chips", style: "margin-top:6px"}, (j.sted || "").trim() ? null : h("span", {class: "pill rød-pill"}, "Ingen adresse"),   // Oscar 28/10
-              chip("Pakkeliste: " + st.pak, st.klar, st.dage),
+              chip("Pakkeliste " + st.pak, st.klar, st.dage ?? 99),   // Oscar 28/10: "færdig" grøn, "mangler" altid gul/rød, aldrig grå
               st.skilteRel ? chip("Skilte: " + st.kortTekst, st.kort, st.dage) : null, chip("Kørsel: " + (st.kørsel ? "gemt" : "ikke lavet"), st.kørsel),
               st.åbne.length ? chip(st.åbne.length + (st.åbne.length === 1 ? " åben opgave" : " åbne opgaver")) : null)),
           h("div", {class: st.dage <= 1 ? "" : "muted lille", style: st.dage <= 1 ? "font-weight:600;white-space:nowrap" : "white-space:nowrap"}, nårTekst(st.dage)));
@@ -759,7 +759,7 @@ function visJobSide(j) {   // alt til ét job samlet: pakkeliste, kort, kørsel,
   const st = jobStatus(j), d = dag(j.dato), tider = jobTider(j);
   const afsnit = (titel, status, god, knap, ekstra) => h("div", {class: "gruppe", style: "margin-top:12px"},
     h("div", {style: "display:flex;align-items:center;gap:8px;flex-wrap:wrap"}, h("div", {class: "overskrift", style: "margin:0"}, titel),
-      h("span", {class: "pill" + (god ? " grøn" : "")}, status), h("div", {class: "spacer"}), knap),
+      h("span", {class: "pill" + (god ? " grøn" : titel === "Pakkeliste" ? " gul" : "")}, status), h("div", {class: "spacer"}), knap),
     ekstra || null);
   $("rod").replaceChildren(h("div", {class: "side"},
     h("button", {class: "btn ghost lille", type: "button", onclick: () => { JH = null; tegn(); window.scrollTo(0, 0); }}, "← Alle jobs"),
@@ -769,7 +769,7 @@ function visJobSide(j) {   // alt til ét job samlet: pakkeliste, kort, kørsel,
     tider.length ? h("div", {class: "muted lille", style: "margin-top:6px"}, tider.join(" · ")) : null,
     h("button", {class: "btn lille", type: "button", style: "margin-top:10px", onclick: () => tbStart(tbFraJob(j))}, "Lav tilbud"),
     jobOpgaver(j, st),
-    afsnit("Pakkeliste", st.pak, st.klar, h("button", {class: "btn primaer lille", type: "button", onclick: () => åbnJob(j)}, "Åbn pakkeliste")),
+    afsnit("Pakkeliste", st.pak[0].toUpperCase() + st.pak.slice(1), st.klar, h("button", {class: "btn primaer lille", type: "button", onclick: () => åbnJob(j)}, "Åbn pakkeliste")),
     afsnit("Skilte", st.kortTekst, st.kort, h("button", {class: "btn lille", type: "button", onclick: () => { KT.job = st.key; KT.slags = null; KT.fk = KT.kk = null; fane = "kort"; tegn(); window.scrollTo(0, 0); }}, "Åbn skilte")),
     afsnit("Kørsel", st.kørsel ? "Plan gemt, kommer på side 2" : "Ikke lavet", st.kørsel, h("button", {class: "btn lille", type: "button", onclick: () => { vælgRuteJob(st.key); fane = "rute"; tegn(); window.scrollTo(0, 0); }}, st.kørsel ? "Åbn kørsel" : "Lav kørsel"))));
 }
@@ -1343,8 +1343,8 @@ function godkendBlok(linjer) {
     return h("div", {class: "godk ok"}, h("span", {class: "fyld"}, `✓ Pakkeliste godkendt ${kortDato(S.godk)}`),
       h("button", {class: "btn ghost lille", type: "button", disabled: optaget, onclick: () => godkend(false)}, "Genåbn liste"));
   return h("div", {class: "godk"},
-    h("span", {class: "fyld", style: ændret ? "color:var(--adv)" : "color:var(--svag)"},
-      ændret ? "Ændret efter godkendelse" : "Ikke godkendt endnu"),
+    h("span", {class: "fyld", style: "color:var(--adv);font-weight:600"},
+      ændret ? "Ændret efter godkendelse" : "Pakkeliste mangler godkendelse"),
     h("button", {class: "btn godkend", type: "button", disabled: !kan, title: kan ? "" : "Listen skal have udstyr og transport",
       onclick: () => godkend(true)}, ændret ? "✓ Godkend igen" : "✓ Godkend pakkeliste"));
 }
@@ -1413,11 +1413,13 @@ async function send(hvad) {   // "pdf": lav PDF (gemmer intet), "gem": gem som l
     else if (sv.status === "FEJL") sætSvar("fejl", "Fejl, ingen PDF.", [sv.fejl]);
     else {
       const punkter = [...sv.advarsler.map(a => "Advarsel: " + a), ...sv.info];
-      const titel = sv.status === "ADVARSEL" ? "Lavet, men tjek advarslerne" : "Pakkelisten er klar";
-      sætSvar(sv.status === "ADVARSEL" ? "adv" : "ok", titel, [...punkter, "Henter PDF …"]);
+      const mangler = !!mig.job && !(mig.godk && signatur(Object.values(mig.l)) === mig.snap);   // Oscar 28/10: lavet, men ikke godkendt, er gul, ikke grøn "klar"
+      const titel = sv.status === "ADVARSEL" ? "Lavet, men tjek advarslerne" : mangler ? "PDF lavet. Pakkelisten mangler godkendelse" : "Pakkelisten er lavet";
+      const klasse = sv.status === "ADVARSEL" || mangler ? "adv" : "ok";
+      sætSvar(klasse, titel, [...punkter, "Henter PDF …"]);
       const r = await laesFil(sv.pdf);
       const link = r ? URL.createObjectURL(new Blob([await r.arrayBuffer()], {type: "application/pdf"})) : null;
-      if (S === mig) sætSvar(sv.status === "ADVARSEL" ? "adv" : "ok", titel, r ? punkter : [...punkter, "PDF'en kunne ikke hentes."], link, decodeURIComponent(sv.pdf.split("/").pop()));
+      if (S === mig) sætSvar(klasse, titel, r ? punkter : [...punkter, "PDF'en kunne ikke hentes."], link, decodeURIComponent(sv.pdf.split("/").pop()));
       if (mig.job) {   // fabz.py har husket listen og anlægsvalget på jobbet (ikke godkendt); hent det, så status og knapper står rigtigt
         D.jobpl = await laesJobpl();
         const jp = jobplTilJob(mig.job);
@@ -1783,13 +1785,13 @@ function visIDag() {
   const sideKort = (titel, indhold, knap) => h("div", {class: "kort2"}, h("div", {class: "kh"}, h("h3", {}, titel), knap || null), indhold);
   const jobKort = dagensJobs.map(j => {
           const st = jobStatus(j);
-          const næste = !st.klar ? ["Pakkeliste: " + st.pak.toLowerCase(), "Åbn jobbet", () => { fane = "pakkelister"; åbnJob(j); }]
+          const næste = !st.klar ? ["Pakkeliste " + st.pak, "Åbn jobbet", () => { fane = "pakkelister"; åbnJob(j); }]
             : !st.kørsel ? ["Kørsel er ikke lavet", "Lav kørsel", () => { vælgRuteJob(st.key); fane = "rute"; tegn(); }]
             : null;
           const række = (t, ok) => h("div", {class: "mini"}, h("span", {class: "prik " + (ok ? "ok" : "adv")}), h("span", {}, t));
           return h("div", {class: "kort2"}, h("div", {class: "kh"}, h("h3", {}, "Dagens job: " + j.navn)),
             j.sted ? h("div", {class: "muted lille", style: "margin-bottom:6px"}, j.sted) : null,
-            række("Pakkeliste: " + st.pak, st.klar),
+            række("Pakkeliste " + st.pak, st.klar),
             st.skilteRel ? række("Skilte: " + st.kortTekst, st.kort) : null,
             række("Kørsel: " + (st.kørsel ? "gemt" : "ikke lavet"), st.kørsel),
             næste ? h("button", {class: "btn primaer lille", type: "button", style: "margin-top:10px", onclick: næste[2]}, næste[1]) : h("button", {class: "btn lille", type: "button", style: "margin-top:10px", onclick: () => { fane = "pakkelister"; åbnJob(j); }}, "Alt er klar · åbn jobbet"));
@@ -1822,10 +1824,10 @@ function visIDag() {
             dm.map(j => h("button", {class: "mini link", type: "button", onclick: () => { fane = "oekonomi"; OK.detaljer = true; tegn(); }},
               h("span", {class: "pill rd"}, "depositum"), h("span", {}, `${j.navn} · ${kortDato(j.dato)} · intet depositum sendt`))))); })(),
         sideKort("Næste jobs", næste.length ? næste.map(j => {
-          const jp = jobplTilJob(j), klar = !!jp?.godkendt || opgaveTilJob(j)?.status === "Færdig";
+          const klar = jobStatus(j).klar;
           return h("button", {class: "mini link", type: "button", onclick: () => { fane = "pakkelister"; åbnJob(j); }},
             h("span", {class: "muted lille tid"}, kortDato(j.dato)), h("span", {}, j.navn),
-            h("span", {class: "prik " + (klar ? "ok" : listeTilJob(j) || jp ? "adv" : ""), style: "margin-left:auto"}));
+            h("span", {class: "prik " + (klar ? "ok" : "adv"), style: "margin-left:auto", title: "Pakkeliste " + (klar ? "færdig" : "mangler")}));
         }) : h("div", {class: "muted lille"}, "Ingen"))];
   const overskrift = h("h1", {}, `${DAGE[d.getDay()][0].toUpperCase() + DAGE[d.getDay()].slice(1)} ${d.getDate()}. ${MDL[d.getMonth()]}`);
   if (dp?.plan_punkter?.length) {   // dagen er planlagt: kun planen (Oscar 28/10: "fokus skal holdes"); resten bag ét lukket link
@@ -3062,7 +3064,7 @@ function visOekonomi() {
       h("button", {class: "btn", type: "button", onclick: () => { OK.detaljer = !OK.detaljer; tegn(); }}, OK.detaljer ? "Skjul detaljer" : "Vis detaljer"),
       h("span", {class: "muted lille"}, "Fakturaer, depositum, udgifter, privatøkonomi og månederne bagud.")));
   $("rod").replaceChildren(h("div", {class: "side bred"}, h("div", {class: "kh"}, h("h1", {}, "Økonomi")),
-    h("div", {class: "sk-top"}, ligeNu, OK.detaljer ? [maanedKort(), pengeKort(), tilDigKort(), vejKort(false)] : null)));
+    h("div", {class: "sk-top"}, ligeNu, OK.detaljer ? [maanedKort(), pengeKort(), tilDigKort(), skatKort(), vejKort(false)] : null)));
 }
 // ---------- Salg: statuskort (Oscar 25/10, skitse C): denne uge, denne måned, vejen. Tal fra data/maanedsoversigt.json (fabz.py) og salgslog ----------
 const MO_FARVE = {groen: "g", gul: "y", roed: "rd", graa: "gr"};   // rd/gr, fordi .r og .x er optaget af andre regler
@@ -3180,6 +3182,41 @@ function pengeKort() {   // Penge ude: ubetalte fakturaer fra Dinero (data/maane
     depLinjer.length ? h("div", {class: "overskrift", style: "margin-top:14px"}, "Depositum på kommende private jobs") : null,
     depLinjer.length ? h("div", {class: "liste"}, depLinjer) : null,
     h("div", {class: "lille muted", style: "margin-top:10px"}, "Ubetalt = bogført i Dinero uden betaling. Depositum læses fra ØKONOMI i kalenderen (Depositum: betalt / faktura sendt / ingen)."));
+}
+function skatKort() {   // Skat (Oscar 28/10): Fabz' overskud mod felt 221, Skat-kontoen og næste B-skat. Tallene regnes af fabz.py (fabz_skat.py) i maanedsoversigt.json
+  const sk = (D.mo || {}).skat;
+  const hoved = h("div", {class: "r1 sk-hoved"}, h("div", {class: "overskrift", style: "margin:0"}, "Skat · " + (sk?.aar || "")),
+    h("span", {class: "muted lille"}, `Dinero pr. ${D.mo?.dinero_pr ? visDato(D.mo.dinero_pr) : "?"}`));
+  if (!sk || sk.forkert_aar) return h("div", {class: "kort2 sk"}, hoved,
+    h("div", {class: "muted", style: "margin-top:12px"}, sk ? `Skatteopsætningen gælder ${sk.aar}. Bed Claude rette data/skat.json til det nye år.` : "Skattetallene kommer med næste Dinero-hentning (hver morgen kl. 7)."));
+  const l = (t, v, ekstra) => h("div", {class: "l"}, h("span", {}, t, ekstra ? h("span", {class: "muted lille", style: "margin-left:6px"}, ekstra) : null), h("b", {style: "white-space:nowrap"}, v));
+  const fortegn = n => (n > 0 ? "+" : n < 0 ? "−" : "") + krKort(Math.abs(n));
+  const dageTil = sk.rate ? Math.round((dag(sk.rate.frist) - dag(iDag())) / 864e5) : null;
+  const b = sk.felter.find(f => f.noegle === "b_indkomst");
+  return h("div", {class: "kort2 sk"}, hoved,
+    h("div", {class: "sk-k4"},
+      h("div", {class: "sk-k " + (sk.advarsel ? "y" : "g")}, h("b", {}, krKort(sk.forventet)), h("span", {}, `kr. forventet overskud ${sk.aar} (felt 221: ${krKort(sk.felt_221)})`)),
+      h("div", {class: "sk-k b"}, h("b", {}, sk.reserve == null ? "?" : krKort(sk.reserve)), h("span", {}, "kr. skal stå på Skat-kontoen")),
+      h("div", {class: "sk-k " + (sk.skylder_mere ? "rd" : "g")}, h("b", {}, krKort(sk.skylder_mere)), h("span", {}, "kr. på vej til at skylde ud over forskuddet")),
+      h("div", {class: "sk-k " + (dageTil != null && dageTil <= 10 ? "y" : "")}, h("b", {}, sk.rate ? krKort(sk.rate.beloeb) : "0"),
+        h("span", {}, sk.rate ? `kr. B-skat rate ${sk.rate.rate}, senest ${kortDato(sk.rate.frist)}` : "ingen B-skat-rater tilbage"))),
+    sk.advarsel ? h("div", {class: "lille", style: "margin-top:10px;color:var(--adv);font-weight:600"},
+      `Ret forskudsopgørelsen (felt 221): forventet ${krKort(sk.forventet)} kr. mod ${krKort(sk.felt_221)} kr. (${fortegn(sk.afvigelse)} kr.)`) : null,
+    h("div", {class: "sk-detalje"}, h("div", {class: "overskrift", style: "margin:0 0 4px"}, "Fabz (felt 221)"),
+    h("div", {class: "liste"},
+      l("Overskud til dato (Dinero)", krKort(sk.til_dato)),
+      sk.kontant_reg ? l("Kontant registreret i år", "+" + krKort(sk.kontant_reg)) : null,
+      l(`Kommende jobs resten af året (${sk.kommende_jobs.length})`, "+" + krKort(sk.kommende), sk.kontant_jobs.length ? "heraf kontant: " + sk.kontant_jobs.map(x => x.navn).join(", ") : ""),
+      l(`Løbende udgifter, skøn (${sk.md_tilbage} md.)`, "−" + krKort(sk.udgifter_skoen)),
+      l("Forventet overskud", krKort(sk.forventet))),
+    sk.uden_pris.length ? h("div", {class: "lille muted", style: "margin-top:6px"}, "Uden pris, ikke regnet med: " + sk.uden_pris.map(x => `${x.navn} ${kortDato(x.dato)}`).join(", ")) : null),
+    h("div", {class: "sk-detalje"}, h("div", {class: "overskrift", style: "margin:0 0 4px"}, "Klubjobs (B-indkomst/løn)"),
+    h("div", {class: "liste"},
+      sk.b_reg ? l("B-indkomst registreret i år", krKort(sk.b_reg)) : null,
+      sk.klub.map(x => l(`${x.navn} · ${kortDato(x.dato)}`, krKort(x.kr), x.type)),
+      b ? l(`Felt ${b.felt}, ${b.navn || "B-indkomst"}`, krKort(b.vaerdi), "skøn for hele året") : null)),
+    h("div", {class: "lille muted", style: "margin-top:10px"}, `Skat-kontoen = ${sk.reserve_pct} % af betalte fakturaer i år (${sk.betalt == null ? "?" : krKort(sk.betalt)} kr. ekskl. moms) og kontant, plus ${sk.b_indkomst_pct} % af B-indkomst. `
+      + "Kontant er skattepligtigt og tæller med. Klubjobs er ikke Fabz-omsætning."));
 }
 function tilDigKort() {   // Til dig: overskud i firmaet (Dinero-posteringer) + B-indkomst/kontant, groft skatteoverslag, mod privatbehovet (strategi)
   const td = (D.mo || {}).til_dig;
