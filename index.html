@@ -3233,11 +3233,11 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
         sk.uden_pris.length ? h("div", {class: "lille muted", style: "margin-top:6px"}, "Uden pris, ikke regnet med: " + sk.uden_pris.map(x => `${x.navn} ${kortDato(x.dato)}`).join(", ")) : null),
       h("div", {class: "sk-detalje"}, h("div", {class: "overskrift", style: "margin:0 0 4px"}, "Skat-puljen"),
         h("div", {class: "liste"},
-          l(`${sk.reserve_pct} % af betalte fakturaer i år`, sk.betalt == null ? "?" : krKort(sk.betalt * sk.reserve_pct / 100), sk.betalt == null ? "" : `af ${krKort(sk.betalt)} kr. ekskl. moms`),
+          l(`${sk.reserve_pct} % af Fabz' overskud til dato`, krKort(Math.max(0, sk.til_dato) * sk.reserve_pct / 100), `af ${krKort(Math.max(0, sk.til_dato))} kr. efter køb og afskrivning`),
           sk.b_reg ? l(`${sk.b_indkomst_pct} % af B-indkomst`, krKort(sk.b_reg * sk.b_indkomst_pct / 100)) : null,
           sk.b_skat_betalt ? l("B-skat betalt i år", "−" + krKort(sk.b_skat_betalt)) : null,
           l("Skal stå i puljen", sk.reserve == null ? "?" : krKort(sk.reserve)))),
-      h("div", {class: "lille muted", style: "margin-top:10px"}, "Kontanter er holdt ude, de tages med revisoren ved årets udgang. Løn har trukket skat og giver ingen reserve.")),
+      h("div", {class: "lille muted", style: "margin-top:10px"}, "Puljen bygges op af det, du faktisk skylder: overskud og B-indkomst. Køber du noget til Fabz, falder den. Kontanter er holdt ude (revisoren), og løn har trukket skat.")),
     fold("Omsætning pr. måned", vejKort(false)),
     fold("Registrér B-indkomst", bIndkomstKort(bLinjer))));
 }
