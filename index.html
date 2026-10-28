@@ -602,6 +602,20 @@ function jobs(fortid = false) {   // fortid: også passerede jobs (link fra påm
     return m ? {navn: m[1].trim(), dato: e.start.slice(0, 10), sted: e.sted || "", besk: e.beskrivelse || ""} : null;
   }).filter(j => j && j.dato >= idag).sort((a, b) => a.dato.localeCompare(b.dato) || a.navn.localeCompare(b.navn));
 }
+// Vagter fra Planday/Deltaplan som jobs (Oscar 28/10: "Planday jobsne skal også hentes ind i jobs i panelet"). Data fra data/vagter.json
+// (tools/vagter.py), så de flyttes og forsvinder af sig selv, når vagten ændres eller aflyses. Nøglen "dato|vagt <sted>" kan bruges til opgaver.
+const VAGT_KILDE = {planday: "Planday", deltaplan: "Deltaplan"};
+const vagtFirma = k => ((D.kalender?.kalendere || {})[k]?.navn || "").split(" - ").pop().replace(/\s+(ApS|A\/S|I\/S|IVS)$/i, "").trim() || VAGT_KILDE[k] || k;
+const vagtTid = v => v.heldag ? "Hele dagen" : `${v.start.slice(11, 16).replace(":", ".")}-${v.slut.slice(11, 16).replace(":", ".")}`;
+function vagtJobs() {
+  const idag = iDag();
+  return (D.vagter?.vagter || []).filter(v => v.slut.slice(0, 10) >= idag).map(v => {
+    const firma = vagtFirma(v.kalender), navn = "Vagt " + firma;
+    return {vagt: v, kilde: VAGT_KILDE[v.kalender] || v.kalender, navn, titel: v.titel || "", dato: v.start.slice(0, 10), sted: v.sted || "", tid: vagtTid(v),
+      key: `${v.start.slice(0, 10)}|${navn.toLowerCase()}`,
+      kollision: (D.vagter.kollisioner || []).filter(x => x.vagt.uid === v.uid).map(x => x.booking)};
+  });
+}
 // samme regel som fabz.py pakke-opgaver: listen med jobbets navn, eller "Pakkeliste: <liste>" i beskrivelsen
 function listeTilJob(j) {
   const mb = /pakkeliste\s*:\s*([^\n\r<]+)/i.exec(j.besk);
@@ -695,6 +709,8 @@ const FILTRE = [["alle", "Alle jobs"], ["pak", "Pakkeliste mangler"], ["kort", "
 function visJobs() {
   const js = jobs();
   const j0 = JH ? jobs(true).find(x => jobNøgle(x) === JH) : null;
+  const v0 = JH && !j0 ? vagtJobs().find(x => x.key === JH) : null;
+  if (v0) return visVagtSide(v0);
   if (JH && !j0) {   // jobbet er gledet ud af kalenderen (den gemmer kun fra i går): vis opgaven om sangene i stedet
     const so = D.opgaver.find(o => o.job_noegle === JH && o.job_opgave === "sangene" && o.status !== "Færdig");
     JH = null;
@@ -704,7 +720,8 @@ function visJobs() {
   const valg = h("select", {class: "input", onchange: e => { if (e.target.value) åbnListe(e.target.value); }},
     h("option", {value: ""}, "Åbn en gemt liste …"), D.lister.map(p => h("option", {value: p.navn}, p.navn)));
   const ok = j => { const st = jobStatus(j); return JF === "alle" || (JF === "pak" && !st.klar) || (JF === "kort" && st.skilteRel && !st.kort) || (JF === "koersel" && !st.kørsel) || (JF === "opg" && st.åbne.length); };
-  const vist = js.filter(ok);
+  const vagter = JF === "alle" ? vagtJobs() : [];   // filtrene handler om pakkeliste, skilte og kørsel, som vagter ikke har
+  const vist = [...js.filter(ok), ...vagter].sort((a, b) => a.dato.localeCompare(b.dato) || (a.vagt ? 0 : 1) - (b.vagt ? 0 : 1));
   // grøn = klar, rød = mangler og jobbet er inden for 3 dage, gul = mangler, grå = intet at gøre endnu
   const chip = (t, god, dage) => h("span", {class: "pill" + (god ? " grøn" : dage == null ? "" : dage <= 3 ? " rød-pill" : " gul")}, t);
   const nårTekst = n => n <= 0 ? "I dag" : n === 1 ? "I morgen" : `Om ${n} dage`;
@@ -713,9 +730,10 @@ function visJobs() {
     h("div", {style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px"},
       h("select", {class: "input", style: "max-width:260px", onchange: e => { JF = e.target.value; tegn(); }},
         FILTRE.map(([v, t]) => h("option", {value: v, selected: JF === v}, t))),
-      h("span", {class: "muted lille"}, `${vist.length} af ${js.length} jobs`)),
+      h("span", {class: "muted lille"}, `${vist.length - vagter.length} af ${js.length} jobs` + (vagter.length ? ` · ${vagter.length} ${vagter.length === 1 ? "vagt" : "vagter"}` : ""))),
     h("div", {class: "jobliste"},
       vist.length ? vist.map(j => {
+        if (j.vagt) return vagtRække(j, nårTekst);
         const st = jobStatus(j), d = dag(j.dato);
         return h("button", {class: "job", type: "button", onclick: () => { JH = st.key; tegn(); window.scrollTo(0, 0); }},
           h("div", {class: "dato"}, h("b", {}, d.getDate()), h("span", {}, MD[d.getMonth()])),
@@ -744,6 +762,26 @@ function visJobSide(j) {   // alt til ét job samlet: pakkeliste, kort, kørsel,
     afsnit("Pakkeliste", st.pak, st.klar, h("button", {class: "btn primaer lille", type: "button", onclick: () => åbnJob(j)}, "Åbn pakkeliste")),
     afsnit("Skilte", st.kortTekst, st.kort, h("button", {class: "btn lille", type: "button", onclick: () => { KT.job = st.key; KT.slags = null; KT.fk = KT.kk = null; fane = "kort"; tegn(); window.scrollTo(0, 0); }}, "Åbn skilte")),
     afsnit("Kørsel", st.kørsel ? "Plan gemt, kommer på side 2" : "Ikke lavet", st.kørsel, h("button", {class: "btn lille", type: "button", onclick: () => { vælgRuteJob(st.key); fane = "rute"; tegn(); window.scrollTo(0, 0); }}, st.kørsel ? "Åbn kørsel" : "Lav kørsel"))));
+}
+function vagtRække(v, nårTekst) {
+  const d = dag(v.dato), dage = Math.round((d - dag(iDag())) / 864e5);
+  return h("button", {class: "job vagtjob", type: "button", onclick: () => { JH = v.key; tegn(); window.scrollTo(0, 0); }},
+    h("div", {class: "dato"}, h("b", {}, d.getDate()), h("span", {}, MD[d.getMonth()])),
+    h("div", {class: "t"}, h("b", {}, v.navn), h("span", {class: "muted lille"}, [DAGE[d.getDay()], v.tid, v.titel, v.sted].filter(Boolean).join(" · ")),
+      h("div", {class: "chips", style: "margin-top:6px"}, h("span", {class: "pill blå"}, "Vagt · " + v.kilde),
+        v.kollision.length ? h("span", {class: "pill rød-pill"}, "Kollision: " + v.kollision.join(", ")) : null)),
+    h("div", {class: dage <= 1 ? "" : "muted lille", style: dage <= 1 ? "font-weight:600;white-space:nowrap" : "white-space:nowrap"}, nårTekst(dage)));
+}
+function visVagtSide(v) {   // vagtens side: dato, tider, sted, kilde, kollision og opgaver (samme afsnit som DJ-jobs)
+  const d = dag(v.dato), åbne = D.opgaver.filter(o => o.job_noegle === v.key && o.status !== "Færdig");
+  $("rod").replaceChildren(h("div", {class: "side"},
+    h("button", {class: "btn ghost lille", type: "button", onclick: () => { JH = null; tegn(); window.scrollTo(0, 0); }}, "← Alle jobs"),
+    h("h1", {style: "margin-top:10px"}, v.navn),
+    h("div", {class: "muted"}, [`${DAGE[d.getDay()]} ${visDato(v.dato)}`, v.tid, v.sted].filter(Boolean).join(" · ")),
+    h("div", {class: "chips", style: "margin-top:8px"}, h("span", {class: "pill blå"}, "Vagt · " + v.kilde), v.titel ? h("span", {class: "pill"}, v.titel) : null),
+    v.kollision.length ? h("div", {class: "pill rød-pill", style: "display:block;margin-top:12px;padding:8px 12px;white-space:normal"}, "Samme dag som " + v.kollision.join(", ") + ". Byt vagten eller sig fra i " + v.kilde + ".") : null,
+    h("div", {class: "muted lille", style: "margin-top:8px"}, `Hentes fra ${v.kilde} hver morgen. Ændres eller aflyses vagten, opdateres den her af sig selv.`),
+    jobOpgaver({dato: v.dato, navn: v.navn}, {key: v.key, åbne})));
 }
 // Opgaver og konklusioner på jobbet (Oscar 27/10: "hvilket karaokesystem var det?"). Færdige opgaver viser konklusionen, åbne deres frist.
 // Pakkeliste- og skilteopgaverne står i deres egne afsnit, så de vises kun her, mens de er åbne.
@@ -1658,11 +1696,11 @@ function visIDag() {
         const link = await hentPdf("pdf/" + navn);
         if (link) window.open(link, "_blank"); else alert(`Der er ingen printliste for i dag endnu (${navn}). Planlæg dagen under Opgaver, så laves den.`);
       }}, "Print listen") : null,
-      mailStatus(idag),
+      mailStatus(idag, dp),
       dp?.moedt_ind ? h("span", {class: "muted lille"}, `Mødt ind ${dp.moedt_ind}` + (dp.moedetid ? ` · aftalt ${dp.moedetid}` : ""))
         : h("button", {class: "btn lille", type: "button", onclick: () => kør("moedt-ind", [nuHHMM()], {tekst: "Mødt ind", efter: ["dagsplaner"],
             med: () => { const x = (D.dagsplaner ||= []).find(x => x.dato === idag); if (x) x.moedt_ind = nuHHMM(); else D.dagsplaner.push({dato: idag, moedt_ind: nuHHMM()});
-              if (!(D.mailoversigt?.dato === idag && D.mailoversigt.status === "sendt")) D.mailoversigt = {dato: idag, status: "bestilt"}; }})}, "Mødt ind nu")),   // Mødt ind starter mailoversigten: vis "kører", så den ikke bestilles to gange (28/10)
+              if (!(D.mailoversigt?.dato === idag && D.mailoversigt.status === "sendt")) D.mailoversigt = {dato: idag, status: "bestilt", tid: nuHHMM()}; }})}, "Mødt ind nu")),   // Mødt ind starter mailoversigten (eneste vej, 28/10)
     dp?.plan_punkter?.length ? [
       ...[["foer_frokost", dp.plan_punkter.some(p => p.halvdel === "efter_frokost") ? "Før frokost" : "Arbejdstid"], ["efter_frokost", "Efter frokost"], ["hvis_tid", "Hvis der er tid"]].map(([hv, navn]) => {
         const ps = dp.plan_punkter.filter(p => p.halvdel === hv);
@@ -2694,14 +2732,13 @@ function vagterKort(idag, sideKort) {
       utilg.length ? h("button", {class: "btn lille", type: "button", onclick: e => { navigator.clipboard?.writeText(tekst); e.target.textContent = "Kopieret"; }}, "Kopiér datoer") : null) : null,
     h("div", {class: "muted lille", style: "margin-top:6px"}, "Tjekket " + (v.opdateret || "").replace("T", " kl. ")));
 }
-function mailStatus(idag) {   // Mailoversigten (Oscar 27/10): kører i panel.yml ved Mødt ind; status fra data/mailoversigt.json, knap til at bestille igen
+function mailStatus(idag, dp) {   // Mailoversigten (Oscar 28/10): KUN Mødt ind starter den (ingen knap, den blev trykket ved siden af Mødt ind og gav to oversigter). Status fra data/mailoversigt.json
   const m = D.mailoversigt, iDagM = m && m.dato === idag;
-  const bestil = (igen) => kør("mailoversigt", igen === true ? ["igen"] : [], {tekst: "Mailoversigt", efter: ["mailoversigt"], med: () => { D.mailoversigt = {dato: idag, status: "bestilt"}; }});
-  if (iDagM && m.status === "sendt") return h("span", {class: "rk", style: "gap:6px"}, h("span", {class: "pill g", title: m.overskrift || ""}, `Mailoversigt sendt ${m.tid} · ${m.kraever} kræver dig`),
-    h("button", {class: "btn lille", type: "button", title: "Sender dagens mailoversigt igen", onclick: () => confirm("Lav dagens mailoversigt igen?") && bestil(true)}, "Lav igen"));
-  if (iDagM && m.status === "bestilt") return h("span", {class: "pill y"}, "Mailoversigt kører … ca. 2 min");
-  if (iDagM && m.status === "fejl") return h("span", {class: "rk", style: "gap:6px"}, h("span", {class: "pill rd", title: m.fejl || ""}, "Mailoversigt fejlede"), h("button", {class: "btn lille", type: "button", onclick: bestil}, "Prøv igen"));
-  return h("button", {class: "btn lille", type: "button", title: "Sorterer indbakken og sender dig oversigten (kører også automatisk ved Mødt ind)", onclick: bestil}, "Lav mailoversigt");
+  if (iDagM && m.status === "sendt") return h("span", {class: "pill g", title: m.overskrift || ""}, `Mailoversigt sendt kl. ${m.tid} · ${m.kraever} kræver dig`);
+  if (iDagM && m.status === "fejl") return h("span", {class: "rk", style: "gap:6px"}, h("span", {class: "pill rd", title: m.fejl || ""}, "Mailoversigt fejlede"),
+    h("button", {class: "btn lille", type: "button", onclick: () => kør("mailoversigt", [], {tekst: "Mailoversigt", efter: ["mailoversigt"], med: () => { D.mailoversigt = {dato: idag, status: "bestilt", tid: nuHHMM()}; }})}, "Prøv igen"));
+  const start = (iDagM && m.status === "bestilt" && m.tid) || dp?.moedt_ind;
+  return start ? h("span", {class: "pill y"}, `Mailoversigt startet kl. ${start}`) : null;   // før Mødt ind: intet (Mødt ind-knappen starter den)
 }
 function koerelisteKnap(vedTidsplan) {   // Køreliste (PDF): samme design som side 2 i pakkelisten (Oscar 26/10: browserens print duede ikke; knappen skal stå ved tidsplanen)
   const r = RU, d = r.svar?.data;
