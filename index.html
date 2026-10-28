@@ -3151,11 +3151,11 @@ function bIndkomstKort(linjer) {
     linjer.length ? h("div", {class: "liste"}, linjer.map(x => h("div", {class: "l"},
       h("span", {}, `${x.navn} · ${kortDato(x.dato)}`, h("span", {class: "muted lille", style: "margin-left:6px"}, x.kr == null ? "beløb ukendt, skriv det herunder" : x.auto ? "fundet automatisk" : "skrevet ind")),
       h("b", {}, x.kr == null ? "?" : krKort(x.kr))))) : h("div", {class: "muted"}, "Ingen B-indkomst i år endnu."),
-    h("div", {class: "muted lille", style: "margin-top:10px"}, "Klubjobs findes selv i kalenderen (Zwei: timer × 150 kr.). Mangler en, eller er et beløb forkert, så skriv det her. Samme dato og sted afløser det fundne."),
+    h("div", {class: "muted lille", style: "margin-top:10px"}, `Jobs hos ${(D.mo?.skat?.b_kunder || []).join(" og ") || "B-indkomst-stederne"} findes selv i kalenderen. Delulu og Zwei er løn med trukket skat og tælles ikke. Mangler en, eller er et beløb forkert, så skriv det her. Samme dato og sted afløser det fundne.`),
     h("div", {class: "felter3", style: "margin-top:8px"},
       felt("Dato", datoInput(n.dato, v => { n.dato = v; })),
       felt("Beløb (kr.)", inp(n, "beloeb", {type: "number", min: "0", inputmode: "numeric"})),
-      felt("Sted", inp(n, "fra", {placeholder: "Fx Zwei Grosse Bier"}))),
+      felt("Sted", inp(n, "fra", {placeholder: "Fx Fox and Hounds"}))),
     h("button", {class: "btn primaer", type: "button", style: "margin-top:8px", onclick: gem}, "Registrér"));
 }
 // ---------- Salg: statuskort (Oscar 25/10, skitse C): denne uge, denne måned, vejen. Tal fra data/maanedsoversigt.json (fabz.py) og salgslog ----------
