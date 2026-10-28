@@ -95,6 +95,9 @@ a.btn{display:inline-block;text-decoration:none}
 .andre select{max-width:280px}
 
 /* editor (fuld skærm) */
+.jo-detalje{padding:4px 14px 16px 42px;border-top:1px solid var(--linje);background:var(--flade2)}
+@media (max-width:700px){.jo-detalje{padding-left:14px}}
+.fokus{display:grid;gap:14px;margin-top:20px}.resten summary{cursor:pointer;padding:6px 2px}
 .agr.markeret{outline:2px solid var(--adv);outline-offset:6px;border-radius:10px}
 .vaelg.låst,.liste.låst .lkrop .step,.liste.låst .lkrop .ekstra,.liste.låst .lkrop .notefelt,.liste.låst .lhoved .felter,.liste.låst .lhoved .startfra,.liste.låst .anlaeg{pointer-events:none}
 .vaelg.låst{opacity:.45}.liste.låst .lkrop .step,.liste.låst .lkrop .ekstra{opacity:.4}
@@ -273,7 +276,7 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .tb-r{display:flex;justify-content:space-between;gap:12px;padding:2px 0}
 .tb-adv{margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--adv-blid);color:var(--adv)}
 .jo{margin-top:8px}.jo-r{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;border:0;border-top:1px solid var(--linje);background:none;padding:10px 14px}
-.jo-r:first-child{border-top:0}.jo-r:hover{background:var(--hover)}
+.jo-r:first-child{border-top:0}.jo-r:hover,.jo-r.valgt{background:var(--hover)}
 .jo-m{flex:none;width:18px;color:var(--svag)}.jo-m.ok{color:var(--ok);font-weight:700}
 .jo-t{display:flex;flex-direction:column;gap:2px;min-width:0}.jo-t b{font-weight:600}
 .note{font-size:13px;color:var(--svag);padding:4px 0;border-top:1px solid var(--linje)}
@@ -625,7 +628,9 @@ function listeTilJob(j) {
   return D.lister.find(p => nøgle(p.navn) === ønsket) || null;
 }
 const jobNøgle = j => `${j.dato}|${j.navn.toLowerCase()}`;
-const opgaveTilJob = j => D.opgaver.find(o => o.job_noegle === jobNøgle(j) && (o.job_opgave || "pakkeliste") === "pakkeliste") || null;
+// pakkeliste-opgaven: job_opgave "pakkeliste", eller en gammel uden feltet med titlen "Lav/Tjek og print pakkeliste". En almindelig opgave koblet til jobbet er det ikke
+const opgaveSlags = o => o.job_opgave || (/^(Lav|Tjek og print) pakkeliste/.test(o.titel || "") ? "pakkeliste" : null);
+const opgaveTilJob = j => D.opgaver.find(o => o.job_noegle === jobNøgle(j) && opgaveSlags(o) === "pakkeliste") || null;
 const festkortTilJob = j => (D.festkort || []).find(r => r.job_noegle === jobNøgle(j)) || null;
 const klubkortTilJob = j => (D.klubkort || []).find(r => r.job_noegle === jobNøgle(j)) || null;
 const jobtype = j => { const m = /jobtype\s*:\s*([^<\n\r]*)/i.exec(j.besk || ""); return m ? m[1].trim() : ""; };
@@ -792,19 +797,22 @@ function visVagtSide(v) {   // vagtens side: dato, tider, sted, kilde, kollision
 // Pakkeliste- og skilteopgaverne står i deres egne afsnit, så de vises kun her, mens de er åbne.
 function jobOpgaver(j, st) {
   const alle = D.opgaver.filter(o => o.job_noegle === st.key);
-  const færdige = alle.filter(o => o.status === "Færdig" && !["pakkeliste", "festkort"].includes(o.job_opgave)).sort((a, b) => (b.faerdig_dato || "").localeCompare(a.faerdig_dato || ""));
-  const åbn = o => { fane = "opgaver"; OP.vis = "opgave"; OP.valgt = o.id; OP.filter = o.status === "Færdig" ? "Færdige" : OP.filter; tegn(); window.scrollTo(0, 0); };
+  const færdige = alle.filter(o => o.status === "Færdig" && !["pakkeliste", "festkort"].includes(opgaveSlags(o))).sort((a, b) => (b.faerdig_dato || "").localeCompare(a.faerdig_dato || ""));
+  const åbn = o => { JOÅ = JOÅ === o.id ? null : o.id; tegn(); };   // folder opgaven ud på jobbet (Oscar 28/10), samme visning som på Opgaver
   const sendt = o => kør("sangene-sendt", [`--dato=${j.dato}`, `--job=${j.navn}`], {tekst: "Sangene sendt", efter: ["opgaver"],
     med: () => { o.status = "Færdig"; o.faerdig_dato = iDag(); o.konklusion = `Linket er sendt ${kortDato(iDag())}`; (o.faerdig_naar || []).forEach(k => { k.ok = true; }); }});
   const række = (o, færdig) => !færdig && o.job_opgave === "sangene" ? h("div", {class: "jo-r"},
     h("span", {class: "jo-m"}, "○"),
     h("span", {class: "jo-t", style: "flex:1"}, h("b", {}, o.titel), h("span", {class: "pre muted"}, (o.kontekst || "").split("\n").filter(l => /^(Link|Mail|Telefon):/.test(l)).join("\n"))),
     h("button", {class: "btn godkend lille", type: "button", disabled: o.id === "…", onclick: () => { if (confirm("Har du sendt linket til kunden? Så stopper påmindelserne.")) sendt(o); }}, "✓ Sendt"))
-  : h("button", {type: "button", class: "jo-r", onclick: () => åbn(o)},
+  : [h("button", {type: "button", class: "jo-r" + (JOÅ === o.id ? " valgt" : ""), "aria-expanded": JOÅ === o.id ? "true" : "false", onclick: () => åbn(o)},
     h("span", {class: "jo-m" + (færdig ? " ok" : "")}, færdig ? "✓" : "○"),
-    h("span", {class: "jo-t"}, h("b", {}, o.titel),
+    h("span", {class: "jo-t", style: "flex:1"}, h("b", {}, o.titel),
       færdig ? h("span", {class: o.konklusion ? "" : "muted"}, o.konklusion || "Ingen konklusion skrevet")
-        : o.deadline ? h("span", {class: "muted"}, "Frist " + visDato(o.deadline)) : null));
+        : h("span", {class: "muted"}, [o.deadline ? h("span", {class: prioKlasse(o) || dlKlasse(o)}, "Frist " + visDato(o.deadline)) : null,
+            (o.faerdig_naar || []).length ? `${o.faerdig_naar.filter(k => k.ok).length}/${o.faerdig_naar.length} krav` : null].filter(Boolean).flatMap((x, i) => i ? [" · ", x] : [x]))),
+    h("span", {class: "muted"}, JOÅ === o.id ? "▴" : "▾")),
+    JOÅ === o.id ? h("div", {class: "jo-detalje"}, opgaveDetalje(o, true)) : null];
   return h("div", {class: "gruppe", style: "margin-top:16px"},
     h("div", {style: "display:flex;align-items:center;gap:8px"}, h("div", {class: "overskrift", style: "margin:0"}, "Opgaver og konklusioner"),
       h("span", {class: "pill" + (st.åbne.length ? "" : " grøn")}, st.åbne.length ? `${st.åbne.length} åbne` : "Ingen åbne"), h("div", {class: "spacer"}),
@@ -1773,12 +1781,7 @@ function visIDag() {
           h("button", {class: "btn primaer", type: "button", style: "margin-top:12px", onclick: () => { fane = "opgaver"; OP.vis = "plan"; OP.planDato = idag; tegn(); }}, "Planlæg dagen")));
 
   const sideKort = (titel, indhold, knap) => h("div", {class: "kort2"}, h("div", {class: "kh"}, h("h3", {}, titel), knap || null), indhold);
-  $("rod").replaceChildren(h("div", {class: "side bred"},
-    h("h1", {}, `${DAGE[d.getDay()][0].toUpperCase() + DAGE[d.getDay()].slice(1)} ${d.getDate()}. ${MDL[d.getMonth()]}`),
-    h("div", {class: "idag"},
-      planKort,
-      h("div", {class: "stak"},
-        ...dagensJobs.map(j => {
+  const jobKort = dagensJobs.map(j => {
           const st = jobStatus(j);
           const næste = !st.klar ? ["Pakkeliste: " + st.pak.toLowerCase(), "Åbn jobbet", () => { fane = "pakkelister"; åbnJob(j); }]
             : !st.kørsel ? ["Kørsel er ikke lavet", "Lav kørsel", () => { vælgRuteJob(st.key); fane = "rute"; tegn(); }]
@@ -1790,7 +1793,10 @@ function visIDag() {
             st.skilteRel ? række("Skilte: " + st.kortTekst, st.kort) : null,
             række("Kørsel: " + (st.kørsel ? "gemt" : "ikke lavet"), st.kørsel),
             næste ? h("button", {class: "btn primaer lille", type: "button", style: "margin-top:10px", onclick: næste[2]}, næste[1]) : h("button", {class: "btn lille", type: "button", style: "margin-top:10px", onclick: () => { fane = "pakkelister"; åbnJob(j); }}, "Alt er klar · åbn jobbet"));
-        }),
+        });
+  const due = (D.salg || []).filter(s => s.naeste_opfoelgning && s.naeste_opfoelgning <= idag);
+  const ub = D.mo?.ubetalt, dm = (D.mo?.depositum || []).filter(j => j.status === "mangler");
+  const resten = [
         forsinket.length ? h("div", {class: "kort2"}, h("div", {class: "kh"}, h("h3", {class: "rød"}, `Forsinket (${forsinket.length})`)),
           forsinket.slice(0, 8).map(o => h("button", {class: "mini link", type: "button", disabled: o.id === "…",
             onclick: () => { fane = "opgaver"; OP.vis = "opgave"; OP.valgt = o.id; tegn(); }},
@@ -1798,19 +1804,18 @@ function visIDag() {
         sideKort("Kalender i dag", kal.length ? kal.map(e => h("div", {class: "mini"},
           h("span", {class: "muted lille tid"}, e.heldag ? "Hele dagen" : e.start.slice(11, 16).replace(":", ".")),
           h("span", {}, e.titel, e.sted ? h("span", {class: "muted lille"}, " · " + e.sted) : null))) : h("div", {class: "muted lille"}, "Intet i kalenderen")),
-        vagterKort(idag),
         sideKort(`Deadlines de næste 7 dage (${dl.length})`, dl.length ? dl.slice(0, 8).map(o => h("button", {class: "mini link", type: "button", disabled: o.id === "…",
           onclick: () => { fane = "opgaver"; OP.vis = "opgave"; OP.valgt = o.id; tegn(); }},
           h("span", {class: "lille tid " + (prioKlasse(o, idag) ? "rød" : dlKlasse(o, idag) || "muted")}, kortDato(o.deadline)), h("span", {class: prioKlasse(o, idag)}, o.titel))) : h("div", {class: "muted lille"}, "Ingen")),
         sideKort(`Forespørgsler der venter (${henv.length})`, henv.length ? henv.slice(0, 6).map(x => h("button", {class: "mini link", type: "button", disabled: x.id === "…",
           onclick: () => { fane = "foresp"; FQ.vis = "h"; FQ.valgt = x.id; tegn(); }},
           h("span", {class: "pill " + pillKlasse(x.status)}, x.status), h("span", {}, x.kunde))) : h("div", {class: "muted lille"}, "Ingen")),
-        (() => { const due = (D.salg || []).filter(s => s.naeste_opfoelgning && s.naeste_opfoelgning <= iDag());
+        (() => {
           const ugeN = (D.salgslog || []).filter(x => x.dato >= plusDage(iDag(), -((dag(iDag()).getDay() + 6) % 7))).length, ugeM = ((D.strategi || {}).salgsmaal || {}).kontakter_uge || 9;
           return sideKort(`Salg: følg op i dag (${due.length}) · uge ${ugeN}/${ugeM} kontakter`, due.length ? due.map(s => h("button", {class: "mini link", type: "button",
             onclick: () => { fane = "salg"; SG.vis = "s"; SG.valgt = s.navn; SG.k = {naeste: s.naeste || ""}; tegn(); }},
             h("span", {class: "lille tid " + (s.naeste_opfoelgning < iDag() ? "rød" : "muted")}, kortDato(s.naeste_opfoelgning)), h("span", {}, s.navn))) : h("div", {class: "muted lille"}, "Ingen")); })(),
-        (() => { const ub = D.mo?.ubetalt, dm = (D.mo?.depositum || []).filter(j => j.status === "mangler");   // Penge ude: kun når noget haster
+        (() => {   // Penge ude: kun når noget haster
           if (!ub || (!ub.forfaldne && !dm.length)) return null;
           return sideKort("Penge ude", h("div", {}, ub.forfaldne ? h("button", {class: "mini link", type: "button", onclick: () => { fane = "oekonomi"; OK.detaljer = true; tegn(); }},
               h("span", {class: "pill rd"}, `${ub.forfaldne} over forfald`), h("span", {}, `${krKort(ub.forfaldne_kr)} kr. · send rykker i Dinero`)) : null,
@@ -1821,7 +1826,19 @@ function visIDag() {
           return h("button", {class: "mini link", type: "button", onclick: () => { fane = "pakkelister"; åbnJob(j); }},
             h("span", {class: "muted lille tid"}, kortDato(j.dato)), h("span", {}, j.navn),
             h("span", {class: "prik " + (klar ? "ok" : listeTilJob(j) || jp ? "adv" : ""), style: "margin-left:auto"}));
-        }) : h("div", {class: "muted lille"}, "Ingen"))))));
+        }) : h("div", {class: "muted lille"}, "Ingen"))];
+  const overskrift = h("h1", {}, `${DAGE[d.getDay()][0].toUpperCase() + DAGE[d.getDay()].slice(1)} ${d.getDate()}. ${MDL[d.getMonth()]}`);
+  if (dp?.plan_punkter?.length) {   // dagen er planlagt: kun planen (Oscar 28/10: "fokus skal holdes"); resten bag ét lukket link
+    const tal = [[forsinket.length, "Forsinket"], [dl.length, "Deadlines"], [henv.length, "Forespørgsler"], [due.length, "Salg"],
+      [ub && (ub.forfaldne || dm.length) ? (ub.forfaldne || 0) + dm.length : 0, "Penge ude"]].filter(([n]) => n).map(([n, t]) => `${t} ${n}`);
+    $("rod").replaceChildren(h("div", {class: "side"}, overskrift,
+      h("div", {class: "fokus"}, planKort, ...jobKort, vagterKort(idag),   // vagtkort vises kun ved kollision eller nye vagter
+        h("details", {class: "resten"}, h("summary", {class: "muted lille"}, "Vis resten" + (tal.length ? ` (${tal.join(" · ")})` : "")),
+          h("div", {class: "stak", style: "margin-top:10px"}, resten)))));
+    return;
+  }
+  $("rod").replaceChildren(h("div", {class: "side bred"}, overskrift,
+    h("div", {class: "idag"}, planKort, h("div", {class: "stak"}, ...jobKort, resten[0], resten[1], vagterKort(idag), ...resten.slice(2)))));
 }
 function estimatForslag(dp) {   // tid brugt mod estimat, så Oscar kan rette opgavens omfang med ét tryk
   const rækker = (dp.plan_punkter || []).filter(p => p.id != null && p.brugt != null).map(p => ({p, o: D.opgaver.find(o => o.id === p.id)})).filter(x => x.o && x.o.status !== "Færdig");
@@ -1894,7 +1911,8 @@ function visOpgaver() {
       : tom("Vælg en opgave, lav en ny, eller planlæg dagen."));
   $("rod").replaceChildren(h("div", {class: "to"}, venstre, højre));
 }
-function opgaveDetalje(o) {
+let JOÅ = null;   // opgaven der er foldet ud på jobbets side
+function opgaveDetalje(o, indlejret) {   // indlejret: på jobbets side, hvor titlen allerede står i rækken
   if (!o) return tom("Opgaven findes ikke længere.");
   const krav = o.faerdig_naar || [];
   const alleOk = krav.every(k => k.ok);
@@ -1903,8 +1921,8 @@ function opgaveDetalje(o) {
     med: () => { if (v === "" || v == null) delete o[felt]; else o[felt] = felt === "estimat" ? Number(v) : v; }});
   const st = {krav: "", note: "", faktisk: o.estimat ?? "", konklusion: o.konklusion || ""};
   const infoLinje = (navn, v) => v ? h("div", {class: "info"}, h("div", {class: "etiket"}, navn), h("div", {class: "pre"}, v)) : null;
-  return h("div", {class: "kort2"},
-    h("div", {class: "kh"}, h("h2", {}, `#${o.id} ${o.titel}`)),
+  return h("div", {class: indlejret ? "" : "kort2"},
+    indlejret ? null : h("div", {class: "kh"}, h("h2", {}, `#${o.id} ${o.titel}`)),
     o.status === "Færdig" ? h("div", {class: "godk ok"}, `Færdig ${o.faerdig_dato ? kortDato(o.faerdig_dato) : ""}` + (o.faktisk != null ? ` · ${o.faktisk} min` : ""))
       : seg(O_STATUS, o.status, v => ret("status", v, `#${o.id} ${v}`)),
     h("div", {class: "felter3"},
@@ -1917,7 +1935,9 @@ function opgaveDetalje(o) {
       h("div", {class: "rk", style: "margin-top:0"}, inp(st, "konklusion", {placeholder: "Fx Singa til karaoke, aftalt med Christoffer"}),
         h("button", {class: "btn", type: "button", onclick: () => { const k = st.konklusion.trim(); if (k === (o.konklusion || "")) return;
           ret("konklusion", k, `#${o.id} konklusion`); }}, "Gem"))) : null,
-    infoLinje("Formål", o.formaal), infoLinje("Første skridt", o.foerste_skridt), infoLinje("Kontekst", o.kontekst), infoLinje("Venter på", o.venter_paa),
+    infoLinje("Formål", o.formaal), infoLinje("Første skridt", o.foerste_skridt), indlejret && (o.kontekst || "").length > 200   // på jobbet: lang kontekst foldet sammen, så omfanget kan ses med det samme
+      ? h("details", {class: "info"}, h("summary", {class: "etiket", style: "cursor:pointer"}, "Kontekst (tryk for at vise)"), h("div", {class: "pre"}, o.kontekst))
+      : infoLinje("Kontekst", o.kontekst), infoLinje("Venter på", o.venter_paa),
     h("div", {class: "etiket", style: "margin-top:16px"}, "Færdig når"),
     krav.map((k, i) => h("label", {class: "cb" + (k.ok ? " gjort" : "")},
       h("input", {type: "checkbox", checked: !!k.ok, disabled: !!k.ok || o.status === "Færdig", title: k.ok ? "Krydset af" : "Kryds af",
