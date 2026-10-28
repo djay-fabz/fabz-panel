@@ -731,7 +731,8 @@ function visJobs() {
     h("div", {style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px"},
       h("select", {class: "input", style: "max-width:260px", onchange: e => { JF = e.target.value; tegn(); }},
         FILTRE.map(([v, t]) => h("option", {value: v, selected: JF === v}, t))),
-      h("span", {class: "muted lille"}, `${vist.length - vagter.length} af ${js.length} jobs` + (vagter.length ? ` · ${vagter.length} ${vagter.length === 1 ? "vagt" : "vagter"}` : ""))),
+      h("span", {class: "muted lille"}, `${vist.length - vagter.length} af ${js.length} jobs` + (vagter.length ? ` · ${vagter.length} ${vagter.length === 1 ? "vagt" : "vagter"}` : "")),
+      h("div", {class: "spacer"}), utilgListe()),
     h("div", {class: "jobliste"},
       vist.length ? vist.map(j => {
         if (j.vagt) return vagtRække(j, nårTekst);
@@ -1750,7 +1751,7 @@ function visIDag() {
         sideKort("Kalender i dag", kal.length ? kal.map(e => h("div", {class: "mini"},
           h("span", {class: "muted lille tid"}, e.heldag ? "Hele dagen" : e.start.slice(11, 16).replace(":", ".")),
           h("span", {}, e.titel, e.sted ? h("span", {class: "muted lille"}, " · " + e.sted) : null))) : h("div", {class: "muted lille"}, "Intet i kalenderen")),
-        vagterKort(idag, sideKort),
+        vagterKort(idag),
         sideKort(`Deadlines de næste 7 dage (${dl.length})`, dl.length ? dl.slice(0, 8).map(o => h("button", {class: "mini link", type: "button", disabled: o.id === "…",
           onclick: () => { fane = "opgaver"; OP.vis = "opgave"; OP.valgt = o.id; tegn(); }},
           h("span", {class: "lille tid " + (prioKlasse(o, idag) ? "rød" : dlKlasse(o, idag) || "muted")}, kortDato(o.deadline)), h("span", {class: prioKlasse(o, idag)}, o.titel))) : h("div", {class: "muted lille"}, "Ingen")),
@@ -2710,28 +2711,30 @@ function ruteKort(e) {   // ét kort pr. stop og pr. kørsel (kan printes)
 // Vagter (Oscar 27/10): kollisioner med bookinger, de næste vagter, ændringer de sidste 3 dage og listen over datoer,
 // hvor han skal gøre sig utilgængelig i Planday/Deltaplan. Data fra tools/vagter.py (dagligt i kalender.yml, Pushover ved nyt).
 const VG = {liste: false};
-function vagterKort(idag, sideKort) {
+function vagterKort(idag) {   // Oscar 28/10: "skal ikke være synlig, bare i baggrunden". Kun når der er kollision eller nyt de sidste 3 dage
   const v = D.vagter, kilder = v?.kilder || [];
-  const navn = k => ({planday: "Planday", deltaplan: "Deltaplan"})[k] || k;
-  const tid = x => kortDato(x.start.slice(0, 10)) + (x.heldag ? "" : ` ${x.start.slice(11, 16).replace(":", ".")}-${x.slut.slice(11, 16).replace(":", ".")}`);
-  if (!kilder.length) return sideKort("Vagter", h("div", {class: "muted lille"}, "Planday og Deltaplan er ikke koblet på endnu."));
-  const kol = (v.kollisioner || []);
-  const næste = (v.vagter || []).filter(x => x.slut.slice(0, 10) >= idag).slice(0, 6);
+  if (!kilder.length) return null;
+  const kol = v.kollisioner || [];
   const nyt = (v.aendringer || []).filter(x => x.tid.slice(0, 10) >= plusDage(idag, -3)).slice(-6).reverse();
+  if (!kol.length && !nyt.length) return null;
+  const tid = x => kortDato(x.start.slice(0, 10)) + (x.heldag ? "" : " " + vagtTid(x));
+  return h("div", {class: "kort2", id: "vagter"},
+    h("div", {class: "kh"}, h("h3", {}, "Vagter"), h("button", {class: "btn lille", type: "button", onclick: () => { fane = "pakkelister"; JH = null; JF = "alle"; tegn(); window.scrollTo(0, 0); }}, "Se i Jobs")),
+    kol.map(x => h("div", {class: "mini"}, h("span", {class: "pill rd"}, "kollision"), h("span", {class: "rød"}, `${kortDato(x.dato)}: ${VAGT_KILDE[x.vagt.kalender] || x.vagt.kalender}-vagt og ${x.booking}`))),
+    nyt.map(x => h("div", {class: "mini"}, h("span", {class: "pill " + (x.type === "ny" ? "g" : "y")}, x.type), h("span", {class: x.type === "aflyst" ? "muted" : ""}, `${VAGT_KILDE[x.vagt.kalender] || x.vagt.kalender} ${tid(x.vagt)}`))));
+}
+function utilgListe() {   // på Jobs: datoer med bookinger de næste 6 måneder, hvor Oscar skal være utilgængelig i Planday/Deltaplan
+  const v = D.vagter, kilder = v?.kilder || [];
+  if (!kilder.length) return null;
   const utilg = v.utilgaengelig || [];
   const tekst = utilg.map(x => `${kortDato(x.dato)} ${x.dato.slice(0, 4)}: ${x.bookinger.join(", ")}`).join("\n");
-  return h("div", {class: "kort2", id: "vagter"},
-    h("div", {class: "kh"}, h("h3", {}, "Vagter · " + kilder.map(navn).join(" og ")),
-      h("button", {class: "btn lille", type: "button", title: "Datoer med bookinger de næste 6 måneder", onclick: () => { VG.liste = !VG.liste; tegn(); }}, VG.liste ? "Skjul listen" : `Utilgængelig (${utilg.length})`)),
-    kol.map(x => h("div", {class: "mini"}, h("span", {class: "pill rd"}, "kollision"), h("span", {class: "rød"}, `${kortDato(x.dato)}: ${navn(x.vagt.kalender)}-vagt og ${x.booking}`))),
-    nyt.map(x => h("div", {class: "mini"}, h("span", {class: "pill " + (x.type === "ny" ? "g" : "y")}, x.type), h("span", {class: x.type === "aflyst" ? "muted" : ""}, `${navn(x.vagt.kalender)} ${tid(x.vagt)}`))),
-    næste.length ? næste.map(x => h("div", {class: "mini"}, h("span", {class: "muted lille tid"}, tid(x)), h("span", {}, navn(x.kalender) + (x.titel ? " · " + x.titel : ""), x.sted ? h("span", {class: "muted lille"}, " · " + x.sted) : null)))
-      : h("div", {class: "muted lille"}, "Ingen kommende vagter"),
-    VG.liste ? h("div", {style: "margin-top:10px"},
-      h("div", {class: "muted lille", style: "margin-bottom:6px"}, "Gør dig utilgængelig på disse datoer i " + kilder.map(navn).join(" og ") + ":"),
-      utilg.length ? h("pre", {class: "lille", style: "white-space:pre-wrap;margin:0 0 8px"}, tekst) : h("div", {class: "muted lille"}, "Ingen bookinger de næste 6 måneder"),
-      utilg.length ? h("button", {class: "btn lille", type: "button", onclick: e => { navigator.clipboard?.writeText(tekst); e.target.textContent = "Kopieret"; }}, "Kopiér datoer") : null) : null,
-    h("div", {class: "muted lille", style: "margin-top:6px"}, "Tjekket " + (v.opdateret || "").replace("T", " kl. ")));
+  const knap = h("button", {class: "btn lille", type: "button", title: "Datoer med bookinger de næste 6 måneder", onclick: () => { VG.liste = !VG.liste; tegn(); }}, VG.liste ? "Skjul listen" : `Utilgængelig (${utilg.length})`);
+  if (!VG.liste) return knap;
+  return h("div", {id: "utilg", style: "flex-basis:100%"}, knap,
+    h("div", {class: "muted lille", style: "margin:8px 0 6px"}, "Gør dig utilgængelig på disse datoer i " + kilder.map(k => VAGT_KILDE[k] || k).join(" og ") + ":"),
+    utilg.length ? h("pre", {class: "lille", style: "white-space:pre-wrap;margin:0 0 8px"}, tekst) : h("div", {class: "muted lille"}, "Ingen bookinger de næste 6 måneder"),
+    utilg.length ? h("button", {class: "btn lille", type: "button", onclick: e => { navigator.clipboard?.writeText(tekst); e.target.textContent = "Kopieret"; }}, "Kopiér datoer") : null,
+    h("div", {class: "muted lille", style: "margin-top:6px"}, "Vagter tjekket " + (v.opdateret || "").replace("T", " kl. ")));
 }
 function mailStatus(idag, dp) {   // Mailoversigten (Oscar 28/10): KUN Mødt ind starter den (ingen knap, den blev trykket ved siden af Mødt ind og gav to oversigter). Status fra data/mailoversigt.json
   const m = D.mailoversigt, iDagM = m && m.dato === idag;
