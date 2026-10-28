@@ -95,6 +95,8 @@ a.btn{display:inline-block;text-decoration:none}
 .andre select{max-width:280px}
 
 /* editor (fuld skærm) */
+.vaelg.låst,.liste.låst .lkrop .step,.liste.låst .lkrop .ekstra,.liste.låst .lkrop .notefelt,.liste.låst .lhoved .felter,.liste.låst .lhoved .startfra,.liste.låst .anlaeg{pointer-events:none}
+.vaelg.låst{opacity:.45}.liste.låst .lkrop .step,.liste.låst .lkrop .ekstra{opacity:.4}
 .ed{display:grid;grid-template-columns:minmax(0,1fr) minmax(380px,460px);height:calc(100vh - var(--top))}
 .vaelg{overflow:auto;padding:0 28px 40px}
 .soeg{position:sticky;top:0;z-index:2;background:var(--bg);padding:20px 0 12px}
@@ -1114,11 +1116,16 @@ function tegnListe() {
       h("label", {}, h("span", {class: "etiket"}, "Navn på PDF"),
         h("input", {class: "input", value: S.jobNavn, oninput: e => { S.jobNavn = e.target.value; }})),
       h("div", {}, h("span", {class: "etiket"}, "Transport"), seg(["Trailer", "Kun bil"], S.transport, v => { S.transport = v; S.rørt = true; tegnListe(); }))),
-    S.egen ? null : h("label", {style: "display:block;margin-top:12px"}, h("span", {class: "etiket"}, "Start fra"), startFra),
+    S.egen ? null : h("label", {class: "startfra", style: "display:block;margin-top:12px"}, h("span", {class: "etiket"}, "Start fra"), startFra),
     S.job ? godkendBlok(linjer) : null,
     S.job && !erKlub(S.job) ? festkortBlok(S.job, S, tegnListe) : null,
     S.job && erKlub(S.job) ? klubkortBlok(S.job, S, tegnListe) : null);
 
+  // Godkendt liste er låst (Oscar 28/10): intet kan rettes, og PDF-knappen henter den PDF, der er lavet, i stedet for at lave en ny.
+  // Genåbn liste låser op.
+  const låst = !!(S.job && S.godk && signatur(Object.values(S.l)) === S.snap);
+  $("vaelg")?.classList.toggle("låst", låst);
+  k.classList.toggle("låst", låst);
   const krop = h("div", {class: "lkrop", id: "lkrop"});
   if (!linjer.length) {
     krop.append(h("div", {class: "tom"}, "Listen er tom.", h("br"), h("span", {class: "lille"}, "Tryk + ud for udstyret til venstre.")));
@@ -1178,15 +1185,23 @@ function tegnListe() {
   const fod = h("div", {class: "lfod"},
     h("div", {class: "resume lille", style: advN ? "color:var(--adv)" : "color:var(--svag)"},
       `${linjer.length} linjer · ${stk} stk` + (advN ? ` · ${advN} advarsler` : "") + (S.transport ? "" : " · vælg transport")),
-    h("button", {class: "btn primaer stor", type: "button", disabled: !kan, onclick: () => send("pdf")},
-      optaget ? "Arbejder …" : "Lav pakkeliste (PDF)"),
-    gemBlok,
+    låst ? h("button", {class: "btn primaer stor", type: "button", onclick: hentGodkendtPdf}, "Hent PDF")
+      : h("button", {class: "btn primaer stor", type: "button", disabled: !kan, onclick: () => send("pdf")},
+        optaget ? "Arbejder …" : "Lav pakkeliste (PDF)"),
+    låst ? h("div", {class: "lille muted", style: "margin-top:6px"}, "Listen er godkendt og låst. Tryk Genåbn liste øverst for at rette den.") : gemBlok,
     h("div", {id: "svar"}));
   k.replaceChildren(hoved, krop, fod);
   krop.scrollTop = gl;
   tegnSvar();
 }
 let gemKnap = null, gemHjælp = null;
+async function hentGodkendtPdf() {   // den PDF, der blev lavet til jobbet (pdf/<navn> - dd.mm.åååå.pdf), uden at lave en ny
+  const j = S.job, navn = (S.jobNavn || j.navn).trim(), fil = `${navn} - ${j.dato.slice(8, 10)}.${j.dato.slice(5, 7)}.${j.dato.slice(0, 4)}.pdf`;
+  const r = await laesFil("pdf/" + fil);
+  if (!r) { alert(`Fandt ikke ${fil}. Tryk Genåbn liste, og lav PDF'en igen.`); return; }
+  const a = h("a", {href: URL.createObjectURL(new Blob([await r.arrayBuffer()], {type: "application/pdf"})), download: fil});
+  document.body.append(a); a.click(); a.remove();
+}
 const ANLEDNING = {bryllup: "Bryllup", privatfest: "Fest", erhverv: "Firmafest", efterskole: "Fest"};
 function gætAnledning(j) {
   const m = /jobtype\s*:\s*([^<\n\r]*)/i.exec(j.besk || "");
