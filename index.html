@@ -307,6 +307,8 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .tb-linje{display:grid;grid-template-columns:minmax(0,1fr) 110px 36px;gap:8px;margin-bottom:8px}
 .tb-r{display:flex;justify-content:space-between;gap:12px;padding:2px 0}
 .tb-adv{margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--adv-blid);color:var(--adv)}
+.bet{padding:12px 14px}.bet-rk{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.bet-in{width:110px;text-align:right;font-weight:600}.bet .jo-r{padding:10px 0 0;margin-top:10px}
+@media (max-width:700px){.bet .seg{display:flex;width:100%}.bet .seg button{flex:1}.bet .bet-in{flex:1;width:auto}.bet .btn.godkend,.bet .btn.primaer{flex:1;text-align:center}}
 .jo{margin-top:8px}.jo-r{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;border:0;border-top:1px solid var(--linje);background:none;padding:10px 14px}
 .jo-r:first-child{border-top:0}.jo-r:hover,.jo-r.valgt{background:var(--hover)}
 .jo-m{flex:none;width:18px;color:var(--svag)}.jo-m.ok{color:var(--ok);font-weight:700}
@@ -554,6 +556,7 @@ async function hentData() {
   const pr = await laesFil("data/priser.json");   // pakkerne i Tilbud (samme priser som fabz-tilbud/priser.md, tjekkes med tools/priser.py)
   D.priser = pr ? await pr.json() : null;
   D.leads = await laesValgfri("data/leads.json");   // leadlisten (Træk en kontakt)
+  D.betalinger = await laesValgfri("data/betalinger.json");   // betaling pr. job (fabz_betaling.py): måde, beløb, opgave, Dinero-kladde
   const mo2 = await laesFil("data/mailoversigt.json");   // dagens mailoversigt (tools/mailoversigt.py via panel.yml ved Mødt ind)
   D.mailoversigt = mo2 ? await mo2.json() : null;
   const vg = await laesFil("data/vagter.json");   // vagter fra Planday/Deltaplan (tools/vagter.py i kalender.yml)
@@ -776,7 +779,9 @@ function visJobs() {
   const j0 = JH ? jobs(true).find(x => jobNøgle(x) === JH) : null;
   const v0 = JH && !j0 ? vagtJobs().find(x => x.key === JH) : null;
   if (v0) return visVagtSide(v0);
-  if (JH && !j0) {   // jobbet er gledet ud af kalenderen (den gemmer kun fra i går): vis opgaven om sangene i stedet
+  if (JH && !j0) {   // jobbet er gledet ud af kalenderen (den gemmer kun fra i går): betalingen kender det stadig, ellers vis opgaven om sangene
+    const br = (D.betalinger || []).find(r => r.job_noegle === JH);
+    if (br) return visJobSide({navn: br.navn, dato: br.dato, sted: br.sted || "", besk: "", afholdt: true});
     const so = D.opgaver.find(o => o.job_noegle === JH && o.job_opgave === "sangene" && o.status !== "Færdig");
     JH = null;
     if (so) { fane = "opgaver"; OP.vis = "opgave"; OP.valgt = so.id; return tegn(); }
@@ -825,7 +830,8 @@ function visJobSide(j) {   // alt til ét job samlet: pakkeliste, kort, kørsel,
     h("div", {class: "muted"}, [`${DAGE[d.getDay()]} ${visDato(j.dato)}`, j.sted].filter(Boolean).join(" · "),
       (j.sted || "").trim() ? null : h("span", {class: "pill rød-pill", style: "margin-left:8px"}, "Ingen adresse")),
     tider.length ? h("div", {class: "muted lille", style: "margin-top:6px"}, tider.join(" · ")) : null,
-    h("button", {class: "btn lille", type: "button", style: "margin-top:10px", onclick: () => tbStart(tbFraJob(j))}, "Lav tilbud"),
+    j.afholdt ? null : h("button", {class: "btn lille", type: "button", style: "margin-top:10px", onclick: () => tbStart(tbFraJob(j))}, "Lav tilbud"),
+    betalingAfsnit(j, st),
     jobOpgaver(j, st),
     afsnit("Pakkeliste", st.pak[0].toUpperCase() + st.pak.slice(1), st.klar, h("button", {class: "btn primaer lille", type: "button", onclick: () => åbnJob(j)}, "Åbn pakkeliste")),
     afsnit("Skilte", st.kortTekst, st.kort, h("button", {class: "btn lille", type: "button", onclick: () => { KT.job = st.key; KT.slags = null; KT.fk = KT.kk = null; fane = "kort"; tegn(); window.scrollTo(0, 0); }}, "Åbn skilte")),
@@ -854,7 +860,8 @@ function visVagtSide(v) {   // vagtens side: dato, tider, sted, kilde, kollision
 // Opgaver og konklusioner på jobbet (Oscar 27/10: "hvilket karaokesystem var det?"). Færdige opgaver viser konklusionen, åbne deres frist.
 // Pakkeliste- og skilteopgaverne står i deres egne afsnit, så de vises kun her, mens de er åbne.
 function jobOpgaver(j, st) {
-  const alle = D.opgaver.filter(o => o.job_noegle === st.key);
+  const alle = D.opgaver.filter(o => o.job_noegle === st.key && !(o.job_opgave === "betaling" && o.status !== "Færdig"));   // betaling-opgaven står i Betaling, mens den er åben
+  st = {...st, åbne: st.åbne.filter(o => o.job_opgave !== "betaling")};
   const færdige = alle.filter(o => o.status === "Færdig" && !["pakkeliste", "festkort"].includes(opgaveSlags(o))).sort((a, b) => (b.faerdig_dato || "").localeCompare(a.faerdig_dato || ""));
   const åbn = o => { JOÅ = JOÅ === o.id ? null : o.id; tegn(); };   // folder opgaven ud på jobbet (Oscar 28/10), samme visning som på Opgaver
   const sendt = o => kør("sangene-sendt", [`--dato=${j.dato}`, `--job=${j.navn}`], {tekst: "Sangene sendt", efter: ["opgaver"],
@@ -877,6 +884,57 @@ function jobOpgaver(j, st) {
       h("button", {class: "btn lille", type: "button", onclick: () => { fane = "opgaver"; OP.vis = "ny"; OP.ny = {job_noegle: st.key}; tegn(); window.scrollTo(0, 0); }}, "+ Opgave til jobbet")),
     alle.length ? h("div", {class: "kort jo"}, færdige.map(o => række(o, true)), st.åbne.map(o => række(o, false)))
       : h("div", {class: "muted lille", style: "margin-top:6px"}, "Ingen opgaver på jobbet endnu."));
+}
+// ---------- Betaling pr. job (Oscar 29/10, bogholder-robot del 1): Kontant · Overførsel · Dinero. Robotten gætter, Oscar retter med ét tryk.
+// Dagen efter jobbet laver fabz.py betaling-opgaver én opgave (job_opgave "betaling"): Send faktura (kladde i Dinero) / Godkend betaling / Tjek at pengene er kommet.
+// Robotten bogfører aldrig og sender aldrig: Oscar sender fakturaen i Dinero og trykker ja her. Kontant tæller ikke i skat (Oscars valg).
+const BET_MAADER = [["kontant", "Kontant"], ["overfoersel", "Overførsel"], ["dinero", "Dinero"]];
+const betMaadeTekst = m => (BET_MAADER.find(x => x[0] === m) || [m, m])[1];
+const betalingTilJob = j => (D.betalinger || []).find(r => r.job_noegle === jobNøgle(j)) || null;
+function betalingGaet(j) {   // samme regel som fabz_betaling.gaet, til jobs robotten ikke har set endnu (booking lagt ind efter morgenkørslen)
+  const mo = moMaaneder().flatMap(m => m.jobs || []).find(x => x.dato === j.dato && (x.navn || "").toLowerCase() === j.navn.toLowerCase());
+  const besk = (j.besk || "").replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "").toLowerCase();
+  const kontant = /(pris|betalingsbetingelser|betalt)\s*:[^\n]*kontant/.test(besk);
+  return {maade: kontant ? "kontant" : mo?.b_indkomst ? "overfoersel" : "dinero", beloeb: mo?.brutto ?? null, gaet: true, status: "valgt"};
+}
+function betalingAfsnit(j, st) {
+  const r = betalingTilJob(j) || {...betalingGaet(j), job_noegle: st.key};
+  const afholdt = j.afholdt || j.dato < iDag();
+  const o = D.opgaver.find(x => x.job_noegle === st.key && x.job_opgave === "betaling" && x.status !== "Færdig");
+  const laast = r.status === "faerdig" || r.status === "aflyst";   // aflyst/flyttet job (fabz.py betaling-opgaver): intet kan trykkes
+  const efter = ["betalinger", "opgaver"];
+  const args = (maade, beloeb) => [`--job=${j.navn}`, `--dato=${j.dato}`, `--maade=${maade}`, ...(beloeb != null && beloeb !== "" ? [`--beloeb=${beloeb}`] : [])];
+  const saet = (maade, beloeb) => kør("betaling-saet", args(maade, beloeb), {tekst: `Betaling ${j.navn}: ${betMaadeTekst(maade)}`, efter,
+    med: () => { const x = betalingTilJob(j) || (D.betalinger = [...(D.betalinger || []), {...r, gaet: false}]).at(-1); x.maade = maade; if (beloeb != null && beloeb !== "") x.beloeb = Number(beloeb); x.kilde = "oscar"; }});
+  const godkend = async () => {   // uden række i filen (kun gæt): gem valget først, så godkend
+    if (r.gaet) { const sv = await kørOgVent("betaling-saet", args(r.maade, r.beloeb)); if (!sv || sv.status === "FEJL") return sendFejl("Betaling " + j.navn, new Error(sv?.fejl || "intet svar")); }
+    kør("betaling-godkend", [`--job=${j.navn}`, `--dato=${j.dato}`, "--tving"], {tekst: `Betaling godkendt: ${j.navn}`, efter,
+      med: () => { const x = betalingTilJob(j); if (x) { x.status = "faerdig"; x.godkendt = iDag(); } if (o) { o.status = "Færdig"; o.faerdig_dato = iDag(); } }});
+  };
+  const b = r.beloeb != null ? Number(r.beloeb) : null, dinero = r.maade === "dinero";
+  const pill = r.status === "aflyst" ? ["", "Aflyst"] : laast ? ["grøn", `Godkendt ${kortDato(r.godkendt || iDag())}`]
+    : !afholdt ? ["blå", dinero ? "Dinero · faktura dagen efter" : r.maade === "kontant" ? "Kontant på dagen" : "Overførsel"]
+    : dinero ? ["gul", "Faktura ikke sendt"] : r.maade === "kontant" ? ["gul", "Venter på dit ja"] : r.bank_dato ? ["grøn", `Set i banken ${kortDato(r.bank_dato)}`] : ["gul", "Venter på overførsel"];
+  const knap = !afholdt || laast ? null
+    : dinero ? [r.dinero?.link ? h("a", {class: "btn primaer", href: r.dinero.link, target: "_blank", rel: "noopener"}, "Åbn kladden i Dinero ↗") : null,
+               h("button", {class: "btn godkend", type: "button", onclick: () => { if (confirm("Har du sendt fakturaen fra Dinero?")) godkend(); }}, "✓ Fakturaen er sendt")]
+    : r.maade === "kontant" ? h("button", {class: "btn godkend", type: "button", disabled: !b, onclick: () => { if (confirm(`Har du fået ${kr(b)} kontant?`)) godkend(); }}, `✓ Betalt kontant${b ? " " + kr(b) : ""}`)
+    : h("button", {class: "btn godkend", type: "button", onclick: () => { if (confirm("Er pengene kommet ind på kontoen?")) godkend(); }}, "✓ Pengene er kommet");
+  const linje = !o ? null : dinero ? (r.dinero?.link ? `Kladden ligger i Dinero${b ? " · " + kr(b * 1.25) + " inkl. moms" : ""} · netto 8 dage. Lukkes selv, når fakturaen er bogført.` : "Kladden blev ikke lavet. Lav fakturaen i Dinero og tryk Fakturaen er sendt.")
+    : r.maade === "kontant" ? "Registreres som kontant indtægt og lukker opgaven."
+    : r.bank_dato ? `${b ? kr(b) + " " : ""}set på erhvervskontoen ${kortDato(r.bank_dato)}. Lukkes, når du trykker.` : "Tjek kontoen, og tryk når pengene er kommet.";
+  const inp = h("input", {class: "input bet-in", type: "number", inputmode: "numeric", min: "1", value: b ?? "", disabled: laast,
+    onchange: e => { if (Number(e.target.value) > 0) saet(r.maade, e.target.value); }});
+  return h("div", {class: "gruppe", style: "margin-top:12px"},
+    h("div", {style: "display:flex;align-items:center;gap:8px;flex-wrap:wrap"}, h("div", {class: "overskrift", style: "margin:0"}, "Betaling"), h("span", {class: "pill " + pill[0]}, pill[1])),
+    h("div", {class: "kort bet"},
+      h("div", {class: "bet-rk"},
+        laast ? h("span", {class: "pill"}, betMaadeTekst(r.maade)) : seg(BET_MAADER, r.maade, v => saet(v, r.beloeb)),
+        inp, h("span", {class: "muted lille"}, dinero ? "kr. ekskl. moms" : "kr."),
+        dinero && b ? h("span", {class: "muted lille"}, `${kr(b * 1.25)} inkl. moms`) : null,
+        h("div", {class: "spacer"}), knap),
+      o ? h("div", {class: "jo-r"}, h("span", {class: "jo-m" + (r.bank_dato ? " ok" : "")}, r.bank_dato ? "✓" : "○"),
+            h("span", {class: "jo-t", style: "flex:1"}, h("b", {}, o.titel), h("span", {class: "muted"}, linje))) : null));
 }
 // valg af job til en opgave: kommende jobs, plus det job opgaven allerede har (også når det er passeret)
 function jobValg(nu) {
@@ -1883,7 +1941,7 @@ async function gemLager() {
 }
 
 // ---------- fælles: kør fabz.py-kommandoer fra panelet ----------
-const FILER = {henvendelser: "data/henvendelser.json", opgaver: "data/opgaver.json", dagsplaner: "data/dagsplaner.json",
+const FILER = {henvendelser: "data/henvendelser.json", opgaver: "data/opgaver.json", betalinger: "data/betalinger.json", dagsplaner: "data/dagsplaner.json",
                ideer: "data/ideer.json", indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json", salgslog: "data/salgslog.json", mo: "data/maanedsoversigt.json", strategi: "data/strategi.json", leads: "data/leads.json", mailoversigt: "data/mailoversigt.json", vagter: "data/vagter.json"};
 async function laesValgfri(p) { const r = await laesFil(p); return r ? r.json() : []; }
 async function genindlæs(navne) { await Promise.all(navne.map(async n => { D[n] = n === "kkTekster" ? await laesKkTekster() : await laesValgfri(FILER[n]); })); }
