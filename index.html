@@ -961,7 +961,7 @@ function betalingAfsnit(j, st) {
       : r.dinero?.guid ? h("button", {class: "btn godkend", type: "button", disabled: r.send === "bestilt", onclick: () => {   // Oscar 30/10: send fra jobbet, jobdatoen står i kommentaren
           if (!confirm(`Send fakturaen til ${(r.kunde || {}).navn || j.navn}${(r.kunde || {}).mail ? " (" + r.kunde.mail + ")" : ""}? ${b ? kr(b * 1.25) + " inkl. moms, " : ""}netto 8 dage. Dinero bogfører og mailer den.`)) return;
           kør("betaling-send", [`--job=${j.navn}`, `--dato=${j.dato}`], {tekst: `Send faktura: ${j.navn}`, efter, med: () => { r.send = "bestilt"; }}); }},
-          r.send === "bestilt" ? "Sendes …" : r.send === "fejl" ? "Prøv at sende igen" : "Send faktura")
+          r.send === "bestilt" ? "Sendes …" : r.bogfoert_nr ? `Send faktura ${r.bogfoert_nr} igen (bogført, ikke mailet)` : r.send === "fejl" ? "Prøv at sende igen" : "Send faktura")
       : h("button", {class: "btn godkend", type: "button", onclick: () => { if (confirm("Har du sendt fakturaen fra Dinero?")) godkend(); }}, "✓ Fakturaen er sendt"))
     : r.maade === "kontant" ? h("button", {class: "btn godkend", type: "button", disabled: !b, onclick: () => { if (confirm(`Har du fået ${kr(b)} kontant?`)) godkend(); }}, `✓ Betalt kontant${b ? " " + kr(b) : ""}`)
     : h("button", {class: "btn godkend", type: "button", onclick: () => { if (confirm("Er pengene kommet ind på kontoen?")) godkend(); }}, "✓ Pengene er kommet");
@@ -1025,9 +1025,7 @@ function visBogfoering() {
   const kræverRække = p => h("div", {class: "bf-r"},
     h("div", {class: "t", style: "cursor:pointer", onclick: e => { if (e.target.tagName === "INPUT") return; BF.åben = BF.åben === p.id ? null : p.id; tegn(); }},
       h("b", {style: p.klaret ? "text-decoration:line-through;opacity:.6" : ""}, p.titel + (p.dato ? ` · ${kortDato(p.dato)}` : "")),
-      h("span", {}, p.hvad || p.grund), detalje(p), resLinje(p),
-      p.forslag === "vedhaeft" && klar ? h("label", {class: "bf-d", style: "display:flex;gap:6px;align-items:center;margin-top:6px"},
-        h("input", {type: "checkbox", checked: BF.valgte.has(p.id), onchange: e => { e.target.checked ? BF.valgte.add(p.id) : BF.valgte.delete(p.id); tegn(); }}), `Ja, lav udkastet "Bilag ${p.bilag_nr}"`) : null),
+      h("span", {}, p.hvad || p.grund), detalje(p), resLinje(p)),
     p.beloeb != null ? h("div", {class: "kr"}, bfKr(p.beloeb, p.valuta)) : null,
     h("button", {class: "btn lille" + (p.klaret ? " ghost" : ""), type: "button", onclick: () => kør("ugepakke-klaret", [`--uge=${pk.uge}`, `--id=${p.id}`, ...(p.klaret ? ["--fortryd"] : [])],
       {tekst: `${p.titel}: ${p.klaret ? "åben igen" : "klaret"}`, efter, med: () => { if (p.klaret) delete p.klaret; else p.klaret = iDag(); }})}, p.klaret ? "Fortryd" : "✓ Klaret"));
@@ -1070,12 +1068,12 @@ function visBogfoering() {
         klar ? h("button", {class: "btn godkend", type: "button", disabled: !BF.valgte.size && !ikke.length, onclick: godkend}, `✓ Godkend ${valgteSikre.length + kræver.filter(p => BF.valgte.has(p.id)).length}`) : null,
         (() => { const ps = P.filter(kanBogføres).filter(p => p.bogfoer !== "bestilt"); return ps.length > 1 ? h("button", {class: "btn godkend", type: "button", onclick: () => bogfør(ps)}, `Bogfør alle ${ps.length}`) : null; })()),
       sikre.length ? h("details", {class: "sk-fold", open: !klar || sikre.length <= 4},
-        h("summary", {}, `Vis: ${sikre.filter(p => p.type === "kladde").length} nye udgifter, ${sikre.filter(p => p.type === "vedhaeft").length} kvitteringer`),
+        h("summary", {}, `Vis: ${sikre.filter(p => p.type === "kladde").length} nye udgifter` + (sikre.some(p => p.type === "vedhaeft") ? `, ${sikre.filter(p => p.type === "vedhaeft").length} kvitteringer` : "")),
         h("div", {}, sikre.map(p => række(p, true)))) : h("div", {class: "muted lille", style: "margin-top:6px"}, "Ingen denne uge.")),
     h("div", {class: "gruppe"},
       h("div", {style: "display:flex;align-items:center;gap:8px"}, h("div", {class: "overskrift", style: "margin:0"}, "Kræver dig"), h("span", {class: "pill" + (åbne.length ? " gul" : " grøn")}, åbne.length ? `${åbne.length} åbne` : "Alt klaret"),
         h("div", {class: "spacer"}), h("a", {class: "btn lille", href: "https://app.dinero.dk/", target: "_blank", rel: "noopener"}, "Åbn Dinero ↗")),
-      kræver.length ? h("div", {class: "kort", style: "margin-top:8px"}, [["spoerg", "Svar på ét spørgsmål"], ["ja", "Sæt flueben, hvis det passer"], ["dinero", "Tjek i Dinero"], ["selv", "Bogfør selv"]].map(([g, t]) => {   // Oscar 29/10: ingen foldemenuer her
+      kræver.length ? h("div", {class: "kort", style: "margin-top:8px"}, [["spoerg", "Svar på ét spørgsmål"], ["dinero", "Tjek i Dinero"], ["selv", "Gør selv i Dinero"]].map(([g, t]) => {   // Oscar 29/10: ingen foldemenuer her
         const ps = kræver.filter(p => (p.gruppe || "dinero") === g).sort((a, b) => (a.klaret ? 1 : 0) - (b.klaret ? 1 : 0) || (b.dato || "").localeCompare(a.dato || ""));
         const tilbage = ps.filter(p => !p.klaret).length;
         return ps.length ? [h("div", {class: "overskrift", style: "margin:14px 14px 2px"}, `${t} · ${tilbage ? tilbage : "alt klaret"}`), ps.map(g === "spoerg" ? spørgRække : kræverRække)] : null;
