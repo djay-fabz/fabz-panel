@@ -2045,7 +2045,7 @@ function planlægPanel() {
     OP.planMode = tom ? "selv" : "foreslaa";
     OP.planArbejder = true; OP.planSvar = null; OP.planPdf = null; tegn();
     try {
-      const sv = await kørOgVent("planlaeg-forslag", [OP.planDato, ...(OP.planFra ? [`--fra=${OP.planFra}`] : []), ...(OP.planStop ? [`--stop=${OP.planStop}`] : []),
+      const sv = await kørOgVent("planlaeg-forslag", [OP.planDato, ...(OP.planFra ? [`--fra=${OP.planFra}`] : []), ...(OP.planDato === iDag() ? [`--trykket=${nuHHMM()}`] : []),   // planen starter 5 min efter trykket (Oscar 29/10) ...(OP.planStop ? [`--stop=${OP.planStop}`] : []),
         ...(OP.planFrokost === "ingen" ? ["--ingen-frokost"] : []), ...(tom ? ["--tom"] : [])]);
       if (!sv) OP.planSvar = {klasse: "fejl", titel: "Intet svar efter 4 minutter."};
       else if (sv.status === "FEJL") OP.planSvar = {klasse: "fejl", titel: "Forslaget kunne ikke laves", punkter: [sv.fejl]};
