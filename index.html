@@ -957,8 +957,12 @@ function betalingAfsnit(j, st) {
     : !afholdt ? ["blå", dinero ? "Dinero · faktura dagen efter" : r.maade === "kontant" ? "Kontant på dagen" : "Overførsel"]
     : dinero ? ["gul", "Faktura ikke sendt"] : r.maade === "kontant" ? ["gul", "Venter på dit ja"] : r.bank_dato ? ["grøn", `Set i banken ${kortDato(r.bank_dato)}`] : ["gul", "Venter på overførsel"];
   const knap = !afholdt || laast ? null
-    : dinero ? [r.dinero?.link ? h("a", {class: "btn primaer", href: r.dinero.link, target: "_blank", rel: "noopener"}, "Åbn kladden i Dinero ↗") : null,
-               h("button", {class: "btn godkend", type: "button", onclick: () => { if (confirm("Har du sendt fakturaen fra Dinero?")) godkend(); }}, "✓ Fakturaen er sendt")]
+    : dinero ? (r.send === "ok" ? h("span", {class: "pill grøn"}, `Faktura ${r.faktura_nr || ""} sendt`)
+      : r.dinero?.guid ? h("button", {class: "btn godkend", type: "button", disabled: r.send === "bestilt", onclick: () => {   // Oscar 30/10: send fra jobbet, jobdatoen står i kommentaren
+          if (!confirm(`Send fakturaen til ${(r.kunde || {}).navn || j.navn}${(r.kunde || {}).mail ? " (" + r.kunde.mail + ")" : ""}? ${b ? kr(b * 1.25) + " inkl. moms, " : ""}netto 8 dage. Dinero bogfører og mailer den.`)) return;
+          kør("betaling-send", [`--job=${j.navn}`, `--dato=${j.dato}`], {tekst: `Send faktura: ${j.navn}`, efter, med: () => { r.send = "bestilt"; }}); }},
+          r.send === "bestilt" ? "Sendes …" : r.send === "fejl" ? "Prøv at sende igen" : "Send faktura")
+      : h("button", {class: "btn godkend", type: "button", onclick: () => { if (confirm("Har du sendt fakturaen fra Dinero?")) godkend(); }}, "✓ Fakturaen er sendt"))
     : r.maade === "kontant" ? h("button", {class: "btn godkend", type: "button", disabled: !b, onclick: () => { if (confirm(`Har du fået ${kr(b)} kontant?`)) godkend(); }}, `✓ Betalt kontant${b ? " " + kr(b) : ""}`)
     : h("button", {class: "btn godkend", type: "button", onclick: () => { if (confirm("Er pengene kommet ind på kontoen?")) godkend(); }}, "✓ Pengene er kommet");
   const linje = !o ? null : dinero ? (r.dinero?.link ? `Kladden ligger i Dinero${b ? " · " + kr(b * 1.25) + " inkl. moms" : ""} · netto 8 dage. Lukkes selv, når fakturaen er bogført.` : "Kladden blev ikke lavet. Lav fakturaen i Dinero og tryk Fakturaen er sendt.")
@@ -1002,14 +1006,22 @@ function visBogfoering() {
   const detalje = p => BF.åben === p.id ? h("div", {class: "bf-d"}, [p.konto ? `Konto ${p.konto}` : null, p.moms ? `moms ${p.moms}` : p.type === "kladde" ? "ingen moms" : null,
       p.kilde ? `kilde: ${p.kilde}` : null, p.fil_navn ? `fil: ${p.fil_navn}` : null, p.kladde_nr ? `kladde ${p.kladde_nr}` : null].filter(Boolean).join(" · "),
       p.grund && p.hvad ? h("div", {}, "Robottens grund: " + p.grund) : null) : null;
+  // Bogfør (Oscar 30/10): hans tryk bogfører præcis de kladder, robotten har udfyldt. Bagefter afstemmer han banken i Dinero
+  const kanBogføres = p => pk.status === "udfoert" && p.type === "kladde" && (p.udfoert || {}).status === "ok" && (!p.bogfoert || p.bogfoert.status !== "ok");
+  const bogfør = ps => { const alle = ps.length > 1;
+    if (!confirm(alle ? `Bogfør ${ps.length} kladder i Dinero? Det kan kun rettes med en kreditnota bagefter.` : `Bogfør ${ps[0].titel} ${bfKr(ps[0].beloeb, ps[0].valuta)} i Dinero? Det kan kun rettes med en kreditnota bagefter.`)) return;
+    kør("ugepakke-bogfoer", [`--uge=${pk.uge}`, ...(alle ? ["--alle"] : [`--id=${ps[0].id}`])], {tekst: alle ? "Bogfør alle" : `Bogfør ${ps[0].titel}`, efter,
+      med: () => { ps.forEach(p => { p.bogfoer = "bestilt"; }); }}); };
   const række = (p, medValg) => h("div", {class: "bf-r"},
     medValg ? h("input", {type: "checkbox", checked: BF.valgte.has(p.id), disabled: !klar, "aria-label": "Vælg " + p.titel,
       onchange: e => { e.target.checked ? BF.valgte.add(p.id) : BF.valgte.delete(p.id); tegn(); }}) : null,
     h("div", {class: "t", style: "cursor:pointer", onclick: () => { BF.åben = BF.åben === p.id ? null : p.id; tegn(); }},
       h("b", {}, p.type === "vedhaeft" ? `${p.titel} → bilag ${p.bilag_nr}` : p.titel + (p.dato ? ` · ${kortDato(p.dato)}` : "")),
       h("span", {}, p.hvad || p.grund),
-      detalje(p), resLinje(p)),
-    p.beloeb != null ? h("div", {class: "kr"}, bfKr(p.beloeb, p.valuta)) : null);
+      detalje(p), resLinje(p),
+      p.bogfoert ? h("div", {class: "bf-d " + (p.bogfoert.status === "ok" ? "bf-ok" : "bf-fejl")}, p.bogfoert.status === "ok" ? `✓ ${p.bogfoert.tekst}` : `Fejl: ${p.bogfoert.fejl}`) : null),
+    p.beloeb != null ? h("div", {class: "kr"}, bfKr(p.beloeb, p.valuta)) : null,
+    kanBogføres(p) ? h("button", {class: "btn lille", type: "button", disabled: p.bogfoer === "bestilt", onclick: () => bogfør([p])}, p.bogfoer === "bestilt" ? "Bogføres …" : "Bogfør") : null);
   const kræverRække = p => h("div", {class: "bf-r"},
     h("div", {class: "t", style: "cursor:pointer", onclick: e => { if (e.target.tagName === "INPUT") return; BF.åben = BF.åben === p.id ? null : p.id; tegn(); }},
       h("b", {style: p.klaret ? "text-decoration:line-through;opacity:.6" : ""}, p.titel + (p.dato ? ` · ${kortDato(p.dato)}` : "")),
@@ -1055,7 +1067,8 @@ function visBogfoering() {
     h("div", {class: "gruppe"},
       h("div", {style: "display:flex;align-items:center;gap:8px;flex-wrap:wrap"}, h("div", {class: "overskrift", style: "margin:0"}, "Robotten er sikker"),
         h("span", {class: "pill"}, `${sikre.length} ting`), h("div", {class: "spacer"}),
-        klar ? h("button", {class: "btn godkend", type: "button", disabled: !BF.valgte.size && !ikke.length, onclick: godkend}, `✓ Godkend ${valgteSikre.length + kræver.filter(p => BF.valgte.has(p.id)).length}`) : null),
+        klar ? h("button", {class: "btn godkend", type: "button", disabled: !BF.valgte.size && !ikke.length, onclick: godkend}, `✓ Godkend ${valgteSikre.length + kræver.filter(p => BF.valgte.has(p.id)).length}`) : null,
+        (() => { const ps = P.filter(kanBogføres).filter(p => p.bogfoer !== "bestilt"); return ps.length > 1 ? h("button", {class: "btn godkend", type: "button", onclick: () => bogfør(ps)}, `Bogfør alle ${ps.length}`) : null; })()),
       sikre.length ? h("details", {class: "sk-fold", open: !klar || sikre.length <= 4},
         h("summary", {}, `Vis: ${sikre.filter(p => p.type === "kladde").length} nye udgifter, ${sikre.filter(p => p.type === "vedhaeft").length} kvitteringer`),
         h("div", {}, sikre.map(p => række(p, true)))) : h("div", {class: "muted lille", style: "margin-top:6px"}, "Ingen denne uge.")),
