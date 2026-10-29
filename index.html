@@ -309,6 +309,12 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .tb-adv{margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--adv-blid);color:var(--adv)}
 .bet{padding:12px 14px}.bet-rk{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.bet-in{width:110px;text-align:right;font-weight:600}.bet .jo-r{padding:10px 0 0;margin-top:10px}
 @media (max-width:700px){.bet .seg{display:flex;width:100%}.bet .seg button{flex:1}.bet .bet-in{flex:1;width:auto}.bet .btn.godkend,.bet .btn.primaer{flex:1;text-align:center}}
+.bf-tal{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}.bf-tal>div{background:var(--flade2);border:1px solid var(--linje);border-radius:12px;padding:12px 14px}
+.bf-tal b{display:block;font-size:22px;line-height:1.2}.bf-tal span{color:var(--svag);font-size:12.5px}
+.bf-r{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-top:1px solid var(--linje)}.bf-r:first-child{border-top:0}.bf-r .t{flex:1;min-width:0}.bf-r .t b{display:block}
+.bf-r .t span{color:var(--svag)}.bf-r .kr{font-weight:600;white-space:nowrap}.bf-r input[type=checkbox]{margin-top:3px;width:18px;height:18px;flex:none}
+.bf-d{font-size:12.5px;color:var(--svag);margin-top:4px}.bf-ok{color:var(--ok)}.bf-fejl{color:var(--fejl)}
+@media (max-width:700px){.bf-tal{grid-template-columns:1fr}.bf-r{flex-wrap:wrap}.bf-r .kr{margin-left:28px}}
 .jo{margin-top:8px}.jo-r{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;border:0;border-top:1px solid var(--linje);background:none;padding:10px 14px}
 .jo-r:first-child{border-top:0}.jo-r:hover,.jo-r.valgt{background:var(--hover)}
 .jo-m{flex:none;width:18px;color:var(--svag)}.jo-m.ok{color:var(--ok);font-weight:700}
@@ -556,7 +562,8 @@ async function hentData() {
   const pr = await laesFil("data/priser.json");   // pakkerne i Tilbud (samme priser som fabz-tilbud/priser.md, tjekkes med tools/priser.py)
   D.priser = pr ? await pr.json() : null;
   D.leads = await laesValgfri("data/leads.json");   // leadlisten (Træk en kontakt)
-  D.betalinger = await laesValgfri("data/betalinger.json");   // betaling pr. job (fabz_betaling.py): måde, beløb, opgave, Dinero-kladde
+  D.betalinger = await laesValgfri("data/betalinger.json");
+  D.ugepakke = await laesValgfri("data/ugepakke.json");   // ugens bogføring (fabz_bogholder.py): robottens forslag, Oscar godkender   // betaling pr. job (fabz_betaling.py): måde, beløb, opgave, Dinero-kladde
   const mo2 = await laesFil("data/mailoversigt.json");   // dagens mailoversigt (tools/mailoversigt.py via panel.yml ved Mødt ind)
   D.mailoversigt = mo2 ? await mo2.json() : null;
   const vg = await laesFil("data/vagter.json");   // vagter fra Planday/Deltaplan (tools/vagter.py i kalender.yml)
@@ -724,7 +731,7 @@ function tegnTop() {
   const aktiv = v => fane === v || (v === "pakkelister" && (fane === "kort" || fane === "rute"));
   const gå = v => { fane = v; MERE = false; if (v === "oekonomi") ØK.guide = null; if (v === "salg") SG.fremÅben = false; if (v === "pakkelister") { JH = null; S = null; } tegn(); window.scrollTo(0, 0); };
   const hoved = [["idag", "I dag"], ["opgaver", "Opgaver"], ["pakkelister", "Jobs"], ["foresp", "Forespørgsler"], ["salg", "Salg"], ["oekonomi", "Økonomi og Skat", "Økonomi"]];   // Salg i hovedbjælken (Oscar 25/10). Økonomi og Skat ud af Mere (Oscar 28/10: intet gemt væk)
-  const mere = [["tilbud", "Tilbud"], ["lager", "Lager"], ["pakker", "Pakker"], ["ideer", "Idéer"]];   // Pakker: trin og regler til "Pak jobbet" (Oscar 27/10)   // Økonomi: penge ude, til dig, privat (Oscar 26/10: Salg skal kun være salg)
+  const mere = [["tilbud", "Tilbud"], ["bogforing", "Bogføring"], ["lager", "Lager"], ["pakker", "Pakker"], ["ideer", "Idéer"]];   // Pakker: trin og regler til "Pak jobbet" (Oscar 27/10)   // Økonomi: penge ude, til dig, privat (Oscar 26/10: Salg skal kun være salg)
   top.replaceChildren(
     h("span", {class: "brand"}, "Fabz"),
     h("nav", {class: "tabs"},
@@ -742,7 +749,7 @@ document.addEventListener("click", () => { if (MERE) { MERE = false; tegnTop(); 
 function tegn() {
   document.body.classList.remove("bar-synlig");
   tegnTop();
-  const vis = {idag: visIDag, tilbud: visTilbud, opgaver: visOpgaver, foresp: visForesp, salg: visSalg, oekonomi: visSkat, pakker: visPakker, ideer: visIdeer, lager: visLager, kort: visKort, rute: visRute}[fane];
+  const vis = {idag: visIDag, bogforing: visBogfoering, tilbud: visTilbud, opgaver: visOpgaver, foresp: visForesp, salg: visSalg, oekonomi: visSkat, pakker: visPakker, ideer: visIdeer, lager: visLager, kort: visKort, rute: visRute}[fane];
   if (vis) vis();
   else if (S) visEditor();
   else visJobs();
@@ -935,6 +942,86 @@ function betalingAfsnit(j, st) {
         h("div", {class: "spacer"}), knap),
       o ? h("div", {class: "jo-r"}, h("span", {class: "jo-m" + (r.bank_dato ? " ok" : "")}, r.bank_dato ? "✓" : "○"),
             h("span", {class: "jo-t", style: "flex:1"}, h("b", {}, o.titel), h("span", {class: "muted"}, linje))) : null));
+}
+// ---------- Ugens bogføring (bogholder-robot del 2, Oscar 29/10: version B "overblik først"). Data: data/ugepakke.json fra fabz_bogholder.py.
+// Robotten foreslår, Oscar godkender med ét ja. Den bogfører aldrig og sender aldrig: Godkend udfylder Dineros kladder og laver Gmail-udkast.
+const BF = {valgte: null, uge: null, åben: null};
+const bfKr = (v, valuta) => v == null || v === "" ? "beløb ukendt" : Number(v).toLocaleString("da-DK", {minimumFractionDigits: 2, maximumFractionDigits: 2}) + (valuta && valuta !== "DKK" ? " " + valuta : " kr.");
+function visBogfoering() {
+  const pk = D.ugepakke && !Array.isArray(D.ugepakke) ? D.ugepakke : null;
+  if (!pk) return $("rod").replaceChildren(h("div", {class: "side"}, h("h1", {}, "Ugens bogføring"), tom("Robotten laver ugens pakke tirsdag morgen. Der er ingen endnu.")));
+  if (BF.uge !== pk.uge) { BF.uge = pk.uge; BF.valgte = new Set(pk.punkter.filter(p => p.valgt).map(p => p.id)); BF.åben = null; }
+  const P = pk.punkter, klar = pk.status === "klar", efter = ["ugepakke", "opgaver"];
+  const sikre = P.filter(p => p.sikker && p.type !== "ignorer"), ikke = P.filter(p => p.type === "ignorer");
+  const kræver = P.filter(p => !p.sikker && p.type !== "ignorer"), åbne = kræver.filter(p => !p.klaret);
+  const valgteSikre = sikre.filter(p => BF.valgte.has(p.id));
+  const sumKr = valgteSikre.filter(p => (p.valuta || "DKK") === "DKK" && p.beloeb != null).reduce((a, p) => a + Number(p.beloeb), 0);
+  const mo = D.mo?.overblik?.linjer?.moms;
+  const uge = Number(pk.uge.split("W")[1]);
+  const status = {klar: ["gul", "Venter på dit ja"], godkendt: ["blå", "Godkendt: robotten arbejder (ca. 2 min.)"], udfoert: ["grøn", "Udført " + (pk.udfoer_tid || "").slice(8, 10).replace(/^0/, "") + "/" + Number((pk.udfoer_tid || "").slice(5, 7))],
+    fortryd_bestilt: ["blå", "Fortryder (ca. 2 min.)"], fortrudt: ["", "Fortrudt"]}[pk.status] || ["", pk.status];
+  const res = p => p.fortrudt || p.udfoert;
+  const resLinje = p => { const r = res(p); if (!r) return null;
+    return h("div", {class: "bf-d " + (r.status === "ok" ? "bf-ok" : r.status === "fejl" ? "bf-fejl" : "")}, (r.status === "ok" ? "✓ " : r.status === "fejl" ? "Fejl: " : "") + (r.tekst || r.fejl || ""),
+      r.link && r.status === "ok" ? [" · ", h("a", {href: r.link, target: "_blank", rel: "noopener"}, r.link.includes("mail.google") ? "Åbn Gmail ↗" : "Åbn Dinero ↗")] : null); };
+  const detalje = p => BF.åben === p.id ? h("div", {class: "bf-d"}, [p.konto ? `Konto ${p.konto}` : null, p.moms ? `moms ${p.moms}` : p.type === "kladde" ? "ingen moms" : null,
+      p.kilde ? `kilde: ${p.kilde}` : null, p.fil_navn ? `fil: ${p.fil_navn}` : null, p.kladde_nr ? `kladde ${p.kladde_nr}` : null].filter(Boolean).join(" · "),
+      p.grund && p.hvad ? h("div", {}, "Robottens grund: " + p.grund) : null) : null;
+  const række = (p, medValg) => h("div", {class: "bf-r"},
+    medValg ? h("input", {type: "checkbox", checked: BF.valgte.has(p.id), disabled: !klar, "aria-label": "Vælg " + p.titel,
+      onchange: e => { e.target.checked ? BF.valgte.add(p.id) : BF.valgte.delete(p.id); tegn(); }}) : null,
+    h("div", {class: "t", style: "cursor:pointer", onclick: () => { BF.åben = BF.åben === p.id ? null : p.id; tegn(); }},
+      h("b", {}, p.type === "vedhaeft" ? `${p.titel} → bilag ${p.bilag_nr}` : p.titel + (p.dato ? ` · ${kortDato(p.dato)}` : "")),
+      h("span", {}, p.hvad || p.grund),
+      detalje(p), resLinje(p)),
+    p.beloeb != null ? h("div", {class: "kr"}, bfKr(p.beloeb, p.valuta)) : null);
+  const kræverRække = p => h("div", {class: "bf-r"},
+    h("div", {class: "t", style: "cursor:pointer", onclick: e => { if (e.target.tagName === "INPUT") return; BF.åben = BF.åben === p.id ? null : p.id; tegn(); }},
+      h("b", {style: p.klaret ? "text-decoration:line-through;opacity:.6" : ""}, p.titel + (p.dato ? ` · ${kortDato(p.dato)}` : "")),
+      h("span", {}, p.hvad || p.grund), detalje(p), resLinje(p),
+      p.forslag === "vedhaeft" && klar ? h("label", {class: "bf-d", style: "display:flex;gap:6px;align-items:center;margin-top:6px"},
+        h("input", {type: "checkbox", checked: BF.valgte.has(p.id), onchange: e => { e.target.checked ? BF.valgte.add(p.id) : BF.valgte.delete(p.id); tegn(); }}), `Ja, lav udkastet "Bilag ${p.bilag_nr}"`) : null),
+    p.beloeb != null ? h("div", {class: "kr"}, bfKr(p.beloeb, p.valuta)) : null,
+    h("button", {class: "btn lille" + (p.klaret ? " ghost" : ""), type: "button", onclick: () => kør("ugepakke-klaret", [`--uge=${pk.uge}`, `--id=${p.id}`, ...(p.klaret ? ["--fortryd"] : [])],
+      {tekst: `${p.titel}: ${p.klaret ? "åben igen" : "klaret"}`, efter, med: () => { if (p.klaret) delete p.klaret; else p.klaret = iDag(); }})}, p.klaret ? "Fortryd" : "✓ Klaret"));
+  const godkend = () => { const v = [...BF.valgte, ...ikke.map(p => p.id)].filter((x, i, a) => a.indexOf(x) === i);
+    if (!confirm(`Godkend ${v.length - ikke.length} ting${ikke.length ? ` (og skjul ${ikke.length} filer, der ikke er bilag)` : ""}? Robotten fylder kladderne ud i Dinero og laver mailudkast i Gmail. Intet bliver bogført eller sendt.`)) return;
+    kør("ugepakke-godkend", [`--uge=${pk.uge}`, `--valgte=${v.join(",")}`], {tekst: "Ugens bogføring godkendt", efter, med: () => { pk.status = "godkendt"; }}); };
+  const minutter = Math.max(2, Math.round(åbne.reduce((a, p) => a + ((p.gruppe || "dinero") === "ja" ? 0.5 : p.gruppe === "selv" ? 3 : 1.5), 0)));   // et skøn: flueben ½ min., tjek 1½, bogfør selv 3
+  $("rod").replaceChildren(h("div", {class: "side"},
+    h("div", {class: "kort2"},
+      h("div", {class: "kh"}, h("h1", {}, `Ugens bogføring · uge ${uge}`), h("span", {class: "pill " + status[0]}, status[1]), h("div", {class: "spacer"}),
+        !klar ? h("button", {class: "btn lille", type: "button", onclick: async () => { await genindlæs(efter); tegn(); }}, "Hent igen") : null),
+      h("div", {class: "muted"}, klar ? `${sikre.length} ting klares med ét ja · ${åbne.length} kræver dig · ${ikke.length} filer er ikke bilag` : `Robotten har kun lavet kladder og udkast. Du sender og bogfører selv.`),
+      h("div", {class: "bf-tal"},
+        h("div", {}, h("span", {}, "Klares med ét ja"), h("b", {}, `${valgteSikre.length} af ${sikre.length}`), h("span", {}, sumKr ? `${bfKr(sumKr)} i kroner` + (valgteSikre.some(p => p.valuta && p.valuta !== "DKK") ? " + valuta" : "") : "intet beløb")),
+        h("div", {}, h("span", {}, "Kræver dig"), h("b", {}, String(åbne.length)), h("span", {}, åbne.length ? `ca. ${minutter} minutter` : "intet")),
+        h("div", {}, h("span", {}, "Moms"), mo ? [h("b", {}, mo.forrige ? bfKr(mo.forrige.kr) : bfKr(mo.nu?.kr ?? mo.kr)),
+          h("span", {}, mo.forrige ? `${kortDato(mo.forrige.fra)}-${kortDato(mo.forrige.til)} · betal senest ${kortDato(mo.forrige.frist)}` : `til nu i kvartalet · frist ${kortDato(mo.nu?.frist || mo.frist)}`, ` · Dinero ${kortDato(mo.dato)}`)]
+          : [h("b", {}, "–"), h("span", {}, "ingen momstal fra Dinero")]))),
+    h("div", {class: "gruppe"},
+      h("div", {style: "display:flex;align-items:center;gap:8px;flex-wrap:wrap"}, h("div", {class: "overskrift", style: "margin:0"}, "Robotten er sikker"),
+        h("span", {class: "pill"}, `${sikre.length} ting`), h("div", {class: "spacer"}),
+        klar ? h("button", {class: "btn godkend", type: "button", disabled: !BF.valgte.size && !ikke.length, onclick: godkend}, `✓ Godkend ${valgteSikre.length + kræver.filter(p => BF.valgte.has(p.id)).length}`) : null),
+      sikre.length ? h("details", {class: "sk-fold", open: !klar || sikre.length <= 4},
+        h("summary", {}, `Vis de ${sikre.length}: ${sikre.filter(p => p.type === "kladde").length} nye udgifter, ${sikre.filter(p => p.type === "vedhaeft").length} kvitteringer til bogførte køb`),
+        h("div", {}, sikre.map(p => række(p, true)))) : h("div", {class: "muted lille", style: "margin-top:6px"}, "Ingen denne uge.")),
+    h("div", {class: "gruppe"},
+      h("div", {style: "display:flex;align-items:center;gap:8px"}, h("div", {class: "overskrift", style: "margin:0"}, "Kræver dig"), h("span", {class: "pill" + (åbne.length ? " gul" : " grøn")}, åbne.length ? `${åbne.length} åbne` : "Alt klaret"),
+        h("div", {class: "spacer"}), h("a", {class: "btn lille", href: "https://app.dinero.dk/", target: "_blank", rel: "noopener"}, "Åbn Dinero ↗")),
+      kræver.length ? [["ja", "Sæt flueben, hvis det passer"], ["dinero", "Tjek i Dinero"], ["selv", "Bogfør selv"]].map(([g, t]) => {
+        const ps = kræver.filter(p => (p.gruppe || "dinero") === g).sort((a, b) => (a.klaret ? 1 : 0) - (b.klaret ? 1 : 0) || (b.dato || "").localeCompare(a.dato || ""));
+        const tilbage = ps.filter(p => !p.klaret).length;
+        return ps.length ? h("details", {class: "sk-fold", open: g === "ja" || ps.length <= 5},
+          h("summary", {}, `${t} · ${tilbage ? tilbage + " åbne" : "alt klaret"}`), h("div", {}, ps.map(kræverRække))) : null;
+      }) : h("div", {class: "muted lille", style: "margin-top:6px"}, "Intet denne uge.")),
+    h("div", {class: "gruppe"}, h("details", {class: "sk-fold"},
+      h("summary", {}, `Til orientering: ${ikke.length} filer er ikke bilag` + ((pk.advarsler || []).length ? ` · ${pk.advarsler.length} advarsler` : "")),
+      h("div", {}, ikke.map(p => h("div", {class: "bf-r"}, h("div", {class: "t"}, h("b", {}, p.fil_navn || p.titel), h("span", {}, p.hvad || p.grund), resLinje(p)))),
+        (pk.advarsler || []).map(a => h("div", {class: "bf-r"}, h("div", {class: "t"}, h("b", {}, "Advarsel"), h("span", {}, a))))))),
+    pk.status === "udfoert" ? h("div", {class: "gruppe", style: "display:flex;gap:10px;align-items:center;flex-wrap:wrap"},
+      h("button", {class: "btn", type: "button", onclick: () => { if (confirm("Fortryd ugens pakke? Robotten tømmer de kladder, den udfyldte, og sletter sine mailudkast. Det, du selv har bogført eller sendt, rører den ikke."))
+        kør("ugepakke-fortryd", [`--uge=${pk.uge}`], {tekst: "Fortryd ugens bogføring", efter, med: () => { pk.status = "fortryd_bestilt"; }}); }}, "Fortryd ugens pakke")) : null));
 }
 // valg af job til en opgave: kommende jobs, plus det job opgaven allerede har (også når det er passeret)
 function jobValg(nu) {
@@ -1941,7 +2028,7 @@ async function gemLager() {
 }
 
 // ---------- fælles: kør fabz.py-kommandoer fra panelet ----------
-const FILER = {henvendelser: "data/henvendelser.json", opgaver: "data/opgaver.json", betalinger: "data/betalinger.json", dagsplaner: "data/dagsplaner.json",
+const FILER = {henvendelser: "data/henvendelser.json", opgaver: "data/opgaver.json", betalinger: "data/betalinger.json", ugepakke: "data/ugepakke.json", dagsplaner: "data/dagsplaner.json",
                ideer: "data/ideer.json", indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json", salgslog: "data/salgslog.json", mo: "data/maanedsoversigt.json", strategi: "data/strategi.json", leads: "data/leads.json", mailoversigt: "data/mailoversigt.json", vagter: "data/vagter.json"};
 async function laesValgfri(p) { const r = await laesFil(p); return r ? r.json() : []; }
 async function genindlæs(navne) { await Promise.all(navne.map(async n => { D[n] = n === "kkTekster" ? await laesKkTekster() : await laesValgfri(FILER[n]); })); }
@@ -2259,6 +2346,7 @@ function opgaveDetalje(o, indlejret) {   // indlejret: på jobbets side, hvor ti
   const infoLinje = (navn, v) => v ? h("div", {class: "info"}, h("div", {class: "etiket"}, navn), h("div", {class: "pre"}, v)) : null;
   return h("div", {class: indlejret ? "" : "kort2"},
     indlejret ? null : h("div", {class: "kh"}, h("h2", {}, `#${o.id} ${o.titel}`)),
+    o.job_opgave === "ugepakke" ? h("button", {class: "btn primaer", type: "button", style: "margin-bottom:10px", onclick: () => { fane = "bogforing"; tegn(); window.scrollTo(0, 0); }}, "Åbn Ugens bogføring") : null,
     o.status === "Færdig" ? h("div", {class: "godk ok"}, `Færdig ${o.faerdig_dato ? kortDato(o.faerdig_dato) : ""}` + (o.faktisk != null ? ` · ${o.faktisk} min` : ""))
       : seg(O_STATUS, o.status, v => ret("status", v, `#${o.id} ${v}`)),
     h("div", {class: "felter3"},
