@@ -335,6 +335,7 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 @media (max-width:900px){.ed{grid-template-columns:1fr;height:auto}.liste{border-left:0;border-top:1px solid var(--linje)}}
 /* salg: statuskort (uge, måned, vejen) */
 .sk-top{display:grid;gap:14px}
+.fold-frem{display:flex;align-items:center;gap:12px;flex-wrap:wrap;width:100%;text-align:left;cursor:pointer;border:0;font:inherit;color:inherit}.fold-frem:hover{background:var(--hover)}.fold-luk{border:0;background:none;padding:0;cursor:pointer;font-family:inherit;text-align:left}
 .nedtonet{opacity:.55}.fra-mærke{margin-left:6px;font-size:11.5px;color:var(--svag);white-space:nowrap}
 .skat-status{margin-top:16px;padding:16px 18px;border-radius:14px;border:1px solid var(--linje);display:grid;gap:10px}.skat-status.g{background:var(--ok-blid);border-color:var(--ok)}.skat-status.y{background:var(--adv-blid);border-color:var(--adv)}.skat-status.rd{background:var(--fejl-blid);border-color:var(--fejl)}
 .skat-titel{font-size:20px;font-weight:700}.skat-status.g .skat-titel{color:var(--ok)}.skat-status.y .skat-titel{color:var(--adv)}.skat-status.rd .skat-titel{color:var(--fejl)}
@@ -718,7 +719,7 @@ function tegnTop() {
     return;
   }
   const aktiv = v => fane === v || (v === "pakkelister" && (fane === "kort" || fane === "rute"));
-  const gå = v => { fane = v; MERE = false; if (v === "oekonomi") ØK.guide = null; if (v === "pakkelister") { JH = null; S = null; } tegn(); window.scrollTo(0, 0); };
+  const gå = v => { fane = v; MERE = false; if (v === "oekonomi") ØK.guide = null; if (v === "salg") SG.fremÅben = false; if (v === "pakkelister") { JH = null; S = null; } tegn(); window.scrollTo(0, 0); };
   const hoved = [["idag", "I dag"], ["opgaver", "Opgaver"], ["pakkelister", "Jobs"], ["foresp", "Forespørgsler"], ["salg", "Salg"], ["oekonomi", "Økonomi og Skat", "Økonomi"]];   // Salg i hovedbjælken (Oscar 25/10). Økonomi og Skat ud af Mere (Oscar 28/10: intet gemt væk)
   const mere = [["tilbud", "Tilbud"], ["lager", "Lager"], ["pakker", "Pakker"], ["ideer", "Idéer"]];   // Pakker: trin og regler til "Pak jobbet" (Oscar 27/10)   // Økonomi: penge ude, til dig, privat (Oscar 26/10: Salg skal kun være salg)
   top.replaceChildren(
@@ -3753,7 +3754,7 @@ function ugeKort() {
     const dato = plusDage(mandag, i), n = uge.filter(x => x.dato === dato).length, rutine = maal.rutinedage.includes(navn);
     const c = n >= maal.kontakter_dag ? "g" : rutine && dato < idag && n < maal.kontakter_dag ? "rd" : "";
     return h("div", {class: "sk-dag " + c + (dato === idag ? " nu" : "") + (rutine ? " rutine" : ""), title: rutine ? `Rutinedag: ${maal.kontakter_dag} kontakter` : ""},
-      h("b", {}, n || (rutine && dato >= idag ? "·" : "–")), navn);
+      h("b", {}, n || (dato <= idag ? 0 : rutine ? "·" : "–")), navn);   // Oscar 29/10: dage, der er gået (og i dag), viser 0, kun kommende dage "–"/"·"
   });
   return h("div", {class: "kort2 sk"},
     h("div", {class: "r1 sk-hoved"}, h("div", {class: "overskrift", style: "margin:0"}, `Salg i denne uge · uge ${ugeNr}`),
@@ -3847,8 +3848,13 @@ function vejKort(kunFrem) {   // kunFrem (Salg): denne måned + de næste 6/12, 
     h("div", {class: "sk-k " + (mo.frem6_kr >= 6 * mn ? "g" : "y")}, h("b", {}, krKort(mo.frem6_kr)), h("span", {}, "kr. booket de næste 6 mdr.")),
     h("div", {class: "sk-k " + (mo.frem6_under_min ? "rd" : "g")}, h("b", {}, `${mo.frem6_under_min} af 6`), h("span", {}, "kommende måneder under minimum")),
     h("div", {class: "sk-k"}, h("b", {}, kar ? Math.round(100 * (ms[i0]?.kr || 0) / kar) + " %" : "–"), h("span", {}, `af karrieremålet (${krKort(kar)}) denne måned`)));
+  if (kunFrem && !SG.fremÅben)   // Oscar 29/10: foldet sammen som standard på Salg, åbnes med et klik (lukker igen, når Salg åbnes)
+    return h("button", {type: "button", class: "kort2 sk fold-frem", onclick: () => { SG.fremÅben = true; tegn(); }},
+      h("span", {class: "overskrift", style: "margin:0"}, "Fremtiden ▸"),
+      h("span", {class: "muted lille"}, `${krKort(mo.frem6_kr)} kr. · ${mo.frem6_under_min} af 6 under minimum`));
   return h("div", {class: "kort2 sk"},
-    h("div", {class: "r1 sk-hoved"}, h("div", {class: "overskrift", style: "margin:0"}, kunFrem ? "Fremtiden · booket pr. måned, ekskl. moms" : "Vejen · omsætning pr. måned, ekskl. moms"),
+    h("div", {class: "r1 sk-hoved"}, kunFrem ? h("button", {type: "button", class: "overskrift fold-luk", style: "margin:0", onclick: () => { SG.fremÅben = false; tegn(); }}, "Fremtiden ▾ · booket pr. måned, ekskl. moms")
+      : h("div", {class: "overskrift", style: "margin:0"}, "Vejen · omsætning pr. måned, ekskl. moms"),
       h("div", {class: "sk-hz"}, (kunFrem ? [[6, "6 mdr."], [12, "12 mdr."]] : [[1, "1 md."], [6, "6 mdr."], [12, "12 mdr."]]).map(([n, t]) => h("button", {type: "button", class: hz === n ? "aktiv" : "", onclick: () => { if (kunFrem) SG.fz = n; else SG.hz = n; SG.hzValgt = null; tegn(); }}, t)))),
     // Oscar 29/10 (19.000 stod over 20.000-linjen): søjler og linjer ligger i samme plot-felt, så samme % giver samme højde.
     // Beløbet over søjlen og månedsnavnet under er lagt uden for feltet og tager ingen højde fra søjlen.
