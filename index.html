@@ -378,14 +378,15 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .sk-ring b{font-size:21px;letter-spacing:-.02em;line-height:1}.sk-ring small{color:var(--svag);font-size:11px;margin-top:3px}
 .pill.g{background:var(--ok-blid);color:var(--ok)}.pill.y{background:var(--adv-blid);color:var(--adv)}.pill.rd{background:var(--fejl-blid);color:var(--fejl)}.pill.gr{background:var(--bg);color:var(--svag)}
 .sk-hz{display:flex;gap:6px}.sk-hz button{padding:5px 12px;border-radius:99px;border:1px solid var(--linje);background:none;font-size:12.5px;color:var(--svag)}.sk-hz button.aktiv{background:var(--tekst);color:var(--flade);border-color:var(--tekst)}
-.sk-graf{position:relative;height:200px;margin-top:22px;border-bottom:1px solid var(--linje)}
+.sk-graf{position:relative;height:200px;margin-top:22px}.sk-plot{position:absolute;left:0;right:0;top:16px;bottom:20px;border-bottom:1px solid var(--linje)}
 .sk-linje{position:absolute;left:0;right:0;border-top:2px solid var(--ok);font-size:11px;color:var(--ok);z-index:1;pointer-events:none}.sk-linje span{position:absolute;right:0;top:-16px}
 .sk-linje.kar{border-top:2px dashed var(--accent);color:var(--accent)}
 .sk-soejler{position:absolute;inset:0;display:flex;align-items:flex-end;gap:6px}
-.sk-soejler button{flex:1;height:100%;border:0;background:none;padding:0;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;font-size:11px;color:var(--svag);border-radius:8px}
+.sk-soejler button{flex:1;height:100%;position:relative;border:0;background:none;padding:0;font-size:11px;color:var(--svag);border-radius:8px 8px 0 0}
+.sk-soejler .md{position:absolute;top:100%;left:0;right:0;margin-top:3px;text-align:center;white-space:nowrap}
 .sk-soejler button:hover{background:var(--hover)}.sk-soejler button.valgt{background:var(--accent-blid)}
-.sk-soejler i{display:block;width:72%;border-radius:6px 6px 0 0;background:var(--linje)}.sk-soejler i.g{background:var(--ok)}.sk-soejler i.y{background:#d97706}.sk-soejler i.rd{background:var(--fejl)}.sk-soejler i.gr{background:var(--linje);border:1px dashed var(--svagere)}
-.sk-soejler em{font-style:normal;font-size:10.5px;color:var(--tekst);font-weight:600;margin-bottom:2px}.sk-soejler .nu em{color:var(--accent)}
+.sk-soejler i{position:absolute;bottom:0;left:14%;width:72%;border-radius:6px 6px 0 0;background:var(--linje)}.sk-soejler i.g{background:var(--ok)}.sk-soejler i.y{background:#d97706}.sk-soejler i.rd{background:var(--fejl)}.sk-soejler i.gr{background:var(--linje);border:1px dashed var(--svagere)}
+.sk-soejler em{position:absolute;left:50%;transform:translateX(-50%);z-index:2;background:var(--flade);padding:0 3px;border-radius:4px;text-align:center;font-style:normal;font-size:10.5px;color:var(--tekst);font-weight:600;white-space:nowrap}.sk-soejler .nu em{color:var(--accent)}
 .sk-detalje{margin-top:14px;padding:12px 14px;background:var(--bg);border-radius:12px}.sk-detalje .liste .l{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--linje)}.sk-detalje .liste .l:first-child{border-top:0}
 @media (max-width:900px){.sk-k4{grid-template-columns:1fr 1fr}.sk-k3{grid-template-columns:1fr 1fr}.sk-k2{grid-template-columns:1fr 1fr}.sk-md{flex-direction:column;text-align:center}.sk-md .r1{justify-content:center}.sk-graf{height:160px}.sk-soejler{gap:3px}.sk-soejler em{font-size:9px}}
 /* telefon: ligger sidst, så reglerne vinder over grundreglerne ovenfor */
@@ -3789,7 +3790,7 @@ function vejKort(kunFrem) {   // kunFrem (Salg): denne måned + de næste 6/12, 
   const vis = ms.slice(Math.max(0, fra), til + 1);
   const mn = mo.min || 20000, kar = kunFrem ? 0 : (mo.karriere_md || 0);
   const maks = Math.max(kar * 1.04, mn * 1.3, ...vis.map(x => x.kr));
-  const pct = v => Math.round(100 * v / maks);
+  const pct = v => 100 * v / maks;   // ingen afrunding: linje og søjle skal ramme samme pixel
   const valgt = vis.find(x => x.ym === SG.hzValgt) || (!kunFrem && hz === 1 ? vis[0] : null);
   const detalje = valgt ? h("div", {class: "sk-detalje"},
     h("div", {class: "overskrift"}, `${valgt.navn} ${valgt.aar} · ${krKort(valgt.kr)} kr. · ${MO_TEKST[valgt.farve]}`),
@@ -3810,12 +3811,16 @@ function vejKort(kunFrem) {   // kunFrem (Salg): denne måned + de næste 6/12, 
   return h("div", {class: "kort2 sk"},
     h("div", {class: "r1 sk-hoved"}, h("div", {class: "overskrift", style: "margin:0"}, kunFrem ? "Fremtiden · booket pr. måned, ekskl. moms" : "Vejen · omsætning pr. måned, ekskl. moms"),
       h("div", {class: "sk-hz"}, (kunFrem ? [[6, "6 mdr."], [12, "12 mdr."]] : [[1, "1 md."], [6, "6 mdr."], [12, "12 mdr."]]).map(([n, t]) => h("button", {type: "button", class: hz === n ? "aktiv" : "", onclick: () => { if (kunFrem) SG.fz = n; else SG.hz = n; SG.hzValgt = null; tegn(); }}, t)))),
-    h("div", {class: "sk-graf"},
+    // Oscar 29/10 (19.000 stod over 20.000-linjen): søjler og linjer ligger i samme plot-felt, så samme % giver samme højde.
+    // Beløbet over søjlen og månedsnavnet under er lagt uden for feltet og tager ingen højde fra søjlen.
+    h("div", {class: "sk-graf"}, h("div", {class: "sk-plot"},
       kar ? h("div", {class: "sk-linje kar", style: `bottom:${pct(kar)}%`}, h("span", {}, `${krKort(kar)} karrieremål`)) : null,
       h("div", {class: "sk-linje", style: `bottom:${pct(mn)}%`}, h("span", {}, `${krKort(mn)} minimum`)),
       h("div", {class: "sk-soejler"}, vis.map(x => h("button", {type: "button", class: (x.nu ? "nu" : "") + (valgt && valgt.ym === x.ym ? " valgt" : ""), title: `${x.navn} ${x.aar}: ${krKort(x.kr)} kr.`,
         onclick: () => { SG.hzValgt = SG.hzValgt === x.ym ? null : x.ym; tegn(); }},
-        h("em", {}, x.kr ? krKort(x.kr) : "–"), h("i", {class: MO_FARVE[x.farve], style: `height:${Math.max(3, pct(x.kr))}%`}), x.navn + (x.navn === "Jan" || vis[0] === x ? ` ${String(x.aar).slice(2)}` : ""))))),
+        h("i", {class: MO_FARVE[x.farve], style: `height:${Math.max(1.5, 100 * x.kr / maks)}%`}),
+        h("em", {style: `bottom:calc(${Math.max(1.5, 100 * x.kr / maks)}% + 2px)`}, x.kr ? krKort(x.kr) : "–"),
+        h("span", {class: "md"}, x.navn + (x.navn === "Jan" || vis[0] === x ? ` ${String(x.aar).slice(2)}` : ""))))))),
     detalje, tal,
     kunFrem ? null : h("div", {class: "lille muted", style: "margin-top:10px"}, `Bagud: Dinero (pr. ${mo.dinero_pr ? visDato(mo.dinero_pr) : "?"}). Frem: faktureret + pris på bookede jobs. Grå = intet booket. Tryk på en søjle for jobs og fakturaer.`));
 }
