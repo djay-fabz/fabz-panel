@@ -3561,15 +3561,41 @@ async function hentPrivat() {   // Lønkonto+ og Opsparing fra privat-data/data/
   if (fane === "oekonomi") tegn();
 }
 const privatFlyt = (beloeb, dato, navn, pulje) => privatSend({kommando: "opsparing-flyt", beloeb, dato, pulje}, `${navn} ${beloeb > 0 ? "+" : "−"}${krKort(Math.abs(beloeb))} kr.`);
+function privatMed(anm) {   // vis ændringen med det samme (Oscar 29/10); hentPrivat() henter de rigtige tal bagefter og sætter tilbage ved fejl
+  const P = ØK.P || {};
+  if (anm.kommando === "pulje-ny") (P.puljer = P.puljer || []).push({navn: anm.navn, saldo: 0, maal: anm.maal});
+  else if (anm.kommando === "pulje-slet") P.puljer = (P.puljer || []).filter(q => q.navn !== anm.navn);
+  else { const x = anm.pulje === "opsparing" ? P.opsparing : anm.pulje === "buffer" ? P.buffer : (P.puljer || []).find(q => q.navn === anm.pulje); if (x) x.saldo = (x.saldo || 0) + anm.beloeb; }
+}
 async function privatSend(anm, tekst) {   // Buffer, Opsparing og egne private puljer: anmodning i privat-data/inbox, som workflowet "Panel-anmodninger (privat)" kører (ca. 30 sek.)
-  const id = `p-${Date.now()}`;
+  const id = `p-${Date.now()}`, bid = nytId("x");
+  privatMed(anm);
+  tegn();
   try {
     const r = await gh(`/repos/djay-fabz/privat-data/contents/inbox/${id}.json`, {method: "PUT",
       body: {message: `Panel: ${tekst}`, branch: "main", content: base64(JSON.stringify(anm))}});
     if (!r.ok) throw new Error(r.status === 403 || r.status === 404 ? "Din token må ikke skrive i privat-data (Contents: Read and write)." : `GitHub svarede ${r.status}`);
-    besked({id: nytId("x"), klasse: "ok", titel: tekst + ": sendt", punkter: ["Saldoen opdateres om ca. et halvt minut."]});
-    setTimeout(hentPrivat, 40000);
-  } catch (e) { sendFejl(tekst, e); }
+  } catch (e) { await hentPrivat(); return sendFejl(tekst, e); }
+  besked({id: bid, klasse: "kø", titel: tekst + " …"});
+  let sv = null;
+  const start = Date.now();
+  while (!sv && Date.now() - start < 900000) {   // som iBaggrunden: efter 4 min "I kø", efter 15 min en fejl
+    await sleep(Date.now() - start < 240000 ? 3000 : 10000);
+    if (Date.now() - start >= 240000) besked({id: bid, klasse: "kø", titel: tekst + ": I kø, gemmes om lidt"});
+    try { const s = await gh(`/repos/djay-fabz/privat-data/contents/inbox/svar/${id}.json?ref=main&t=${Date.now()}`, {raw: true}); if (s.ok) sv = await s.json(); } catch {}
+  }
+  await hentPrivat();
+  if (sv && sv.status === "OK") besked({id: bid, klasse: "ok", titel: tekst + ": gemt", punkter: [sv.besked]});
+  else besked({id: bid, klasse: "fejl", titel: tekst + ": ikke gemt", punkter: [sv ? sv.fejl : "Intet svar efter 15 minutter. Tjek Actions i privat-data.", "Siden er sat tilbage."]});
+}
+function puljeMed(navn, b) {   // Fabz-puljer og Skat-puljen: vis det nye tal med det samme (Oscar 29/10). kør() henter de rigtige tal efter workflowet og sætter tilbage ved fejl
+  const mo = D.mo || {}, sk = mo.skat;
+  if (navn === "Skat" && sk) {
+    sk.saldo = (sk.saldo || 0) + b;
+    if (sk.reserve != null) sk.mangler_paa_kontoen = Math.max(0, sk.reserve - sk.saldo);
+    const L = mo.overblik?.linjer?.skat;
+    if (L) { L.kr = sk.saldo; L.f = sk.mangler_paa_kontoen ? "rd" : "g"; }
+  } else { const p = (mo.overblik?.puljer || []).find(q => q.navn === navn); if (p) p.saldo += b; }
 }
 function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker med det der er galt, overblik, puljer i Saxo, detaljer
   if (ØK.guide) return visGuide(ØK.guide);
@@ -3605,7 +3631,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   ob.bjaelker.forEach(b => gør.push(trin(b.f, [h("b", {}, b.tekst), b.ekstra ? " " + b.ekstra : ""], b.knap && mål(b.mål) ? knap(b.knap, mål(b.mål), b.mål.startsWith("guide:")) : null)));
   if (sk.reserve != null && sk.saldo == null) gør.push(trin("y", [h("b", {}, "Skriv saldoen på Skat-puljen i Saxo.")], knap("Hurtig guide →", mål("guide:saxo"), true)));
   else if (sk.mangler_paa_kontoen) gør.push(trin("rd", [h("b", {}, `Overfør ${krKort(sk.mangler_paa_kontoen)} kr. til Skat-puljen i Saxo.`)],
-    knap("✓ Jeg har overført", () => kør("pulje", ["flyt", "Skat", String(sk.mangler_paa_kontoen)], {tekst: `Skat-puljen +${krKort(sk.mangler_paa_kontoen)} kr.`, efter: ["mo"]}))));
+    knap("✓ Jeg har overført", () => kør("pulje", ["flyt", "Skat", String(sk.mangler_paa_kontoen)], {tekst: `Skat-puljen +${krKort(sk.mangler_paa_kontoen)} kr.`, efter: ["mo"], med: () => puljeMed("Skat", sk.mangler_paa_kontoen)}))));
   ub.liste.filter(u => u.dage_over > 0).forEach(u => gør.push(trin(u.dage_over > 14 ? "rd" : "y",
     [h("b", {}, `Send rykker til ${u.kunde}`), ` for faktura ${u.nr}, ${krKort(u.kr)} kr. Den er ${u.dage_over} dage over forfald. Dinero → Salg → Fakturaer → Send påmindelse.`])));
   (mo.depositum || []).filter(j => j.status === "mangler").forEach(j => gør.push(trin("y",
@@ -3653,6 +3679,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     d.addEventListener("toggle", () => { if (d.open) OKF.add(id); else OKF.delete(id); });
     return d;
   };
+  const tilSkat = P.d1?.uden_skat && !gammeltÅr ? (sk.mangler_paa_kontoen ?? sk.reserve ?? 0) : 0;   // én kilde: det samme tal som den røde bjælke (Oscar 29/10)
   const LI = ob.linjer, E = LI.erhverv || {}, M = LI.moms || {}, R = LI.regninger || {liste: [], alle: []}, S = LI.skat || {};
   const priv = () => h("span", {class: "priv"}, "privat");
   const ikkeKoblet = P.mangler ? h("div", {class: "muted lille"}, P.mangler === "fil" ? "Privat-data har endnu ingen panel.json. Den laves af privatøkonomien." : "Din token har ikke adgang til privat-data. Tilføj privat-data på github.com → Settings → Developer settings → Fine-grained tokens (Contents: Read and write).") : null;
@@ -3687,8 +3714,8 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
         L ? l(`Løn (felt ${L.felt || 201}), skatten er trukket`, L.forventet_aar == null ? "mangler" : `forventet ${krKort(L.forventet_aar)} · felt ${L.forskud == null ? "?" : krKort(L.forskud)}`, L.dato ? "eIndkomst " + kortDato(L.dato) : "")
           : h("div", {class: "l muted"}, "Løn: kommer fra privat-data"),
         l("Skat-puljen i Saxo", `${S.kr == null ? "?" : krKort(S.kr)} af ${krKort(S.maal)}`)), ikkeKoblet),
-    obLinje("loenkonto", P.d1 ? "g" : "y", h("span", {}, "Lønkonto+", priv()), P.d1 ? krKort(P.d1.beloeb) : "?", kilde(P.d1 ? "privat-data" : null, P.opdateret),
-      P.d1 ? h("div", {}, `Skal stå der d. ${kortDato(P.d1.dato)}.`, (P.d1.advarsler || []).map(a => h("div", {class: "muted lille"}, a))) : ikkeKoblet || h("div", {class: "muted"}, "Henter …")),
+    obLinje("loenkonto", P.d1 ? "g" : "y", h("span", {}, "Lønkonto+", priv()), P.d1 ? krKort(P.d1.beloeb + tilSkat) : "?", kilde(P.d1 ? "privat-data" : null, P.opdateret),
+      P.d1 ? h("div", {}, `Skal stå der d. ${kortDato(P.d1.dato)}.`, tilSkat ? h("div", {}, `Heraf ${krKort(tilSkat)} kr. til Skat-puljen.`) : null, (P.d1.advarsler || []).map(a => h("div", {class: "muted lille"}, a))) : ikkeKoblet || h("div", {class: "muted"}, "Henter …")),
     obLinje("opsparing", P.opsparing ? (P.opsparing.saldo >= P.opsparing.maal ? "g" : "y") : "y", h("span", {}, "Opsparing", priv()), P.opsparing ? `${krKort(P.opsparing.saldo)} af ${krKort(P.opsparing.maal)}` : "?", kilde(P.opsparing ? "Saxo" : null, P.opsparing?.dato),
       P.opsparing ? h("div", {}, P.opsparing.navn || "Opsparing") : ikkeKoblet || h("div", {class: "muted"}, "Henter …")));
   // Puljer i Saxo (Oscar 28/10, grupperet 29/10 skitse A): Skyld (Skat), Fabz (egne puljer), Privat (Buffer, Opsparing via privat-data/inbox). Bjælke + Sæt ind / Træk fra
@@ -3700,7 +3727,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
       knap("Gem", () => { const b = Math.round(Number(st.beloeb)); if (!(b > 0)) return alert("Skriv beløbet");
         const P = ØK.P || {}, privat = {[P.opsparing?.navn || "Opsparing"]: "opsparing", Buffer: "buffer", ...Object.fromEntries((P.puljer || []).map(q => [q.navn, q.navn]))}[navn];
         if (privat) { ØK.flyt = {}; tegn(); return privatFlyt(st.fortegn * b, st.dato, navn, privat); }
-        kør("pulje", ["flyt", navn, String(st.fortegn * b), `--dato=${st.dato}`], {tekst: `${navn} ${st.fortegn > 0 ? "+" : "−"}${krKort(b)} kr.`, efter: ["mo"], med: () => { ØK.flyt = {}; }}); }, true),
+        kør("pulje", ["flyt", navn, String(st.fortegn * b), `--dato=${st.dato}`], {tekst: `${navn} ${st.fortegn > 0 ? "+" : "−"}${krKort(b)} kr.`, efter: ["mo"], med: () => { ØK.flyt = {}; puljeMed(navn, st.fortegn * b); }}); }, true),
       knap("Fortryd", () => { ØK.flyt = {}; tegn(); }));
   };
   const pulje = (navn, saldo, maal, farve, ekstra, kanFlytte = true, slet = null) => h("div", {class: "pulje"},
