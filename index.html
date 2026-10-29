@@ -2790,12 +2790,23 @@ function utilgListe() {   // på Jobs: datoer med bookinger de næste 6 måneder
     utilg.length ? h("button", {class: "btn lille", type: "button", onclick: e => { navigator.clipboard?.writeText(tekst); e.target.textContent = "Kopieret"; }}, "Kopiér datoer") : null,
     h("div", {class: "muted lille", style: "margin-top:6px"}, "Vagter tjekket " + (v.opdateret || "").replace("T", " kl. ")));
 }
+let MO_POLL = 0;
 function mailStatus(idag, dp) {   // Mailoversigten (Oscar 28/10): KUN Mødt ind starter den (ingen knap, den blev trykket ved siden af Mødt ind og gav to oversigter). Status fra data/mailoversigt.json
   const m = D.mailoversigt, iDagM = m && m.dato === idag;
   if (iDagM && m.status === "sendt") return h("span", {class: "pill g", title: m.overskrift || ""}, `Mailoversigt sendt kl. ${m.tid} · ${m.kraever} kræver dig`);
-  if (iDagM && m.status === "fejl") return h("span", {class: "rk", style: "gap:6px"}, h("span", {class: "pill rd", title: m.fejl || ""}, "Mailoversigt fejlede"),
+  if (iDagM && m.status === "fejl") return h("span", {class: "rk", style: "gap:6px"}, h("span", {class: "pill rd", title: m.fejl || ""},   // kort grund (29/10: Gmail-kvote)
+      "Mailoversigt fejlede: " + (/quota|kvote|403|429/i.test(m.fejl || "") ? "Gmail havde travlt" : (m.fejl || "ukendt fejl").replace(/^\w+Error:\s*/, "").slice(0, 50))),
     h("button", {class: "btn lille", type: "button", onclick: () => kør("mailoversigt", [], {tekst: "Mailoversigt", efter: ["mailoversigt"], med: () => { D.mailoversigt = {dato: idag, status: "bestilt", tid: nuHHMM()}; }})}, "Prøv igen"));
   const start = (iDagM && m.status === "bestilt" && m.tid) || dp?.moedt_ind;
+  if (start && !MO_POLL) {   // hent status igen, mens den kører, så "startet" bliver til sendt eller fejlede uden genindlæsning (29/10)
+    let n = 0;
+    MO_POLL = setInterval(async () => {
+      n++;
+      const f = await laesFil("data/mailoversigt.json");
+      const j = f ? await f.json() : null;
+      if ((j && j.dato === idag && j.status !== "bestilt") || n >= 12) { clearInterval(MO_POLL); MO_POLL = 0; if (j && j.dato === idag) { D.mailoversigt = j; tegn(); } }
+    }, 45000);
+  }
   return start ? h("span", {class: "pill y"}, `Mailoversigt startet kl. ${start}`) : null;   // før Mødt ind: intet (Mødt ind-knappen starter den)
 }
 function koerelisteKnap(vedTidsplan) {   // Køreliste (PDF): samme design som side 2 i pakkelisten (Oscar 26/10: browserens print duede ikke; knappen skal stå ved tidsplanen)
