@@ -1895,7 +1895,7 @@ function afslutDag(dato, nået, brugt) {
       const n = nået();
       if (!confirm(`Følg op på dagen med ${n.length} punkter nået?`)) return;
       const b = Object.entries(brugt()).map(([nr, m]) => `${nr}=${m}`);
-      kør("dag-opfoelg", [dato, ...(st.uplanlagt.trim() ? [`--uplanlagt=${st.uplanlagt.trim()}`] : []), "--naaet", ...n.map(String), ...(b.length ? ["--brugt", ...b] : [])],
+      kør("dag-opfoelg", [dato, ...(dato === iDag() ? [`--kl=${nuHHMM()}`] : []), ...(st.uplanlagt.trim() ? [`--uplanlagt=${st.uplanlagt.trim()}`] : []), "--naaet", ...n.map(String), ...(b.length ? ["--brugt", ...b] : [])],
         {tekst: "Opfølgning på dagen", efter: ["dagsplaner", "opgaver"], med: () => { const x = D.dagsplaner.find(x => x.dato === dato); if (x) { x.status = "Fulgt op"; x.naaede_punkter = n; } }});
     }}, "Følg op på dagen"));
 }
