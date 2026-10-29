@@ -992,31 +992,33 @@ function visBogfoering() {
     h("div", {class: "kort2"},
       h("div", {class: "kh"}, h("h1", {}, `Ugens bogføring · uge ${uge}`), h("span", {class: "pill " + status[0]}, status[1]), h("div", {class: "spacer"}),
         !klar ? h("button", {class: "btn lille", type: "button", onclick: async () => { await genindlæs(efter); tegn(); }}, "Hent igen") : null),
-      h("div", {class: "muted"}, klar ? `${sikre.length} ting klares med ét ja · ${åbne.length} kræver dig · ${ikke.length} filer er ikke bilag` : `Robotten har kun lavet kladder og udkast. Du sender og bogfører selv.`),
+      h("div", {class: "muted"}, klar ? `${sikre.length} ting klares med ét ja · ${åbne.length} kræver dig · ${ikke.length} filer skal ikke bruges` : `Robotten har kun lavet kladder og udkast. Du sender og bogfører selv.`),
       h("div", {class: "bf-tal"},
         h("div", {}, h("span", {}, "Klares med ét ja"), h("b", {}, `${valgteSikre.length} af ${sikre.length}`), h("span", {}, sumKr ? `${bfKr(sumKr)} i kroner` + (valgteSikre.some(p => p.valuta && p.valuta !== "DKK") ? " + valuta" : "") : "intet beløb")),
         h("div", {}, h("span", {}, "Kræver dig"), h("b", {}, String(åbne.length)), h("span", {}, åbne.length ? `ca. ${minutter} minutter` : "intet")),
         h("div", {}, h("span", {}, "Moms"), mo ? [h("b", {}, mo.forrige ? bfKr(mo.forrige.kr) : bfKr(mo.nu?.kr ?? mo.kr)),
-          h("span", {}, mo.forrige ? `${kortDato(mo.forrige.fra)}-${kortDato(mo.forrige.til)} · betal senest ${kortDato(mo.forrige.frist)}` : `til nu i kvartalet · frist ${kortDato(mo.nu?.frist || mo.frist)}`, ` · Dinero ${kortDato(mo.dato)}`)]
-          : [h("b", {}, "–"), h("span", {}, "ingen momstal fra Dinero")]))),
+          h("span", {style: "display:block"}, mo.forrige ? `${kortDato(mo.forrige.fra)}-${kortDato(mo.forrige.til)} · betal mellem ${kortDato(mo.forrige.tidligst || mo.forrige.frist)} og ${kortDato(mo.forrige.frist)} ${mo.forrige.frist.slice(0, 4)}`
+            : `til nu i kvartalet · betal senest ${kortDato(mo.nu?.frist || mo.frist)} ${(mo.nu?.frist || mo.frist || "").slice(0, 4)}`),
+          (() => { const dage = mo.dato ? Math.round((dag(iDag()) - dag(mo.dato)) / 864e5) : 99;   // Dinero hentes hver morgen: højst 2 dage gammelt er nyt (Oscar 29/10: grøn/rød)
+            return h("span", {class: "pill " + (dage <= 2 ? "grøn" : "rød-pill"), style: "margin-top:6px"}, dage <= 2 ? `Opdateret ${kortDato(mo.dato)} fra Dinero` : mo.dato ? `Gammel: opdateret ${kortDato(mo.dato)}` : "Virker ikke"); })()]
+          : [h("b", {}, "–"), h("span", {class: "pill rød-pill", style: "margin-top:6px"}, "Virker ikke: ingen momstal fra Dinero")]))),
     h("div", {class: "gruppe"},
       h("div", {style: "display:flex;align-items:center;gap:8px;flex-wrap:wrap"}, h("div", {class: "overskrift", style: "margin:0"}, "Robotten er sikker"),
         h("span", {class: "pill"}, `${sikre.length} ting`), h("div", {class: "spacer"}),
         klar ? h("button", {class: "btn godkend", type: "button", disabled: !BF.valgte.size && !ikke.length, onclick: godkend}, `✓ Godkend ${valgteSikre.length + kræver.filter(p => BF.valgte.has(p.id)).length}`) : null),
       sikre.length ? h("details", {class: "sk-fold", open: !klar || sikre.length <= 4},
-        h("summary", {}, `Vis de ${sikre.length}: ${sikre.filter(p => p.type === "kladde").length} nye udgifter, ${sikre.filter(p => p.type === "vedhaeft").length} kvitteringer til bogførte køb`),
+        h("summary", {}, `Vis: ${sikre.filter(p => p.type === "kladde").length} nye udgifter, ${sikre.filter(p => p.type === "vedhaeft").length} kvitteringer`),
         h("div", {}, sikre.map(p => række(p, true)))) : h("div", {class: "muted lille", style: "margin-top:6px"}, "Ingen denne uge.")),
     h("div", {class: "gruppe"},
       h("div", {style: "display:flex;align-items:center;gap:8px"}, h("div", {class: "overskrift", style: "margin:0"}, "Kræver dig"), h("span", {class: "pill" + (åbne.length ? " gul" : " grøn")}, åbne.length ? `${åbne.length} åbne` : "Alt klaret"),
         h("div", {class: "spacer"}), h("a", {class: "btn lille", href: "https://app.dinero.dk/", target: "_blank", rel: "noopener"}, "Åbn Dinero ↗")),
-      kræver.length ? [["ja", "Sæt flueben, hvis det passer"], ["dinero", "Tjek i Dinero"], ["selv", "Bogfør selv"]].map(([g, t]) => {
+      kræver.length ? h("div", {class: "kort", style: "margin-top:8px"}, [["ja", "Sæt flueben, hvis det passer"], ["dinero", "Tjek i Dinero"], ["selv", "Bogfør selv"]].map(([g, t]) => {   // Oscar 29/10: ingen foldemenuer her
         const ps = kræver.filter(p => (p.gruppe || "dinero") === g).sort((a, b) => (a.klaret ? 1 : 0) - (b.klaret ? 1 : 0) || (b.dato || "").localeCompare(a.dato || ""));
         const tilbage = ps.filter(p => !p.klaret).length;
-        return ps.length ? h("details", {class: "sk-fold", open: g === "ja" || ps.length <= 5},
-          h("summary", {}, `${t} · ${tilbage ? tilbage + " åbne" : "alt klaret"}`), h("div", {}, ps.map(kræverRække))) : null;
-      }) : h("div", {class: "muted lille", style: "margin-top:6px"}, "Intet denne uge.")),
+        return ps.length ? [h("div", {class: "overskrift", style: "margin:14px 14px 2px"}, `${t} · ${tilbage ? tilbage : "alt klaret"}`), ps.map(kræverRække)] : null;
+      })) : h("div", {class: "muted lille", style: "margin-top:6px"}, "Intet denne uge.")),
     h("div", {class: "gruppe"}, h("details", {class: "sk-fold"},
-      h("summary", {}, `Til orientering: ${ikke.length} filer er ikke bilag` + ((pk.advarsler || []).length ? ` · ${pk.advarsler.length} advarsler` : "")),
+      h("summary", {}, `Til orientering: ${ikke.length} filer skal ikke bruges (kopier og ikke bilag)` + ((pk.advarsler || []).length ? ` · ${pk.advarsler.length} advarsler` : "")),
       h("div", {}, ikke.map(p => h("div", {class: "bf-r"}, h("div", {class: "t"}, h("b", {}, p.fil_navn || p.titel), h("span", {}, p.hvad || p.grund), resLinje(p)))),
         (pk.advarsler || []).map(a => h("div", {class: "bf-r"}, h("div", {class: "t"}, h("b", {}, "Advarsel"), h("span", {}, a))))))),
     pk.status === "udfoert" ? h("div", {class: "gruppe", style: "display:flex;gap:10px;align-items:center;flex-wrap:wrap"},
