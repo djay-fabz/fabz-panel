@@ -98,6 +98,9 @@ a.btn{display:inline-block;text-decoration:none}
 .jo-detalje{padding:4px 14px 16px 42px;border-top:1px solid var(--linje);background:var(--flade2)}
 @media (max-width:700px){.jo-detalje{padding-left:14px}}
 .fokus{display:grid;gap:14px;margin-top:20px}.resten summary{cursor:pointer;padding:6px 2px}
+.bryd{display:block;width:100%;text-align:left;border:0;border-radius:8px;padding:9px 12px;font-weight:600;margin-top:6px}
+.bryd.adv{background:var(--adv-blid);color:var(--adv)}.bryd.fejl{background:var(--fejl-blid);color:var(--fejl)}
+@media (max-width:700px){.bryd .navne{display:none}}
 .agr.markeret{outline:2px solid var(--adv);outline-offset:6px;border-radius:10px}
 .vaelg.låst,.liste.låst .lkrop .step,.liste.låst .lkrop .ekstra,.liste.låst .lkrop .notefelt,.liste.låst .lhoved .felter,.liste.låst .lhoved .startfra,.liste.låst .anlaeg{pointer-events:none}
 .vaelg.låst{opacity:.45}.liste.låst .lkrop .step,.liste.låst .lkrop .ekstra{opacity:.4}
@@ -609,13 +612,15 @@ async function iBaggrunden(præfiks, krav, commit, {tekst, ok, fejl}) {
     let sv = null;
     try {
       const start = Date.now();
-      while (!sv && Date.now() - start < 240000) {
-        await sleep(1500);
+      let iKø = false;
+      while (!sv && Date.now() - start < 900000) {   // efter 4 min: "I kø", og der ventes op til 15 min, før det kaldes en fejl (29/10)
+        await sleep(Date.now() - start < 240000 ? 1500 : 5000);
+        if (!iKø && Date.now() - start >= 240000) { iKø = true; besked({id, klasse: "kø", titel: tekst + ": I kø, gemmes om lidt"}); }
         const r = await laesFil(`inbox/svar/${id}.json`);
         if (r) sv = await r.json();
       }
     } catch (e) { sv = {status: "FEJL", fejl: e.message}; }
-    if (!sv) sv = {status: "FEJL", fejl: "Intet svar efter 4 minutter. Tjek Actions i fabz-data."};
+    if (!sv) sv = {status: "FEJL", fejl: "Intet svar efter 15 minutter. Tjek Actions i fabz-data."};
     if (sv.status === "FEJL") {
       let håndteret = false;
       try { håndteret = await fejl(sv); } catch {}
@@ -2082,12 +2087,23 @@ function visIDag() {
       [ub && (ub.forfaldne || dm.length) ? (ub.forfaldne || 0) + dm.length : 0, "Penge ude"]].filter(([n]) => n).map(([n, t]) => `${t} ${n}`);
     $("rod").replaceChildren(h("div", {class: "side"}, overskrift,
       h("div", {class: "fokus"}, planKort, ...jobKort, vagterKort(idag),   // vagtkort vises kun ved kollision eller nye vagter
+        brydIgennem(henv, ub, dm),
         h("details", {class: "resten"}, h("summary", {class: "muted lille"}, "Vis resten" + (tal.length ? ` (${tal.join(" · ")})` : "")),
           h("div", {class: "stak", style: "margin-top:10px"}, resten)))));
     return;
   }
   $("rod").replaceChildren(h("div", {class: "side bred"}, overskrift,
     h("div", {class: "idag"}, planKort, h("div", {class: "stak"}, ...jobKort, resten[0], resten[1], vagterKort(idag), ...resten.slice(2)))));
+}
+function brydIgennem(henv, ub, dm) {   // planlagt dag: nye forespørgsler og penge ude står over "Vis resten" (skitse panel-opfoelgning, Oscar ja 29/10)
+  const nye = henv.filter(x => x.status === "Ny" && x.id !== "…" && forespAlder(x) >= 1).sort((a, b) => forespAlder(b) - forespAlder(a));
+  const forf = ub?.forfaldne || 0, linjer = [];
+  if (nye.length) linjer.push(h("button", {class: "bryd adv", type: "button", onclick: () => { fane = "foresp"; FQ.vis = null; tegn(); }},
+    `${nye.length} ${nye.length === 1 ? "ny forespørgsel venter" : "nye forespørgsler venter"}`,
+    h("span", {class: "navne"}, ": " + nye.slice(0, 3).map(x => `${x.kunde} (${forespAlder(x)} ${forespAlder(x) === 1 ? "dag" : "dage"})`).join(", "))));
+  if (forf || dm.length) linjer.push(h("button", {class: "bryd fejl", type: "button", onclick: () => { fane = "oekonomi"; tegn(); }},
+    "Penge ude: " + [forf ? `${krKort(ub.forfaldne_kr)} kr. over forfald` : "", dm.length ? `${dm.length} uden depositum` : ""].filter(Boolean).join(" · ")));
+  return linjer.length ? h("div", {}, linjer) : null;
 }
 function estimatForslag(dp) {   // tid brugt mod estimat, så Oscar kan rette opgavens omfang med ét tryk
   const rækker = (dp.plan_punkter || []).filter(p => p.id != null && p.brugt != null).map(p => ({p, o: D.opgaver.find(o => o.id === p.id)})).filter(x => x.o && x.o.status !== "Færdig");
@@ -2355,6 +2371,9 @@ function fqÅbn(id) {
 }
 function fqLuk() { fqGemKladde(); FQ.vis = null; FQ.valgt = null; FQ.ret = {}; tegn(); }
 const pillKlasse = s => ({"Ny": "blå", "Tilbud sendt": "gul", "Booket": "grøn"})[s] || "";
+// alder på en åben forespørgsel (skitse panel-opfoelgning, Oscar ja 29/10): dage siden status blev sat, gul fra 5, rød fra 14
+const forespAlder = x => { const fra = x.status_dato || x.modtaget; return fra ? Math.max(0, Math.round((dag(iDag()) - dag(fra)) / 864e5)) : 0; };
+const alderKlasse = d => d >= 14 ? "rød-pill" : d >= 5 ? "gul" : "";
 function optagetDato(dato) {
   if (!dato) return [];
   return (D.kalender?.begivenheder || []).filter(e => e.kalender === "bookinger" && e.start.slice(0, 10) <= dato && e.slut.slice(0, 10) >= dato)
@@ -2368,12 +2387,14 @@ function ledigMærke(dato) {
 }
 function visForesp() {
   const rows = (D.henvendelser || []).slice().sort((a, b) => (b.modtaget || "").localeCompare(a.modtaget || "") || b.id - a.id);
-  const åbne = rows.filter(x => ["Ny", "Tilbud sendt"].includes(x.status)), andre = rows.filter(x => !["Ny", "Tilbud sendt"].includes(x.status));
+  const åbne = rows.filter(x => ["Ny", "Tilbud sendt"].includes(x.status)).sort((a, b) => forespAlder(b) - forespAlder(a)), andre = rows.filter(x => !["Ny", "Tilbud sendt"].includes(x.status));
   const række = x => h("button", {type: "button", class: "r række" + (FQ.vis === "h" && FQ.valgt === x.id ? " valgt" : ""), disabled: x.id === "…", onclick: () => fqÅbn(x.id)},
     h("div", {class: "n"}, h("div", {class: "titel"}, x.kunde || "?", x.id === "…" ? h("span", {class: "muted lille"}, "  gemmes …") : null),
       h("div", {class: "meta"}, h("span", {}, x.type), x.eventdato ? h("span", {}, "event " + kortDatoÅr(x.eventdato)) : null,
         x.pris != null ? h("span", {}, kr(x.pris)) : null, h("span", {}, "fra " + x.kilde))),
-    h("span", {class: "pill " + pillKlasse(x.status)}, x.status));
+    ["Ny", "Tilbud sendt"].includes(x.status) && x.id !== "…"
+      ? h("span", {class: "pill " + alderKlasse(forespAlder(x))}, `${x.status === "Ny" ? "Ny" : "Tilbud"} · ${forespAlder(x)} ${forespAlder(x) === 1 ? "dag" : "dage"}`)
+      : h("span", {class: "pill " + pillKlasse(x.status)}, x.status));
   const venstre = h("div", {class: "liste-kol"},
     h("div", {class: "kh"}, h("h1", {}, "Forespørgsler"), h("div", {class: "spacer"}),
       h("button", {class: "btn primaer", type: "button", onclick: () => { FQ.vis = "ny"; FQ.ny = {modtaget: iDag(), type: "", kilde: ""}; tegn(); }}, "+ Ny forespørgsel")),
@@ -2692,7 +2713,7 @@ function tbTypeFelter(type, dato) {   // forespørgslens/jobbets type -> kundety
 function tbFraForesp(x) {
   const k = tbKontakt(x.kontakt), sted = ((x.note || "").match(/[^.\n]*\b\d{4} [A-ZÆØÅ][\wæøå]+/) || [""])[0].trim();
   return {navn: x.kunde || "", mail: k.mail, tlf: k.tlf, evdato: x.eventdato || "", gaester: x.gaester ? String(x.gaester) : "", sted,
-    ...tbTypeFelter(x.type, x.eventdato)};
+    h_id: x.id, ...tbTypeFelter(x.type, x.eventdato)};   // h_id: "Markér som sendt" sætter forespørgslen til Tilbud sendt (29/10)
 }
 function tbFraJob(j) {
   const t = (j.besk || "").replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "");
@@ -2752,6 +2773,18 @@ function tbPdf() {
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
+function tbSendtKnap() {   // tilbud lavet fra en forespørgsel: sæt den til Tilbud sendt med prisen ekskl. moms (skitse panel-opfoelgning, Oscar ja 29/10)
+  const x = TB.type === "tilbud" && TB.h_id != null ? (D.henvendelser || []).find(y => y.id === TB.h_id) : null;
+  if (!x || x.status !== "Ny") return null;
+  return h("button", {class: "btn", type: "button", onclick: () => {
+    const R = tbBeregn(TB);
+    if (R.fejl) { alert(R.fejl); return; }
+    const pris = Math.round(R.total - R.moms);
+    kør("henvendelse-status", [String(x.id), "Tilbud sendt", `--pris=${pris}`], {tekst: `${x.kunde}: Tilbud sendt`, efter: ["henvendelser"], med: () => {
+      x.status = "Tilbud sendt"; x.status_dato = iDag(); x.pris = pris;
+    }});
+  }}, "Markér som sendt");
+}
 function visTilbud() {
   if (!TB) { try { TB = JSON.parse(lager.get(TB_KEY) || "null"); } catch { TB = null; } }
   if (!TB) TB = tbNy();
@@ -2821,6 +2854,7 @@ function visTilbud() {
     h("div", {style: "margin-top:16px"}, sum),
     h("div", {class: "rk", style: "margin-top:16px"},
       h("button", {class: "btn primaer", type: "button", onclick: tbPdf}, "Hent PDF"),
+      tbSendtKnap(),
       h("div", {class: "spacer"}),
       h("button", {class: "btn ghost", type: "button", onclick: () => { if (confirm("Ryd formularen og start forfra?")) { TB = tbNy(); tbGem(); tegn(); } }}, "Ryd"))));
   opdater();
