@@ -1047,14 +1047,14 @@ function visBogfoering() {
           kør("ugepakke-svar", [`--uge=${pk.uge}`, `--id=${p.id}`, "--privat"], {tekst: `${p.titel}: privat`, efter}); }}, "Privat"))),
       p.beloeb != null ? h("div", {class: "kr"}, bfKr(p.beloeb, p.valuta)) : null); };
   const godkend = () => { const v = [...BF.valgte, ...ikke.map(p => p.id)].filter((x, i, a) => a.indexOf(x) === i);
-    if (!confirm(`Godkend ${v.length - ikke.length} ting${ikke.length ? ` (og skjul ${ikke.length} filer, der ikke er bilag)` : ""}? Robotten fylder kladderne ud i Dinero og laver mailudkast i Gmail. Intet bliver bogført eller sendt.`)) return;
+    if (!confirm(`Godkend ${v.length - ikke.length} ting${ikke.length ? ` (og skjul ${ikke.length} filer, der ikke er bilag)` : ""}? Robotten fylder kladderne ud i Dinero og sender kvitteringerne til Dineros bilagsindbakke. Intet bliver bogført, før du trykker Bogfør.`)) return;
     kør("ugepakke-godkend", [`--uge=${pk.uge}`, `--valgte=${v.join(",")}`], {tekst: "Ugens bogføring godkendt", efter, med: () => { pk.status = "godkendt"; }}); };
   const minutter = Math.max(2, Math.round(åbne.reduce((a, p) => a + ((p.gruppe || "dinero") === "ja" ? 0.5 : p.gruppe === "selv" ? 3 : 1.5), 0)));   // et skøn: flueben ½ min., tjek 1½, bogfør selv 3
   $("rod").replaceChildren(h("div", {class: "side"},
     h("div", {class: "kort2"},
       h("div", {class: "kh"}, h("h1", {}, `Ugens bogføring · uge ${uge}`), h("span", {class: "pill " + status[0]}, status[1]), h("div", {class: "spacer"}),
         !klar ? h("button", {class: "btn lille", type: "button", onclick: async () => { await genindlæs(efter); tegn(); }}, "Hent igen") : null),
-      h("div", {class: "muted"}, klar ? `${sikre.length} ting klares med ét ja · ${åbne.length} kræver dig · ${ikke.length} filer skal ikke bruges` : `Robotten har kun lavet kladder og udkast. Du sender og bogfører selv.`),
+      h("div", {class: "muted"}, klar ? `${sikre.length} ting klares med ét ja · ${åbne.length} kræver dig · ${ikke.length} filer skal ikke bruges` : `Robotten har udfyldt kladderne og sendt kvitteringerne til Dinero. Du bogfører med Bogfør og afstemmer banken i Dinero.`),
       h("div", {class: "bf-tal"},
         h("div", {}, h("span", {}, "Klares med ét ja"), h("b", {}, `${valgteSikre.length} af ${sikre.length}`), h("span", {}, sumKr ? `${bfKr(sumKr)} i kroner` + (valgteSikre.some(p => p.valuta && p.valuta !== "DKK") ? " + valuta" : "") : "intet beløb")),
         h("div", {}, h("span", {}, "Kræver dig"), h("b", {}, String(åbne.length)), h("span", {}, åbne.length ? `ca. ${minutter} minutter` : "intet")),
@@ -1085,7 +1085,7 @@ function visBogfoering() {
       h("div", {}, ikke.map(p => h("div", {class: "bf-r"}, h("div", {class: "t"}, h("b", {}, p.fil_navn || p.titel), h("span", {}, p.hvad || p.grund), resLinje(p)))),
         (pk.advarsler || []).map(a => h("div", {class: "bf-r"}, h("div", {class: "t"}, h("b", {}, "Advarsel"), h("span", {}, a))))))),
     pk.status === "udfoert" ? h("div", {class: "gruppe", style: "display:flex;gap:10px;align-items:center;flex-wrap:wrap"},
-      h("button", {class: "btn", type: "button", onclick: () => { if (confirm("Fortryd ugens pakke? Robotten tømmer de kladder, den udfyldte, og sletter sine mailudkast. Det, du selv har bogført eller sendt, rører den ikke."))
+      h("button", {class: "btn", type: "button", onclick: () => { if (confirm("Fortryd ugens pakke? Robotten tømmer de kladder, den udfyldte. Kvitteringer, der er sendt til Dinero, og det, der er bogført, kan den ikke fortryde."))
         kør("ugepakke-fortryd", [`--uge=${pk.uge}`], {tekst: "Fortryd ugens bogføring", efter, med: () => { pk.status = "fortryd_bestilt"; }}); }}, "Fortryd ugens pakke")) : null));
 }
 // valg af job til en opgave: kommende jobs, plus det job opgaven allerede har (også når det er passeret)
