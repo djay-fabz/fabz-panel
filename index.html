@@ -1045,7 +1045,7 @@ function visBogfoering() {
           kør("ugepakke-svar", [`--uge=${pk.uge}`, `--id=${p.id}`, "--privat"], {tekst: `${p.titel}: privat`, efter}); }}, "Privat"))),
       p.beloeb != null ? h("div", {class: "kr"}, bfKr(p.beloeb, p.valuta)) : null); };
   const godkend = () => { const v = [...BF.valgte, ...ikke.map(p => p.id)].filter((x, i, a) => a.indexOf(x) === i);
-    if (!confirm(`Godkend ${v.length - ikke.length} ting${ikke.length ? ` (og skjul ${ikke.length} filer, der ikke er bilag)` : ""}? Robotten fylder kladderne ud i Dinero og sender kvitteringerne til Dineros bilagsindbakke. Intet bliver bogført, før du trykker Bogfør.`)) return;
+    if (!confirm(`Godkend ${v.length - ikke.length} ting${ikke.length ? ` (og skjul ${ikke.length} filer, der ikke er bilag)` : ""}? Robotten fylder kladderne ud i Dinero. Intet bliver bogført, før du trykker Bogfør.`)) return;
     kør("ugepakke-godkend", [`--uge=${pk.uge}`, `--valgte=${v.join(",")}`], {tekst: "Ugens bogføring godkendt", efter, med: () => { pk.status = "godkendt"; }}); };
   const minutter = Math.max(2, Math.round(åbne.reduce((a, p) => a + ((p.gruppe || "dinero") === "ja" ? 0.5 : p.gruppe === "selv" ? 3 : 1.5), 0)));   // et skøn: flueben ½ min., tjek 1½, bogfør selv 3
   $("rod").replaceChildren(h("div", {class: "side"},
