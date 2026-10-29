@@ -2246,7 +2246,7 @@ function visIDag() {
                   oninput: e => { if (e.target.value === "") delete brugt[p.nr]; else brugt[p.nr] = Number(e.target.value); lager.set(BRUGT_KEY(idag), JSON.stringify(brugt)); },
                   onclick: e => e.stopPropagation()})))) : null;
       }),
-      fulgtOp ? [h("div", {class: "godk ok", style: "margin-top:14px"}, `Fulgt op: nået ${dp.naaet_min ?? "?"} af ${dp.planlagt_min ?? "?"} min`), estimatForslag(dp)]
+      fulgtOp ? [h("div", {class: "godk ok", style: "margin-top:14px"}, dp.naaet_min != null && dp.planlagt_min != null ? `Fulgt op: nået ${dp.naaet_min} af ${dp.planlagt_min} min` : "Fulgt op: gemmes …"), estimatForslag(dp)]
         : afslutDag(idag, () => nået, () => brugt)
     ] : h("div", {class: "tom", style: "padding:24px 0"}, "Ingen plan for i dag.", h("br"),
           h("button", {class: "btn primaer", type: "button", style: "margin-top:12px", onclick: () => { fane = "opgaver"; OP.vis = "plan"; OP.planDato = idag; tegn(); }}, "Planlæg dagen")));
@@ -2349,7 +2349,9 @@ function afslutDag(dato, nået, brugt) {
       if (!confirm(`Følg op på dagen med ${n.length} punkter nået?`)) return;
       const b = Object.entries(brugt()).map(([nr, m]) => `${nr}=${m}`);
       kør("dag-opfoelg", [dato, ...(dato === iDag() ? [`--kl=${nuHHMM()}`] : []), ...(st.uplanlagt.trim() ? [`--uplanlagt=${st.uplanlagt.trim()}`] : []), "--naaet", ...n.map(String), ...(b.length ? ["--brugt", ...b] : [])],
-        {tekst: "Opfølgning på dagen", efter: ["dagsplaner", "opgaver"], med: () => { const x = D.dagsplaner.find(x => x.dato === dato); if (x) { x.status = "Fulgt op"; x.naaede_punkter = n; } }});
+        {tekst: "Opfølgning på dagen", efter: ["dagsplaner", "opgaver"], med: () => { const x = D.dagsplaner.find(x => x.dato === dato); if (x) { x.status = "Fulgt op"; x.naaede_punkter = n;
+          // samme regel som fabz.py dag-opfoelg: minutterne for de nåede punkter, "hvis der er tid" tæller ikke (rettes, når de rigtige data kommer)
+          x.naaet_min = (x.plan_punkter || []).filter(p => n.includes(p.nr) && p.halvdel !== "hvis_tid").reduce((s, p) => s + (Number(p.min) || 0), 0); } }});
     }}, "Følg op på dagen"));
 }
 
