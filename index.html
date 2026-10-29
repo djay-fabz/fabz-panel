@@ -979,12 +979,13 @@ function betalingAfsnit(j, st) {
 }
 // ---------- Ugens bogføring (bogholder-robot del 2, Oscar 29/10: version B "overblik først"). Data: data/ugepakke.json fra fabz_bogholder.py.
 // Robotten foreslår, Oscar godkender med ét ja. Den bogfører aldrig og sender aldrig: Godkend udfylder Dineros kladder og laver Gmail-udkast.
-const BF = {valgte: null, uge: null, åben: null};
+const BF = {valgte: null, uge: null, åben: null, svar: {}};   // svar: {punkt-id: {konto, region}} til spørgsmål om nye leverandører
 const bfKr = (v, valuta) => v == null || v === "" ? "beløb ukendt" : Number(v).toLocaleString("da-DK", {minimumFractionDigits: 2, maximumFractionDigits: 2}) + (valuta && valuta !== "DKK" ? " " + valuta : " kr.");
 function visBogfoering() {
   const pk = D.ugepakke && !Array.isArray(D.ugepakke) ? D.ugepakke : null;
   if (!pk) return $("rod").replaceChildren(h("div", {class: "side"}, h("h1", {}, "Ugens bogføring"), tom("Robotten laver ugens pakke tirsdag morgen. Der er ingen endnu.")));
-  if (BF.uge !== pk.uge) { BF.uge = pk.uge; BF.valgte = new Set(pk.punkter.filter(p => p.valgt).map(p => p.id)); BF.åben = null; }
+  if (BF.uge !== pk.uge) { BF.uge = pk.uge; BF.valgte = new Set(pk.punkter.filter(p => p.valgt).map(p => p.id)); BF.sikre = new Set(pk.punkter.filter(p => p.sikker).map(p => p.id)); BF.åben = null; }
+  for (const p of pk.punkter) if (p.sikker && !BF.sikre.has(p.id)) { BF.sikre.add(p.id); if (p.valgt) BF.valgte.add(p.id); }   // besvaret ny leverandør tæller straks med i Godkend
   const P = pk.punkter, klar = pk.status === "klar", efter = ["ugepakke", "opgaver"];
   const sikre = P.filter(p => p.sikker && p.type !== "ignorer"), ikke = P.filter(p => p.type === "ignorer");
   const kræver = P.filter(p => !p.sikker && p.type !== "ignorer"), åbne = kræver.filter(p => !p.klaret);
@@ -1018,6 +1019,21 @@ function visBogfoering() {
     p.beloeb != null ? h("div", {class: "kr"}, bfKr(p.beloeb, p.valuta)) : null,
     h("button", {class: "btn lille" + (p.klaret ? " ghost" : ""), type: "button", onclick: () => kør("ugepakke-klaret", [`--uge=${pk.uge}`, `--id=${p.id}`, ...(p.klaret ? ["--fortryd"] : [])],
       {tekst: `${p.titel}: ${p.klaret ? "åben igen" : "klaret"}`, efter, med: () => { if (p.klaret) delete p.klaret; else p.klaret = iDag(); }})}, p.klaret ? "Fortryd" : "✓ Klaret"));
+  // Ny leverandør: ét spørgsmål, kategorierne 1:1 som Dineros købskonti (Oscar 29/10), svaret gemmes som regel
+  const spørgRække = p => { const sv = BF.svar[p.id] ||= {konto: "", region: (p.valuta || "DKK") === "DKK" ? "DK" : "EU"};
+    const grupper = [...new Set((pk.konti || []).map(k => k.kategori))];
+    return h("div", {class: "bf-r"}, h("div", {class: "t"},
+      h("b", {}, p.titel + (p.dato ? ` · ${kortDato(p.dato)}` : "")), h("span", {}, p.hvad),
+      h("div", {class: "bet-rk", style: "margin-top:8px"},
+        h("select", {class: "input", style: "max-width:340px", "aria-label": "Kategori i Dinero", onchange: e => { sv.konto = e.target.value; tegn(); }},
+          h("option", {value: ""}, "Vælg kategori …"),
+          grupper.map(g => h("optgroup", {label: g}, (pk.konti || []).filter(k => k.kategori === g).map(k => h("option", {value: k.nr, selected: String(sv.konto) === String(k.nr)}, `${k.nr} ${k.navn}`))))),
+        seg([["DK", "Danmark"], ["EU", "EU"], ["World", "Uden for EU"]], sv.region, v => { sv.region = v; tegn(); }),
+        h("button", {class: "btn primaer", type: "button", disabled: !sv.konto || !klar, onclick: () => kør("ugepakke-svar", [`--uge=${pk.uge}`, `--id=${p.id}`, `--konto=${sv.konto}`, `--region=${sv.region}`],
+          {tekst: `${p.titel}: kategori gemt`, efter})}, "Gem"),
+        h("button", {class: "btn", type: "button", disabled: !klar, onclick: () => { if (confirm(`Er ${p.titel} privat? Så kommer den aldrig med i regnskabet.`))
+          kør("ugepakke-svar", [`--uge=${pk.uge}`, `--id=${p.id}`, "--privat"], {tekst: `${p.titel}: privat`, efter}); }}, "Privat"))),
+      p.beloeb != null ? h("div", {class: "kr"}, bfKr(p.beloeb, p.valuta)) : null); };
   const godkend = () => { const v = [...BF.valgte, ...ikke.map(p => p.id)].filter((x, i, a) => a.indexOf(x) === i);
     if (!confirm(`Godkend ${v.length - ikke.length} ting${ikke.length ? ` (og skjul ${ikke.length} filer, der ikke er bilag)` : ""}? Robotten fylder kladderne ud i Dinero og laver mailudkast i Gmail. Intet bliver bogført eller sendt.`)) return;
     kør("ugepakke-godkend", [`--uge=${pk.uge}`, `--valgte=${v.join(",")}`], {tekst: "Ugens bogføring godkendt", efter, med: () => { pk.status = "godkendt"; }}); };
@@ -1046,10 +1062,10 @@ function visBogfoering() {
     h("div", {class: "gruppe"},
       h("div", {style: "display:flex;align-items:center;gap:8px"}, h("div", {class: "overskrift", style: "margin:0"}, "Kræver dig"), h("span", {class: "pill" + (åbne.length ? " gul" : " grøn")}, åbne.length ? `${åbne.length} åbne` : "Alt klaret"),
         h("div", {class: "spacer"}), h("a", {class: "btn lille", href: "https://app.dinero.dk/", target: "_blank", rel: "noopener"}, "Åbn Dinero ↗")),
-      kræver.length ? h("div", {class: "kort", style: "margin-top:8px"}, [["ja", "Sæt flueben, hvis det passer"], ["dinero", "Tjek i Dinero"], ["selv", "Bogfør selv"]].map(([g, t]) => {   // Oscar 29/10: ingen foldemenuer her
+      kræver.length ? h("div", {class: "kort", style: "margin-top:8px"}, [["spoerg", "Svar på ét spørgsmål"], ["ja", "Sæt flueben, hvis det passer"], ["dinero", "Tjek i Dinero"], ["selv", "Bogfør selv"]].map(([g, t]) => {   // Oscar 29/10: ingen foldemenuer her
         const ps = kræver.filter(p => (p.gruppe || "dinero") === g).sort((a, b) => (a.klaret ? 1 : 0) - (b.klaret ? 1 : 0) || (b.dato || "").localeCompare(a.dato || ""));
         const tilbage = ps.filter(p => !p.klaret).length;
-        return ps.length ? [h("div", {class: "overskrift", style: "margin:14px 14px 2px"}, `${t} · ${tilbage ? tilbage : "alt klaret"}`), ps.map(kræverRække)] : null;
+        return ps.length ? [h("div", {class: "overskrift", style: "margin:14px 14px 2px"}, `${t} · ${tilbage ? tilbage : "alt klaret"}`), ps.map(g === "spoerg" ? spørgRække : kræverRække)] : null;
       })) : h("div", {class: "muted lille", style: "margin-top:6px"}, "Intet denne uge.")),
     h("div", {class: "gruppe"}, h("details", {class: "sk-fold"},
       h("summary", {}, `Til orientering: ${ikke.length} filer skal ikke bruges (kopier og ikke bilag)` + ((pk.advarsler || []).length ? ` · ${pk.advarsler.length} advarsler` : "")),
