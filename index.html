@@ -304,6 +304,7 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 @media (max-width:900px){.ed{grid-template-columns:1fr;height:auto}.liste{border-left:0;border-top:1px solid var(--linje)}}
 /* salg: statuskort (uge, måned, vejen) */
 .sk-top{display:grid;gap:14px}
+.nedtonet{opacity:.55}.fra-mærke{margin-left:6px;font-size:11.5px;color:var(--svag);white-space:nowrap}
 .skat-status{margin-top:16px;padding:16px 18px;border-radius:14px;border:1px solid var(--linje);display:grid;gap:10px}.skat-status.g{background:var(--ok-blid);border-color:var(--ok)}.skat-status.y{background:var(--adv-blid);border-color:var(--adv)}.skat-status.rd{background:var(--fejl-blid);border-color:var(--fejl)}
 .skat-titel{font-size:20px;font-weight:700}.skat-status.g .skat-titel{color:var(--ok)}.skat-status.y .skat-titel{color:var(--adv)}.skat-status.rd .skat-titel{color:var(--fejl)}
 .skat-gør{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:10px 12px;background:var(--flade);border-radius:10px;border-left:4px solid var(--adv)}.skat-gør.rd{border-left-color:var(--fejl)}.skat-gør.g{border-left-color:var(--ok)}
@@ -1759,6 +1760,10 @@ function tidInput(værdi, ved, attr = {}) {   // 24-timers tid, skrevet som 17.2
 // ---------- I dag ----------
 const NÅET_KEY = dato => "fabz-naaet-" + dato;
 const BRUGT_KEY = dato => "fabz-brugt-" + dato;
+// "Kan ikke løses før" (Oscar 29/10): opgaven står nedtonet med "Fra <dato>" og kommer ikke i planforslaget før datoen
+const senere = (o, ref = iDag()) => !!o.ikke_foer && o.ikke_foer > ref;
+const fraMærke = o => o.ikke_foer && o.ikke_foer > iDag() ? h("span", {class: "fra-mærke"}, "Fra " + kortDato(o.ikke_foer)) : null;
+const fraFejl = o => o.ikke_foer && o.deadline && o.ikke_foer > o.deadline;
 function visIDag() {
   const idag = iDag(), d = dag(idag);
   const dp = (D.dagsplaner || []).find(x => x.dato === idag);
@@ -1833,13 +1838,13 @@ function visIDag() {
         forsinket.length ? h("div", {class: "kort2"}, h("div", {class: "kh"}, h("h3", {class: "rød"}, `Forsinket (${forsinket.length})`)),
           forsinket.slice(0, 8).map(o => h("button", {class: "mini link", type: "button", disabled: o.id === "…",
             onclick: () => { fane = "opgaver"; OP.vis = "opgave"; OP.valgt = o.id; tegn(); }},
-            h("span", {class: "lille tid rød"}, kortDato(o.deadline)), h("span", {}, o.titel)))) : null,
+            h("span", {class: "lille tid rød"}, kortDato(o.deadline)), h("span", {class: senere(o) ? "nedtonet" : ""}, o.titel, fraMærke(o))))) : null,
         sideKort("Kalender i dag", kal.length ? kal.map(e => h("div", {class: "mini"},
           h("span", {class: "muted lille tid"}, e.heldag ? "Hele dagen" : e.start.slice(11, 16).replace(":", ".")),
           h("span", {}, e.titel, e.sted ? h("span", {class: "muted lille"}, " · " + e.sted) : null))) : h("div", {class: "muted lille"}, "Intet i kalenderen")),
         sideKort(`Deadlines de næste 7 dage (${dl.length})`, dl.length ? dl.slice(0, 8).map(o => h("button", {class: "mini link", type: "button", disabled: o.id === "…",
           onclick: () => { fane = "opgaver"; OP.vis = "opgave"; OP.valgt = o.id; tegn(); }},
-          h("span", {class: "lille tid " + (prioKlasse(o, idag) ? "rød" : dlKlasse(o, idag) || "muted")}, kortDato(o.deadline)), h("span", {class: prioKlasse(o, idag)}, o.titel))) : h("div", {class: "muted lille"}, "Ingen")),
+          h("span", {class: "lille tid " + (prioKlasse(o, idag) ? "rød" : dlKlasse(o, idag) || "muted")}, kortDato(o.deadline)), h("span", {class: senere(o) ? "nedtonet" : prioKlasse(o, idag)}, o.titel, fraMærke(o)))) : h("div", {class: "muted lille"}, "Ingen")),
         sideKort(`Forespørgsler der venter (${henv.length})`, henv.length ? henv.slice(0, 6).map(x => h("button", {class: "mini link", type: "button", disabled: x.id === "…",
           onclick: () => { fane = "foresp"; FQ.vis = "h"; FQ.valgt = x.id; tegn(); }},
           h("span", {class: "pill " + pillKlasse(x.status)}, x.status), h("span", {}, x.kunde))) : h("div", {class: "muted lille"}, "Ingen")),
@@ -1922,12 +1927,13 @@ function visOpgaver() {
       const krav = o.faerdig_naar || [], ok = krav.filter(k => k.ok).length;
       const planlægger = OP.vis === "plan" && !!OP.plan && o.status !== "Færdig" && o.id !== "…";
       const iPlanen = planlægger && ["foer_frokost", "efter_frokost", "hvis_tid"].some(k => OP.plan[k].some(x => x.id === o.id));
-      const række = h("button", {type: "button", class: "r række" + (OP.vis === "opgave" && OP.valgt === o.id ? " valgt" : "") + (planlægger ? " plantræk" : "") + (iPlanen ? " iplan" : ""), disabled: o.id === "…",
+      const række = h("button", {type: "button", class: "r række" + (OP.vis === "opgave" && OP.valgt === o.id ? " valgt" : "") + (planlægger ? " plantræk" : "") + (iPlanen ? " iplan" : "") + (senere(o, planlægger ? OP.planDato : iDag()) ? " nedtonet" : ""), disabled: o.id === "…",
         ...(planlægger && !iPlanen ? {draggable: "true", ondragstart: e => { e.dataTransfer.setData("text/plain", String(o.id)); e.dataTransfer.effectAllowed = "copy"; }} : {}),
         onclick: () => { if (planlægger) { if (!iPlanen) { planTilføj(o); tegn(); } return; } OP.vis = "opgave"; OP.valgt = o.id; tegn(); if (window.innerWidth <= 900) window.scrollTo(0, 0); }},   // telefon: detaljen ligger øverst
         h("div", {class: "n"}, h("div", {class: "titel"}, o.titel, o.id === "…" ? h("span", {class: "muted lille"}, "  gemmes …") : null),
           h("div", {class: "meta"},
             o.deadline ? h("span", {class: prioKlasse(o, idag) || dlKlasse(o, idag)}, "dl " + kortDato(o.deadline)) : null,
+            o.ikke_foer && o.ikke_foer > idag ? h("span", {class: fraFejl(o) ? "rød" : ""}, "Fra " + kortDato(o.ikke_foer) + (fraFejl(o) ? " (efter fristen!)" : "")) : null,
             o.prioritet ? h("span", {class: prioKlasse(o, idag)}, o.prioritet) : null,
             o.estimat != null ? h("span", {}, o.estimat + " min") : null,
             krav.length ? h("span", {}, `${ok}/${krav.length} krav`) : null,
@@ -1961,8 +1967,10 @@ function opgaveDetalje(o, indlejret) {   // indlejret: på jobbets side, hvor ti
     h("div", {class: "felter3"},
       felt("Deadline", datoInput(o.deadline, v => ret("deadline", v))),
       felt("Planlagt", datoInput(o.planlagt, v => ret("planlagt", v))),
+      felt("Kan ikke løses før", datoInput(o.ikke_foer, v => ret("ikke_foer", v, v ? `#${o.id} kan først løses ${kortDato(v)}` : `#${o.id} kan løses nu`))),
       felt("Prioritet", sel(["", ...PRIO].map(p => [p, p || "–"]), {v: o.prioritet || ""}, "v", v => ret("prioritet", v))),
       felt("Estimat (min)", h("input", {class: "input", type: "number", min: "0", value: o.estimat ?? "", onchange: e => ret("estimat", e.target.value)}))),
+    fraFejl(o) ? h("div", {class: "lille rød", style: "font-weight:600;margin-top:6px"}, `Fejl: opgaven kan først løses ${kortDato(o.ikke_foer)}, men fristen er ${kortDato(o.deadline)}. Ret fristen eller datoen.`) : null,
     o.job_opgave ? null : felt("Job", sel(jobValg(o.job_noegle), {v: o.job_noegle || ""}, "v", v => ret("job_noegle", v, v ? `#${o.id} koblet til jobbet` : `#${o.id} uden job`))),
     o.status === "Færdig" ? h("div", {class: "info"}, h("div", {class: "etiket"}, "Konklusion (vises på jobbet)"),
       h("div", {class: "rk", style: "margin-top:0"}, inp(st, "konklusion", {placeholder: "Fx Singa til karaoke, aftalt med Christoffer"}),
@@ -2003,6 +2011,7 @@ function nyOpgaveForm() {
     felt("Færdig når (ét krav pr. linje)", tekstfelt(n, "krav", {rows: 3, placeholder: "Fx Mailen er sendt"})),
     h("div", {class: "felter3"},
       felt("Deadline", datoInput(n.deadline, v => { n.deadline = v; })),
+      felt("Kan ikke løses før", datoInput(n.ikke_foer, v => { n.ikke_foer = v; })),
       felt("Prioritet", sel(PRIO, n, "prioritet")),
       felt("Estimat (min)", inp(n, "estimat", {type: "number", min: "0"})),
       felt("Kategori", sel(KATEGORI_O, n, "kategori")),
@@ -2013,7 +2022,7 @@ function nyOpgaveForm() {
       const krav = (n.krav || "").split("\n").map(x => x.trim()).filter(Boolean);
       if (!(n.titel || "").trim() || !(n.formaal || "").trim() || !krav.length) { alert("Titel, formål og mindst ét krav skal udfyldes."); return; }
       const j = {titel: n.titel.trim(), formaal: n.formaal.trim(), faerdig_naar: krav.map(k => ({krav: k})),
-        ...Object.fromEntries(["deadline", "prioritet", "estimat", "kategori", "type", "foerste_skridt", "job_noegle"].filter(k => String(n[k] ?? "").trim()).map(k => [k, String(n[k]).trim()]))};
+        ...Object.fromEntries(["deadline", "ikke_foer", "prioritet", "estimat", "kategori", "type", "foerste_skridt", "job_noegle"].filter(k => String(n[k] ?? "").trim()).map(k => [k, String(n[k]).trim()]))};
       kør("opret", ["@json"], {json: j, tekst: `Ny opgave '${j.titel}'`, efter: ["opgaver"], med: () => {
         D.opgaver.push({...j, id: "…", status: "Ikke startet", faerdig_naar: j.faerdig_naar.map(k => ({...k, ok: false})), estimat: j.estimat ? Number(j.estimat) : undefined});
         OP.vis = null; OP.ny = {};
@@ -2027,6 +2036,7 @@ const dlKlasse = (o, dato = iDag()) => !o.deadline || o.status === "Færdig" ? "
 const prioKlasse = (o, dato = iDag()) => o.prioritet === "Høj" && o.deadline && o.deadline <= dato && o.status !== "Færdig" ? "rød fed" : "";
 const KATEGORI_O = ["Internet opgave", "Ingen internet", "Deep work / ingen AI", "Møde online", "Møde fysisk"];
 function planTilføj(o, hv) {   // lægger en opgave ind i den åbne plan (klik eller træk fra opgavelisten)
+  if (senere(o, OP.planDato)) { alert(`Kan først løses fra ${kortDato(o.ikke_foer)}.`); return false; }
   const p = OP.plan;
   if (!p || o.status === "Færdig" || ["foer_frokost", "efter_frokost", "hvis_tid"].some(k => p[k].some(x => x.id === o.id))) return false;
   const sum = k => p[k].reduce((t, x) => t + (Number(x.min) || 0), 0), m = Number(o.estimat) || 0;
