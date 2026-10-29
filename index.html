@@ -2470,7 +2470,7 @@ function nyOpgaveForm() {
 const PRIO = ["Høj", "Mellem", "Lav"];
 // Farver på frist og prioritet (Oscar 28/10): overskredet = rød frist, i dag = gul frist. Høj prioritet med frist i dag eller overskredet:
 // både frist og prioritet røde (to røde). Kun den kombination; ellers har prioriteten sin normale farve. Ingen blink.
-const dlKlasse = (o, dato = iDag()) => !o.deadline || o.status === "Færdig" ? "" : o.deadline < dato ? "rød" : o.deadline === dato ? "gul-t" : "";
+const dlKlasse = (o, dato = iDag()) => !o.deadline || o.status === "Færdig" ? "" : o.deadline < dato ? "rød" : o.deadline === dato || (o.gul_fra && dato >= o.gul_fra) ? "gul-t" : "";   // gul_fra: gul før fristen (formøde, Oscar 29/10)
 const prioKlasse = (o, dato = iDag()) => o.prioritet === "Høj" && o.deadline && o.deadline <= dato && o.status !== "Færdig" ? "rød fed" : "";
 const KATEGORI_O = ["Internet opgave", "Ingen internet", "Deep work / ingen AI", "Møde online", "Møde fysisk"];
 function planTilføj(o, hv) {   // lægger en opgave ind i den åbne plan (klik eller træk fra opgavelisten)
