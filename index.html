@@ -344,7 +344,8 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 /* salg: statuskort (uge, måned, vejen) */
 .sk-top{display:grid;gap:14px}
 .fold-frem{display:flex;align-items:center;gap:12px;flex-wrap:wrap;width:100%;text-align:left;cursor:pointer;border:0;font:inherit;color:inherit}.fold-frem:hover{background:var(--hover)}.fold-luk{border:0;background:none;padding:0;cursor:pointer;font-family:inherit;text-align:left}
-.nedtonet{opacity:.55}.fra-mærke{margin-left:6px;font-size:11.5px;color:var(--svag);white-space:nowrap}
+.nedtonet{opacity:.55}.input.mangler{border-color:var(--adv)}
+.rk.spilletid .seg{display:inline-flex;width:auto}@media (max-width:600px){.rk.spilletid{display:grid!important;grid-template-columns:1fr 1fr}.rk.spilletid input{width:100%!important}.rk.spilletid>:nth-child(3),.rk.spilletid>:nth-child(4){grid-column:1/-1}.rk.spilletid>:nth-child(4){width:100%}}.fra-mærke{margin-left:6px;font-size:11.5px;color:var(--svag);white-space:nowrap}
 .skat-status{margin-top:16px;padding:16px 18px;border-radius:14px;border:1px solid var(--linje);display:grid;gap:10px}.skat-status.g{background:var(--ok-blid);border-color:var(--ok)}.skat-status.y{background:var(--adv-blid);border-color:var(--adv)}.skat-status.rd{background:var(--fejl-blid);border-color:var(--fejl)}
 .skat-titel{font-size:20px;font-weight:700}.skat-status.g .skat-titel{color:var(--ok)}.skat-status.y .skat-titel{color:var(--adv)}.skat-status.rd .skat-titel{color:var(--fejl)}
 .skat-gør{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:10px 12px;background:var(--flade);border-radius:10px;border-left:4px solid var(--adv)}.skat-gør.rd{border-left-color:var(--fejl)}.skat-gør.g{border-left-color:var(--ok)}
@@ -555,6 +556,7 @@ async function hentData() {
   D.strategi = st ? await st.json() : {};
   const jr = await laesFil("data/jobrute.json");
   D.jobrute = jr ? await jr.json() : {};
+  D.jobtider = await laesValgfri("data/jobtider.json");   // spilletid gemt på jobbet (fabz.py spilletid)
   const su = await laesFil("data/setups.json");
   D.setups = su ? await su.json() : {grupper: [], setups: []};
   const mo = await laesFil("data/maanedsoversigt.json");   // omsætning pr. måned med trafiklys, regnet af fabz.py maanedsoversigt --gem
@@ -762,6 +764,36 @@ function tegn() {
 
 // ---------- startside: jobs ----------
 let JH = null, JF = "alle";   // JH: åbnet jobs nøgle (jobbets side), JF: filter på oversigten
+// Spilletid (Oscar 29/10): gemt på jobbet går forud for TIDER i bookingen. Start skal være udfyldt før PDF; uden slut står der "til luk".
+function spilletid(j) {
+  const g = Array.isArray(D.jobtider) ? null : (D.jobtider || {})[jobNøgle(j)];   // laesValgfri giver [] uden fil
+  const kal = (jobTider(j).find(l => /^spilletid\s*:/i.test(l)) || "").replace(/^spilletid\s*:\s*/i, "");
+  const m = kal.match(/(\d{1,2}[.:]\d{2})\s*(?:-|–|til)\s*(\d{1,2}[.:]\d{2})?/), kunSlut = kal.match(/^til\s*(\d{1,2}[.:]\d{2})/i);
+  const kalStart = m && !kunSlut ? m[1].replace(":", ".") : null, kalSlut = kunSlut ? kunSlut[1].replace(":", ".") : m && m[2] ? m[2].replace(":", ".") : null;
+  return g ? {start: g.start, slut: g.slut, ekstra: !!g.ekstra_time, gemt: true, kal, kalStart, kalSlut}
+    : {start: kalStart, slut: kalSlut, ekstra: false, gemt: false, kal, kalStart, kalSlut};
+}
+const JT = {};   // kladder til spilletid pr. job
+function spilletidBlok(j) {
+  const sp = spilletid(j), key = jobNøgle(j), k = JT[key] ||= {start: sp.start || "", slut: sp.slut || "", ekstra: sp.ekstra};
+  const forskel = sp.gemt && sp.kal && (sp.kalStart !== sp.start || sp.kalSlut !== sp.slut);
+  const gem = () => {
+    const tid = v => (v || "").trim().replace(":", ".");
+    if (!/^\d{1,2}\.\d{2}$/.test(tid(k.start))) { alert("Skriv starttiden som 21.00."); return; }
+    if (tid(k.slut) && !/^\d{1,2}\.\d{2}$/.test(tid(k.slut))) { alert("Skriv sluttiden som 01.00, eller lad den stå tom (til luk)."); return; }
+    kør("spilletid", [j.dato, j.navn, `--start=${tid(k.start)}`, ...(tid(k.slut) ? [`--slut=${tid(k.slut)}`] : []), `--ekstra=${k.ekstra ? "ja" : "nej"}`],
+      {tekst: `${j.navn}: spilletid`, efter: ["jobtider"], med: () => { if (!D.jobtider || Array.isArray(D.jobtider)) D.jobtider = {}; D.jobtider[key] = {start: tid(k.start).padStart(5, "0"), slut: tid(k.slut) ? tid(k.slut).padStart(5, "0") : null, ekstra_time: !!k.ekstra}; delete JT[key]; }});
+  };
+  return h("div", {class: "gruppe", style: "margin-top:12px"},
+    h("div", {style: "display:flex;align-items:center;gap:8px;flex-wrap:wrap"}, h("div", {class: "overskrift", style: "margin:0"}, "Spilletid"),
+      h("span", {class: "pill " + (sp.start ? "grøn" : "gul")}, sp.start ? (sp.gemt ? "Gemt" : "Fra kalenderen") : "Start mangler")),
+    h("div", {class: "rk spilletid", style: "margin-top:10px;align-items:flex-end;flex-wrap:wrap;gap:10px"},
+      felt("Start", h("input", {class: "input" + (k.start ? "" : " mangler"), inputmode: "numeric", placeholder: "21.00", value: k.start, style: "width:96px", oninput: e => { k.start = e.target.value; }})),
+      felt("Slut", h("input", {class: "input", inputmode: "numeric", placeholder: "luk", value: k.slut, style: "width:96px", oninput: e => { k.slut = e.target.value; }})),
+      felt("Mulig ekstra time", seg(["Ja", "Nej"], k.ekstra ? "Ja" : "Nej", v => { k.ekstra = v === "Ja"; tegn(); })),
+      h("button", {class: "btn primaer", type: "button", onclick: gem}, "Gem")),
+    forskel ? h("div", {class: "lille", style: "margin-top:8px;color:var(--adv)"}, "Kalenderen siger: " + sp.kal) : null);
+}
 const jobStatus = j => {
   const key = jobNøgle(j), liste = listeTilJob(j), jp = jobplTilJob(j), opg = D.opgaver.filter(o => o.job_noegle === key);
   const klar = !!jp?.godkendt || opgaveTilJob(j)?.status === "Færdig";
@@ -819,7 +851,8 @@ function visJobs() {
             h("div", {class: "chips", style: "margin-top:6px"}, (j.sted || "").trim() ? null : h("span", {class: "pill rød-pill"}, "Ingen adresse"),   // Oscar 28/10
               chip("Pakkeliste " + st.pak, st.klar, st.dage ?? 99),   // Oscar 28/10: "færdig" grøn, "mangler" altid gul/rød, aldrig grå
               st.skilteRel ? chip("Skilte: " + st.kortTekst, st.kort, st.dage) : null, chip("Kørsel: " + (st.kørsel ? "gemt" : "ikke lavet"), st.kørsel),
-              st.åbne.length ? chip(st.åbne.length + (st.åbne.length === 1 ? " åben opgave" : " åbne opgaver")) : null)),
+              st.åbne.length ? chip(st.åbne.length + (st.åbne.length === 1 ? " åben opgave" : " åbne opgaver")) : null,
+              st.dage >= 0 && !spilletid(j).start ? h("span", {class: "pill gul"}, "Spilletid mangler") : null)),
           h("div", {class: st.dage <= 1 ? "" : "muted lille", style: st.dage <= 1 ? "font-weight:600;white-space:nowrap" : "white-space:nowrap"}, nårTekst(st.dage)));
       }) : h("div", {class: "tom"}, js.length ? "Ingen jobs matcher filteret." : "Ingen jobs fra i dag og frem. Tryk Hent alle jobs.")),
     h("div", {class: "andre", style: "display:flex;gap:8px;flex-wrap:wrap"}, valg,
@@ -840,6 +873,7 @@ function visJobSide(j) {   // alt til ét job samlet: pakkeliste, kort, kørsel,
     j.afholdt ? null : h("button", {class: "btn lille", type: "button", style: "margin-top:10px", onclick: () => tbStart(tbFraJob(j))}, "Lav tilbud"),
     betalingAfsnit(j, st),
     jobOpgaver(j, st),
+    spilletidBlok(j),
     afsnit("Pakkeliste", st.pak[0].toUpperCase() + st.pak.slice(1), st.klar, h("button", {class: "btn primaer lille", type: "button", onclick: () => åbnJob(j)}, "Åbn pakkeliste")),
     afsnit("Skilte", st.kortTekst, st.kort, h("button", {class: "btn lille", type: "button", onclick: () => { KT.job = st.key; KT.slags = null; KT.fk = KT.kk = null; fane = "kort"; tegn(); window.scrollTo(0, 0); }}, "Åbn skilte")),
     afsnit("Kørsel", st.kørsel ? "Plan gemt, kommer på side 2" : "Ikke lavet", st.kørsel, h("button", {class: "btn lille", type: "button", onclick: () => { vælgRuteJob(st.key); fane = "rute"; tegn(); window.scrollTo(0, 0); }}, st.kørsel ? "Åbn kørsel" : "Lav kørsel"))));
@@ -1306,6 +1340,7 @@ function sætAntal(key, navn, n) {
 }
 
 // højre: pakkelisten
+const startMangler = () => !!S?.job && !spilletid(S.job).start;   // Oscar 29/10: starttid skal være på før print, sluttid må mangle
 const overLager = linjer => {   // Oscar 28/10: mere end lageret må aldrig stå stille som en lille gul linje
   const lm = lagerMap();
   return linjer.filter(([key, l]) => { const u = lm.get(key); return u && l.antal > u.antal; }).map(([key, l]) => ({udstyr: l.udstyr, antal: l.antal, lager: lm.get(key).antal}));
@@ -1428,8 +1463,8 @@ function tegnListe() {
         ? h("button", {class: "btn stor", type: "button", style: "border-color:var(--adv);color:var(--adv)",   // tydeligt hvad der mangler (Oscar 28/10)
             onclick: () => { const el = $("trin-transport"); if (el) { el.scrollIntoView({behavior: "smooth", block: "center"}); el.classList.add("markeret"); setTimeout(() => el.classList.remove("markeret"), 1200); } }},
             "Vælg transport for at lave PDF ↑")
-        : h("button", {class: "btn primaer stor", type: "button", disabled: !kan || !!overLager(linjer).length, title: overLager(linjer).length ? "Mere end lageret på listen, se den røde boks øverst" : "", onclick: () => send("pdf")},
-          optaget ? "Arbejder …" : overLager(linjer).length ? "Ret antal over lageret først ↑" : "Lav pakkeliste (PDF)"),
+        : h("button", {class: "btn primaer stor", type: "button", disabled: !kan || !!overLager(linjer).length || startMangler(), title: overLager(linjer).length ? "Mere end lageret på listen, se den røde boks øverst" : "", onclick: () => send("pdf")},
+          optaget ? "Arbejder …" : overLager(linjer).length ? "Ret antal over lageret først ↑" : startMangler() ? "Skriv starttid på jobbet først" : "Lav pakkeliste (PDF)"),
     låst ? h("div", {class: "lille muted", style: "margin-top:6px"}, "Listen er godkendt og låst. Tryk Genåbn liste øverst for at rette den.") : gemBlok,
     h("div", {id: "svar"}));
   k.replaceChildren(hoved, krop, fod);
@@ -1741,14 +1776,14 @@ function klubkortBlok(j, st, gentegn) {
 }
 function godkendBlok(linjer) {
   const ændret = S.godk && signatur(Object.values(S.l)) !== S.snap;
-  const kan = !optaget && linjer.length && S.transport && !overLager(linjer).length;
+  const kan = !optaget && linjer.length && S.transport && !overLager(linjer).length && !startMangler();
   if (S.godk && !ændret)
     return h("div", {class: "godk ok"}, h("span", {class: "fyld"}, `✓ Pakkeliste godkendt ${kortDato(S.godk)}`),
       h("button", {class: "btn ghost lille", type: "button", disabled: optaget, onclick: () => godkend(false)}, "Genåbn liste"));
   return h("div", {class: "godk"},
     h("span", {class: "fyld", style: "color:var(--adv);font-weight:600"},
       ændret ? "Ændret efter godkendelse" : "Pakkeliste mangler godkendelse"),
-    h("button", {class: "btn godkend", type: "button", disabled: !kan, title: kan ? "" : overLager(linjer).length ? "Mere end lageret på listen, se den røde boks øverst" : "Listen skal have udstyr og transport",
+    h("button", {class: "btn godkend", type: "button", disabled: !kan, title: kan ? "" : overLager(linjer).length ? "Mere end lageret på listen, se den røde boks øverst" : startMangler() ? "Skriv starttid på jobbet først" : "Listen skal have udstyr og transport",
       onclick: () => godkend(true)}, ændret ? "✓ Godkend igen" : "✓ Godkend pakkeliste"));
 }
 async function godkend(ja) {
@@ -2030,7 +2065,7 @@ async function gemLager() {
 }
 
 // ---------- fælles: kør fabz.py-kommandoer fra panelet ----------
-const FILER = {henvendelser: "data/henvendelser.json", opgaver: "data/opgaver.json", betalinger: "data/betalinger.json", ugepakke: "data/ugepakke.json", dagsplaner: "data/dagsplaner.json",
+const FILER = {jobtider: "data/jobtider.json", henvendelser: "data/henvendelser.json", opgaver: "data/opgaver.json", betalinger: "data/betalinger.json", ugepakke: "data/ugepakke.json", dagsplaner: "data/dagsplaner.json",
                ideer: "data/ideer.json", indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json", salgslog: "data/salgslog.json", mo: "data/maanedsoversigt.json", strategi: "data/strategi.json", leads: "data/leads.json", mailoversigt: "data/mailoversigt.json", vagter: "data/vagter.json"};
 async function laesValgfri(p) { const r = await laesFil(p); return r ? r.json() : []; }
 async function genindlæs(navne) { await Promise.all(navne.map(async n => { D[n] = n === "kkTekster" ? await laesKkTekster() : await laesValgfri(FILER[n]); })); }
