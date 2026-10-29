@@ -100,7 +100,9 @@ a.btn{display:inline-block;text-decoration:none}
 .fokus{display:grid;gap:14px;margin-top:20px}.resten summary{cursor:pointer;padding:6px 2px}
 .bryd{display:block;width:100%;text-align:left;border:0;border-radius:8px;padding:9px 12px;font-weight:600;margin-top:6px}
 .bryd.adv{background:var(--adv-blid);color:var(--adv)}.bryd.fejl{background:var(--fejl-blid);color:var(--fejl)}
-@media (max-width:700px){.bryd .navne{display:none}}
+.dato-adv{margin-top:8px;border-radius:8px;padding:8px 11px;font-weight:600}.dato-adv.adv{background:var(--adv-blid);color:var(--adv)}.dato-adv.fejl{background:var(--fejl-blid);color:var(--fejl)}
+.bryd .kun-tlf{display:none}
+@media (max-width:700px){.bryd .navne{display:none}.bryd .kun-tlf{display:inline}}
 .agr.markeret{outline:2px solid var(--adv);outline-offset:6px;border-radius:10px}
 .vaelg.låst,.liste.låst .lkrop .step,.liste.låst .lkrop .ekstra,.liste.låst .lkrop .notefelt,.liste.låst .lhoved .felter,.liste.låst .lhoved .startfra,.liste.låst .anlaeg{pointer-events:none}
 .vaelg.låst{opacity:.45}.liste.låst .lkrop .step,.liste.låst .lkrop .ekstra{opacity:.4}
@@ -2099,9 +2101,13 @@ function visIDag() {
 function brydIgennem(henv, ub, dm) {   // planlagt dag: nye forespørgsler og penge ude står over "Vis resten" (skitse panel-opfoelgning, Oscar ja 29/10)
   const nye = henv.filter(x => x.status === "Ny" && x.id !== "…" && forespAlder(x) >= 1).sort((a, b) => forespAlder(b) - forespAlder(a));
   const forf = ub?.forfaldne || 0, linjer = [];
+  const udl = henv.filter(tilbudUdløbet).sort((a, b) => forespAlder(b) - forespAlder(a));
   if (nye.length) linjer.push(h("button", {class: "bryd adv", type: "button", onclick: () => { fane = "foresp"; FQ.vis = null; tegn(); }},
     `${nye.length} ${nye.length === 1 ? "ny forespørgsel venter" : "nye forespørgsler venter"}`,
     h("span", {class: "navne"}, ": " + nye.slice(0, 3).map(x => `${x.kunde} (${forespAlder(x)} ${forespAlder(x) === 1 ? "dag" : "dage"})`).join(", "))));
+  if (udl.length) linjer.push(h("button", {class: "bryd fejl", type: "button", onclick: () => { fane = "foresp"; FQ.vis = null; tegn(); }},
+    h("span", {class: "navne"}, "Tilbud udløbet, følg op: " + udl.slice(0, 3).map(x => `${x.kunde} (${forespAlder(x)} dage)`).join(", ")),
+    h("span", {class: "kun-tlf"}, `${udl.length} ${udl.length === 1 ? "tilbud" : "tilbud"} udløbet, følg op`)));
   if (forf || dm.length) linjer.push(h("button", {class: "bryd fejl", type: "button", onclick: () => { fane = "oekonomi"; tegn(); }},
     "Penge ude: " + [forf ? `${krKort(ub.forfaldne_kr)} kr. over forfald` : "", dm.length ? `${dm.length} uden depositum` : ""].filter(Boolean).join(" · ")));
   return linjer.length ? h("div", {}, linjer) : null;
@@ -2380,6 +2386,19 @@ function optagetDato(dato) {
   return (D.kalender?.begivenheder || []).filter(e => e.kalender === "bookinger" && e.start.slice(0, 10) <= dato && e.slut.slice(0, 10) >= dato)
     .map(e => e.titel.replace(/^\s*DJ\s*:\s*/i, ""));
 }
+// åbne tilbud (Tilbud sendt) på samme dato til en anden kunde (skitse panel-tilbud-samme-dato, Oscar ja 29/10).
+// Gult, mens tilbuddet gælder (14 dage fra status_dato), rødt bagefter. Forsvinder først ved Booket, Sagt nej eller Intet svar.
+const tilbudGyldigTil = x => plusDage(x.status_dato || x.modtaget || iDag(), 14);
+const tilbudUdløbet = x => x.status === "Tilbud sendt" && iDag() > tilbudGyldigTil(x);
+function tilbudAdvarsel(dato, uden) {
+  if (!dato) return null;
+  const åbne = (D.henvendelser || []).filter(x => x.status === "Tilbud sendt" && x.eventdato === dato && x.id !== uden && x.id !== "…");
+  if (!åbne.length) return null;
+  return h("div", {}, åbne.map(x => tilbudUdløbet(x)
+    ? h("div", {class: "dato-adv fejl"}, `Tilbud til ${x.kunde} udløbet ${kortDato(tilbudGyldigTil(x))}, ikke lukket, følg op`)
+    : h("div", {class: "dato-adv adv"}, `Tilbud sendt til ${x.kunde} samme dato, gyldigt til ${kortDato(tilbudGyldigTil(x))}`)));
+}
+const datoMærker = (dato, uden) => [ledigMærke(dato) || "", tilbudAdvarsel(dato, uden) || ""];
 function ledigMærke(dato) {
   if (!dato) return null;
   const o = optagetDato(dato);
@@ -2411,7 +2430,7 @@ function visForesp() {
 const kortDatoÅr = iso => `${Number(iso.slice(8, 10))}/${Number(iso.slice(5, 7))} ${iso.slice(0, 4)}`;
 function nyForespForm() {
   const n = FQ.ny;
-  const led = h("span", {}, ledigMærke(n.eventdato));
+  const led = h("div", {}, ...datoMærker(n.eventdato));
   return h("div", {class: "kort2"},
     h("div", {class: "kh"}, h("h2", {}, "Ny forespørgsel"), h("button", {class: "x", type: "button", onclick: () => { FQ.vis = null; tegn(); }}, "×")),
     felt("Kunde", inp(n, "kunde", {placeholder: "Navn på kunde eller firma"})),
@@ -2420,7 +2439,7 @@ function nyForespForm() {
       felt("Kilde", sel([["", "Vælg …"], ...H_KILDER], n, "kilde")),
       felt("Modtaget", datoInput(n.modtaget, v => { n.modtaget = v; }))),
     h("div", {class: "felter3"},
-      felt("Eventdato", datoInput(n.eventdato, v => { n.eventdato = v; led.replaceChildren(ledigMærke(n.eventdato) || ""); })),
+      felt("Eventdato", datoInput(n.eventdato, v => { n.eventdato = v; led.replaceChildren(...datoMærker(n.eventdato)); })),
       felt("Gæster", inp(n, "gaester", {type: "number", min: "0"})),
       felt("Pris (kr. ekskl. moms)", inp(n, "pris", {type: "number", min: "0"}))),
     h("div", {style: "margin:-4px 0 8px"}, led),
@@ -2442,7 +2461,7 @@ function forespDetalje(x) {
   const r = FQ.ret, efter = ["henvendelser"];
   const v = k => r[k] !== undefined ? r[k] : (x[k] ?? "");
   const st = new Proxy({}, {get: (_, k) => v(k), set: (_, k, val) => { r[k] = val; return true; }});
-  const led = h("span", {}, ledigMærke(v("eventdato")));
+  const led = h("div", {}, ...datoMærker(v("eventdato"), x.id));
   const sætStatus = s => {
     const args = [String(x.id), s];
     if (s === "Booket") {
@@ -2793,9 +2812,10 @@ function visTilbud() {
   const t = (k, attr = {}) => h("input", {class: "input", value: TB[k] ?? "", ...attr, oninput: e => sæt(k, e.target.value)});
   const tf = (k, rows, ph) => h("textarea", {class: "input", rows, placeholder: ph || "", value: TB[k] ?? "", oninput: e => sæt(k, e.target.value)});
   const sum = h("div", {class: "kort2 tb-sum"});
-  const advBoks = h("div");
+  const advBoks = h("div"), datoAdv = h("div");
   function opdater() {
     const R = tbBeregn(TB);
+    datoAdv.replaceChildren(tilbudAdvarsel(TB.evdato, TB.h_id) || "");
     advBoks.replaceChildren(R.mange ? h("div", {class: "tb-adv"},
       h("b", {}, "Over 100 gæster. "), "Pakkeprisen gælder op til 100 gæster. Du sætter selv prisen for det ekstra udstyr i prislinjerne.",
       h("label", {style: "display:flex;gap:8px;align-items:center;margin-top:8px"},
@@ -2836,6 +2856,7 @@ function visTilbud() {
         felt("Anledning", t("anledning", {placeholder: "Julefrokost"})),
         felt("Dato", datoInput(TB.evdato, iso => sæt("evdato", iso))),
         felt("Gæster", t("gaester", {placeholder: "80"}))),
+      datoAdv,
       felt("Sted", t("sted", {placeholder: "Marselis Hotel, Strandvejen 25, 8000 Aarhus"})),
       felt("Tider", t("tider", {placeholder: "Opstilling fra 17.00, musik 19.00-01.00"})),
       advBoks,
