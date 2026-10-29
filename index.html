@@ -447,6 +447,7 @@ function h(tag, props, ...born) {
     if (k === "class") e.className = v;
     else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
     else if (EGENSKAB.includes(k)) e[k] = v;
+    else if ((k === "href" || k === "src") && /^\s*(javascript|data:text)/i.test(String(v ?? ""))) continue;   // links fra data må aldrig køre kode med tokenen (29/10)
     else if (v !== false && v != null) e.setAttribute(k, v === true ? "" : v);
   }
   for (const c of born.flat(Infinity)) {
@@ -953,7 +954,6 @@ const ikonEl = (nøgle, tekst) => {
   return e;
 };
 const anlægGruppe = x => (D.setups?.grupper || []).find(g => g.navn === x.gruppe);
-const anlægAf = x => x.navn && D.setups?.setups.find(y => y.navn === x);   // (ubrugt hjælper beholdt for læsbarhed)
 function anlægTal(x, antal) {   // tallet et anlægs linjer og fra/til regnes på: eget antal, ellers "af", ellers gruppens antal
   if (x.antal) return antal[x.navn] || 0;
   if (x.af) return antal[x.af] || 0;
@@ -1396,7 +1396,8 @@ function kkRessourcer() {
     for (const [n, b] of [["kkSerif", serif], ["kkPopl", popl]]) { const f = new FontFace(n, b); await f.load(); document.fonts.add(f); }
     const qr = await new Promise(ok => {
       if (window.qrcode) return ok(window.qrcode);
-      const s = h("script", {src: "https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"});
+      const s = h("script", {src: "https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js", crossorigin: "anonymous",
+        integrity: "sha384-mZT2gIty7ZDdOGkxfP6joZcYdMW1Jvj9dRlfpTmaJAKKXTqzygtB22k7FLe+KZC1"});   // fremmed script på siden med tokenen: kun præcis denne fil (29/10)
       s.onload = () => ok(window.qrcode || null); s.onerror = () => ok(null);
       document.head.append(s);
     });
@@ -3135,7 +3136,6 @@ const S_TYPE = ["Eksisterende kunde", "Venue", "Ny virksomhed"];
 const S_STATUS = ["Ikke kontaktet", "Kontaktet", "Møde aftalt", "Tilbud sendt", "Booket", "Ikke nu"];
 const S_KANAL = ["Telefon", "Besked", "Mail", "Møde", "LinkedIn"];
 const SG = {vis: null, valgt: null, lukkede: false, ny: {}, k: {}};
-const salgPill = s => ({"Kontaktet": "blå", "Møde aftalt": "blå", "Tilbud sendt": "gul", "Booket": "grøn"})[s] || "";
 function visSalg() {
   const idag = iDag(), rows = (D.salg || []).slice();
   const åben = s => !["Booket", "Ikke nu"].includes(s.status);
