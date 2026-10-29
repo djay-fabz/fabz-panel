@@ -2057,12 +2057,12 @@ function visIDag() {
           onclick: () => { fane = "opgaver"; OP.vis = "opgave"; OP.valgt = o.id; tegn(); }},
           h("span", {class: "lille tid " + (prioKlasse(o, idag) ? "rød" : dlKlasse(o, idag) || "muted")}, kortDato(o.deadline)), h("span", {class: senere(o) ? "nedtonet" : prioKlasse(o, idag)}, o.titel, fraMærke(o)))) : h("div", {class: "muted lille"}, "Ingen")),
         sideKort(`Forespørgsler der venter (${henv.length})`, henv.length ? henv.slice(0, 6).map(x => h("button", {class: "mini link", type: "button", disabled: x.id === "…",
-          onclick: () => { fane = "foresp"; FQ.vis = "h"; FQ.valgt = x.id; tegn(); }},
+          onclick: () => { fane = "foresp"; if (!(FQ.vis === "h" && FQ.valgt === x.id)) fqÅbn(x.id); else tegn(); }},
           h("span", {class: "pill " + pillKlasse(x.status)}, x.status), h("span", {}, x.kunde))) : h("div", {class: "muted lille"}, "Ingen")),
         (() => {
           const ugeN = (D.salgslog || []).filter(x => x.dato >= plusDage(iDag(), -((dag(iDag()).getDay() + 6) % 7))).length, ugeM = ((D.strategi || {}).salgsmaal || {}).kontakter_uge || 9;
           return sideKort(`Salg: følg op i dag (${due.length}) · uge ${ugeN}/${ugeM} kontakter`, due.length ? due.map(s => h("button", {class: "mini link", type: "button",
-            onclick: () => { fane = "salg"; SG.vis = "s"; SG.valgt = s.navn; SG.k = {naeste: s.naeste || ""}; tegn(); }},
+            onclick: () => { fane = "salg"; if (!(SG.vis === "s" && SG.valgt === s.navn)) salgÅbn(s.navn); else tegn(); }},
             h("span", {class: "lille tid " + (s.naeste_opfoelgning < iDag() ? "rød" : "muted")}, kortDato(s.naeste_opfoelgning)), h("span", {}, s.navn))) : h("div", {class: "muted lille"}, "Ingen")); })(),
         (() => {   // Penge ude: kun når noget haster
           if (!ub || (!ub.forfaldne && !dm.length)) return null;
@@ -2340,7 +2340,20 @@ const H_TYPER = ["Erhverv", "Bryllup", "Privatfest", "Efterskole", "Løb", "Klub
 const H_KILDER = ["Hjemmeside", "Google", "Anbefaling", "Eksisterende kunde", "Facebook-annonce", "Facebook", "Instagram",
                   "LinkedIn-annonce", "LinkedIn", "Google-annonce", "Venue", "Netværk", "Telefon", "Mail", "Andet"];
 const H_STATUS = ["Ny", "Tilbud sendt", "Booket", "Sagt nej", "Intet svar", "Dato optaget"];
-const FQ = {vis: null, valgt: null, alle: false, ny: {}, ret: {}};
+const FQ = {vis: null, valgt: null, alle: false, ny: {}, ret: {}, kladder: {}};
+// Samme regler som Salg (Oscar 29/10): nyt klik på samme forespørgsel, klik udenfor, × og Esc lukker. Ugemte rettelser bliver en kladde.
+function fqUgemt() {
+  const x = (D.henvendelser || []).find(y => y.id === FQ.valgt);
+  return FQ.vis === "h" && !!x && Object.keys(FQ.ret || {}).some(k => String(FQ.ret[k] ?? "") !== String(x[k] ?? ""));
+}
+function fqGemKladde() { if (fqUgemt()) FQ.kladder[FQ.valgt] = FQ.ret; }
+function fqÅbn(id) {
+  if (FQ.vis === "h" && FQ.valgt === id) { fqLuk(); return; }
+  fqGemKladde();
+  FQ.vis = "h"; FQ.valgt = id; FQ.ret = FQ.kladder[id] || {}; delete FQ.kladder[id];
+  tegn();
+}
+function fqLuk() { fqGemKladde(); FQ.vis = null; FQ.valgt = null; FQ.ret = {}; tegn(); }
 const pillKlasse = s => ({"Ny": "blå", "Tilbud sendt": "gul", "Booket": "grøn"})[s] || "";
 function optagetDato(dato) {
   if (!dato) return [];
@@ -2356,7 +2369,7 @@ function ledigMærke(dato) {
 function visForesp() {
   const rows = (D.henvendelser || []).slice().sort((a, b) => (b.modtaget || "").localeCompare(a.modtaget || "") || b.id - a.id);
   const åbne = rows.filter(x => ["Ny", "Tilbud sendt"].includes(x.status)), andre = rows.filter(x => !["Ny", "Tilbud sendt"].includes(x.status));
-  const række = x => h("button", {type: "button", class: "r række" + (FQ.vis === "h" && FQ.valgt === x.id ? " valgt" : ""), disabled: x.id === "…", onclick: () => { FQ.vis = "h"; FQ.valgt = x.id; FQ.ret = {}; tegn(); }},
+  const række = x => h("button", {type: "button", class: "r række" + (FQ.vis === "h" && FQ.valgt === x.id ? " valgt" : ""), disabled: x.id === "…", onclick: () => fqÅbn(x.id)},
     h("div", {class: "n"}, h("div", {class: "titel"}, x.kunde || "?", x.id === "…" ? h("span", {class: "muted lille"}, "  gemmes …") : null),
       h("div", {class: "meta"}, h("span", {}, x.type), x.eventdato ? h("span", {}, "event " + kortDatoÅr(x.eventdato)) : null,
         x.pris != null ? h("span", {}, kr(x.pris)) : null, h("span", {}, "fra " + x.kilde))),
@@ -2427,7 +2440,8 @@ function forespDetalje(x) {
   };
   const ændret = Object.keys(r).filter(k => String(r[k] ?? "") !== String(x[k] ?? ""));
   return h("div", {class: "kort2"},
-    h("div", {class: "kh"}, h("h2", {}, x.kunde || "?"), h("span", {class: "muted lille"}, `H${x.id} · modtaget ${x.modtaget ? kortDatoÅr(x.modtaget) : "?"}`)),
+    h("div", {class: "kh"}, h("h2", {}, x.kunde || "?"), h("span", {class: "muted lille"}, `H${x.id} · modtaget ${x.modtaget ? kortDatoÅr(x.modtaget) : "?"}`),
+      h("div", {class: "spacer"}), h("button", {class: "x", type: "button", title: "Luk (Esc)", onclick: fqLuk}, "×")),
     h("button", {class: "btn lille", type: "button", style: "margin-bottom:10px", onclick: () => tbStart(tbFraForesp(x))}, "Lav tilbud"),
     seg(H_STATUS, x.status, s => { if (s !== x.status) sætStatus(s); }),
     x.status === "Booket" ? h("div", {class: "godk ok", style: "margin-top:12px"},
@@ -3135,7 +3149,41 @@ function visRute() {
 const S_TYPE = ["Eksisterende kunde", "Venue", "Ny virksomhed"];
 const S_STATUS = ["Ikke kontaktet", "Kontaktet", "Møde aftalt", "Tilbud sendt", "Booket", "Ikke nu"];
 const S_KANAL = ["Telefon", "Besked", "Mail", "Møde", "LinkedIn"];
-const SG = {vis: null, valgt: null, lukkede: false, ny: {}, k: {}};
+const SG = {vis: null, valgt: null, lukkede: false, ny: {}, k: {}, kladder: {}};
+// Kundevisningen på Salg (Oscar 29/10): klik udenfor, Esc eller nyt klik på samme kunde lukker den.
+// Ugemt tekst i "Registrér kontakt" gemmes som kladde på kunden og står der igen, når kunden åbnes.
+const salgKunde = navn => (D.salg || []).find(x => x.navn === navn);
+function salgUgemt() {
+  const k = SG.k || {}, s = salgKunde(SG.valgt);
+  return SG.vis === "s" && !!s && !!((k.tekst || "").trim() || (k.kontaktperson || "").trim() || k.opfoelgning || k.status || k.ingen || (k.naeste || "") !== (s.naeste || ""));
+}
+function salgGemKladde() { if (salgUgemt()) SG.kladder[SG.valgt] = SG.k; }
+function salgÅbn(navn) {
+  if (SG.vis === "s" && SG.valgt === navn) { salgLuk(); return; }
+  salgGemKladde();
+  const s = salgKunde(navn);
+  SG.vis = "s"; SG.valgt = navn; SG.k = SG.kladder[navn] || {naeste: s?.naeste || ""}; delete SG.kladder[navn];
+  tegn();
+}
+function salgLuk() { salgGemKladde(); SG.vis = null; SG.valgt = null; SG.k = {}; tegn(); }
+// Detaljen til højre (Salg og Forespørgsler) lukker ved klik udenfor og Esc (Oscar 29/10). Klikket huskes ved pointerdown og
+// lukker først efter pointerup, så knappen man trykkede på når at virke, og kun hvis den ikke selv åbnede noget andet.
+const DETALJER = () => [
+  {fane: "salg", åben: () => SG.vis === "s" ? SG.valgt : null, inde: ".ap-row", luk: salgLuk},
+  {fane: "foresp", åben: () => FQ.vis === "h" ? FQ.valgt : null, inde: ".række", luk: fqLuk}];
+let detaljeTryk = null;
+document.addEventListener("pointerdown", e => {
+  const d = DETALJER().find(x => x.fane === fane);
+  detaljeTryk = d && d.åben() != null && !e.target.closest(`.detalje-kol, ${d.inde}, #beskeder, .meremenu, .tabs`) ? {d, var: d.åben()} : null;
+});
+document.addEventListener("pointerup", () => {
+  const t = detaljeTryk; detaljeTryk = null;
+  if (t) setTimeout(() => { if (fane === t.d.fane && t.d.åben() === t.var) t.d.luk(); }, 0);
+});
+document.addEventListener("keydown", e => {
+  const d = DETALJER().find(x => x.fane === fane);
+  if (e.key === "Escape" && d && d.åben() != null && !e.defaultPrevented) d.luk();
+});
 function visSalg() {
   const idag = iDag(), rows = (D.salg || []).slice();
   const åben = s => !["Booket", "Ikke nu"].includes(s.status);
@@ -3146,10 +3194,10 @@ function visSalg() {
   const prik = st => ({"Kontaktet": "blaa", "Møde aftalt": "blaa", "Tilbud sendt": "gul", "Booket": "groen"})[st] || "graa";
   // Apple-stil (Oscar 26/10): navn stort, én grå linje under, dato til højre, pil. Status som farvet prik, ikke som pille.
   const række = s => h("button", {type: "button", class: "ap-row" + (SG.vis === "s" && SG.valgt === s.navn ? " valgt" : ""), disabled: !!s._ny, title: s.status,
-    onclick: () => { SG.vis = "s"; SG.valgt = s.navn; SG.k = {naeste: s.naeste || ""}; tegn(); }},
+    onclick: () => salgÅbn(s.navn)},
     h("span", {class: "ap-dot " + prik(s.status)}),
     h("span", {class: "ap-tekst"}, h("span", {class: "ap-navn"}, s.navn, s._ny ? h("span", {class: "muted lille"}, "  gemmes …") : null),
-      h("span", {class: "ap-sub"}, s.naeste || s.status + (s.type ? " · " + s.type : ""))),
+      h("span", {class: "ap-sub"}, SG.kladder[s.navn] ? h("span", {class: "gul-t"}, "Kladde: ") : null, s.naeste || s.status + (s.type ? " · " + s.type : ""))),
     h("span", {class: "ap-hoejre" + (s.naeste_opfoelgning && s.naeste_opfoelgning < idag ? " rød" : "")},
       s.naeste_opfoelgning ? (s.naeste_opfoelgning === idag ? "i dag" : kortDato(s.naeste_opfoelgning)) : "", h("span", {class: "ap-chev"}, "›")));
   const gruppe = (titel, l) => l.length ? [h("div", {class: "overskrift", style: "margin-top:18px"}, titel), h("div", {class: "kort ap"}, l.map(række))] : null;
@@ -3765,7 +3813,8 @@ function salgDetalje(s) {
     }});
   };
   return h("div", {class: "kort2"},
-    h("div", {class: "kh"}, h("h2", {}, s.navn), h("span", {class: "muted lille"}, s.type)),
+    h("div", {class: "kh"}, h("h2", {}, s.navn), h("span", {class: "muted lille"}, s.type), h("div", {class: "spacer"}),
+      h("button", {class: "x", type: "button", title: "Luk (Esc)", onclick: salgLuk}, "×")),
     seg(S_STATUS, s.status, v => { if (v !== s.status) kør("salg-ret", ["--", s.navn, `status=${v}`], {tekst: `${s.navn}: ${v}`, efter, med: () => { s.status = v; }}); }),
     h("div", {class: "felter3", style: "margin-top:12px"},
       felt("Næste opfølgning", h("div", {class: "muted"}, s.naeste_opfoelgning ? dagNavnLang(s.naeste_opfoelgning) : "ingen dato")),
