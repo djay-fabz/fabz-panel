@@ -158,6 +158,31 @@ a.btn{display:inline-block;text-decoration:none}
 .notefelt{display:block;width:100%;border:0;background:none;padding:0;margin-top:0;font-size:12px;line-height:16px;color:var(--svag);border-radius:4px}
 .advl{font-size:12px;color:var(--adv);margin-top:2px}.advl.rød-adv{color:var(--fejl);font-weight:700}
 .overlager{margin-top:12px;padding:12px 14px;border-radius:12px;background:var(--fejl-blid);border:2px solid var(--fejl);color:var(--fejl)}.overlager ul{margin:6px 0;padding-left:18px}.overlager .lille{color:var(--tekst)}
+.kk-kol{display:grid;grid-template-columns:1fr minmax(240px,320px);gap:20px;align-items:start}
+.kk-felt{display:flex;gap:8px;align-items:flex-start;background:var(--flade);border:1px solid var(--linje);border-radius:10px;padding:8px;margin-top:8px}
+.kk-ind{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.kk-ta{width:100%;font:inherit;font-size:14px;background:var(--bg);color:var(--tekst);border:1px solid var(--linje);border-radius:8px;padding:7px 9px;resize:vertical}
+.kk-in{font:inherit;font-size:13px;background:var(--bg);color:var(--tekst);border:1px solid var(--linje);border-radius:8px;padding:5px 9px}
+.kk-mr{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.kk-mk{font:inherit;font-size:12px;border:1px solid #c4b5fd;color:#6d28d9;background:#f3e8ff;border-radius:99px;padding:2px 10px;width:150px}
+.kk-link{border:0;background:none;padding:0;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer}
+.kk-step{display:flex;align-items:center;border:1px solid var(--linje);border-radius:8px;overflow:hidden;flex:none}
+.kk-step button{border:0;background:none;width:28px;height:28px;color:var(--svag);font-size:16px;cursor:pointer}
+.kk-step b{width:28px;text-align:center;line-height:28px;border-left:1px solid var(--linje);border-right:1px solid var(--linje)}
+.kk-x{border:0;background:none;color:var(--svagere);font-size:15px;cursor:pointer;padding:4px}
+.kk-pladser{display:flex;align-items:center;gap:10px;margin-top:10px;padding:7px 12px;border-radius:8px;background:var(--ok-blid);color:var(--ok);font-weight:600}
+.kk-pladser.adv{background:var(--adv-blid);color:var(--adv)}
+.kk-prik{display:flex;gap:3px;flex-wrap:wrap}.kk-prik i{width:11px;height:11px;border-radius:3px;background:currentColor}.kk-prik i.t{background:none;border:1px solid currentColor}
+.kk-fakta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;color:var(--adv);font-weight:600;font-size:13px}
+.kk-fejl{color:var(--fejl);font-weight:600;font-size:13px}
+.kk-arkene{display:flex;flex-direction:column;gap:10px}
+.kk-ark{display:block;width:100%;border-radius:4px;box-shadow:0 2px 10px rgba(0,0,0,.25)}
+.kk-t{font-kerning:none;font-variant-ligatures:none;white-space:pre}
+.kk-tidl{margin-top:8px;border:1px solid var(--linje);border-radius:10px;background:var(--flade);max-height:320px;overflow:auto}
+.kk-tl{display:flex;gap:10px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--linje);font-size:13px}.kk-tl:last-child{border:0}
+.kk-bp{width:8px;height:8px;border-radius:50%;flex:none}.kk-bp.b{background:var(--accent)}
+@media (max-width:700px){.kk-kol{grid-template-columns:1fr}}
+@media (prefers-color-scheme:dark){.kk-mk{background:#221a3a;border-color:#4a3a7a;color:#c4b5fd}}
 .godk{display:flex;align-items:center;gap:10px;margin-top:14px;padding:10px 12px;border-radius:10px;background:var(--flade2);font-size:13px}
 .godk.ok{background:var(--ok-blid);color:var(--ok);font-weight:600}
 .godk .fyld{flex:1}
@@ -1329,44 +1354,229 @@ function festkortBlok(j, st, gentegn) {
         fk.svar.klasse === "ok" ? h("div", {class: "lille muted", style: "margin-top:8px"},
           "Print fra Preview med Scale 100 %. Visitkort: preset Mat karton 250g, side 1, vend arket som ved kalibreringen, så side 2. Barskilt: ensidet, almindeligt papir.") : null) : null) : null);
 }
+// ---------- Klubkort: frie tekster, antal pr. tekst, mærke i QR-linket og arket tegnet med det samme ----------
+// Arket tegnes med generatorens egne mål og tegnbredder (tools/klubkort/maal.json, lavet af klubkort.py --maal),
+// så linjeskift og skriftstørrelse er de samme som i PDF'en. test_klubkort.js tjekker det mod Python.
+const KK_MM = 72 / 25.4;
+const kkRens = t => String(t || "").replace(/\r/g, "").replace(/[ \t]+/g, " ").trim().replace(/\n{2,}/g, "\n").replace(/ ?\n ?/g, "\n");
+const kkSamme = t => String(t || "").split(/\s+/).filter(Boolean).join(" ").toLowerCase();
+const kkBredde = (t, f, s) => { let w = 0; for (const c of t) w += f.tegn[c] ?? f.std; return w * 0.001 * s / KK_MM; };
+function kkBryd(tekst, f, s, b) {
+  const ud = [];
+  for (const afsnit of String(tekst).replace(/\r/g, "").split("\n")) {
+    let linje = "";
+    for (const o of afsnit.split(/\s+/).filter(Boolean)) {
+      const prøve = (linje + " " + o).trim();
+      if (linje && kkBredde(prøve, f, s) > b) { ud.push(linje); linje = o; } else linje = prøve;
+    }
+    if (linje) ud.push(linje);
+  }
+  return ud;
+}
+function kkLayout(k, M) {   // samme regler som layout() i tools/klubkort/klubkort.py
+  const tekst = String(k.tekst || "").trim(), svar = String(k.svar || "").trim();
+  if (!tekst) return null;
+  let ss = M.SVAR_STR;
+  while (svar && kkBredde(svar, M.popl, ss) > M.TEKST_B && ss > M.SVAR_MIN) ss -= 0.5;
+  if (svar && kkBredde(svar, M.popl, ss) > M.TEKST_B) return "svar";
+  for (let s = M.STR; s >= M.MIN_STR; s -= 0.5) {
+    const linjer = kkBryd(tekst, M.serif, s, M.TEKST_B), lh = s * 0.45;
+    const bund = M.TEKST_TOP + s * 0.33 + (linjer.length - 1) * lh + (svar ? 5 + ss * 0.35 : 0);
+    if (linjer.length <= M.MAX_LINJER && linjer.every(l => kkBredde(l, M.serif, s) <= M.TEKST_B) && bund <= M.TEKST_BUND)
+      return {str: s, linjer, lh, svar, ss};
+  }
+  return null;
+}
+let KKR = null, kkRessourcerKlar = null;
+function kkRessourcer() {
+  return KKR ||= (async () => {
+    const bin = async p => { const r = await laesFil(p); if (!r) throw new Error("Fandt ikke " + p); return r.arrayBuffer(); };
+    const [m, serif, popl, ikon] = await Promise.all([laesJson("tools/klubkort/maal.json"), bin("tools/festkort/fonts/serif.ttf"),
+      bin("tools/festkort/fonts/pop300.ttf"), laesFil("tools/festkort/ikon.svg").then(r => r.text())]);
+    for (const [n, b] of [["kkSerif", serif], ["kkPopl", popl]]) { const f = new FontFace(n, b); await f.load(); document.fonts.add(f); }
+    const qr = await new Promise(ok => {
+      if (window.qrcode) return ok(window.qrcode);
+      const s = h("script", {src: "https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"});
+      s.onload = () => ok(window.qrcode || null); s.onerror = () => ok(null);
+      document.head.append(s);
+    });
+    const vb = ikon.match(/viewBox="([^"]+)"/)[1].split(/\s+/).map(Number);
+    const stier = [...ikon.matchAll(/<path[^>]*>/g)].map(t => ({d: t[0].match(/ d="([^"]+)"/)[1], eo: t[0].includes("evenodd")}));
+    return {m, qr, vb, stier};
+  })().catch(e => { KKR = null; throw e; });
+}
+function kkArk(kortene, R, link) {   // kortene: [{tekst, svar, kamp}] i rækkefølge, 4 pr. ark
+  const {m: M, qr, vb, stier} = R, NS = "http://www.w3.org/2000/svg", W = M.W, H = M.H;
+  const farve = c => `rgb(${c.map(v => Math.round(v * 255)).join(",")})`;
+  const el = (tag, a, ...b) => { const e = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(a)) e.setAttribute(k, v); e.append(...b); return e; };
+  const ark = [];
+  for (let start = 0; start < Math.max(kortene.length, 1); start += 4) {
+    const svg = el("svg", {viewBox: `0 0 ${2 * W} ${2 * H}`, class: "kk-ark"});
+    svg.append(el("rect", {x: 0, y: 0, width: 2 * W, height: 2 * H, fill: "#fff"}));
+    kortene.slice(start, start + 4).forEach((k, i) => {
+      const ox = (i % 2) * W, oy = Math.floor(i / 2) * H, cx = ox + W / 2, L = kkLayout(k, M);
+      svg.append(el("rect", {x: ox + M.M, y: oy + M.M, width: W - 2 * M.M, height: H - 2 * M.M, fill: farve(M.farver.creme)}));
+      if (L && typeof L === "object") {
+        const y = oy + M.TEKST_TOP + L.str * 0.33;
+        L.linjer.forEach((l, j) => svg.append(el("text", {x: cx, y: y + j * L.lh, "font-family": "kkSerif", "font-size": L.str / KK_MM,
+          fill: farve(M.farver.moerk), "text-anchor": "middle", class: "kk-t"}, l)));
+        if (L.svar) svg.append(el("text", {x: cx, y: y + (L.linjer.length - 1) * L.lh + 5 + L.ss * 0.35, "font-family": "kkPopl",
+          "font-size": L.ss / KK_MM, fill: farve(M.farver.bord), "text-anchor": "middle", class: "kk-t"}, L.svar));
+      }
+      const qs = M.QR.str, qx = cx - qs / 2, qy = oy + H - M.QR.bund - qs;
+      if (qr) {
+        const q = qr(0, "M"); q.addData(link + k.kamp, "Byte"); q.make();
+        const n = q.getModuleCount(), s = qs / n;
+        let d = "";
+        for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) d += `M${qx + c * s} ${qy + r * s}h${s * 1.02}v${s * 1.02}h${-s * 1.02}z`;
+        svg.append(el("path", {d, fill: farve(M.farver.moerk)}));
+      } else svg.append(el("rect", {x: qx, y: qy, width: qs, height: qs, fill: "none", stroke: farve(M.farver.moerk), "stroke-width": 0.4}));
+      const kk = M.IKON.h / vb[3], g = el("g", {transform: `translate(${cx - vb[2] * kk / 2 - vb[0] * kk} ${oy + H - M.IKON.top - vb[1] * kk}) scale(${kk})`});
+      stier.forEach(p => g.append(el("path", {d: p.d, fill: farve(M.farver.bord), "fill-rule": p.eo ? "evenodd" : "nonzero"})));
+      svg.append(g);
+    });
+    for (const [x1, y1, x2, y2] of [[W, M.M, W, M.M + 6], [W, 2 * H - M.M, W, 2 * H - M.M - 6], [M.M, H, M.M + 6, H], [2 * W - M.M, H, 2 * W - M.M - 6, H]])
+      svg.append(el("line", {x1, y1, x2, y2, stroke: "rgb(209,209,209)", "stroke-width": 0.1}));
+    ark.push(svg);
+  }
+  return ark;
+}
+const kkSlug = t => String(t || "").toLowerCase().replace(/æ/g, "ae").replace(/ø/g, "oe").replace(/å/g, "aa").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 30);
+const kkKanPrintes = k => (k.ingen_fakta || (k.kilde && k.tjekket)) && !(k.udloeber && k.udloeber < iDagIso());
+function iDagIso() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
+function kkFordel(kk) {   // 1 tekst = 4 gange, 2 = 2+2, 3 = 2+1+1, flere end 4 = 1 hver
+  if (!kk.auto) { kk.linjer.forEach(l => { if (kkRens(l.tekst) && !l.antal) l.antal = 1; if (!kkRens(l.tekst)) l.antal = 0; }); return; }
+  const med = kk.linjer.filter(l => kkRens(l.tekst)), n = med.length;
+  kk.linjer.forEach(l => l.antal = 0);
+  med.forEach((l, i) => l.antal = n > 4 ? 1 : Math.floor(4 / n) + (i < 4 % n ? 1 : 0));
+}
 function klubkortBlok(j, st, gentegn) {
-  const rec = klubkortTilJob(j), alle = (D.kkTekster || []).filter(k => k.aktiv !== false);
-  const kk = st.kk ||= {valgt: new Set((rec?.kort || alle.map(k => k.nr)).filter(n => alle.some(k => k.nr === n))), åben: false, svar: null};
+  const rec = klubkortTilJob(j), tekster = D.kkTekster || [];
+  const fraTekst = (t, a = 0, maerke = "") => ({tekst: t ? t.tekst : "", svar: t?.svar || "", antal: a, maerke, åbenSvar: !!t?.svar, åbenMk: !!maerke});
+  const kk = st.kk ||= (() => {
+    const efterNr = n => tekster.find(t => t.nr === n);
+    const linjer = rec?.linjer ? rec.linjer.map(l => fraTekst(efterNr(l.nr), l.antal, l.maerke)).filter(l => l.tekst)
+      : rec ? rec.kort.map(n => fraTekst(efterNr(n), 1)).filter(l => l.tekst) : [];
+    while (linjer.length < 4) linjer.push(fraTekst(null));
+    return {linjer, auto: !rec?.linjer, åben: false, tidl: false, svar: null};
+  })();
+  const kendt = l => tekster.find(t => kkSamme(t.tekst) === kkSamme(kkRens(l.tekst)) && kkSamme(t.svar) === kkSamme(l.svar));
+  const kampagne = rec?.kampagne || (() => {
+    const brugt = new Set((D.klubkort || []).filter(r => r.dato === j.dato).map(r => r.kampagne)), base = `klub-${j.dato}`;
+    if (!brugt.has(base)) return base;
+    for (let n = 2; ; n++) if (!brugt.has(`${base}-${n}`)) return `${base}-${n}`;
+  })();
+  const kortene = () => {   // samme rækkefølge og mærker som fabz_klubkort.linjer_til_kort
+    const ud = [], brugt = new Set(), nye = new Map();
+    let næste = Math.max(0, ...tekster.map(t => t.nr)) + 1;
+    kk.linjer.forEach(l => {
+      const t = kkRens(l.tekst); if (!t || !(l.antal > 0)) return;
+      const ny = kkSamme(t) + "|" + kkSamme(l.svar);
+      const nr = kendt(l)?.nr || nye.get(ny) || (nye.set(ny, næste), næste++);
+      let mk = kkSlug(l.maerke) || `k${nr}`, base = mk, n = 2;
+      while (brugt.has(mk)) mk = `${base}-${n++}`;
+      brugt.add(mk);
+      for (let i = 0; i < l.antal; i++) ud.push({tekst: t, svar: kkRens(l.svar).replace(/\n/g, " "), kamp: `${kampagne}-${mk}`});
+    });
+    return ud;
+  };
+  const link = "https://fabz.dk/instagram?utm_source=klubkort&utm_campaign=";
+  const arkBoks = h("div", {class: "kk-arkene"}), pladsBoks = h("div"), svarBoks = h("div"), faktaBokse = [], fejlBokse = [], antalB = [];
+  const opdater = () => {
+    kkFordel(kk);
+    const k = kortene(), ark = Math.max(1, Math.ceil(k.length / 4)), tomme = ark * 4 - k.length;
+    pladsBoks.replaceChildren(h("div", {class: "kk-pladser" + (tomme && k.length ? " adv" : "")},
+      h("span", {class: "kk-prik"}, Array.from({length: ark * 4}, (_, i) => h("i", {class: i < k.length ? "" : "t"}))),
+      `${k.length} af ${ark * 4} pladser · ${ark} A4` + (tomme && k.length ? ` (${tomme} tomme)` : "")));
+    kk.linjer.forEach((l, i) => {
+      if (antalB[i]) antalB[i].textContent = String(l.antal || 0);
+      faktaBokse[i]?.replaceChildren(...(kkRens(l.tekst) && !kendt(l) ? [h("div", {class: "kk-fakta"},
+        h("span", {}, "Ny tekst. Står der fakta på?"),
+        seg(["Nej", "Ja"], l.ingen_fakta ? "Nej" : l.fakta ? "Ja" : null, v => { l.ingen_fakta = v === "Nej"; l.fakta = v === "Ja"; gentegn(); }),
+        l.fakta ? h("input", {class: "kk-in", placeholder: "Link til kilden", value: l.kilde || "", oninput: e => { l.kilde = e.target.value.trim(); }}) : null)] : []));
+      const L = kkRessourcerKlar && kkRens(l.tekst) ? kkLayout({tekst: kkRens(l.tekst), svar: kkRens(l.svar)}, kkRessourcerKlar.m) : true;
+      fejlBokse[i]?.replaceChildren(L === "svar" ? h("div", {class: "kk-fejl"}, "Svaret er for langt til én linje") :
+        L === null ? h("div", {class: "kk-fejl"}, "Teksten er for lang til kortet") : "");
+    });
+    if (kkRessourcerKlar) arkBoks.replaceChildren(...kkArk(k, kkRessourcerKlar, link));
+    if (kk.svar && kk.svar.signatur !== JSON.stringify(k)) { kk.svar = null; svarBoks.replaceChildren(); }
+  };
+  if (!kkRessourcerKlar) kkRessourcer().then(R => { kkRessourcerKlar = R; if (st.kk === kk) opdater(); })
+    .catch(e => arkBoks.replaceChildren(h("div", {class: "kk-fejl"}, "Arket kunne ikke tegnes: " + e.message)));
   const lav = async () => {
-    if (!kk.valgt.size) { alert("Vælg mindst ét kort."); return; }
-    const nr = alle.map(k => k.nr).filter(n => kk.valgt.has(n));
-    kk.arbejder = true; kk.svar = {klasse: "", titel: "Laver klubkort … typisk 20-30 sekunder"}; gentegn();
+    const k = kortene();
+    if (!k.length) { alert("Skriv mindst én tekst."); return; }
+    const mangler = kk.linjer.filter(l => kkRens(l.tekst) && !kendt(l) && !l.ingen_fakta && !/^https?:\/\/\S+$/.test(l.kilde || ""));
+    if (mangler.length) { alert("Svar på, om der står fakta på de nye tekster. Står der fakta, skal linket til kilden med."); return; }
+    const sig = JSON.stringify(k), json = kk.linjer.filter(l => kkRens(l.tekst) && l.antal > 0).map(l => ({tekst: kkRens(l.tekst), svar: kkRens(l.svar),
+      antal: l.antal, maerke: l.maerke || "", ...(kendt(l) ? {} : l.ingen_fakta ? {ingen_fakta: true} : {kilde: l.kilde})}));
+    kk.arbejder = true; kk.svar = {klasse: "", titel: "Laver PDF …"}; gentegn();
     try {
-      const sv = await kørOgVent("klubkort", [`--dato=${j.dato}`, `--job=${j.navn}`, `--kort=${nr.join(",")}`]);
+      const sv = await kørOgVent("klubkort", [`--dato=${j.dato}`, `--job=${j.navn}`, "--linjer", "@json"], json);
       if (!sv) kk.svar = {klasse: "fejl", titel: "Intet svar efter 4 minutter."};
-      else if (sv.status === "FEJL") kk.svar = {klasse: "fejl", titel: "Kortene er ikke lavet", punkter: [sv.fejl]};
+      else if (sv.status === "FEJL") kk.svar = {klasse: "fejl", titel: "PDF'en er ikke lavet", punkter: [sv.fejl]};
       else {
         const filer = await Promise.all((sv.pdfs || []).map(async p => ({navn: decodeURIComponent(p.split("/").pop()), link: await hentPdf(p)})));
-        kk.svar = {klasse: "ok", titel: "Kortene er klar", punkter: sv.info.filter(l => !l.startsWith("Klubkort:")), filer};
-        await genindlæs(["klubkort"]);
+        kk.svar = {klasse: "ok", titel: "PDF'en er klar", filer, signatur: sig};
+        await genindlæs(["klubkort", "kkTekster"]);
       }
     } catch (e) { kk.svar = {klasse: "fejl", titel: "Det gik galt", punkter: [e.message]}; }
     kk.arbejder = false;
     if (st.kk === kk) gentegn();
   };
-  const valg = alle.map(k => h("label", {style: "display:flex;gap:10px;align-items:flex-start;padding:6px 0;cursor:pointer"},
-    h("input", {type: "checkbox", checked: kk.valgt.has(k.nr), style: "margin-top:4px",
-      onchange: e => { e.target.checked ? kk.valgt.add(k.nr) : kk.valgt.delete(k.nr); }}),
-    h("span", {}, k.tekst.replace(/\n/g, " "), k.svar ? h("span", {class: "muted"}, " " + k.svar) : null)));
-  return h("div", {class: "godk" + (rec ? " ok" : ""), style: "flex-direction:column;align-items:stretch"},
+  const brugTekst = t => {
+    let l = kk.linjer.find(x => !kkRens(x.tekst));
+    if (!l) kk.linjer.push(l = fraTekst(null));
+    Object.assign(l, {tekst: t.tekst, svar: t.svar || "", åbenSvar: !!t.svar});
+    gentegn();
+  };
+  const felt = (l, i) => {
+    const fakta = h("div"), fejl = h("div"); faktaBokse[i] = fakta; fejlBokse[i] = fejl;
+    const antal = d => { kk.auto = false; l.antal = Math.max(0, Math.min(24, (l.antal || 0) + d)); gentegn(); };
+    return h("div", {class: "kk-felt"},
+      h("div", {class: "kk-ind"},
+        h("textarea", {class: "kk-ta", rows: 3, value: l.tekst, oninput: e => { l.tekst = e.target.value; opdater(); }}),
+        l.åbenSvar ? h("input", {class: "kk-in", placeholder: "Svar", value: l.svar, oninput: e => { l.svar = e.target.value; opdater(); }}) : null,
+        h("div", {class: "kk-mr"},
+          l.åbenMk ? h("input", {class: "kk-mk", placeholder: "Mærke", value: l.maerke, oninput: e => { l.maerke = e.target.value; opdater(); }})
+            : h("button", {class: "kk-link", type: "button", onclick: () => { l.åbenMk = true; gentegn(); }}, "+ mærke"),
+          l.åbenSvar ? null : h("button", {class: "kk-link", type: "button", onclick: () => { l.åbenSvar = true; gentegn(); }}, "+ svar")),
+        fejl, fakta),
+      h("div", {class: "kk-step"}, h("button", {type: "button", onclick: () => antal(-1)}, "−"), antalB[i] = h("b", {}, String(l.antal || 0)),
+        h("button", {type: "button", onclick: () => antal(1)}, "+")),
+      h("button", {class: "kk-x", type: "button", title: "Fjern", onclick: () => { kk.linjer.splice(i, 1); if (!kk.linjer.length) kk.linjer.push(fraTekst(null)); gentegn(); }}, "✕"));
+  };
+  const tidligere = () => {
+    const her = new Set((D.klubkort || []).filter(r => nøgle(r.job) === nøgle(j.navn)).flatMap(r => r.kort || []));
+    const liste = tekster.filter(t => t.aktiv !== false && kkKanPrintes(t)).sort((a, b) => her.has(b.nr) - her.has(a.nr) || b.nr - a.nr);
+    return h("div", {class: "kk-tidl"}, liste.map(t => h("div", {class: "kk-tl"},
+      h("span", {class: "kk-bp" + (her.has(t.nr) ? " b" : ""), title: her.has(t.nr) ? "Brugt her før" : null}),
+      h("span", {class: "fyld"}, t.tekst.replace(/\n/g, " "), t.svar ? h("span", {class: "muted"}, " " + t.svar) : null),
+      h("button", {class: "btn lille", type: "button", onclick: () => brugTekst(t)}, "Brug"))));
+  };
+  const indhold = kk.åben ? h("div", {class: "kk-kol"},
+    h("div", {},
+      h("div", {style: "display:flex;justify-content:flex-end"}, h("button", {class: "btn", type: "button", onclick: () => { kk.tidl = !kk.tidl; gentegn(); }},
+        kk.tidl ? "Skjul tidligere godkendte" : "Se tidligere godkendte")),
+      kk.tidl ? tidligere() : null,
+      kk.linjer.map(felt),
+      h("div", {style: "display:flex;justify-content:space-between;margin-top:8px"},
+        h("button", {class: "kk-link", type: "button", onclick: () => { kk.linjer.push(fraTekst(null)); gentegn(); }}, "+ Tilføj linje"),
+        kk.auto ? null : h("button", {class: "kk-link", type: "button", onclick: () => { kk.auto = true; gentegn(); }}, "↺ Fordel automatisk")),
+      pladsBoks),
+    h("div", {}, arkBoks,
+      h("button", {class: "btn primaer", type: "button", style: "margin-top:10px;width:100%", disabled: kk.arbejder, onclick: lav}, kk.arbejder ? "Laver PDF …" : "Lav PDF"),
+      svarBoks)) : null;
+  if (kk.svar) svarBoks.replaceChildren(h("div", {class: "svar " + kk.svar.klasse}, h("b", {}, kk.svar.titel),
+    kk.svar.punkter?.length ? h("ul", {}, kk.svar.punkter.map(x => h("li", {}, x))) : null,
+    (kk.svar.filer || []).map(f => f.link ? pdfKnapper(f.link, f.navn, () => markérPrintet(j, "Klubkort")) : null)));
+  if (kk.åben) opdater();
+  return h("div", {class: "godk kk" + (rec ? " ok" : ""), style: "flex-direction:column;align-items:stretch"},
     h("div", {style: "display:flex;align-items:center;gap:10px"},
-      h("span", {class: "fyld"}, rec ? `✓ Klubkort lavet ${kortDato(rec.lavet)} · kampagne ${rec.kampagne}` : "Klubkort med QR-kode"),
+      h("span", {class: "fyld"}, rec ? `✓ Klubkort lavet ${kortDato(rec.lavet)}` : "Klubkort med QR-kode"),
       h("button", {class: "btn " + (rec ? "ghost lille" : "godkend"), type: "button", onclick: () => { kk.åben = !kk.åben; gentegn(); }},
         kk.åben ? "Luk" : rec ? "Lav igen" : "Lav kort")),
-    kk.åben ? h("div", {style: "margin-top:10px;color:var(--tekst);font-weight:400"},
-      h("div", {class: "muted lille"}, "Vælg kortene. Hvert kort får sin egen QR-kampagne for jobbet. 4 kort pr. A4."),
-      valg,
-      h("button", {class: "btn primaer", type: "button", style: "margin-top:10px", disabled: kk.arbejder, onclick: lav}, kk.arbejder ? "Laver kort …" : "Lav klubkort"),
-      kk.svar ? h("div", {class: "svar " + kk.svar.klasse}, h("b", {}, kk.svar.titel),
-        kk.svar.punkter?.length ? h("ul", {}, kk.svar.punkter.map(x => h("li", {}, x))) : null,
-        (kk.svar.filer || []).map(f => f.link ? h("div", {style: "margin-top:8px"}, h("div", {class: "lille muted"}, f.navn), pdfKnapper(f.link, f.navn, () => markérPrintet(j, "Klubkort"))) : null),
-        kk.svar.klasse === "ok" ? h("div", {class: "lille muted", style: "margin-top:8px"},
-          "Print fra Preview med Scale 100 %, ensidet. Skær på de lysegrå mærker midt på kanterne.") : null) : null) : null);
+    indhold ? h("div", {style: "margin-top:10px;color:var(--tekst);font-weight:400"}, indhold) : null);
 }
 function godkendBlok(linjer) {
   const ændret = S.godk && signatur(Object.values(S.l)) !== S.snap;
