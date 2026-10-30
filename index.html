@@ -344,7 +344,12 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 /* salg: statuskort (uge, måned, vejen) */
 .sk-top{display:grid;gap:14px}
 .fold-frem{display:flex;align-items:center;gap:12px;flex-wrap:wrap;width:100%;text-align:left;cursor:pointer;border:0;font:inherit;color:inherit}.fold-frem:hover{background:var(--hover)}.fold-luk{border:0;background:none;padding:0;cursor:pointer;font-family:inherit;text-align:left}
-.nedtonet{opacity:.55}.humoer{display:flex;gap:8px}.humoer button{flex:1;font-size:22px;padding:8px 0;border-radius:10px;border:1px solid var(--linje);background:var(--flade2)}.humoer button.valgt{border-color:var(--accent);background:var(--accent-blid)}.tolk{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.tolk-sum{width:100%;font-size:12.5px;font-weight:600;color:var(--ok)}.input.mangler{border-color:var(--adv)}
+.nedtonet{opacity:.55}.salg-del{margin-top:6px}.kompakt{margin-top:10px;background:var(--flade);border:1px solid var(--linje);border-radius:12px;max-height:62vh;overflow:auto}
+.kompakt-r{display:flex;gap:10px;align-items:baseline;width:100%;text-align:left;border:0;border-top:1px solid var(--linje);background:none;padding:8px 12px;font-size:13.5px}.kompakt-r:first-child{border-top:0}.kompakt-r:hover,.kompakt-r.valgt{background:var(--hover)}
+.kompakt-r .ap-dot{align-self:center}.k-navn{font-weight:600;white-space:nowrap}.k-vej{color:var(--svag);white-space:nowrap}.k-naeste{color:var(--svag);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:700px){.kompakt-r{flex-wrap:wrap;row-gap:0}.k-naeste{flex-basis:100%;padding-left:20px}}
+.cc-dele{display:flex;gap:8px;margin-top:10px}.cc-dele span{flex:1;text-align:center;padding:8px 0;border-radius:10px;background:var(--flade2);border:1px solid var(--linje);font-size:12.5px;color:var(--svag)}.cc-dele span.ok{background:var(--ok-blid);color:var(--ok);border-color:var(--ok)}
+.cc-træk{margin-top:12px}.cc-træk .btn{width:100%;padding:14px;font-size:16px;font-weight:700}.cc-kort{display:block;width:100%;text-align:left;margin-top:12px;cursor:pointer}.cc-kort.valgt{outline:2px solid var(--accent)}.cc-navn{font-size:17px;font-weight:700}.cc-tal{font-size:20px;font-weight:700;margin-top:4px}.humoer{display:flex;gap:8px}.humoer button{flex:1;font-size:22px;padding:8px 0;border-radius:10px;border:1px solid var(--linje);background:var(--flade2)}.humoer button.valgt{border-color:var(--accent);background:var(--accent-blid)}.tolk{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.tolk-sum{width:100%;font-size:12.5px;font-weight:600;color:var(--ok)}.input.mangler{border-color:var(--adv)}
 .rk.spilletid .seg{display:inline-flex;width:auto}@media (max-width:600px){.rk.spilletid{display:grid!important;grid-template-columns:1fr 1fr}.rk.spilletid input{width:100%!important}.rk.spilletid>:nth-child(3),.rk.spilletid>:nth-child(4){grid-column:1/-1}.rk.spilletid>:nth-child(4){width:100%}}.fra-mærke{margin-left:6px;font-size:11.5px;color:var(--svag);white-space:nowrap}
 .skat-status{margin-top:16px;padding:16px 18px;border-radius:14px;border:1px solid var(--linje);display:grid;gap:10px}.skat-status.g{background:var(--ok-blid);border-color:var(--ok)}.skat-status.y{background:var(--adv-blid);border-color:var(--adv)}.skat-status.rd{background:var(--fejl-blid);border-color:var(--fejl)}
 .skat-titel{font-size:20px;font-weight:700}.skat-status.g .skat-titel{color:var(--ok)}.skat-status.y .skat-titel{color:var(--adv)}.skat-status.rd .skat-titel{color:var(--fejl)}
@@ -3464,7 +3469,15 @@ function visRute() {
 const S_TYPE = ["Eksisterende kunde", "Venue", "Ny virksomhed"];
 const S_STATUS = ["Ikke kontaktet", "Kontaktet", "Møde aftalt", "Tilbud sendt", "Booket", "Ikke nu"];
 const S_KANAL = ["Telefon", "Besked", "Mail", "Møde", "LinkedIn"];
-const SG = {vis: null, valgt: null, lukkede: false, ny: {}, k: {}, kladder: {}};
+const SG = {vis: null, valgt: null, lukkede: false, ny: {}, k: {}, kladder: {}, del: "opf", filter: "idag"};
+// "Nye i dag/denne uge" (Oscar 30/10): oprettet, senest kontakt og datoerne i historikken ("2026-10-30" eller "30/10")
+function salgDatoer(s) {
+  const år = iDag().slice(0, 4), h0 = s.historik || "";
+  return [s.oprettet, s.senest_kontakt, ...(h0.match(/\d{4}-\d{2}-\d{2}/g) || []),
+    ...[...h0.matchAll(/\b(\d{1,2})\/(\d{1,2})\b/g)].map(m => `${år}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`)].filter(Boolean);
+}
+const salgKilde = s => /g-kraft/i.test((s.historik || "") + " " + (s.kontakt || "")) ? "G-kraft" : null;
+const salgVej = s => (s.kontakt || "").replace(/\s*\([^)]*\)?/g, "").split(/[,·]/)[0].trim();   // "Randi (randi@...), henvist af ..." -> "Randi"
 // Kundevisningen på Salg (Oscar 29/10): klik udenfor, Esc eller nyt klik på samme kunde lukker den.
 // Ugemt tekst i "Registrér kontakt" gemmes som kladde på kunden og står der igen, når kunden åbnes.
 const salgKunde = navn => (D.salg || []).find(x => x.navn === navn);
@@ -3484,7 +3497,7 @@ function salgLuk() { salgGemKladde(); SG.vis = null; SG.valgt = null; SG.k = {};
 // Detaljen til højre (Salg og Forespørgsler) lukker ved klik udenfor og Esc (Oscar 29/10). Klikket huskes ved pointerdown og
 // lukker først efter pointerup, så knappen man trykkede på når at virke, og kun hvis den ikke selv åbnede noget andet.
 const DETALJER = () => [
-  {fane: "salg", åben: () => SG.vis === "s" ? SG.valgt : null, inde: ".ap-row", luk: salgLuk},
+  {fane: "salg", åben: () => SG.vis === "s" ? SG.valgt : null, inde: ".ap-row, .kompakt-r, .cc-kort, .salg-del, .chips", luk: salgLuk},
   {fane: "foresp", åben: () => FQ.vis === "h" ? FQ.valgt : null, inde: ".række", luk: fqLuk}];
 let detaljeTryk = null;
 document.addEventListener("pointerdown", e => {
@@ -3515,28 +3528,36 @@ function visSalg() {
       h("span", {class: "ap-sub"}, SG.kladder[s.navn] ? h("span", {class: "gul-t"}, "Kladde: ") : null, s.naeste || s.status + (s.type ? " · " + s.type : ""))),
     h("span", {class: "ap-hoejre" + (s.naeste_opfoelgning && s.naeste_opfoelgning < idag ? " rød" : "")},
       s.naeste_opfoelgning ? (s.naeste_opfoelgning === idag ? "i dag" : kortDato(s.naeste_opfoelgning)) : "", h("span", {class: "ap-chev"}, "›")));
-  const gruppe = (titel, l) => l.length ? [h("div", {class: "overskrift", style: "margin-top:18px"}, titel), h("div", {class: "kort ap"}, l.map(række))] : null;
-  // Oscar 26/10: kun 3-4 kunder ad gangen. Standard: dagens opfølgninger (højst 4), ellers de næste 3. Resten bag "Vis alle".
-  const fokus = iDagL.length ? iDagL.slice(0, 4) : [...uden, ...senere].slice(0, 3);
-  const fokusTitel = iDagL.length ? `I dag (${iDagL.length})` : "Næste";
-  const skjult = rows.length - fokus.length;
+  // Salg i to dele (Oscar 30/10): Opfølgning (dem med en vej ind) og Cold call (træk en kontakt, to gange om dagen)
+  const mandag = plusDage(idag, -((dag(idag).getDay() + 6) % 7));
+  const nyFra = {nye: idag, uge: mandag}[SG.filter];
+  const liste = SG.filter === "nye" || SG.filter === "uge" ? rows.filter(s => salgDatoer(s).some(d => d >= nyFra && d <= idag))
+    : SG.filter === "alle" ? [...iDagL, ...uden, ...senere, ...lukket] : iDagL;
+  const antal = {idag: iDagL.length, nye: rows.filter(s => salgDatoer(s).includes(idag)).length,
+    uge: rows.filter(s => salgDatoer(s).some(d => d >= mandag && d <= idag)).length, alle: rows.length};
+  const kompakt = s => h("button", {type: "button", class: "kompakt-r" + (SG.vis === "s" && SG.valgt === s.navn ? " valgt" : ""), disabled: !!s._ny, onclick: () => salgÅbn(s.navn)},
+    h("span", {class: "ap-dot " + prik(s.status)}), h("span", {class: "k-navn"}, s.navn), salgKilde(s) ? h("span", {class: "pill gul"}, salgKilde(s)) : null,
+    h("span", {class: "k-vej"}, salgVej(s)), h("span", {class: "k-naeste"}, SG.kladder[s.navn] ? "Kladde: " : "", s.naeste || s.status),
+    s.naeste_opfoelgning && s.naeste_opfoelgning < idag ? h("span", {class: "rød lille k-dato"}, kortDato(s.naeste_opfoelgning)) : null);
+  const leadsIDag = (D.leads || []).filter(r => r.trukket === idag), ugeTræk = (D.leads || []).filter(r => r.trukket && r.trukket >= mandag && r.trukket <= idag).length;
+  const trukneIDag = rows.filter(s => s.lead_id && leadsIDag.some(r => r.id === s.lead_id));
+  const opf = [
+    h("div", {class: "chips", style: "margin-top:12px"}, [["idag", "I dag"], ["nye", "Nye i dag"], ["uge", "Nye denne uge"], ["alle", "Alle"]].map(([k, t]) =>
+      h("button", {type: "button", class: "chip" + (SG.filter === k ? " aktiv" : ""), onclick: () => { SG.filter = k; tegn(); }}, `${t} (${antal[k]})`))),
+    liste.length ? h("div", {class: "kompakt"}, liste.map(kompakt)) : h("div", {class: "muted", style: "margin-top:12px"}, SG.filter === "idag" ? "Ingen at følge op på i dag." : "Ingen.")];
+  const cold = [
+    h("div", {class: "skat-status " + (leadsIDag.length >= 2 ? "g" : "y"), style: "margin-top:12px"}, h("div", {class: "skat-titel"}, leadsIDag.length >= 2 ? "✓ Cold call i dag: 2 af 2" : `Cold call i dag: ${leadsIDag.length} af 2`)),
+    h("div", {class: "cc-dele"}, h("span", {class: leadsIDag.length >= 1 ? "ok" : ""}, "Formiddag" + (leadsIDag.length >= 1 ? " ✓" : "")), h("span", {class: leadsIDag.length >= 2 ? "ok" : ""}, "Eftermiddag" + (leadsIDag.length >= 2 ? " ✓" : ""))),
+    h("div", {class: "cc-træk"}, traekKnap()),
+    trukneIDag.map(s => h("button", {type: "button", class: "kort2 cc-kort" + (SG.vis === "s" && SG.valgt === s.navn ? " valgt" : ""), onclick: () => salgÅbn(s.navn)},
+      h("div", {class: "cc-navn"}, s.navn), h("div", {class: "muted lille"}, s.kontakt || ""), s.naeste ? h("div", {style: "margin-top:6px"}, s.naeste) : null)),
+    h("div", {class: "kort2", style: "margin-top:12px"}, h("div", {class: "overskrift", style: "margin:0"}, "Ugens cold call"), h("div", {class: "cc-tal"}, `${ugeTræk} af 10`))];
   const venstre = h("div", {class: "liste-kol"},
     h("div", {class: "kh"}, h("h1", {}, "Kunder"), h("div", {class: "spacer"}),
-      traekKnap(),
       h("button", {class: "btn", type: "button", onclick: () => { SG.vis = "ny"; SG.ny = {type: "Ny virksomhed", status: "Ikke kontaktet"}; tegn(); }}, "+ Ny kunde")),
-    SG.alle ? [
-      iDagL.length ? gruppe(`I dag (${iDagL.length})`, iDagL) : h("div", {class: "muted", style: "margin-top:18px"}, "Ingen at følge op på i dag."),
-      gruppe("Uden dato", uden),
-      gruppe("Senere", senere),
-      h("div", {class: "r1", style: "margin-top:14px"},
-        h("button", {class: "btn ghost lille", type: "button", onclick: () => { SG.alle = false; tegn(); }}, "Vis kun de næste"),
-        h("button", {class: "btn ghost lille", type: "button", onclick: () => { SG.lukkede = !SG.lukkede; tegn(); }},
-          SG.lukkede ? "Skjul Booket og Ikke nu" : `Vis Booket og Ikke nu (${lukket.length})`)),
-      SG.lukkede && lukket.length ? h("div", {class: "kort ap", style: "margin-top:8px"}, lukket.map(række)) : null]
-    : [
-      fokus.length ? gruppe(fokusTitel, fokus) : h("div", {class: "muted", style: "margin-top:18px"}, "Ingen kunder i salg. Tryk Træk en kontakt."),
-      iDagL.length > 4 ? h("div", {class: "muted lille", style: "margin-top:6px"}, `+ ${iDagL.length - 4} mere i dag`) : null,
-      skjult > 0 ? h("button", {class: "btn ghost lille", type: "button", style: "margin-top:14px", onclick: () => { SG.alle = true; tegn(); }}, `Vis alle kunder (${rows.length})`) : null]);
+    h("div", {class: "seg salg-del"}, [["opf", `Opfølgning (${iDagL.length})`], ["cold", "Cold call"]].map(([k, t]) =>
+      h("button", {type: "button", class: SG.del === k ? "aktiv" : "", onclick: () => { SG.del = k; tegn(); }}, t))),
+    SG.del === "cold" ? cold : opf);
   const højre = h("div", {class: "detalje-kol"},
     SG.vis === "ny" ? nySalgForm() : SG.vis === "s" ? salgDetalje((D.salg || []).find(s => s.navn === SG.valgt)) : tom("Vælg en kunde, eller tilføj en ny."));
   // Oscar 28/10: salget øverst (hvem han kontakter), ugens salg under. Pengene står på Økonomi (skat, penge ude, fremtiden).
