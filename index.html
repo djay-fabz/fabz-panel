@@ -3711,7 +3711,7 @@ function privatMed(anm) {   // vis ændringen med det samme (Oscar 29/10); hentP
     f[anm.del] = {kr: anm.kr};
     const x = anm.del === "buffer" ? P.buffer : anm.del === "opsparing" ? P.opsparing : null; if (x) x.saldo = (x.saldo || 0) + anm.kr;
   }
-  else { const x = anm.pulje === "opsparing" ? P.opsparing : anm.pulje === "buffer" ? P.buffer : anm.pulje === "husleje_d1" ? P.husleje_d1 : (P.puljer || []).find(q => q.navn === anm.pulje); if (x) x.saldo = (x.saldo || 0) + anm.beloeb; }
+  else { const x = anm.pulje === "opsparing" ? P.opsparing : anm.pulje === "buffer" ? P.buffer : anm.pulje === "husleje_d1" ? P.husleje_d1 : anm.pulje === "kontanter" ? P.kontanter : (P.puljer || []).find(q => q.navn === anm.pulje); if (x) x.saldo = (x.saldo || 0) + anm.beloeb; }
 }
 async function privatSend(anm, tekst) {   // Buffer, Opsparing og egne private puljer: anmodning i privat-data/inbox, som workflowet "Panel-anmodninger (privat)" kører (ca. 30 sek.)
   const id = `p-${Date.now()}`, bid = nytId("x");
@@ -3880,19 +3880,19 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     return h("div", {class: "pk"}, h("b", {class: "lille"}, st.fortegn > 0 ? "Sæt ind" : "Træk fra"), inp(st, "beloeb", {type: "number", inputmode: "numeric", placeholder: "Beløb", style: "width:110px"}),
       datoInput(st.dato, v => { st.dato = v; }, {style: "width:120px"}),
       knap("Gem", () => { const b = Math.round(Number(st.beloeb)); if (!(b > 0)) return alert("Skriv beløbet");
-        const P = ØK.P || {}, privat = {[P.opsparing?.navn || "Opsparing"]: "opsparing", Buffer: "buffer", "Husleje d. 1": "husleje_d1", ...Object.fromEntries((P.puljer || []).map(q => [q.navn, q.navn]))}[navn];
+        const P = ØK.P || {}, privat = {[P.opsparing?.navn || "Opsparing"]: "opsparing", Buffer: "buffer", "Husleje d. 1": "husleje_d1", Kontanter: "kontanter", ...Object.fromEntries((P.puljer || []).map(q => [q.navn, q.navn]))}[navn];
         if (privat) { ØK.flyt = {}; tegn(); return privatFlyt(st.fortegn * b, st.dato, navn, privat); }
         kør("pulje", ["flyt", navn, String(st.fortegn * b), `--dato=${st.dato}`], {tekst: `${navn} ${st.fortegn > 0 ? "+" : "−"}${krKort(b)} kr.`, efter: ["mo"], med: () => { ØK.flyt = {}; puljeMed(navn, st.fortegn * b); }}); }, true),
       knap("Fortryd", () => { ØK.flyt = {}; tegn(); }));
   };
   const pulje = (navn, saldo, maal, farve, ekstra, kanFlytte = true, slet = null) => h("div", {class: "pulje"},
-    h("div", {class: "r1"}, h("b", {}, navn), ekstra, h("div", {class: "spacer"}), h("b", {}, saldo == null ? "?" : krKort(saldo)), h("span", {class: "muted"}, ` af ${maal == null ? "?" : krKort(maal)} kr.`)),
-    h("div", {class: "pbar"}, h("i", {style: `width:${maal ? Math.min(100, Math.max(1, 100 * (saldo || 0) / maal)) : 1}%;background:${farve}`})),
+    h("div", {class: "r1"}, h("b", {}, navn), ekstra, h("div", {class: "spacer"}), h("b", {}, saldo == null ? "?" : krKort(saldo)), h("span", {class: "muted"}, maal === false ? " kr." : ` af ${maal == null ? "?" : krKort(maal)} kr.`)),
+    maal === false ? null : h("div", {class: "pbar"}, h("i", {style: `width:${maal ? Math.min(100, Math.max(1, 100 * (saldo || 0) / maal)) : 1}%;background:${farve}`})),
     kanFlytte ? flytForm(navn) : h("div", {class: "muted lille"}, "Sæt ind og træk fra kommer, når privat-data har en indbakke til panelet."),
     slet && !saldo ? h("button", {class: "btn ghost lille", type: "button", style: "margin-top:6px", onclick: () => confirm(`Fjern puljen ${navn}?`) && slet()}, "Fjern puljen") : null);
   const fabzSlet = navn => () => kør("pulje", ["slet", navn], {tekst: `Pulje ${navn} fjernet`, efter: ["mo"]});
   const privSlet = navn => () => { privatSend({kommando: "pulje-slet", navn}, `Pulje ${navn} fjernet`); };
-  const egne = P.puljer || [], iAlt = (sk.saldo || 0) + ob.puljer.reduce((s, p) => s + p.saldo, 0) + (P.buffer?.saldo || 0) + (P.opsparing?.saldo || 0) + egne.reduce((s, p) => s + (p.saldo || 0), 0);
+  const egne = P.puljer || [], iAlt = (sk.saldo || 0) + ob.puljer.reduce((s, p) => s + p.saldo, 0) + (P.husleje_d1?.saldo || 0) + (P.buffer?.saldo || 0) + (P.opsparing?.saldo || 0) + egne.reduce((s, p) => s + (p.saldo || 0), 0);
   const fabzPulje = p => pulje(p.navn, p.saldo, p.maal, p.kategori === "skyld" ? "var(--fejl)" : "#d97706", p.kategori === "skyld" ? mk("s", "skyld") : mk("f", "Fabz"), true, fabzSlet(p.navn));
   const mk = (kl, t) => h("span", {class: "sx-mk " + kl}, t), gruppe = (navn, ...ind) => ind.flat().some(Boolean) ? [h("div", {class: "sx-g"}, navn), ind] : null;
   const puljer = h("div", {},
@@ -3904,7 +3904,9 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
       gruppe("Privat", P.husleje_d1 ? pulje("Husleje d. 1", P.husleje_d1.saldo, P.husleje_d1.maal, "#7c3aed", priv(), !!P.inbox) : null,
         P.buffer ? pulje("Buffer", P.buffer.saldo, P.buffer.maal, "#7c3aed", priv(), !!P.inbox) : null,
         P.opsparing ? pulje(P.opsparing.navn || "Opsparing", P.opsparing.saldo, P.opsparing.maal, "#7c3aed", priv(), !!P.inbox) : null,
-        egne.map(p => pulje(p.navn, p.saldo, p.maal, "#7c3aed", priv(), !!P.inbox, P.inbox ? privSlet(p.navn) : null)))),
+        egne.map(p => pulje(p.navn, p.saldo, p.maal, "#7c3aed", priv(), !!P.inbox, P.inbox ? privSlet(p.navn) : null))),
+      // kontantkisten (Oscar 30/10): ikke i Saxo og ikke med i d. 1, løn eller skat, kun til brændstof og kontante ting
+      P.kontanter ? [h("div", {class: "sx-g"}, "Kontanter (kisten)"), pulje("Kontanter", P.kontanter.saldo, false, "#7c3aed", priv(), !!P.inbox)] : null),
     // ny pulje (Oscar 29/10): kategorien vælges først, så navn og mål. Privat oprettes i privat-data
     ØK.ny ? h("div", {class: "pk", style: "margin-top:8px"}, seg([["skyld", "Skyld"], ["fabz", "Fabz"], ...(P.inbox ? [["privat", "Privat"]] : [])], ØK.ny.kat, v => { ØK.ny.kat = v; tegn(); }),
         ØK.ny.kat ? [inp(ØK.ny, "navn", {placeholder: "Navn, fx Ny bil", style: "width:160px"}), inp(ØK.ny, "maal", {type: "number", inputmode: "numeric", placeholder: "Mål i kr.", style: "width:110px"}),
