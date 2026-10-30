@@ -3313,9 +3313,18 @@ function adrFelt(x, slukket) {
 }
 const RU = {koeretoej: "trailer", stop: [nyttStop(), nyttStop()], arbejder: false, svar: null, job: ""};
 const jobRuteNøgle = j => `${j.dato}|${j.navn.toLowerCase()}`;
+// Jobbets adresse (Oscar 30/10): "Adresse:" i bookingen, ellers stedfeltet ("Fox and Hounds, Østergade 17, 7400 Herning"), uden stedets navn
+function jobAdresse(j) {
+  const tekst = (j.besk || "").replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "");
+  const kilde = (/Adresse:\s*([^\n]+)/i.exec(tekst) || [])[1] || j.sted || "";
+  const dele = kilde.split(",").map(x => x.trim()).filter(Boolean);
+  while (dele.length > 2 && !/\d/.test(dele[0])) dele.shift();
+  return dele.join(", ");
+}
+const postnr = t => ((t || "").match(/\b(\d{4})\b/) || [])[1] || null;
 function vælgRuteJob(nøgle) {   // henter adresse og ankomsttid fra jobbets booking i kalenderen, eller den gemte plan
   const r = RU, j = jobs().find(x => jobRuteNøgle(x) === nøgle);
-  r.job = j ? nøgle : ""; r.svar = null;
+  r.job = j ? nøgle : ""; r.svar = null; r.postnr = j ? postnr(jobAdresse(j)) : null;
   if (!j) return;
   const gemt = (D.jobrute || {})[nøgle];
   if (gemt?.input) {
@@ -3326,14 +3335,10 @@ function vælgRuteJob(nøgle) {   // henter adresse og ankomsttid fra jobbets bo
     return;
   }
   const tekst = (j.besk || "").replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "");
-  const adr = /Adresse:\s*([^\n]+)/i.exec(tekst), ank = /Ankomst til opstilling:\s*(?:ca\.\s*)?(\d{1,2})[.:](\d{2})/i.exec(tekst);
+  const ank = /Ankomst til opstilling:\s*(?:ca\.\s*)?(\d{1,2})[.:](\d{2})/i.exec(tekst);
   const sidste = r.stop[r.stop.length - 1];
   sidste.navn = j.navn;
-  if (adr) {   // "Haverslev Hallen, Strandvejen 21, 9610 Nørager" -> uden stedets navn, som adressesøgningen ikke kender
-    const dele = adr[1].split(",").map(x => x.trim()).filter(Boolean);
-    while (dele.length > 2 && !/\d/.test(dele[0])) dele.shift();
-    sidste.adr = dele.join(", ");
-  }
+  if (jobAdresse(j)) { sidste.adr = jobAdresse(j); sidste.lat = sidste.lon = null; }   // slås op på den fulde adresse, aldrig på stedets navn
   if (ank) sidste.tid = `${ank[1].padStart(2, "0")}.${ank[2]}`;
 }
 const km1 = v => Number(v).toLocaleString("da-DK", {minimumFractionDigits: 1, maximumFractionDigits: 1});
@@ -3440,7 +3445,9 @@ function visRute() {
   const beregn = async () => {
     const brugt = r.stop.filter(x => x.adr.trim());
     if (brugt.length < 2) { alert("Skriv mindst to adresser (fra og til)."); return; }
-    if (!brugt.some(x => x.tid)) { alert("Skriv mindst ét tidspunkt: afgang fra første sted, eller kl. på et sted, fx at være fremme senest."); return; }
+    if (!brugt.some(x => x.tid)) { r.svar = {klasse: "fejl", titel: "Ankomst mangler", fejl: "Skriv kl. for ankomst til opstilling, eller afgang fra første sted."}; tegn(); return; }
+    const pJob = r.job && r.postnr, pStop = postnr(brugt[brugt.length - 1].adr);
+    if (pJob && pStop !== r.postnr) { r.svar = {klasse: "fejl", titel: "Adressen kunne ikke findes præcist, tjek den", fejl: `Bookingen siger ${r.postnr}, adressen siger ${pStop || "intet postnummer"}.`}; tegn(); return; }
     const json = {koeretoej: r.koeretoej,
       stop: brugt.map(x => ({navn: x.navn.trim(), adresse: x.adr.trim(), ...(x.lat != null ? {lat: x.lat, lon: x.lon} : {}), ophold: Math.max(0, parseInt(x.ophold, 10) || 0), note: x.note.trim(), ...(x.tid ? {tid: x.tid} : {})}))};
     r.arbejder = true; r.svar = {klasse: "", titel: "Beregner ruten … typisk under et minut"}; tegn();
@@ -3493,6 +3500,9 @@ function visRute() {
     h("button", {class: "btn primaer", type: "button", style: "margin-top:16px", disabled: r.arbejder, onclick: beregn}, r.arbejder ? "Beregner …" : "Beregn rute"),
     d?.advarsler?.length ? h("div", {class: "svar adv", style: "margin-top:12px"}, h("b", {}, "Tjek tiderne"), h("ul", {}, d.advarsler.map(x => h("li", {}, x)))) : null,
     r.svar && !d ? h("div", {class: "svar " + r.svar.klasse, style: "margin-top:12px"}, h("b", {}, r.svar.titel), r.svar.fejl ? h("div", {}, r.svar.fejl) : null) : null,
+    !r.svar && r.job && r.postnr && postnr(r.stop[r.stop.length - 1].adr) && postnr(r.stop[r.stop.length - 1].adr) !== r.postnr   // gemt kørsel til et forkert sted (Fox 30/10)
+      ? h("div", {class: "svar fejl", style: "margin-top:12px"}, h("b", {}, "Adressen kunne ikke findes præcist, tjek den"), h("div", {}, `Bookingen siger ${r.postnr}, kørslen går til ${postnr(r.stop[r.stop.length - 1].adr)}.`)) : null,
+    !r.svar && r.job && !r.stop.some(x => x.tid) ? h("div", {class: "svar fejl", style: "margin-top:12px"}, h("b", {}, "Ankomst mangler")) : null,
     d ? h("div", {class: "rute-resultat", style: "margin-top:20px"},
       h("div", {style: "display:flex;align-items:center;gap:8px;flex-wrap:wrap"}, h("h1", {style: "margin:0"}, "Tidsplan"), h("div", {class: "spacer"}),
         h("button", {class: "btn lille ikke-print", type: "button", onclick: kopiér}, "Kopiér tekst")),
