@@ -97,7 +97,7 @@ a.btn{display:inline-block;text-decoration:none}
 /* editor (fuld skærm) */
 .jo-detalje{padding:4px 14px 16px 42px;border-top:1px solid var(--linje);background:var(--flade2)}
 @media (max-width:700px){.jo-detalje{padding-left:14px}}
-.fokus{display:grid;gap:14px;margin-top:20px}.resten summary{cursor:pointer;padding:6px 2px}
+.fokus{display:grid;gap:14px;margin-top:20px;grid-template-columns:minmax(0,1fr)}.fokus>*{min-width:0}.resten summary{cursor:pointer;padding:6px 2px}
 .bryd{display:block;width:100%;text-align:left;border:0;border-radius:8px;padding:9px 12px;font-weight:600;margin-top:6px}
 .bryd.adv{background:var(--adv-blid);color:var(--adv)}.bryd.fejl{background:var(--fejl-blid);color:var(--fejl)}
 .dato-adv{margin-top:8px;border-radius:8px;padding:8px 11px;font-weight:600}.dato-adv.adv{background:var(--adv-blid);color:var(--adv)}.dato-adv.fejl{background:var(--fejl-blid);color:var(--fejl)}
@@ -344,7 +344,7 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 /* salg: statuskort (uge, måned, vejen) */
 .sk-top{display:grid;gap:14px}
 .fold-frem{display:flex;align-items:center;gap:12px;flex-wrap:wrap;width:100%;text-align:left;cursor:pointer;border:0;font:inherit;color:inherit}.fold-frem:hover{background:var(--hover)}.fold-luk{border:0;background:none;padding:0;cursor:pointer;font-family:inherit;text-align:left}
-.nedtonet{opacity:.55}.input.mangler{border-color:var(--adv)}
+.nedtonet{opacity:.55}.humoer{display:flex;gap:8px}.humoer button{flex:1;font-size:22px;padding:8px 0;border-radius:10px;border:1px solid var(--linje);background:var(--flade2)}.humoer button.valgt{border-color:var(--accent);background:var(--accent-blid)}.tolk{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.tolk-sum{width:100%;font-size:12.5px;font-weight:600;color:var(--ok)}.input.mangler{border-color:var(--adv)}
 .rk.spilletid .seg{display:inline-flex;width:auto}@media (max-width:600px){.rk.spilletid{display:grid!important;grid-template-columns:1fr 1fr}.rk.spilletid input{width:100%!important}.rk.spilletid>:nth-child(3),.rk.spilletid>:nth-child(4){grid-column:1/-1}.rk.spilletid>:nth-child(4){width:100%}}.fra-mærke{margin-left:6px;font-size:11.5px;color:var(--svag);white-space:nowrap}
 .skat-status{margin-top:16px;padding:16px 18px;border-radius:14px;border:1px solid var(--linje);display:grid;gap:10px}.skat-status.g{background:var(--ok-blid);border-color:var(--ok)}.skat-status.y{background:var(--adv-blid);border-color:var(--adv)}.skat-status.rd{background:var(--fejl-blid);border-color:var(--fejl)}
 .skat-titel{font-size:20px;font-weight:700}.skat-status.g .skat-titel{color:var(--ok)}.skat-status.y .skat-titel{color:var(--adv)}.skat-status.rd .skat-titel{color:var(--fejl)}
@@ -2303,14 +2303,14 @@ function visIDag() {
     const tal = [[forsinket.length, "Forsinket"], [dl.length, "Deadlines"], [henv.length, "Forespørgsler"], [due.length, "Salg"],
       [ub && (ub.forfaldne || dm.length) ? (ub.forfaldne || 0) + dm.length : 0, "Penge ude"]].filter(([n]) => n).map(([n, t]) => `${t} ${n}`);
     $("rod").replaceChildren(h("div", {class: "side"}, overskrift,
-      h("div", {class: "fokus"}, planKort, ...jobKort, vagterKort(idag),   // vagtkort vises kun ved kollision eller nye vagter
+      h("div", {class: "fokus"}, planKort, jobHumoerKort(idag), ...jobKort, vagterKort(idag),   // vagtkort vises kun ved kollision eller nye vagter
         brydIgennem(henv, ub, dm),
         h("details", {class: "resten"}, h("summary", {class: "muted lille"}, "Vis resten" + (tal.length ? ` (${tal.join(" · ")})` : "")),
           h("div", {class: "stak", style: "margin-top:10px"}, resten)))));
     return;
   }
   $("rod").replaceChildren(h("div", {class: "side bred"}, overskrift,
-    h("div", {class: "idag"}, planKort, h("div", {class: "stak"}, ...jobKort, resten[0], resten[1], vagterKort(idag), ...resten.slice(2)))));
+    h("div", {class: "idag"}, planKort, h("div", {class: "stak"}, jobHumoerKort(idag), ...jobKort, resten[0], resten[1], vagterKort(idag), ...resten.slice(2)))));
 }
 function brydIgennem(henv, ub, dm) {   // planlagt dag: nye forespørgsler og penge ude står over "Vis resten" (skitse panel-opfoelgning, Oscar ja 29/10)
   const nye = henv.filter(x => x.status === "Ny" && x.id !== "…" && forespAlder(x) >= 1).sort((a, b) => forespAlder(b) - forespAlder(a));
@@ -2338,21 +2338,63 @@ function estimatForslag(dp) {   // tid brugt mod estimat, så Oscar kan rette op
           {tekst: `#${o.id}: estimat ${i_alt} min`, efter: ["opgaver"], med: () => { o.estimat = i_alt; }})}, `Sæt estimat til ${i_alt}`) : h("span", {class: "pill grøn"}, "Passer"));
     }));
 }
+// Humør (Oscar 29/10): gemmes i privat-data (privatSend), vises ikke i panelet, men i månedsrapporten. Også efter hvert job.
+const HUMOER = ["😣", "🙁", "😐", "🙂", "😄"];
+const humoerKnapper = (valgt, vælg) => h("div", {class: "humoer"}, HUMOER.map((e, i) => h("button", {type: "button", class: valgt === i + 1 ? "valgt" : "", onclick: () => vælg(i + 1)}, e)));
+function andetMin(tekst) {   // samme regel som fabz.py andet_minutter: "bankbreve 1 t, virk.dk 30 min" -> [["bankbreve", 60], ["virk.dk", 30]]
+  const re = /(\d+(?:[.,]\d+)?)\s*(timer|time|t|h|minutter|min|m)\b/gi;
+  return (tekst || "").split(/(?<!\d),|,(?!\d)|[;\n]+/).map(d => d.trim()).filter(Boolean).map(d => {
+    let m = 0;
+    for (const x of d.matchAll(re)) m += parseFloat(x[1].replace(",", ".")) * (/^(timer|time|t|h)$/i.test(x[2]) ? 60 : 1);
+    return [d.replace(/\s*(\d+(?:[.,]\d+)?)\s*(timer|time|t|h|minutter|min|m)\b\.?/gi, "").replace(/^[\s:-]+|[\s:-]+$/g, "") || d, Math.round(m)];
+  }).filter(([, m]) => m);
+}
+const AD = {};   // kladde pr. dato: uplanlagt, score, note
 function afslutDag(dato, nået, brugt) {
-  const st = {uplanlagt: ""};
+  const st = AD[dato] ||= {uplanlagt: "", score: null, note: ""};
+  const dp = (D.dagsplaner || []).find(x => x.dato === dato) || {};
+  const nåetMin = () => (dp.plan_punkter || []).filter(p => nået().includes(p.nr) && p.halvdel !== "hvis_tid").reduce((s, p) => s + (Number(p.min) || 0), 0);
+  const tolk = h("div", {class: "tolk"});
+  const visTolk = () => {
+    const a = andetMin(st.uplanlagt), sum = a.reduce((s, [, m]) => s + m, 0);
+    tolk.replaceChildren(...a.map(([t, m]) => h("span", {class: "pill blå"}, `${t} ${m} min`)),
+      h("div", {class: "tolk-sum"}, `Nået ${nåetMin()} af ${dp.planlagt_min ?? "?"} min planlagt` + (sum ? ` + ${sum} min andet = ${nåetMin() + sum} min` : "")));
+  };
+  visTolk();
   return h("div", {class: "afslut"},
     h("div", {class: "etiket"}, "Afslut dagen"),
     h("div", {class: "muted lille", style: "margin-bottom:6px"}, "Skriv minutter brugt ud for hvert punkt, så kan estimaterne rettes."),
-    tekstfelt(st, "uplanlagt", {rows: 2, placeholder: "Hvad kom der af uplanlagt? (valgfrit)"}),
-    h("button", {class: "btn", type: "button", style: "margin-top:8px", onclick: () => {
+    h("div", {class: "etiket"}, "Hvad gik dagen ellers med?"),
+    h("textarea", {class: "input", rows: 2, value: st.uplanlagt, placeholder: "bankbreve 1 t, virk.dk 30 min", oninput: e => { st.uplanlagt = e.target.value; visTolk(); }}),
+    tolk,
+    h("div", {class: "etiket", style: "margin-top:10px"}, "Kom der noget nyt, der stadig skal laves?"),
+    h("button", {class: "btn lille", type: "button", onclick: () => { fane = "opgaver"; OP.vis = "ny"; OP.ny = {}; tegn(); window.scrollTo(0, 0); }}, "+ Ny opgave"),
+    h("div", {class: "etiket", style: "margin-top:10px"}, "Hvordan har du haft det i dag?"),
+    humoerKnapper(st.score, v => { st.score = st.score === v ? null : v; tegn(); }),
+    h("input", {class: "input", style: "margin-top:6px", value: st.note, placeholder: "Kort note (valgfrit)", oninput: e => { st.note = e.target.value; }}),
+    h("button", {class: "btn", type: "button", style: "margin-top:10px", onclick: () => {
       const n = nået();
       if (!confirm(`Følg op på dagen med ${n.length} punkter nået?`)) return;
       const b = Object.entries(brugt()).map(([nr, m]) => `${nr}=${m}`);
+      if (st.score) privatSend({kommando: "humoer", slags: "dag", dato, score: st.score, note: st.note.trim()}, `Humør ${HUMOER[st.score - 1]}`);
       kør("dag-opfoelg", [dato, ...(dato === iDag() ? [`--kl=${nuHHMM()}`] : []), ...(st.uplanlagt.trim() ? [`--uplanlagt=${st.uplanlagt.trim()}`] : []), "--naaet", ...n.map(String), ...(b.length ? ["--brugt", ...b] : [])],
         {tekst: "Opfølgning på dagen", efter: ["dagsplaner", "opgaver"], med: () => { const x = D.dagsplaner.find(x => x.dato === dato); if (x) { x.status = "Fulgt op"; x.naaede_punkter = n;
           // samme regel som fabz.py dag-opfoelg: minutterne for de nåede punkter, "hvis der er tid" tæller ikke (rettes, når de rigtige data kommer)
-          x.naaet_min = (x.plan_punkter || []).filter(p => n.includes(p.nr) && p.halvdel !== "hvis_tid").reduce((s, p) => s + (Number(p.min) || 0), 0); } }});
+          x.naaet_min = (x.plan_punkter || []).filter(p => n.includes(p.nr) && p.halvdel !== "hvis_tid").reduce((s, p) => s + (Number(p.min) || 0), 0);
+          if (st.uplanlagt.trim()) { x.uplanlagt = st.uplanlagt.trim(); x.andet_min = andetMin(x.uplanlagt).reduce((s, [, m]) => s + m, 0); } }
+          delete AD[dato]; }});
     }}, "Følg op på dagen"));
+}
+// Humør efter et job (Oscar 29/10): kortet står på I dag de første 3 dage efter jobbet, til det er udfyldt
+function jobHumoerKort(idag) {
+  const fra = plusDage(idag, -3);
+  const j = jobs(true).find(j => j.dato < idag && j.dato >= fra && !lager.get("humoer-job:" + jobNøgle(j)));
+  if (!j) return null;
+  const st = AD["job:" + jobNøgle(j)] ||= {note: ""};
+  return h("div", {class: "kort2"}, h("div", {class: "kh"}, h("h3", {}, `Hvordan havde du det til ${j.navn}?`)),
+    humoerKnapper(null, v => { privatSend({kommando: "humoer", slags: "job", dato: j.dato, job: j.navn, score: v, note: (st.note || "").trim()}, `${j.navn}: ${HUMOER[v - 1]}`);
+      lager.set("humoer-job:" + jobNøgle(j), String(v)); tegn(); }),
+    h("input", {class: "input", style: "margin-top:6px", value: st.note, placeholder: "Kort note (valgfrit)", oninput: e => { st.note = e.target.value; }}));
 }
 
 // ---------- Opgaver ----------
@@ -3626,6 +3668,7 @@ async function hentPrivat() {   // Lønkonto+ og Opsparing fra privat-data/data/
 }
 const privatFlyt = (beloeb, dato, navn, pulje) => privatSend({kommando: "opsparing-flyt", beloeb, dato, pulje}, `${navn} ${beloeb > 0 ? "+" : "−"}${krKort(Math.abs(beloeb))} kr.`);
 function privatMed(anm) {   // vis ændringen med det samme (Oscar 29/10); hentPrivat() henter de rigtige tal bagefter og sætter tilbage ved fejl
+  if (anm.kommando === "humoer") return;   // humør vises ikke i panelet
   const P = ØK.P || {};
   if (anm.kommando === "pulje-ny") (P.puljer = P.puljer || []).push({navn: anm.navn, saldo: 0, maal: anm.maal});
   else if (anm.kommando === "pulje-slet") P.puljer = (P.puljer || []).filter(q => q.navn !== anm.navn);
