@@ -3811,7 +3811,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   // Skat mod forskuddet (Oscar 28/10): B-indkomst og løn sammenlignes også, løn fra privat-data. Ingen reserve for løn
   const bFelt = (sk.felter || []).find(f => f.noegle === "b_indkomst"), bForv = sk.b_forventet ?? ((sk.b_reg || 0) + (sk.b_kommende || 0));
   // højere: altid. Lavere: kun når eIndkomst-tallet er under 30 dage gammelt, og tjek først (revision 29/10)
-  const bAfv = bFelt ? bForv - bFelt.vaerdi : 0, bRet = bFelt && (bAfv > (sk.graense || 5000) || (bAfv < -(sk.graense || 5000) && sk.eindkomst_frisk));
+  const bAfv = bFelt ? bForv - bFelt.vaerdi : 0, bRet = bFelt && (bAfv - (sk.b_indkomst_dk?.r29 || 0) > (sk.graense || 5000) || (bAfv < -(sk.graense || 5000) && sk.eindkomst_frisk));   // fradraget i B-indkomst.dk opvejer mere honorar
   if (bRet) gør.push(trin("y", [h("b", {}, `Ret felt ${bFelt.felt} ${bFelt.navn || "B-indkomst"} fra ${krKort(bFelt.vaerdi)} til ${krKort(Math.round(bForv / 1000) * 1000)} kr.`),
     bAfv < 0 ? ` Tjek først eIndkomst på skat.dk (${krKort(sk.eindkomst.kr)} kr. pr. ${kortDato(sk.eindkomst.dato)}). Sig til Claude, når det er gjort.` : " På skat.dk under forskudsopgørelsen. Sig til Claude, når det er gjort."]));
   const L = P.loen;
@@ -3932,7 +3932,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
             kør("pulje", ["ny", navn, String(m), `--kategori=${n.kat}`], {tekst: `Pulje ${navn}`, efter: ["mo"], med: () => { ØK.ny = null; }}); }, true)] : null,
         knap("Fortryd", () => { ØK.ny = null; tegn(); }))
       : h("button", {class: "btn lille", type: "button", style: "margin-top:8px", onclick: () => { ØK.ny = {}; tegn(); }}, "+ Ny pulje"));
-  const bLinjer = sk.b_linjer || [];
+  const bLinjer = sk.b_linjer || [], bi = sk.b_indkomst_dk;
   const bTekst = "kr. B-indkomst i år" + (sk.eindkomst ? `, eIndkomst pr. ${kortDato(sk.eindkomst.dato)}` : (bLinjer.length ? ` (${bLinjer.length} ${bLinjer.length === 1 ? "klubjob" : "klubjobs"})` : "") + (bt.tjekket_til ? `, tjekket på skat.dk til og med ${mdNavn(bt.tjekket_til)}` : ""));
   // Har jeg råd? (Oscar 30/10, skitse panel-raad-firmakonto): frit at bruge, løn-forslag, én advarsel, Låst og Fremtiden foldet. Tallene regnes i fabz_raad.py
   const RD = mo.raad, rå = RD && !gammeltÅr ? h("div", {},
@@ -4012,9 +4012,20 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
           l(`Løbende udgifter, skøn (${sk.md_tilbage} md.)`, "−" + krKort(sk.udgifter_skoen)),
           l("Forventet overskud", krKort(sk.forventet))),
         sk.uden_pris.length ? h("div", {class: "lille muted", style: "margin-top:6px"}, "Uden pris, ikke regnet med: " + sk.uden_pris.map(x => `${x.navn} ${kortDato(x.dato)}`).join(", ")) : null),
+      bi ? h("div", {class: "sk-detalje"}, h("div", {class: "overskrift", style: "margin:0 0 4px"}, "B-indkomst ",
+          h("span", {class: "pill " + (bi.frisk ? "grøn" : "rød-pill"), style: "text-transform:none;letter-spacing:0"}, `${bi.frisk ? "B-indkomst.dk opdateret" : "Gammel: B-indkomst.dk"} ${kortDato(bi.hentet.slice(0, 10))}`)),
+        h("div", {class: "liste"},
+          l("Honorarer i B-indkomst.dk (rubrik 12)", krKort(bi.r12)),
+          sk.eindkomst ? l(`Heraf indberettet af hvervgiverne (eIndkomst ${kortDato(sk.eindkomst.dato)})`, krKort(sk.eindkomst.kr)) : null,
+          bi.ikke_indberettet ? l("Ikke indberettet: skrives i rubrik 15 på årsopgørelsen", h("span", {style: "color:var(--fejl)"}, krKort(bi.ikke_indberettet))) : null,
+          l("Kommende klubjobs resten af året", "+" + krKort(sk.b_kommende || 0)),
+          bFelt ? l(`Felt ${bFelt.felt} (forskudsopgørelsen)`, krKort(bFelt.vaerdi)) : null,
+          l("Fradrag i B-indkomst.dk: kørsel m.m. (rubrik 29)", h("span", {style: "color:var(--ok)"}, krKort(bi.r29))))) : null,
       h("div", {class: "sk-detalje"}, h("div", {class: "overskrift", style: "margin:0 0 4px"}, "Skat-puljen"),
         h("div", {class: "liste"},
           l("B-skat-rater, der ikke er betalt", krKort(sk.rater_ubetalt || 0)),
+          bi ? l("Restskat før fradrag", krKort(bi.restskat_foer)) : null,
+          bi ? l(`Fradraget sparer (${bi.traekprocent} % af ${krKort(bi.r29)})`, h("span", {style: "color:var(--ok)"}, "−" + krKort(bi.fradrag_vaerdi))) : null,
           l("Restskat, hvis året ender som forventet", krKort(sk.restskat || 0), `${String(sk.reserve_pct).replace(".", ",")} % af det, der ligger over felt 221 og ${bFelt ? "felt " + bFelt.felt : "B-indkomsten"}`),
           sk.b_skat_betalt ? l("B-skat betalt i år", krKort(sk.b_skat_betalt)) : null,
           l("Skal stå i puljen", sk.reserve == null ? "?" : krKort(sk.reserve))))),
