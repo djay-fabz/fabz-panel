@@ -3811,8 +3811,9 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   // Skat mod forskuddet (Oscar 28/10): B-indkomst og løn sammenlignes også, løn fra privat-data. Ingen reserve for løn
   const bFelt = (sk.felter || []).find(f => f.noegle === "b_indkomst"), bForv = sk.b_forventet ?? ((sk.b_reg || 0) + (sk.b_kommende || 0));
   // højere: altid. Lavere: kun når eIndkomst-tallet er under 30 dage gammelt, og tjek først (revision 29/10)
-  const bAfv = bFelt ? bForv - bFelt.vaerdi : 0, bRet = bFelt && (bAfv - (sk.b_indkomst_dk?.r29 || 0) > (sk.graense || 5000) || (bAfv < -(sk.graense || 5000) && sk.eindkomst_frisk));   // fradraget i B-indkomst.dk opvejer mere honorar
-  if (bRet) gør.push(trin("y", [h("b", {}, `Ret felt ${bFelt.felt} ${bFelt.navn || "B-indkomst"} fra ${krKort(bFelt.vaerdi)} til ${krKort(Math.round(bForv / 1000) * 1000)} kr.`),
+  const bAfv = bFelt ? bForv - bFelt.vaerdi : 0, bRet = bFelt && sk.b_ret;   // fabz_skat afgør det: skat af mere honorar minus fradraget, kun mens der er rater tilbage
+  if (bRet) gør.push(trin("y", [h("b", {}, `Ret felt ${bFelt.felt} ${bFelt.navn || "B-indkomst"} fra ${krKort(bFelt.vaerdi)} til ${krKort(bRet.til)} kr.`
+      + (bRet.fradrag ? ` og skriv fradraget ${krKort(bRet.fradrag)} kr. ind (Andre felter → Fradrag).` : "")),
     bAfv < 0 ? ` Tjek først eIndkomst på skat.dk (${krKort(sk.eindkomst.kr)} kr. pr. ${kortDato(sk.eindkomst.dato)}). Sig til Claude, når det er gjort.` : " På skat.dk under forskudsopgørelsen. Sig til Claude, når det er gjort."]));
   const L = P.loen;
   if (L && L.forskud != null && L.forventet_aar != null && Math.abs(L.forventet_aar - L.forskud) > (sk.graense || 5000)) gør.push(trin("y",
