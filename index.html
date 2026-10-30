@@ -2234,6 +2234,10 @@ const BRUGT_KEY = dato => "fabz-brugt-" + dato;
 const senere = (o, ref = iDag()) => !!o.ikke_foer && o.ikke_foer > ref;
 const fraMærke = o => o.ikke_foer && o.ikke_foer > iDag() ? h("span", {class: "fra-mærke"}, "Fra " + kortDato(o.ikke_foer)) : null;
 const fraFejl = o => o.ikke_foer && o.deadline && o.ikke_foer > o.deadline;
+// Planens punkt for den faste salgsopgave: streget ud, når opgaven er lukket (6 kontakter logget), rødt efter kl. 12, mens den er åben
+const planOpg = p => p.id != null ? D.opgaver.find(x => x.id === p.id) : null;
+const salgKlaret = p => { const o = planOpg(p); return !!o && o.job_opgave === "salg" && o.status === "Færdig"; };
+const salgRød = p => { const o = planOpg(p); return !!o && o.job_opgave === "salg" && o.status !== "Færdig" && new Date().getHours() >= 12; };
 function visIDag() {
   const idag = iDag(), d = dag(idag);
   const dp = (D.dagsplaner || []).find(x => x.dato === idag);
@@ -2241,7 +2245,7 @@ function visIDag() {
     .sort((a, b) => (a.heldag ? 0 : 1) - (b.heldag ? 0 : 1) || a.start.localeCompare(b.start));
   const grænse = plusDage(idag, 7);
   const åbne = D.opgaver.filter(o => !["Færdig", "Venter"].includes(o.status));
-  const sorteret = åbne.filter(o => o.deadline && o.deadline <= grænse).sort((a, b) => a.deadline.localeCompare(b.deadline));
+  const sorteret = åbne.filter(o => o.deadline && o.deadline <= grænse).sort((a, b) => salgFørst(a, b) || a.deadline.localeCompare(b.deadline));
   const forsinket = sorteret.filter(o => o.deadline < idag), dl = sorteret.filter(o => o.deadline >= idag);
   const dagensJobs = jobs().filter(j => j.dato === idag);
   const henv = (D.henvendelser || []).filter(x => ["Ny", "Tilbud sendt"].includes(x.status));
@@ -2270,13 +2274,13 @@ function visIDag() {
       ...[["foer_frokost", dp.plan_punkter.some(p => p.halvdel === "efter_frokost") ? "Før frokost" : "Arbejdstid"], ["efter_frokost", "Efter frokost"], ["hvis_tid", "Hvis der er tid"]].map(([hv, navn]) => {
         const ps = dp.plan_punkter.filter(p => p.halvdel === hv);
         return ps.length ? h("div", {class: "lg"}, h("div", {class: "overskrift"}, navn), ps.map(p =>
-          h("label", {class: "cb" + (nået.includes(p.nr) ? " gjort" : "")},
+          h("label", {class: "cb" + (nået.includes(p.nr) || salgKlaret(p) ? " gjort" : "")},
             h("input", {type: "checkbox", checked: nået.includes(p.nr), disabled: fulgtOp, onchange: e => {
               nået = e.target.checked ? [...new Set([...nået, p.nr])] : nået.filter(n => n !== p.nr);
               lager.set(NÅET_KEY(idag), JSON.stringify(nået));
               e.target.closest(".cb").classList.toggle("gjort", e.target.checked);
             }}),
-            h("span", {class: "t"}, p.overskredet ? h("span", {class: "rød"}, "! ") : null, p.tekst),
+            h("span", {class: "t" + (salgRød(p) ? " rød" : "")}, p.overskredet ? h("span", {class: "rød"}, "! ") : null, p.tekst),
             p.min ? h("span", {class: "muted lille"}, p.min + " min") : null,
             fulgtOp ? (p.brugt != null ? h("span", {class: "muted lille"}, "brugt " + p.brugt + " min") : null)
               : h("input", {class: "input", type: "number", min: "0", max: "720", placeholder: "brugt, min", style: "width:92px;padding:4px 8px;margin-left:8px", value: brugt[p.nr] ?? "",
@@ -2445,7 +2449,7 @@ function opgaveFiltre(o) {
 function visOpgaver() {
   const idag = iDag();
   const liste = D.opgaver.filter(opgaveFiltre).sort((a, b) => OP.filter === "Færdige"
-    ? (b.faerdig_dato || "").localeCompare(a.faerdig_dato || "") : (a.deadline || "9999").localeCompare(b.deadline || "9999") || a.id - b.id);
+    ? (b.faerdig_dato || "").localeCompare(a.faerdig_dato || "") : salgFørst(a, b) || (a.deadline || "9999").localeCompare(b.deadline || "9999") || a.id - b.id);
   const venstre = h("div", {class: "liste-kol"},
     h("div", {class: "kh"}, h("h1", {}, "Opgaver"), h("div", {class: "spacer"}),
       h("button", {class: "btn", type: "button", onclick: () => { OP.vis = "plan"; tegn(); }}, "Planlæg dag"),
@@ -2563,7 +2567,10 @@ const PRIO = ["Høj", "Mellem", "Lav"];
 // Farver på frist og prioritet (Oscar 28/10): overskredet = rød frist, i dag = gul frist. Høj prioritet med frist i dag eller overskredet:
 // både frist og prioritet røde (to røde). Kun den kombination; ellers har prioriteten sin normale farve. Ingen blink.
 const dlKlasse = (o, dato = iDag()) => !o.deadline || o.status === "Færdig" ? "" : o.deadline < dato ? "rød" : o.deadline === dato || (o.gul_fra && dato >= o.gul_fra) ? "gul-t" : "";   // gul_fra: gul før fristen (formøde, Oscar 29/10)
-const prioKlasse = (o, dato = iDag()) => o.prioritet === "Høj" && o.deadline && o.deadline <= dato && o.status !== "Færdig" ? "rød fed" : "";
+// Den faste salgsopgave (job_opgave "salg", Oscar 30/10) bliver først rød efter kl. 12 den dag; før er fristen gul som andre med frist i dag
+const salgFørKl12 = (o, dato) => o.job_opgave === "salg" && o.deadline === dato && dato === iDag() && new Date().getHours() < 12;
+const prioKlasse = (o, dato = iDag()) => o.prioritet === "Høj" && o.deadline && o.deadline <= dato && o.status !== "Færdig" && !salgFørKl12(o, dato) ? "rød fed" : "";
+const salgFørst = (a, b) => (a.job_opgave === "salg" ? 0 : 1) - (b.job_opgave === "salg" ? 0 : 1);   // salgsopgaven øverst på I dag og i Opgaver
 const KATEGORI_O = ["Internet opgave", "Ingen internet", "Deep work / ingen AI", "Møde online", "Møde fysisk"];
 function planTilføj(o, hv) {   // lægger en opgave ind i den åbne plan (klik eller træk fra opgavelisten)
   if (senere(o, OP.planDato)) { alert(`Kan først løses fra ${kortDato(o.ikke_foer)}.`); return false; }
@@ -4244,7 +4251,7 @@ const MO_FARVE = {groen: "g", gul: "y", roed: "rd", graa: "gr"};   // rd/gr, for
 const MO_TEKST = {groen: "grøn", gul: "gul", roed: "rød", graa: "tom"};
 const krKort = v => Math.round(Number(v) || 0).toLocaleString("da-DK");
 function salgMaal() {
-  return {kontakter_uge: 9, samtaler_uge: 2, tilbud_md: 2, kontakter_dag: 3, rutinedage: ["Ti", "On", "To"], ...((D.strategi || {}).salgsmaal || {})};
+  return {kontakter_uge: 18, samtaler_uge: 4, tilbud_md: 4, kontakter_dag: 6, opkald_dag: 2, beskeder_dag: 4, rutinedage: ["Ti", "On", "To"], ...((D.strategi || {}).salgsmaal || {})};   // Oscar 30/10: 6 pr. dag ti-to (før 3)
 }
 const moMaaneder = () => (D.mo && Array.isArray(D.mo.maaneder)) ? D.mo.maaneder : [];
 function salgTop() {
