@@ -421,7 +421,11 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .fs-tb{width:100%;border-collapse:collapse;font-size:14px}.fs-tb th{font-size:12px;color:var(--svag);font-weight:600;text-align:right;padding:6px 16px;border-top:1px solid var(--linje)}
 .fs-tb td{padding:9px 16px;border-top:1px solid var(--linje);text-align:right;white-space:nowrap}.fs-tb th:first-child,.fs-tb td:first-child{text-align:left;white-space:normal}
 .fs-tb td .f{display:block;color:var(--svag);font-size:12px}.fs-tb tr.ret{background:var(--fejl-blid)}.fs-tb td.ny{font-weight:800;color:var(--fejl)}.fs-tb td.ok{color:var(--ok);font-weight:700}
-.fs-fod{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 16px;border-top:1px solid var(--linje);font-size:13px;color:var(--svag)}.fs-fod b{color:var(--tekst)}
+.fs-fod{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 16px;border-top:1px solid var(--linje);font-size:13px;color:var(--svag)}.fs-fod b{color:var(--tekst)}
+.fs-tb input{width:100px;height:32px;border:1px solid #cbd2dc;border-radius:8px;background:var(--flade);color:var(--tekst);text-align:right;padding:5px 8px;font:inherit}.fs-tb input.fejl{border-color:var(--fejl);background:var(--fejl-blid)}
+.fs-svar{margin:0 16px 12px;padding:10px 12px;border-radius:10px;font-size:13.5px;border-left:5px solid #d97706;background:var(--adv-blid)}.fs-svar.g{border-color:var(--ok);background:var(--ok-blid)}.fs-svar.rd{border-color:var(--fejl);background:var(--fejl-blid)}.fs-svar b{display:block;margin-bottom:2px}.fs-svar ol{margin:4px 0 0;padding-left:20px}
+.fs-knap{display:flex;gap:8px;margin-left:auto}
+@media (max-width:700px){.fs-tb td,.fs-tb th{padding:8px 10px}.fs-tb input{width:86px}}
 @media (max-width:600px){.fs-tb td,.fs-tb th{padding:8px 10px}.fs-tb td .f{display:none}}
 .sk-detalje{margin-top:14px;padding:12px 14px;background:var(--bg);border-radius:12px}.sk-detalje .liste .l{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--linje)}.sk-detalje .liste .l:first-child{border-top:0}
 @media (max-width:900px){.sk-k4{grid-template-columns:1fr 1fr}.sk-k3{grid-template-columns:1fr 1fr}.sk-k2{grid-template-columns:1fr 1fr}.sk-md{flex-direction:column;text-align:center}.sk-md .r1{justify-content:center}.sk-graf{height:160px}.sk-soejler{gap:3px}.sk-soejler em{font-size:9px}}
@@ -3690,7 +3694,7 @@ function visPakker() {
     o.grupper.map(trinKort)));
 }
 // ---------- Skat (Oscar 28/10): egen side under Mere. Grøn = i orden, gul = gør noget snart, rød = gør det nu. Tallene regnes af fabz.py (fabz_skat.py) i maanedsoversigt.json ----------
-const SKT = {saldo: "", felt: "", rate: ""};
+const SKT = {saldo: "", felt: "", rate: "", form: null, svar: null};
 function skatTjek(sk) {   // de fire punkter med farve og evt. handling, samme rækkefølge som felterne
   const dageTil = sk.rate ? Math.round((dag(sk.rate.frist) - dag(iDag())) / 864e5) : null;
   const rate = !sk.rate ? {f: "g", tal: "Betalt", tekst: `B-skat ${sk.aar}: alle rater er betalt`}
@@ -3832,16 +3836,40 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   const PRIV = {201: "Lønindkomst, fri telefon og fri bil mv.", 210: "Honorarer, indkomst fra privat dagpleje og værdien af nogle personalegoder",
     221: "Overskud af virksomhed/udlejningsejendom", 425: "Andre fradrag i personlig indkomst"};
   const skatTekst = n => n ? `ca. ${krKort(Math.abs(n))} kr. ${n > 0 ? "mere" : "mindre"} i skat` : "samme skat";
+  // ✓ Rettet på skat.dk (Oscar 30/10): Oscar skriver det, skat.dk viser, og fabz_skat.forskud_tjek regner efter, før det gemmes
+  const lønR = fsRækker.find(f => f.felt === 201), FF = SKT.form;
+  const fsÅbn = () => {
+    SKT.form = {v: {...Object.fromEntries(fsRækker.map(f => [f.felt, String(f.skal)])), rate: ""}, svar: null}; SKT.svar = null; tegn();
+    setTimeout(() => document.querySelector(".fs-kort")?.scrollIntoView({block: "start", behavior: "smooth"}), 50);
+  };
+  const fsGem = async tving => {
+    const F = SKT.form, v = F.v, s = x => String(x ?? "").trim();
+    const args = [210, 221, 425].filter(k => s(v[k])).map(k => `--f${k}=${s(v[k])}`);
+    if (lønR && s(v[201])) args.push(`--f201=${s(v[201])}`, `--loen201=${lønR.skal}`);
+    if (s(v.rate)) args.push(`--rate=${s(v.rate)}`);
+    if (tving) args.push("--tving");
+    F.arbejder = true; F.svar = null; tegn();
+    try {
+      const sv = await kørOgVent("skat-forskud-opdateret", args);
+      if (!sv) F.svar = {fejl: "Intet svar efter 4 minutter. Prøv igen om lidt."};
+      else if (sv.status === "FEJL") F.svar = {fejl: sv.fejl};
+      else if (sv.data && sv.data.gemt) {
+        const n = x => Math.round(Number(s(x).replace(/\./g, "").replace(",", ".")));
+        const linjer = {...Object.fromEntries([210, 221, 425].map(k => [PRIV[k], sv.data.felter[k]])), ...(lønR ? {[PRIV[201]]: s(v[201]) ? n(v[201]) : lønR.skal} : {})};
+        privatSend({kommando: "forskud-linjer", linjer}, "Forskud gemt i privat-data");
+        SKT.form = null; SKT.svar = sv.data;
+        await genindlæs(["mo"]).catch(() => {});
+      } else F.svar = sv.data || {fejl: "Svaret manglede tjekket."};
+    } catch (e) { F.svar = {fejl: e.message}; }
+    F.arbejder = false; opfrisk();
+  };
+  const fsSvar = sv => !sv ? null : sv.fejl ? h("div", {class: "fs-svar rd"}, h("b", {}, "Intet er gemt:"), sv.fejl)
+    : sv.ok ? h("div", {class: "fs-svar g"}, h("b", {}, "✓ Det passer med panelets regnestykke."), "Det, du skrev, er gemt. " + sv.foraar_tekst)
+    : h("div", {class: "fs-svar"}, h("b", {}, sv.gemt ? "Gemt alligevel. Panelet regnede med noget andet:" : "Tjek før du gemmer:"),
+        h("ol", {}, sv.punkter.map(p => h("li", {}, p))), sv.foraar_tekst);
   if (!gammeltÅr && (FS.opdater || lønRet)) gør.push(trin("y", [h("b", {}, "Opdater forskudsopgørelsen på skat.dk:"),
-      ` ${fsRet.length} ${fsRet.length === 1 ? "felt er rødt" : "felter er røde"} nedenfor (${skatTekst(FS.netto)}).` + (sk.rate ? ` Ny rate ${kortDato(sk.rate.frist)} fra skat.dk:` : "")],
-    h("span", {class: "skat-input"},
-      sk.rate ? h("input", {type: "number", inputmode: "numeric", placeholder: "kr.", value: SKT.rate || "", oninput: e => { SKT.rate = e.target.value; }}) : null,
-      knap("✓ Opdateret", () => {
-        const r = SKT.rate !== undefined && SKT.rate !== "" ? String(Math.round(Number(SKT.rate))) : null;
-        if (sk.rate && r === null && !confirm("Uden ny rate bliver raten stående. Gem alligevel?")) return;
-        kør("skat-forskud-opdateret", r !== null ? [`--rate=${r}`] : [], {tekst: "Forskudsopgørelsen opdateret", efter: ["mo"], med: () => { SKT.rate = ""; }});
-        privatSend({kommando: "forskud-linjer", linjer: Object.fromEntries(fsRækker.filter(f => PRIV[f.felt]).map(f => [PRIV[f.felt], f.skal]))}, "Forskud gemt i privat-data");
-      }, true))));
+      ` ${fsRet.length} ${fsRet.length === 1 ? "felt er rødt" : "felter er røde"} nedenfor (${skatTekst(FS.netto)}).`],
+    knap("✓ Rettet på skat.dk", () => fsÅbn(), true)));
   if (sk.rate && t.dageTil <= 10) gør.push(trin(t.rate.f,
     [h("b", {}, `Betal B-skat ${krKort(sk.rate.beloeb)} kr. ${t.dageTil < 0 ? "nu, fristen var" : "senest"} ${kortDato(sk.rate.frist)}.`), " På skat.dk: TastSelv → Betal skat. Betal fra Skat-puljen."],
     knap("✓ Jeg har betalt", () => kør("skat-betalt", [String(sk.rate.rate)], {tekst: `B-skat rate ${sk.rate.rate} betalt`, efter: ["mo", "opgaver"]}))));
@@ -4027,14 +4055,28 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
         tekst: sk.skylder_mere ? `kr. forventet overskud, felt 221 er for lavt (${krKort(sk.felt_221)})` : sk.advarsel ? `kr. forventet overskud, felt 221 er ${krKort(sk.felt_221)}` : "kr. forventet overskud, felt 221 passer"}),
       felt(t.rate),
       felt({f: bUkendt.length ? "y" : "g", tal: krKort(sk.b_til_dato ?? sk.b_reg), tekst: bTekst})),
-    gammeltÅr || !fsRækker.length ? null : h("div", {class: "fs-kort"},
+    gammeltÅr || !fsRækker.length ? null : FF ? h("div", {class: "fs-kort"},
+      h("div", {class: "fs-kh"}, `Forskudsopgørelse ${sk.aar}`, " ", h("span", {class: "pill gul"}, FF.svar && !FF.svar.fejl ? `Tjek ${FF.svar.punkter.length} ting` : "Skriv det, skat.dk viser")),
+      fsSvar(FF.svar),
+      h("table", {class: "fs-tb"}, h("tr", {}, h("th", {}, "Felt"), h("th", {}, "Panelet regner med"), h("th", {}, "Står på skat.dk")),
+        [...fsRækker.map(f => [f.felt, `${f.felt} ${f.navn}`, krKort(f.skal)]), ...(sk.rate || FS.rater_tilbage ? [["rate", h("span", {}, h("b", {}, "Nyt skattekort:"), " Ratebeløb B-skat"), FF.svar && FF.svar.forventet_rate != null ? `ca. ${krKort(FF.svar.forventet_rate)}` : "–"]] : [])]
+          .map(([k, navn, panel]) => h("tr", {}, h("td", {}, navn), h("td", {}, panel),
+            h("td", {}, h("input", {type: "text", inputmode: "numeric", autocomplete: "off", placeholder: "kr.", "data-fs": k, value: FF.v[k] ?? "",
+              class: FF.svar && (FF.svar.fejl_felter || []).includes(k) ? "fejl" : "", oninput: e => { FF.v[k] = e.target.value; }}))))),
+      h("div", {class: "fs-fod"}, h("span", {}, "Felterne er udfyldt med panelets tal. Ret kun det, der står anderledes."),
+        h("span", {class: "fs-knap"}, knap("Luk", () => { SKT.form = null; tegn(); }),
+          FF.svar && !FF.svar.fejl && !FF.svar.ok && !FF.arbejder ? knap("Gem alligevel", () => fsGem(true)) : null,
+          h("button", {class: "btn lille primaer", type: "button", disabled: !!FF.arbejder, onclick: () => fsGem(false)}, FF.arbejder ? "Tjekker … ca. 30 sek." : "Gem og tjek"))))
+    : h("div", {class: "fs-kort"},
       h("div", {class: "fs-kh"}, `Forskudsopgørelse ${sk.aar}`, " ", h("span", {class: "pill " + (fsRet.length ? (FS.opdater || lønRet ? "gul" : "") : "grøn")},
         fsRet.length ? `${fsRet.length} ${fsRet.length === 1 ? "felt afviger" : "felter afviger"}` : "Passer")),
+      fsSvar(SKT.svar),
       h("table", {class: "fs-tb"}, h("tr", {}, h("th", {}, "Felt"), h("th", {}, "På skat.dk nu"), h("th", {}, "Skal stå")),
         fsRækker.map(f => h("tr", {class: f.ret ? "ret" : ""}, h("td", {}, f.navn, h("span", {class: "f"}, `felt ${f.felt} · ${f.hvorfor}`)),
           h("td", {}, krKort(f.nu)), h("td", {class: f.ret ? "ny" : "ok"}, f.ret ? krKort(f.skal) : `${krKort(f.skal)} ✓`)))),
       h("div", {class: "fs-fod"}, h("span", {}, "Samlet: ", h("b", {}, skatTekst(FS.netto)), FS.rater_tilbage === false ? " (ingen rater tilbage, det går op på årsopgørelsen)" : " end forskuddet nu"),
-        h("span", {}, "Sidst opdateret ", h("b", {}, FS.opdateret ? kortDato(FS.opdateret) : "aldrig")))),
+        h("span", {}, "Sidst opdateret ", h("b", {}, FS.opdateret ? kortDato(FS.opdateret) : "aldrig")),
+        h("span", {class: "fs-knap"}, knap("✓ Rettet på skat.dk", () => fsÅbn())))),
     h("div", {class: "overskrift", style: "margin-top:16px"}, "Fold ud for detaljer"),
     fold("Fakturaer og depositum", pengeListe()),
     gammeltÅr ? null : fold("Skat: tallene bag",
