@@ -3687,7 +3687,8 @@ function skatTjek(sk) {   // de fire punkter med farve og evt. handling, samme r
     felt: {f: sk.advarsel ? "y" : "g", tal: krKort(sk.forventet), tekst: `kr. forventet overskud, felt 221 er ${krKort(sk.felt_221)}`},
     skyld: {f: sk.skylder_mere ? "rd" : "g", tal: krKort(sk.skylder_mere), tekst: sk.skylder_mere ? "kr. på vej til at skylde ud over forskuddet" : "kr. at skylde, forskuddet passer"}};
 }
-const ØK = {åbne: new Set(), guide: null, alle: false, P: undefined, flyt: {}, ny: null, reg: null, csv: null};   // Økonomi og Skat (skitse 3c): guide-side, alle bjælker, privat-data, formularer
+const KISTE_FRA = "2026-10-29";   // kontante jobs fra denne dag skal i kisten (før: tastet ind i hånden)
+const ØK = {kiste: {}, åbne: new Set(), guide: null, alle: false, P: undefined, flyt: {}, ny: null, reg: null, csv: null};   // Økonomi og Skat (skitse 3c): guide-side, alle bjælker, privat-data, formularer
 async function hentPrivat() {   // Lønkonto+ og Opsparing fra privat-data/data/panel.json (Oscar 28/10, valg A). Kun læsning
   ØK.P = null;
   try {
@@ -3784,6 +3785,22 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     knap("✓ Sat ind", () => privatFlyt(husMangler, iDag(), "Husleje d. 1", "husleje_d1"))));
   (P0.delpuljer?.linjer || []).filter(x => x.saldo < 0).forEach(x => gør.push(trin("rd", [h("b", {}, `${x.navn} mangler ${krKort(-x.saldo)} kr.`), " Tag dem fra Buffer i Saxo."],
     knap("Tag fra Buffer", () => privatSend({kommando: "fra-buffer", navn: x.navn, kr: -x.saldo}, `${x.navn} +${krKort(-x.saldo)} kr. fra Buffer`)))));
+  // kontante jobs (Oscar 30/10): efter jobbet "Godkend: X kr. ligger i kontantkisten" -> betalingen godkendes i fabz-data, og kisten i privat-data får beløbet
+  (D.betalinger || []).filter(r => r.maade === "kontant" && !["faerdig", "aflyst"].includes(r.status) && r.dato < iDag() && r.dato >= KISTE_FRA).forEach(r => {
+    const st = (ØK.kiste[r.job_noegle] = ØK.kiste[r.job_noegle] || {beloeb: r.beloeb ?? ""});
+    gør.push(trin("y", [h("b", {}, `Godkend: ${krKort(Number(st.beloeb) || 0)} kr. fra ${r.navn} ${kortDato(r.dato)} ligger i kontantkisten.`)],
+      h("span", {class: "pk"}, inp(st, "beloeb", {type: "number", inputmode: "numeric", style: "width:100px"}),
+        knap("✓ Godkend", async () => {
+          const b = Math.round(Number(st.beloeb)); if (!(b > 0)) return alert("Skriv beløbet");
+          const job = [`--job=${r.navn}`, `--dato=${r.dato}`];
+          if (b !== Number(r.beloeb) || r.kilde === "gaet") { const sv = await kørOgVent("betaling-saet", [...job, "--maade=kontant", `--beloeb=${b}`]); if (!sv || sv.status === "FEJL") return sendFejl("Kontant " + r.navn, new Error(sv?.fejl || "intet svar")); }
+          const før = r.status; r.status = "faerdig"; tegn();   // væk med det samme; kisten får beløbet først, når godkendelsen er gemt
+          const sv = await kørOgVent("betaling-godkend", [...job, "--tving"]);
+          if (!sv || sv.status === "FEJL") { r.status = før; tegn(); return sendFejl("Kontant " + r.navn, new Error(sv?.fejl || "intet svar")); }
+          if (P0.kontanter) privatFlyt(b, iDag(), "Kontanter", "kontanter");
+          await genindlæs(["betalinger", "opgaver", "indtaegter"]).catch(() => {}); opfrisk();
+        }, true))));
+  });
   ub.liste.filter(u => u.dage_over > 0).forEach(u => gør.push(trin(u.dage_over > 14 ? "rd" : "y",
     [h("b", {}, `Send rykker til ${u.kunde}`), ` for faktura ${u.nr}, ${krKort(u.kr)} kr. Den er ${u.dage_over} dage over forfald. Dinero → Salg → Fakturaer → Send påmindelse.`])));
   (mo.depositum || []).filter(j => j.status === "mangler").forEach(j => gør.push(trin("y",
