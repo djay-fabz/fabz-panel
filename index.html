@@ -4016,7 +4016,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   const bTekst = "kr. B-indkomst i år" + (sk.eindkomst ? `, eIndkomst pr. ${kortDato(sk.eindkomst.dato)}` : (bLinjer.length ? ` (${bLinjer.length} ${bLinjer.length === 1 ? "klubjob" : "klubjobs"})` : "") + (bt.tjekket_til ? `, tjekket på skat.dk til og med ${mdNavn(bt.tjekket_til)}` : ""));
   // Har jeg råd? (Oscar 30/10, skitse panel-raad-firmakonto): frit at bruge, løn-forslag, én advarsel, Låst og Fremtiden foldet. Tallene regnes i fabz_raad.py
   const RD = mo.raad, LV = leveAfDj(), i0 = (mo.maaneder || []).findIndex(x => x.nu);
-  const lvMdr = LV && i0 >= 0 ? mo.maaneder.slice(i0 + 1, i0 + 7).map(x => ({navn: x.navn, kr: x.kr, klub: x.jobs.filter(j => j.b_indkomst && j.talt).reduce((t, j) => t + (j.kr || 0), 0)})) : [];
+  const lvMdr = LV && i0 >= 0 ? mo.maaneder.slice(i0 + 1, i0 + 7).map(x => ({navn: x.navn, kr: x.kr})) : [];
   const rå = RD && !gammeltÅr ? h("div", {},
     h("div", {class: "rd-top"},
       h("div", {class: "t"}, "Frit at bruge på firmakontoen ", kilde("kontoudtog", RD.saldo_dato), kilde("Dinero", RD.kilder.moms)),
@@ -4029,7 +4029,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
         h("div", {class: "t"}, "For at leve af DJ skal du tjene ", kilde("Dinero", LV.F.dato), kilde("privat-data", LV.L.dato), kilde("forskud", LV.L.dato)),
         h("div", {class: "v2"}, `${krKort(LV.kr)} kr./md. `, h("span", {class: "muted", style: "font-size:15px;font-weight:600"}, "ekskl. moms")),
         h("div", {class: "rd-mdr"}, lvMdr.map(x => h("div", {class: "rd-md" + (x.kr >= LV.kr ? " g" : "")}, x.navn, h("b", {}, krKort(x.kr)),
-          x.kr >= LV.kr ? "✓" : `mangler ${krKort(LV.kr - x.kr)}`, x.klub ? h("div", {}, `heraf klub ${krKort(x.klub)}`) : null)))) : null),
+          x.kr >= LV.kr ? "✓" : `mangler ${krKort(LV.kr - x.kr)}`)))) : null),
     RD.advarsel ? h("div", {class: "bj rd", style: "margin-top:8px"}, h("span", {class: "bj-t"}, h("b", {}, RD.advarsel.tekst),
       RD.uden_jobs.length ? ` Ingen jobs booket i ${RD.uden_jobs.map(x => x.toLowerCase()).join(", ")}.` : "", RD.uden_pris ? ` ${RD.uden_pris} ${RD.uden_pris === 1 ? "job" : "jobs"} uden pris.` : "")) : null,
     LV ? h("details", rdFold("leve"), h("summary", {}, "For at leve af DJ, det består af", h("span", {class: "v"}, `${krKort(LV.kr)} kr.`)),
