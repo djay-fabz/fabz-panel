@@ -3512,9 +3512,12 @@ function visRute() {
       koerelisteKnap(true),
       h("div", {class: "chips"},
         h("span", {class: "pill blå"}, d.koeretoej === "trailer" ? "Trailer, højst 80 km/t" : "Bil"),
-        h("span", {class: "pill"}, `${km1(d.km)} km`), h("span", {class: "pill"}, `${d.min} min køretid`)),
+        h("span", {class: "pill"}, `${km1(d.km)} km`), h("span", {class: "pill"}, `${d.min} min køretid`),
+        d.kilde === "osrm" ? h("span", {class: "pill gul rute-reserve"}, "Google Maps fejlede") : h("span", {class: "pill grøn"}, "Beregnet")),
+      d.kilde === "osrm" ? h("div", {class: "svar adv rute-reserve", style: "margin-top:10px"}, h("b", {}, "Google Maps fejlede"),
+        h("div", {}, "Køretiden er regnet uden trafik. Tjek den selv.")) : null,
       d.elementer.map(ruteKort),
-      h("div", {class: "muted lille", style: "margin-top:10px"}, "Uden trafik, færger og vejarbejde. Adresserne er fundet som: " + d.elementer.filter(e => e.slags === "stop").map(e => `${e.nr}. ${e.fundet}`).join(" · "))) : null));
+      h("div", {class: "muted lille", style: "margin-top:10px"}, (d.kilde === "osrm" ? "Uden trafik, færger og vejarbejde. " : "Med trafik ved afgangstiden. ") + "Adresserne er fundet som: " + d.elementer.filter(e => e.slags === "stop").map(e => `${e.nr}. ${e.fundet}`).join(" · "))) : null));
 }
 
 // ---------- Salg ----------
