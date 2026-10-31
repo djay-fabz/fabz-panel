@@ -344,7 +344,7 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 /* salg: statuskort (uge, måned, vejen) */
 .sk-top{display:grid;gap:14px}
 .fold-frem{display:flex;align-items:center;gap:12px;flex-wrap:wrap;width:100%;text-align:left;cursor:pointer;border:0;font:inherit;color:inherit}.fold-frem:hover{background:var(--hover)}.fold-luk{border:0;background:none;padding:0;cursor:pointer;font-family:inherit;text-align:left}
-.nedtonet{opacity:.55}.salg-del{margin-top:6px}.kompakt{margin-top:10px;background:var(--flade);border:1px solid var(--linje);border-radius:12px;max-height:62vh;overflow:auto}
+.nedtonet{opacity:.55}.opk-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.opk-k{padding:13px 8px;border-radius:12px;border:1px solid var(--linje);background:var(--flade2);font-weight:500}.opk-k.valgt{background:var(--accent-blid);border-color:var(--accent);color:var(--accent)}.opk-c{padding:8px 13px}.opk-gem{width:100%;margin-top:12px;padding:13px;font-size:16px}.kform{display:flex}.kform button{flex:1}.tragt{display:grid;gap:6px;margin-top:10px}.tr{display:flex;align-items:center;gap:10px}.tr-lab{width:120px;flex:none;color:var(--svag);font-size:12.5px}.tr .muted{white-space:nowrap}.tr-bar{background:var(--linje);border-radius:7px;padding:4px 8px;font-weight:600;font-size:13px;min-width:28px}.tr-bar.g{background:var(--ok-blid);color:var(--ok)}.salg-del{margin-top:6px}.tal-md{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px}.tal-md td,.tal-md th{padding:6px;border-top:1px solid var(--linje);text-align:right}.tal-md th{color:var(--svagere);font-weight:600;font-size:11px;text-transform:uppercase}.tal-md td:first-child,.tal-md th:first-child{text-align:left}.kompakt{margin-top:10px;background:var(--flade);border:1px solid var(--linje);border-radius:12px;max-height:62vh;overflow:auto}
 .kompakt-r{display:flex;gap:10px;align-items:baseline;width:100%;text-align:left;border:0;border-top:1px solid var(--linje);background:none;padding:8px 12px;font-size:13.5px}.kompakt-r:first-child{border-top:0}.kompakt-r:hover,.kompakt-r.valgt{background:var(--hover)}
 .kompakt-r .ap-dot{align-self:center}.k-navn{font-weight:600;white-space:nowrap}.k-vej{color:var(--svag);white-space:nowrap}.k-naeste{color:var(--svag);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media (max-width:700px){.kompakt-r{flex-wrap:wrap;row-gap:0}.k-naeste{flex-basis:100%;padding-left:20px}}
@@ -583,7 +583,9 @@ async function hentData() {
   D.strategi = st ? await st.json() : {};
   const jr = await laesFil("data/jobrute.json");
   D.jobrute = jr ? await jr.json() : {};
-  D.jobtider = await laesValgfri("data/jobtider.json");   // spilletid gemt på jobbet (fabz.py spilletid)
+  D.jobtider = await laesValgfri("data/jobtider.json");
+  D.salgjobs = await laesValgfri("data/salgjobs.json");   // hvilket firma i Salg et job kom fra (fabz.py salg-job)
+  D.salgslaering = await laesValgfri("data/salgslaering.json");   // forslag fra opkaldene (Tal på Salg)   // spilletid gemt på jobbet (fabz.py spilletid)
   const su = await laesFil("data/setups.json");
   D.setups = su ? await su.json() : {grupper: [], setups: []};
   const mo = await laesFil("data/maanedsoversigt.json");   // omsætning pr. måned med trafiklys, regnet af fabz.py maanedsoversigt --gem
@@ -909,6 +911,7 @@ function visJobSide(j) {   // alt til ét job samlet: pakkeliste, kort, kørsel,
     tider.length ? h("div", {class: "muted lille", style: "margin-top:6px"}, tider.join(" · ")) : null,
     j.afholdt ? null : h("button", {class: "btn lille", type: "button", style: "margin-top:10px", onclick: () => tbStart(tbFraJob(j))}, "Lav tilbud"),
     betalingAfsnit(j, st),
+    salgKoblBlok(j),
     jobOpgaver(j, st),
     spilletidBlok(j),
     afsnit("Pakkeliste", st.pak[0].toUpperCase() + st.pak.slice(1), st.klar, h("button", {class: "btn primaer lille", type: "button", onclick: () => åbnJob(j)}, "Åbn pakkeliste")),
@@ -2129,7 +2132,7 @@ async function gemLager() {
 }
 
 // ---------- fælles: kør fabz.py-kommandoer fra panelet ----------
-const FILER = {jobtider: "data/jobtider.json", henvendelser: "data/henvendelser.json", opgaver: "data/opgaver.json", betalinger: "data/betalinger.json", ugepakke: "data/ugepakke.json", dagsplaner: "data/dagsplaner.json",
+const FILER = {jobtider: "data/jobtider.json", salgjobs: "data/salgjobs.json", salgslaering: "data/salgslaering.json", henvendelser: "data/henvendelser.json", opgaver: "data/opgaver.json", betalinger: "data/betalinger.json", ugepakke: "data/ugepakke.json", dagsplaner: "data/dagsplaner.json",
                ideer: "data/ideer.json", indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json", salgslog: "data/salgslog.json", mo: "data/maanedsoversigt.json", strategi: "data/strategi.json", leads: "data/leads.json", mailoversigt: "data/mailoversigt.json", vagter: "data/vagter.json", fejl: "data/fejl.json"};
 async function laesValgfri(p) { const r = await laesFil(p); return r ? r.json() : []; }
 async function genindlæs(navne) { await Promise.all(navne.map(async n => { D[n] = n === "kkTekster" ? await laesKkTekster() : await laesValgfri(FILER[n]); })); }
@@ -3532,7 +3535,7 @@ const salgVej = s => (s.kontakt || "").replace(/\s*\([^)]*\)?/g, "").split(/[,·
 const salgKunde = navn => (D.salg || []).find(x => x.navn === navn);
 function salgUgemt() {
   const k = SG.k || {}, s = salgKunde(SG.valgt);
-  return SG.vis === "s" && !!s && !!((k.tekst || "").trim() || (k.kontaktperson || "").trim() || k.opfoelgning || k.status || k.ingen || (k.naeste || "") !== (s.naeste || ""));
+  return SG.vis === "s" && !!s && !!(k.opk?.fik || k.opk?.skridt || (k.tekst || "").trim() || (k.kontaktperson || "").trim() || k.opfoelgning || k.status || k.ingen || (k.naeste || "") !== (s.naeste || ""));
 }
 function salgGemKladde() { if (salgUgemt()) SG.kladder[SG.valgt] = SG.k; }
 function salgÅbn(navn) {
@@ -4265,7 +4268,7 @@ function salgMaal() {
 }
 const moMaaneder = () => (D.mo && Array.isArray(D.mo.maaneder)) ? D.mo.maaneder : [];
 function salgTop() {
-  return h("div", {class: "sk-top"}, ugeKort(), vejKort(true));   // Oscar 28/10 (skitse 2): ugens salg og det bookede frem. Penge ude står på Økonomi og Skat
+  return h("div", {class: "sk-top"}, ugeKort(), vejKort(true), talKort());   // Oscar 28/10 (skitse 2): ugens salg og det bookede frem. Penge ude står på Økonomi og Skat
 }
 function ugeKort() {
   const idag = iDag(), maal = salgMaal(), log = D.salgslog || [];
@@ -4406,6 +4409,141 @@ function datoKnapper(st, k, felt) {
   return h("div", {class: "rk", style: "margin-top:4px;gap:6px;flex-wrap:wrap"},
     [["+3 dage", 3], ["+1 uge", 7], ["+2 uger", 14], ["+1 md.", 30]].map(([t, n]) => h("button", {class: "chip", type: "button", onclick: () => sæt(n)}, t)));
 }
+// Opkald med tryk (Oscar 31/10): ca. 10 sekunder efter hvert opkald, store knapper til telefonen. fabz.py salg-opkald gemmer det struktureret
+const OPK_FIK = [["svarede_ikke", "Svarede ikke"], ["reception", "Receptionen"], ["forkert", "Forkert person"], ["rigtig", "Den rigtige"]];
+const OPK_SAGDE = [["interesseret", "Interesseret"], ["fast_dj", "Fast DJ"], ["ikke_mig", "Ikke mig"], ["send_mail", "Send mail"], ["ikke_nu", "Ikke nu"], ["budget", "Budget"], ["andet", "Andet"]];
+const OPK_SKRIDT = [["ring_uge", "Ring igen +1 uge", 7], ["ring_md", "Ring igen +1 md.", 30], ["mail", "Send mail", 7, "Kontaktet"], ["moede", "Møde", 7, "Møde aftalt"], ["tilbud", "Tilbud", 7, "Tilbud sendt"], ["nej", "Ikke interesseret", null, "Ikke nu"]];
+function opkaldBlok(s, k) {
+  const o = k.opk ||= {fik: null, sagde: [], skridt: null, rigtig: "", rigtigK: "", sender: false, aabning: null, note: ""};
+  const knap = (v, t, valgt, fn) => h("button", {type: "button", class: "opk-k" + (valgt ? " valgt" : ""), onclick: fn}, t);
+  const gem = () => {
+    if (!o.fik || !o.skridt) { alert("Vælg hvem du fik fat i og næste skridt."); return; }
+    const args = [`--fik=${o.fik}`, `--skridt=${o.skridt}`, ...(o.sagde.length ? [`--sagde=${o.sagde.join(",")}`] : []),
+      ...(o.rigtig.trim() ? [`--rigtig=${o.rigtig.trim()}`] : []), ...(o.rigtigK.trim() ? [`--rigtig-kontakt=${o.rigtigK.trim()}`] : []), ...(o.sender ? ["--sender-videre"] : []),
+      ...(o.aabning ? [`--aabning=${o.aabning}`] : []), ...(o.note.trim() ? [`--note=${o.note.trim()}`] : []), "--", s.navn];
+    const sk = OPK_SKRIDT.find(x => x[0] === o.skridt), dage = o.sender && (sk[2] == null || sk[2] > 7) ? 7 : sk[2];
+    kør("salg-opkald", args, {tekst: `${s.navn}: opkald`, efter: ["salg", "salgslog"], med: () => {
+      (D.salgslog ||= []).push({dato: iDag(), navn: s.navn, kanal: "Telefon", tekst: "Opkald", opkald: {fik: o.fik, sagde: o.sagde, skridt: o.skridt, aabning: o.aabning || undefined}});
+      s.senest_kontakt = iDag(); if (dage != null) s.naeste_opfoelgning = plusDage(iDag(), dage); else delete s.naeste_opfoelgning;
+      if (sk[3]) s.status = sk[3]; else if (o.fik !== "svarede_ikke" && s.status === "Ikke kontaktet") s.status = "Kontaktet";
+      SG.k = {naeste: s.naeste || ""};
+    }});
+  };
+  return h("div", {class: "afslut opkald"},
+    h("div", {class: "etiket"}, "Fik fat i"),
+    h("div", {class: "opk-grid"}, OPK_FIK.map(([v, t]) => knap(v, t, o.fik === v, () => { o.fik = o.fik === v ? null : v; tegn(); }))),
+    o.fik === "reception" || o.fik === "forkert" ? [h("div", {class: "etiket", style: "margin-top:10px"}, "Hvem er den rigtige?"),
+      h("input", {class: "input", value: o.rigtig, placeholder: "Navn og rolle", oninput: e => { o.rigtig = e.target.value; }}),
+      h("input", {class: "input", style: "margin-top:6px", value: o.rigtigK, placeholder: "Mail eller nummer", oninput: e => { o.rigtigK = e.target.value; }}),
+      h("div", {class: "chips", style: "margin-top:8px"}, h("button", {type: "button", class: "chip" + (o.sender ? " aktiv" : ""), onclick: () => { o.sender = !o.sender; tegn(); }}, "De sender videre"))] : null,
+    h("div", {class: "etiket", style: "margin-top:10px"}, "Hvad sagde de"),
+    h("div", {class: "chips"}, OPK_SAGDE.map(([v, t]) => h("button", {type: "button", class: "chip opk-c" + (o.sagde.includes(v) ? " aktiv" : ""),
+      onclick: () => { o.sagde = o.sagde.includes(v) ? o.sagde.filter(x => x !== v) : [...o.sagde, v]; tegn(); }}, t))),
+    h("div", {class: "etiket", style: "margin-top:10px"}, "Næste skridt"),
+    h("div", {class: "opk-grid"}, OPK_SKRIDT.map(([v, t]) => knap(v, t, o.skridt === v, () => { o.skridt = o.skridt === v ? null : v; tegn(); }))),
+    h("div", {class: "etiket", style: "margin-top:10px"}, "Åbning"),
+    h("div", {class: "chips"}, ["A", "B"].map(v => h("button", {type: "button", class: "chip opk-c" + (o.aabning === v ? " aktiv" : ""), onclick: () => { o.aabning = o.aabning === v ? null : v; tegn(); }}, v))),
+    h("input", {class: "input", style: "margin-top:8px", value: o.note, placeholder: "Note (valgfri)", oninput: e => { o.note = e.target.value; }}),
+    h("button", {class: "btn primaer opk-gem", type: "button", onclick: gem}, "Gem opkald"));
+}
+// Kom fra (Salg) (Oscar 31/10): kobler bookingen til firmaet, så lukkeraten og kr. pr. opkald kan regnes. Forslaget kommer fra kundenavnet.
+const salgJob = j => (D.salgjobs || []).find(r => r.job_noegle === jobNøgle(j)) || null;
+function salgForslag(j) {
+  const jn = nøgle(j.navn);
+  return (D.salg || []).find(s => { const sn = nøgle(s.navn).split(",")[0].trim(); const f = sn.split(/\s+/)[0];
+    return sn.length >= 3 && (jn.includes(sn) || (f.length >= 4 && new RegExp(`\\b${f.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`).test(jn))); }) || null;
+}
+const førsteOpkald = n => (D.salgslog || []).filter(x => x.opkald && x.navn === n).map(x => x.dato).sort()[0] || null;
+function salgKoblBlok(j) {
+  const r = salgJob(j), fs = r ? null : salgForslag(j);
+  if (!r && !fs && !SG.koblÅben) return h("button", {class: "btn ghost lille", type: "button", style: "margin-top:10px", onclick: () => { SG.koblÅben = true; tegn(); }}, "Kom fra Salg?");
+  const vaerdi = r ? r.salg : fs ? fs.navn : "";
+  const tekst = s => { const fo = førsteOpkald(s.navn); return s.navn + (fo ? ` (opkald ${kortDato(fo)})` : ""); };
+  const navne = (D.salg || []).filter(s => s.navn !== vaerdi).sort((a, b) => a.navn.localeCompare(b.navn, "da"));
+  const valgt = (D.salg || []).find(s => s.navn === vaerdi);
+  return h("div", {class: "gruppe", style: "margin-top:12px"},
+    h("div", {style: "display:flex;align-items:center;gap:8px"}, h("div", {class: "overskrift", style: "margin:0"}, "Kom fra (Salg)"),
+      !r && fs ? h("span", {class: "pill gul"}, "Forslag") : null),
+    h("select", {class: "input salg-kobl", style: "margin-top:8px", onchange: e => {
+      const fra = e.target.value;
+      kør("salg-job", [`--job=${j.navn}`, `--dato=${j.dato}`, `--fra=${fra}`], {tekst: `${j.navn}: kom fra ${fra || "ingen"}`, efter: ["salgjobs"],
+        med: () => { D.salgjobs = [...(D.salgjobs || []).filter(x => x.job_noegle !== jobNøgle(j)), {job_noegle: jobNøgle(j), dato: j.dato, job: j.navn, salg: fra}]; SG.koblÅben = false; }});
+    }},
+      !r && fs ? h("option", {value: "", selected: true, disabled: true}, "Vælg …") : null,
+      valgt ? h("option", {value: valgt.navn, selected: !!r && !!r.salg}, tekst(valgt)) : null,
+      h("option", {value: "", selected: !!r && !r.salg}, "Ingen (kom selv)"),
+      navne.map(s => h("option", {value: s.navn}, tekst(s)))),
+    !r && fs ? h("button", {class: "btn lille", type: "button", style: "margin-top:8px", onclick: () => kør("salg-job", [`--job=${j.navn}`, `--dato=${j.dato}`, `--fra=${fs.navn}`],
+      {tekst: `${j.navn}: kom fra ${fs.navn}`, efter: ["salgjobs"], med: () => { D.salgjobs = [...(D.salgjobs || []), {job_noegle: jobNøgle(j), dato: j.dato, job: j.navn, salg: fs.navn}]; }})}, `Ja, ${fs.navn}`) : null);
+}
+// Lukkerate (Oscar 31/10): bookinger fra firmaer, der er ringet til, pr. opkald og pr. samtale med den rigtige, kr. pr. opkald og fordelt på måneden for første opkald
+function lukkeTal(alle) {
+  const job = r => jobs(true).find(x => jobNøgle(x) === r.job_noegle);
+  const kr = r => { const j = job(r); if (!j) return 0; const b = betalingTilJob(j) || betalingGaet(j);   // beløbet fra betalingen, ellers "Pris:" i kalenderen
+    const m = /pris\s*:\s*([\d.]+)/i.exec((j.besk || "").replace(/<[^>]+>/g, "\n")); return Number(b.beloeb) || (m ? Number(m[1].replace(/\./g, "")) : 0); };
+  const ringet = new Set(alle.map(x => x.navn));
+  const book = (D.salgjobs || []).filter(r => r.salg && ringet.has(r.salg)).map(r => ({...r, kr: kr(r)}));
+  const md = {};
+  alle.forEach(x => { const m = førsteOpkald(x.navn).slice(0, 7); (md[m] ||= {opk: 0, book: 0, kr: 0}).opk++; });
+  book.forEach(r => { const m = førsteOpkald(r.salg).slice(0, 7); md[m].book++; md[m].kr += r.kr; });
+  return {opk: alle.length, rigtig: alle.filter(x => x.opkald.fik === "rigtig").length, book: book.length, kr: book.reduce((a, r) => a + r.kr, 0),
+    md: Object.entries(md).sort((a, b) => a[0].localeCompare(b[0]))};
+}
+function lukkeBlok(alle) {
+  const t = lukkeTal(alle), pr = n => t.book ? `1 pr. ${Math.round(n / t.book)}` : "Ingen endnu";
+  const kr = n => Math.round(n).toLocaleString("da-DK");
+  return h("div", {class: "lukkerate"},
+    h("div", {class: "overskrift", style: "margin-top:12px"}, "Lukkerate"),
+    h("div", {class: "sk-k4 sk-k3"},
+      h("div", {class: "sk-k b"}, h("b", {}, pr(t.opk)), h("span", {}, "opkald giver en booking")),
+      h("div", {class: "sk-k b"}, h("b", {}, pr(t.rigtig)), h("span", {}, "samtaler med den rigtige person")),
+      h("div", {class: "sk-k b"}, h("b", {}, t.opk ? kr(t.kr / t.opk) + " kr." : "–"), h("span", {}, "pr. opkald (ekskl. moms)"))),
+    t.md.length ? h("table", {class: "tal-md"}, h("tr", {}, ["Måned", "Opkald", "Bookinger", "Kr."].map(x => h("th", {}, x))),
+      t.md.map(([m, v]) => h("tr", {}, h("td", {}, MDL[Number(m.slice(5)) - 1].replace(/^./, c => c.toUpperCase()) + " " + m.slice(0, 4)), h("td", {}, v.opk),
+        v.opk < 20 && !v.book ? h("td", {colspan: 2, class: "muted lille"}, "for få data endnu") : [h("td", {}, v.book), h("td", {}, kr(v.kr))]))) : null);
+}
+// Tal (Oscar 31/10): tragten fra opkald til booket, varm mod kold, det der oftest siges, åbning A mod B og forslag til salgslæringen
+const LÆR_FORSLAG = {fast_dj: ["fast dj", "Vi bruger allerede en fast DJ", "Tilbyd at være backup, når den faste DJ er optaget eller syg."],
+  ikke_nu: ["ikke nu", "Ikke nu", "Spørg hvornår de planlægger næste fest, og sæt opfølgning til den måned."],
+  budget: ["budget", "Det er for dyrt / ingen budget", "Spørg hvad de plejer at bruge, og nævn den mindste pakke."],
+  ikke_mig: ["ikke mig", "Det er ikke mig, der står for festerne", "Spørg hvem der står for festerne, og få navn og mail."]};
+function talKort() {
+  const idag = iDag(), mandag = plusDage(idag, -((dag(idag).getDay() + 6) % 7));
+  const alle = (D.salgslog || []).filter(x => x.opkald), log = SG.talAlt ? alle : alle.filter(x => x.dato >= mandag && x.dato <= idag);
+  const salgN = n => (D.salg || []).find(s => s.navn === n) || {};
+  const ja = x => ["mail", "moede", "tilbud"].includes(x.opkald.skridt) || (x.opkald.sagde || []).some(v => v === "interesseret" || v === "send_mail");
+  const firmaer = [...new Set(log.map(x => x.navn))];
+  const trin = [["Opkald", log.length], ["Fik fat i nogen", log.filter(x => x.opkald.fik !== "svarede_ikke").length], ["Rigtig person", log.filter(x => x.opkald.fik === "rigtig").length],
+    ["Ja til mail/møde", log.filter(ja).length], ["Tilbud", firmaer.filter(n => ["Tilbud sendt", "Booket"].includes(salgN(n).status) || log.some(x => x.navn === n && x.opkald.skridt === "tilbud")).length],
+    ["Booket", firmaer.filter(n => salgN(n).status === "Booket" || (D.salgjobs || []).some(r => r.salg === n)).length]];
+  const varm = x => { const s = salgN(x.navn); return !!salgKilde(s) || /^via\s/i.test(s.kontakt || "") || !s.lead_id; };
+  const grp = f => { const l = log.filter(f); return `${l.filter(ja).length} af ${l.length}`; };
+  const sagt = OPK_SAGDE.map(([v, t]) => [v, t, alle.filter(x => (x.opkald.sagde || []).includes(v)).length]).filter(x => x[2]).sort((a, b) => b[2] - a[2]);
+  const ab = alle.filter(x => x.opkald.aabning);
+  const lær = D.salgslaering && !Array.isArray(D.salgslaering) ? [] : (D.salgslaering || []);
+  const forslag = sagt.filter(([v, , n]) => n >= 3 && LÆR_FORSLAG[v] && !lær.some(l => (l.hvad || "").toLowerCase().includes(LÆR_FORSLAG[v][0])));
+  if (!SG.talÅben) return h("button", {type: "button", class: "kort2 sk fold-frem", onclick: () => { SG.talÅben = true; tegn(); }},
+    h("span", {class: "overskrift", style: "margin:0"}, "Tal ▸"), h("span", {class: "muted lille"}, `${log.length} opkald i denne uge`));
+  const maks = Math.max(1, trin[0][1]);
+  return h("div", {class: "kort2 sk tal-kort"},
+    h("div", {class: "r1 sk-hoved"}, h("button", {type: "button", class: "overskrift fold-luk", style: "margin:0", onclick: () => { SG.talÅben = false; tegn(); }}, "Tal ▾"),
+      h("div", {class: "sk-hz"}, [[false, "Uge"], [true, "Alt"]].map(([v, t]) => h("button", {type: "button", class: !!SG.talAlt === v ? "aktiv" : "", onclick: () => { SG.talAlt = v; tegn(); }}, t)))),
+    h("div", {class: "tragt"}, trin.map(([t, n], i) => h("div", {class: "tr"}, h("span", {class: "tr-lab"}, t),
+      h("span", {class: "tr-bar" + (t === "Booket" ? " g" : ""), style: `width:${Math.max(6, 100 * n / maks)}%`}, n),
+      i && trin[i - 1][1] ? h("span", {class: "muted lille"}, Math.round(100 * n / trin[i - 1][1]) + " %") : null))),
+    lukkeBlok(alle),
+    h("div", {class: "sk-k4 sk-k2", style: "margin-top:12px"},
+      h("div", {class: "sk-k b"}, h("b", {}, grp(varm)), h("span", {}, "varme opkald (G-kraft, henvisning) med ja til mail/møde")),
+      h("div", {class: "sk-k"}, h("b", {}, grp(x => !varm(x))), h("span", {}, "kolde opkald (træk) med ja til mail/møde"))),
+    sagt.length ? h("div", {class: "sk-detalje"}, h("div", {class: "overskrift", style: "margin:0 0 4px"}, "Oftest sagt"), h("div", {class: "liste"}, sagt.slice(0, 4).map(([, t, n]) => h("div", {class: "l"}, h("span", {}, t), h("b", {}, n))))) : null,
+    h("div", {class: "overskrift", style: "margin-top:12px"}, "Åbning A mod B"),
+    ab.length < 20 ? h("div", {class: "muted lille"}, `For få opkald endnu (${ab.length} af 20)`)
+      : h("div", {class: "sk-detalje"}, h("div", {class: "liste"}, ["A", "B"].map(v => { const l = ab.filter(x => x.opkald.aabning === v); return h("div", {class: "l"}, h("span", {}, "Åbning " + v), h("b", {}, `${l.filter(ja).length} af ${l.length} ja`)); }))),
+    forslag.map(([v, , n]) => h("div", {class: "svar adv", style: "margin-top:12px"}, h("b", {}, "Forslag til salgslæringen"),
+      h("div", {}, `"${LÆR_FORSLAG[v][1]}" er sagt ${n} gange. Svar: ${LÆR_FORSLAG[v][2]}`),
+      h("button", {class: "btn lille", type: "button", style: "margin-top:6px", onclick: () => kør("laering-ny", [`--hvad=${LÆR_FORSLAG[v][1]}`, "--type=Indvending", "--segment=Alle", `--svar=${LÆR_FORSLAG[v][2]}`, "--kilde=Opkald i panelet"],
+        {tekst: "Salgslæring tilføjet", efter: ["salgslaering"], med: () => { if (!Array.isArray(D.salgslaering)) D.salgslaering = []; D.salgslaering.push({hvad: LÆR_FORSLAG[v][1]}); }})}, "Tilføj"))));
+}
 function salgDetalje(s) {
   if (!s) return tom("Kunden findes ikke længere.");
   const k = SG.k, efter = ["salg"];
@@ -4441,7 +4579,9 @@ function salgDetalje(s) {
     s.linkedin_side || s.kontaktside ? h("div", {class: "rk", style: "gap:8px;flex-wrap:wrap;margin-top:6px"},
       s.linkedin_side ? h("a", {class: "btn lille", href: s.linkedin_side, target: "_blank", rel: "noopener"}, "LinkedIn-side") : null,
       s.kontaktside ? h("a", {class: "btn lille", href: s.kontaktside, target: "_blank", rel: "noopener"}, "Kontaktside") : null) : null,
-    h("div", {class: "afslut"},
+    h("div", {class: "seg kform", style: "margin-top:14px"}, [["opkald", "Opkald"], ["anden", "Anden kontakt"]].map(([v, t]) =>
+      h("button", {type: "button", class: (SG.kform || "opkald") === v ? "aktiv" : "", onclick: () => { SG.kform = v; tegn(); }}, t))),
+    (SG.kform || "opkald") === "opkald" ? opkaldBlok(s, k) : h("div", {class: "afslut"},
       h("div", {class: "etiket", style: "font-weight:600;color:var(--tekst)"}, "Registrér kontakt"),
       felt("Hvad skete der?", tekstfelt(k, "tekst", {rows: 2, placeholder: "Fx Ringede til Felix. Han sender navnet på bestyrelsen."})),
       felt("Hvordan?", seg(S_KANAL, k.kanal || "Besked", v => { k.kanal = v; })),
