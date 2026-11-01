@@ -4032,7 +4032,8 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
       knap("Fortryd", () => { ØK.flyt = {}; tegn(); }));
   };
   const pulje = (navn, saldo, maal, farve, ekstra, kanFlytte = true, slet = null) => h("div", {class: "pulje"},
-    h("div", {class: "r1"}, h("b", {}, navn), ekstra, h("div", {class: "spacer"}), h("b", {}, saldo == null ? "?" : krKort(saldo)), h("span", {class: "muted"}, maal === false ? " kr." : ` af ${maal == null ? "?" : krKort(maal)} kr.`)),
+    h("div", {class: "r1"}, h("b", {}, navn), ekstra, h("div", {class: "spacer"}), maal === false ? h("b", {}, `${saldo == null ? "?" : krKort(saldo)} kr.`)   // uden mål (kisten): beløb og kr. samlet, uden flex-mellemrum (Oscar 1/11)
+      : [h("b", {}, saldo == null ? "?" : krKort(saldo)), h("span", {class: "muted"}, ` af ${maal == null ? "?" : krKort(maal)} kr.`)]),
     maal === false ? null : h("div", {class: "pbar"}, h("i", {style: `width:${maal ? Math.min(100, Math.max(1, 100 * (saldo || 0) / maal)) : 1}%;background:${farve}`})),
     kanFlytte ? flytForm(navn) : h("div", {class: "muted lille"}, "Sæt ind og træk fra kommer, når privat-data har en indbakke til panelet."),
     slet && !saldo ? h("button", {class: "btn ghost lille", type: "button", style: "margin-top:6px", onclick: () => confirm(`Fjern puljen ${navn}?`) && slet()}, "Fjern puljen") : null);
@@ -4089,9 +4090,10 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   let buf = Math.max(0, ØK.P?.buffer?.saldo || 0);
   // Over basis deles det efter skat: halvt til dig, halvt til bufferen (privat-data basis.deling). Måneder uden jobs er "ikke booket endnu" og tager ikke af bufferen
   const del = LV?.L.deling || {dig: 0, buffer: 0}, es = LV?.L.efter_skat || 0;
-  const over = x => { const o = Math.max(0, x.kr - LV.kr) * es; return {dig: Math.round(o * del.dig), tilBuf: Math.round(o * del.buffer)}; };
+  const basisMd = ym => { const bm = (LV?.L.maaneder || []).find(q => q.ym === ym); return bm ? LV.F.kr + bm.brutto : LV?.kr; };   // basis pr. måned (Oscar 1/11): afdrag der slutter, gør måneden billigere
+  const over = x => { const o = Math.max(0, x.kr - basisMd(x.ym)) * es; return {dig: Math.round(o * del.dig), tilBuf: Math.round(o * del.buffer)}; };
   const lvMdr = LV && i0 >= 0 ? mo.maaneder.slice(i0 + 1, i0 + 7).map(x => {
-    const tom = LV.basis && !x.kr && !x.jobs.length, m = LV.kr - x.kr, brugt = m > 0 && !tom ? Math.min(buf, m) : 0;
+    const tom = LV.basis && !x.kr && !x.jobs.length, m = basisMd(x.ym) - x.kr, brugt = m > 0 && !tom ? Math.min(buf, m) : 0;
     buf -= brugt;
     return {navn: x.navn, kr: x.kr, m, brugt, rest: buf, tom, ...over(x)};
   }) : [];
@@ -4099,7 +4101,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   // Basis (Oscar 1/11): kun denne måned og 2 frem, dækket eller mangler, ingen beløb pr. måned. Bufferen dækker i rækkefølge
   let buf2 = Math.max(0, ØK.P?.buffer?.saldo || 0);
   const lvChips = LV?.basis && i0 >= 0 ? mo.maaneder.slice(i0, i0 + 3).map(x => {
-    const m = LV.kr - x.kr, brugt = m > 0 ? Math.min(buf2, m) : 0;
+    const m = basisMd(x.ym) - x.kr, brugt = m > 0 ? Math.min(buf2, m) : 0;
     buf2 -= brugt;
     return {navn: MDL[Number(x.ym.slice(5, 7)) - 1].replace(/^./, c => c.toUpperCase()), m, brugt};
   }) : [];
