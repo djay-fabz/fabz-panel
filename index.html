@@ -1032,12 +1032,16 @@ function visBogfoering() {
   for (const p of pk.punkter) if (p.sikker && !BF.sikre.has(p.id)) { BF.sikre.add(p.id); if (p.valgt) BF.valgte.add(p.id); }   // besvaret ny leverandør tæller straks med i Godkend
   const P = pk.punkter, klar = pk.status === "klar", efter = ["ugepakke", "opgaver"];
   const sikre = P.filter(p => p.sikker && p.type !== "ignorer"), ikke = P.filter(p => p.type === "ignorer");
+  const bogførte = sikre.filter(p => (p.bogfoert || {}).status === "ok"), aktive = sikre.filter(p => !bogførte.includes(p));   // Oscar 1/11: bogførte kan han ikke gøre mere ved
+  const bogførtLinje = () => { const nr = bogførte.map(p => Number(String(p.bogfoert.tekst || "").match(/\d+$/)?.[0])).filter(Boolean).sort((a, b) => a - b);
+    return h("div", {class: "bf-r"}, h("div", {class: "t"}, h("b", {class: "bf-ok"}, `✓ ${bogførte.length} bogført` + (nr.length ? ` · bilag ${nr[0]}${nr.length > 1 ? "-" + nr[nr.length - 1] : ""}` : ""))),
+      h("a", {class: "btn lille", href: "https://app.dinero.dk/", target: "_blank", rel: "noopener"}, "Åbn Dinero ↗")); };
   const kræver = P.filter(p => !p.sikker && p.type !== "ignorer"), åbne = kræver.filter(p => !p.klaret);
   const valgteSikre = sikre.filter(p => BF.valgte.has(p.id));
   const sumKr = valgteSikre.filter(p => (p.valuta || "DKK") === "DKK" && p.beloeb != null).reduce((a, p) => a + Number(p.beloeb), 0);
   const mo = D.mo?.overblik?.linjer?.moms;
   const uge = Number(pk.uge.split("W")[1]);
-  const status = {klar: ["gul", "Venter på dit ja"], godkendt: ["blå", "Godkendt: robotten arbejder (ca. 2 min.)"], udfoert: ["grøn", "Udført " + (pk.udfoer_tid || "").slice(8, 10).replace(/^0/, "") + "/" + Number((pk.udfoer_tid || "").slice(5, 7))],
+  const status = {klar: ["gul", "Venter på dit ja"], godkendt: ["blå", "Godkendt: robotten arbejder (ca. 2 min.)"], udfoert: P.some(p => p.sikker && p.type === "kladde") && P.filter(p => p.sikker && p.type === "kladde").every(p => (p.bogfoert || {}).status === "ok") ? ["grøn", "Bogført"] : ["grøn", "Udført " + (pk.udfoer_tid || "").slice(8, 10).replace(/^0/, "") + "/" + Number((pk.udfoer_tid || "").slice(5, 7))],
     fortryd_bestilt: ["blå", "Fortryder (ca. 2 min.)"], fortrudt: ["", "Fortrudt"]}[pk.status] || ["", pk.status];
   const res = p => p.fortrudt || p.udfoert;
   const resLinje = p => { const r = res(p); if (!r) return null;
@@ -1092,7 +1096,7 @@ function visBogfoering() {
     h("div", {class: "kort2"},
       h("div", {class: "kh"}, h("h1", {}, `Ugens bogføring · uge ${uge}`), h("span", {class: "pill " + status[0]}, status[1]), h("div", {class: "spacer"}),
         !klar ? h("button", {class: "btn lille", type: "button", onclick: async () => { await genindlæs(efter); tegn(); }}, "Hent igen") : null),
-      h("div", {class: "muted"}, klar ? `${sikre.length} ting klares med ét ja · ${åbne.length} kræver dig · ${ikke.length} filer skal ikke bruges` : `Robotten har udfyldt kladderne og sendt kvitteringerne til Dinero. Du bogfører med Bogfør og afstemmer banken i Dinero.`),
+      h("div", {class: "muted"}, klar ? `${sikre.length} ting klares med ét ja · ${åbne.length} kræver dig · ${ikke.length} filer skal ikke bruges` : `Robotten har udfyldt kladderne. Du bogfører med Bogfør og afstemmer banken i Dinero.`),
       h("div", {class: "bf-tal"},
         h("div", {}, h("span", {}, "Klares med ét ja"), h("b", {}, `${valgteSikre.length} af ${sikre.length}`), h("span", {}, sumKr ? `${bfKr(sumKr)} i kroner` + (valgteSikre.some(p => p.valuta && p.valuta !== "DKK") ? " + valuta" : "") : "intet beløb")),
         h("div", {}, h("span", {}, "Kræver dig"), h("b", {}, String(åbne.length)), h("span", {}, åbne.length ? `ca. ${minutter} minutter` : "intet")),
@@ -1107,9 +1111,10 @@ function visBogfoering() {
         h("span", {class: "pill"}, `${sikre.length} ting`), h("div", {class: "spacer"}),
         klar ? h("button", {class: "btn godkend", type: "button", disabled: !BF.valgte.size && !ikke.length, onclick: godkend}, `✓ Godkend ${valgteSikre.length + kræver.filter(p => BF.valgte.has(p.id)).length}`) : null,
         (() => { const ps = P.filter(kanBogføres).filter(p => p.bogfoer !== "bestilt"); return ps.length > 1 ? h("button", {class: "btn godkend", type: "button", onclick: () => bogfør(ps)}, `Bogfør alle ${ps.length}`) : null; })()),
-      sikre.length ? h("details", {class: "sk-fold", open: !klar || sikre.length <= 4},
-        h("summary", {}, `Vis: ${sikre.filter(p => p.type === "kladde").length} nye udgifter` + (sikre.some(p => p.type === "vedhaeft") ? `, ${sikre.filter(p => p.type === "vedhaeft").length} kvitteringer` : "")),
-        h("div", {}, sikre.map(p => række(p, true)))) : h("div", {class: "muted lille", style: "margin-top:6px"}, "Ingen denne uge.")),
+      aktive.length ? h("details", {class: "sk-fold", open: !klar || aktive.length <= 4},
+        h("summary", {}, `Vis: ${aktive.filter(p => p.type === "kladde").length} nye udgifter` + (aktive.some(p => p.type === "vedhaeft") ? `, ${aktive.filter(p => p.type === "vedhaeft").length} kvitteringer` : "")),
+        h("div", {}, aktive.map(p => række(p, true)))) : !bogførte.length ? h("div", {class: "muted lille", style: "margin-top:6px"}, "Ingen denne uge.") : null,
+      bogførte.length ? h("div", {class: "kort", style: "margin-top:8px"}, bogførtLinje()) : null),
     h("div", {class: "gruppe"},
       h("div", {style: "display:flex;align-items:center;gap:8px"}, h("div", {class: "overskrift", style: "margin:0"}, "Kræver dig"), h("span", {class: "pill" + (åbne.length ? " gul" : " grøn")}, åbne.length ? `${åbne.length} åbne` : "Alt klaret"),
         h("div", {class: "spacer"}), h("a", {class: "btn lille", href: "https://app.dinero.dk/", target: "_blank", rel: "noopener"}, "Åbn Dinero ↗")),
@@ -1122,7 +1127,7 @@ function visBogfoering() {
       h("summary", {}, `Til orientering: ${ikke.length} filer skal ikke bruges (kopier og ikke bilag)` + ((pk.advarsler || []).length ? ` · ${pk.advarsler.length} advarsler` : "")),
       h("div", {}, ikke.map(p => h("div", {class: "bf-r"}, h("div", {class: "t"}, h("b", {}, p.fil_navn || p.titel), h("span", {}, p.hvad || p.grund), resLinje(p)))),
         (pk.advarsler || []).map(a => h("div", {class: "bf-r"}, h("div", {class: "t"}, h("b", {}, "Advarsel"), h("span", {}, a))))))),
-    pk.status === "udfoert" ? h("div", {class: "gruppe", style: "display:flex;gap:10px;align-items:center;flex-wrap:wrap"},
+    pk.status === "udfoert" && !P.some(p => p.bogfoert || p.bogfoer) ? h("div", {class: "gruppe", style: "display:flex;gap:10px;align-items:center;flex-wrap:wrap"},   // bogført kan ikke fortrydes
       h("button", {class: "btn", type: "button", onclick: () => { if (confirm("Fortryd ugens pakke? Robotten tømmer de kladder, den udfyldte. Kvitteringer, der er sendt til Dinero, og det, der er bogført, kan den ikke fortryde."))
         kør("ugepakke-fortryd", [`--uge=${pk.uge}`], {tekst: "Fortryd ugens bogføring", efter, med: () => { pk.status = "fortryd_bestilt"; }}); }}, "Fortryd ugens pakke")) : null));
 }
