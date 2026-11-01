@@ -980,6 +980,11 @@ function betalingGaet(j) {   // samme regel som fabz_betaling.gaet, til jobs rob
   const kontant = /(pris|betalingsbetingelser|betalt)\s*:[^\n]*kontant/.test(besk);
   return {maade: kontant ? "kontant" : mo?.b_indkomst ? "overfoersel" : "dinero", beloeb: mo?.brutto ?? null, gaet: true, status: "valgt"};
 }
+// Overførsler (Oscar 1/11): efter jobbet spørger panelet neutralt "Er X betalt?", efter 8 dage rødt. Lukker selv, når betaling-tjek ser pengene, ellers ✓ Betalt
+const BET_RØD_DAGE = 8;
+const betalingDage = r => Math.round((dag(iDag()) - dag(r.dato)) / 864e5);
+const betaltSpørgsmål = r => betalingDage(r) > BET_RØD_DAGE ? ["rød-pill", `Ikke betalt · ${betalingDage(r)} dage`] : ["", `Er ${r.navn} betalt?`];
+const åbneOverførsler = () => (D.betalinger || []).filter(r => r.maade === "overfoersel" && !["faerdig", "aflyst"].includes(r.status) && r.dato < iDag());
 function betalingAfsnit(j, st) {
   const r = betalingTilJob(j) || {...betalingGaet(j), job_noegle: st.key};
   const afholdt = j.afholdt || j.dato < iDag();
@@ -995,9 +1000,9 @@ function betalingAfsnit(j, st) {
       med: () => { const x = betalingTilJob(j); if (x) { x.status = "faerdig"; x.godkendt = iDag(); } if (o) { o.status = "Færdig"; o.faerdig_dato = iDag(); } }});
   };
   const b = r.beloeb != null ? Number(r.beloeb) : null, dinero = r.maade === "dinero";
-  const pill = r.status === "aflyst" ? ["", "Aflyst"] : laast ? ["grøn", `Godkendt ${kortDato(r.godkendt || iDag())}`]
+  const pill = r.status === "aflyst" ? ["", "Aflyst"] : laast ? ["grøn", r.bank_dato ? `Set i banken ${kortDato(r.bank_dato)}` : `Godkendt ${kortDato(r.godkendt || iDag())}`]
     : !afholdt ? ["blå", dinero ? "Dinero · faktura dagen efter" : r.maade === "kontant" ? "Kontant på dagen" : "Overførsel"]
-    : dinero ? ["gul", "Faktura ikke sendt"] : r.maade === "kontant" ? ["gul", "Venter på dit ja"] : r.bank_dato ? ["grøn", `Set i banken ${kortDato(r.bank_dato)}`] : ["gul", "Venter på overførsel"];
+    : dinero ? ["gul", "Faktura ikke sendt"] : r.maade === "kontant" ? ["gul", "Venter på dit ja"] : betaltSpørgsmål(r);
   const knap = !afholdt || laast ? null
     : dinero ? (r.send === "ok" ? h("span", {class: "pill grøn"}, `Faktura ${r.faktura_nr || ""} sendt`)
       : r.dinero?.guid ? h("button", {class: "btn godkend", type: "button", disabled: r.send === "bestilt", onclick: () => {   // Oscar 30/10: send fra jobbet, jobdatoen står i kommentaren
@@ -1006,10 +1011,10 @@ function betalingAfsnit(j, st) {
           r.send === "bestilt" ? "Sendes …" : r.bogfoert_nr ? `Send faktura ${r.bogfoert_nr} igen (bogført, ikke mailet)` : r.send === "fejl" ? "Prøv at sende igen" : "Send faktura")
       : h("button", {class: "btn godkend", type: "button", onclick: () => { if (confirm("Har du sendt fakturaen fra Dinero?")) godkend(); }}, "✓ Fakturaen er sendt"))
     : r.maade === "kontant" ? h("button", {class: "btn godkend", type: "button", disabled: !b, onclick: () => { if (confirm(`Har du fået ${kr(b)} kontant?`)) godkend(); }}, `✓ Betalt kontant${b ? " " + kr(b) : ""}`)
-    : h("button", {class: "btn godkend", type: "button", onclick: () => { if (confirm("Er pengene kommet ind på kontoen?")) godkend(); }}, "✓ Pengene er kommet");
+    : h("button", {class: "btn godkend", type: "button", onclick: () => { if (confirm(`Er ${b ? kr(b) + " fra " : ""}${j.navn} kommet ind på kontoen?`)) godkend(); }}, "✓ Betalt");
   const linje = !o ? null : dinero ? (r.dinero?.link ? `Kladden ligger i Dinero${b ? " · " + kr(b * 1.25) + " inkl. moms" : ""} · netto 8 dage. Lukkes selv, når fakturaen er bogført.` : "Kladden blev ikke lavet. Lav fakturaen i Dinero og tryk Fakturaen er sendt.")
     : r.maade === "kontant" ? "Registreres som kontant indtægt og lukker opgaven."
-    : r.bank_dato ? `${b ? kr(b) + " " : ""}set på erhvervskontoen ${kortDato(r.bank_dato)}. Lukkes, når du trykker.` : "Tjek kontoen, og tryk når pengene er kommet.";
+    : "Tjek kontoen, og tryk når pengene er kommet.";
   const inp = h("input", {class: "input bet-in", type: "number", inputmode: "numeric", min: "1", value: b ?? "", disabled: laast,
     onchange: e => { if (Number(e.target.value) > 0) saet(r.maade, e.target.value); }});
   return h("div", {class: "gruppe", style: "margin-top:12px"},
@@ -1020,7 +1025,7 @@ function betalingAfsnit(j, st) {
         inp, h("span", {class: "muted lille"}, dinero ? "kr. ekskl. moms" : "kr."),
         dinero && b ? h("span", {class: "muted lille"}, `${kr(b * 1.25)} inkl. moms`) : null,
         h("div", {class: "spacer"}), knap),
-      o ? h("div", {class: "jo-r"}, h("span", {class: "jo-m" + (r.bank_dato ? " ok" : "")}, r.bank_dato ? "✓" : "○"),
+      o ? h("div", {class: "jo-r"}, h("span", {class: "jo-m"}, "○"),
             h("span", {class: "jo-t", style: "flex:1"}, h("b", {}, o.titel), h("span", {class: "muted"}, linje))) : null));
 }
 // ---------- Ugens bogføring (bogholder-robot del 2, Oscar 29/10: version B "overblik først"). Data: data/ugepakke.json fra fabz_bogholder.py.
@@ -2338,8 +2343,16 @@ function visIDag() {
             onclick: () => { fane = "salg"; if (!(SG.vis === "s" && SG.valgt === s.navn)) salgÅbn(s.navn); else tegn(); }},
             h("span", {class: "lille tid " + (s.naeste_opfoelgning < iDag() ? "rød" : "muted")}, kortDato(s.naeste_opfoelgning)), h("span", {}, s.navn))) : h("div", {class: "muted lille"}, "Ingen")); })(),
         (() => {   // Penge ude: kun når noget haster
-          if (!ub || (!ub.forfaldne && !dm.length)) return null;
-          return sideKort("Penge ude", h("div", {}, ub.forfaldne ? h("button", {class: "mini link", type: "button", onclick: () => { fane = "oekonomi"; tegn(); }},
+          const ov = åbneOverførsler();
+          if ((!ub || !ub.forfaldne) && !dm.length && !ov.length) return null;
+          return sideKort("Penge ude", h("div", {},
+            ov.map(r => { const sp = betaltSpørgsmål(r);
+              return h("div", {class: "mini"}, h("span", {class: "pill " + sp[0]}, sp[0] ? `${betalingDage(r)} dage` : "betalt?"),
+                h("button", {class: "mini link", type: "button", style: "flex:1;border:0;padding:0", onclick: () => { fane = "pakkelister"; S = null; JH = r.job_noegle; tegn(); window.scrollTo(0, 0); }},
+                  h("span", {}, `${r.navn} · ${kortDato(r.dato)}` + (r.beloeb ? ` · ${krKort(r.beloeb)} kr.` : ""))),
+                h("button", {class: "btn lille", type: "button", onclick: () => { if (!confirm(`Er ${r.beloeb ? krKort(r.beloeb) + " kr. fra " : ""}${r.navn} kommet ind på kontoen?`)) return;
+                  kør("betaling-godkend", [`--job=${r.navn}`, `--dato=${r.dato}`, "--tving"], {tekst: `Betalt: ${r.navn}`, efter: ["betalinger", "opgaver"], med: () => { r.status = "faerdig"; r.godkendt = iDag(); }}); }}, "✓ Betalt")); }),
+            ub && ub.forfaldne ? h("button", {class: "mini link", type: "button", onclick: () => { fane = "oekonomi"; tegn(); }},
               h("span", {class: "pill rd"}, `${ub.forfaldne} over forfald`), h("span", {}, `${krKort(ub.forfaldne_kr)} kr. · send rykker i Dinero`)) : null,
             dm.map(j => h("button", {class: "mini link", type: "button", onclick: () => { fane = "oekonomi"; tegn(); }},
               h("span", {class: "pill rd"}, "depositum"), h("span", {}, `${j.navn} · ${kortDato(j.dato)} · intet depositum sendt`))))); })(),
