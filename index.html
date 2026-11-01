@@ -3874,6 +3874,15 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   const husNavn = HB0 ? "Husleje d. 1 + Buffer" : "Husleje d. 1";
   if (husMangler) gør.push(trin("y", [h("b", {}, `Sæt ${krKort(husMangler)} kr. ind på ${husNavn} i Saxo${P0.d1 ? " inden " + kortDato(P0.d1.dato) : ""}.`)],
     knap("✓ Sat ind", () => privatFlyt(husMangler, iDag(), husNavn, HB0 ? "husbuffer" : "husleje_d1"))));
+  // Overfør fra Saxo til Lønkonto+ før d. 1 (Oscar 1/11, fabz_saxo): opgaven vises 3 bankdage før, frist kl. 13 på næstsidste bankdag. Beløbet kommer fra privat-data
+  (D.opgaver || []).filter(o => o.saxo_d1 && o.status !== "Færdig" && iDag() >= (o.ikke_foer || "")).forEach(o => {
+    const mk = HB0 && P0.d1?.dato === o.saxo_d1 ? HB0.maerke : null, x = mk != null ? Math.min(mk, Math.max(0, HB0.saldo)) : null, fr = dag(o.deadline);   // aldrig mere end der står (revision 1/11)
+    gør.push(trin(iDag() >= o.deadline ? "rd" : "y", [h("b", {}, `Overfør ${x != null ? krKort(x) + " kr. " : ""}fra Saxo til Lønkonto+ senest ${DAGE[fr.getDay()]} ${kortDato(o.deadline)} kl. 13.`),
+      mk != null && x < mk ? ` Puljen mangler ${krKort(mk - x)} til d. ${kortDato(o.saxo_d1)}.` : ""],
+      knap("✓ Overført", () => {
+        if (x && P0.inbox) privatFlyt(-x, iDag(), "Husleje d. 1 + Buffer", "husbuffer");   // puljen opdateres
+        kør("faerdig", [String(o.id)], {tekst: `#${o.id} Overført fra Saxo`, efter: ["opgaver"], med: () => { o.status = "Færdig"; }}); }, true)));
+  });
   // job uden pris (Oscar 1/11, skitse panel-advarsel): én bjælke pr. job, der åbner jobbet, så beløbet kan skrives der
   const prisBj = (mo.raad?.uden_pris_jobs || []).map(x => trin("y", [h("b", {}, `${x.navn} ${kortDato(x.dato)} har ingen pris.`)],
     knap("Åbn jobbet →", () => visJobNøgle(`${x.dato}|${x.navn.toLowerCase()}`), true)));   // over "Frit at bruge", som i skitsen
