@@ -807,6 +807,7 @@ function tegn() {
 }
 
 // ---------- startside: jobs ----------
+const visJobNøgle = nøgle => { fane = "pakkelister"; S = null; JH = nøgle; tegn(); window.scrollTo(0, 0); };   // jobbets side fra en anden fane (fx Økonomi: job uden pris)
 let JH = null, JF = "alle";   // JH: åbnet jobs nøgle (jobbets side), JF: filter på oversigten
 // Spilletid (Oscar 29/10): gemt på jobbet går forud for TIDER i bookingen. Start skal være udfyldt før PDF; uden slut står der "til luk".
 function spilletid(j) {
@@ -3873,6 +3874,9 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   const husNavn = HB0 ? "Husleje d. 1 + Buffer" : "Husleje d. 1";
   if (husMangler) gør.push(trin("y", [h("b", {}, `Sæt ${krKort(husMangler)} kr. ind på ${husNavn} i Saxo inden ${kortDato(P0.d1.dato)}.`)],
     knap("✓ Sat ind", () => privatFlyt(husMangler, iDag(), husNavn, HB0 ? "husbuffer" : "husleje_d1"))));
+  // job uden pris (Oscar 1/11, skitse panel-advarsel): én bjælke pr. job, der åbner jobbet, så beløbet kan skrives der
+  const prisBj = (mo.raad?.uden_pris_jobs || []).map(x => trin("y", [h("b", {}, `${x.navn} ${kortDato(x.dato)} har ingen pris.`)],
+    knap("Åbn jobbet →", () => visJobNøgle(`${x.dato}|${x.navn.toLowerCase()}`), true)));   // over "Frit at bruge", som i skitsen
   (P0.delpuljer?.linjer || []).filter(x => x.saldo < 0).forEach(x => gør.push(trin("rd", [h("b", {}, `${x.navn} mangler ${krKort(-x.saldo)} kr.`), " Tag dem fra Buffer i Saxo."],
     knap("Tag fra Buffer", () => privatSend({kommando: "fra-buffer", navn: x.navn, kr: -x.saldo}, `${x.navn} +${krKort(-x.saldo)} kr. fra Buffer`)))));
   // kontante jobs (Oscar 30/10): efter jobbet "Godkend: X kr. ligger i kontantkisten" -> betalingen godkendes i fabz-data, og kisten i privat-data får beløbet
@@ -4122,8 +4126,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
           LV.basis ? h("div", {class: "rd-st"}, h("i", {class: "s1", style: lvP(Math.min(x.kr, LV.kr))}), h("i", {class: "s2", style: lvP(Math.max(0, x.kr - LV.kr) * del.dig)}), h("i", {class: "s3", style: lvP(Math.max(0, x.kr - LV.kr) * del.buffer)})) : null,
           x.m <= 0 ? (LV.basis ? [h("div", {}, "✓ basis"), h("div", {}, `+${krKort(x.dig)} til dig`), del.buffer ? h("div", {}, `+${krKort(x.tilBuf)} til bufferen`) : null] : "✓")
           : x.brugt === x.m ? `mangler ${krKort(x.m)}, dækket af bufferen (${krKort(x.rest)} tilbage)` : `mangler ${krKort(x.m - x.brugt)}${x.brugt ? " efter bufferen" : ""}`)))) : null),
-    RD.advarsel ? h("div", {class: "bj rd", style: "margin-top:8px"}, h("span", {class: "bj-t"}, h("b", {}, RD.advarsel.tekst),
-      RD.uden_jobs.length ? ` Ingen jobs booket i ${RD.uden_jobs.map(x => x.toLowerCase()).join(", ")}.` : "", RD.uden_pris ? ` ${RD.uden_pris} ${RD.uden_pris === 1 ? "job" : "jobs"} uden pris.` : "")) : null,
+    RD.advarsel ? h("div", {class: "bj rd", style: "margin-top:8px"}, h("span", {class: "bj-t"}, h("b", {}, RD.advarsel.tekst))) : null,   // kun inden for 60 dage, jobs uden pris står øverst (Oscar 1/11)
     LV ? h("details", rdFold("leve"), h("summary", {}, LV.basis ? "Basis består af" : "For at leve af DJ, det består af", h("span", {class: "v"}, `${krKort(LV.kr)} kr.`)),
       h("div", {class: "rd-l"}, h("span", {}, "Firmaets faste udgifter ", h("span", {class: "muted"}, LV.F.linjer.slice(0, 4).map(x => `${x.navn} ${krKort(x.kr)}`).join(" · ") + (LV.F.linjer.length > 4 ? ` · ${LV.F.linjer.length - 4} andre ${krKort(LV.F.linjer.slice(4).reduce((t, x) => t + x.kr, 0))}` : "")), kilde("kontoudtog", LV.F.dato)), h("b", {}, krKort(LV.F.kr))),
       h("div", {class: "rd-l"}, h("span", {}, "Til dig privat ", priv(), h("span", {class: "muted"}, " " + LV.L.linjer.map(x => `${x.navn} ${krKort(x.kr)}`).join(" · ")), kilde(LV.basis ? "privat-data" : "snit 12 mdr., privat-data", LV.L.dato)), h("b", {}, krKort(LV.L.netto))),
@@ -4177,7 +4180,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
           if (del === "skat") kør("pulje", ["flyt", "Skat", String(b)], {tekst: `Skat-puljen +${krKort(b)} kr.`, efter: ["mo"], med: () => puljeMed("Skat", b)});
           privatSend({kommando: "fordel", id: String(x.id), del, kr: b, job_kr: x.beloeb}, `${x.fra}: ${krKort(b)} kr. til ${navn}`); }, true)))));
   }).filter(Boolean) : [];
-  $("rod").replaceChildren(h("div", {class: "side bred skat-side"}, top, msKort, fejlBjælker(), rå, klub.length ? [h("div", {class: "overskrift", style: "margin-top:16px"}, "Klubjob betalt"), klub] : null, bjælker, overblik, puljer, regFold, tjekFold, fordFold,
+  $("rod").replaceChildren(h("div", {class: "side bred skat-side"}, top, msKort, fejlBjælker(), prisBj.length ? h("div", {class: "bjaelker", style: "margin-top:12px"}, prisBj) : null, rå, klub.length ? [h("div", {class: "overskrift", style: "margin-top:16px"}, "Klubjob betalt"), klub] : null, bjælker, overblik, puljer, regFold, tjekFold, fordFold,
     h("div", {class: "overskrift", style: "margin-top:20px"}, "Penge ude"),
     h("div", {class: "sk-k4 sk-k2"},
       felt({f: ub.antal ? "y" : "g", tal: krKort(ub.kr), tekst: `kr. ubetalt (${ub.antal} ${ub.antal === 1 ? "faktura" : "fakturaer"}, inkl. moms)`}),
