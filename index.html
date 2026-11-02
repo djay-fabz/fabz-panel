@@ -365,6 +365,7 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .kuv{margin-top:12px;padding:0}.kuv-h{display:flex;gap:12px;flex-wrap:wrap;justify-content:space-between;align-items:baseline;padding:14px 18px;border-bottom:1px solid var(--linje)}.kuv-g{display:grid;grid-template-columns:repeat(4,1fr)}.kuv-k{padding:14px 18px;border-right:1px solid var(--linje)}.kuv-k:last-child{border-right:0}.kuv-k .s{font-size:26px;font-weight:800;margin:4px 0 2px}.kuv-k .s.neg{color:var(--fejl)}.kuv-k .pm{font-size:13px;color:var(--svag)}.kuv-k .tr{font-size:13px;margin-top:4px}.kuv-k .tr.op{color:var(--fejl)}.kuv-k .tr.ned{color:var(--ok)}.kuv-k .btn,.kuv-k .pk{margin-top:10px}
 @media(max-width:700px){.kuv-g{grid-template-columns:1fr 1fr}.kuv-k:nth-child(2n){border-right:0}.kuv-k:nth-child(-n+2){border-bottom:1px solid var(--linje)}.kuv-k .s{font-size:22px}}
 .ms-r{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.ms-i{margin-top:12px;padding-top:12px;border-top:1px solid var(--linje);color:var(--svag)}.ms-i b{color:var(--tekst)}
+.sx-g.fold{cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding-bottom:0}.sx-g.fold span{font-size:18px;letter-spacing:0;color:var(--svag);line-height:1}.kh-se{padding:0 14px 10px}
 .kh-hist{padding:0 14px 10px;font-size:12.5px;color:var(--svag)}.kh-hist div{display:flex;justify-content:space-between;gap:10px;padding:3px 0}.kh-hist b{font-weight:600}
 .sx-g{font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--svagere);padding:12px 14px 0;border-top:1px solid var(--linje)}.sx-g:first-child{border-top:0}
 .sx-mk{font-size:10px;font-weight:700;border-radius:99px;padding:1px 6px;margin-left:6px;vertical-align:middle}.sx-mk.s{color:#b91c1c;background:#fdeeee}.sx-mk.f{color:#b45309;background:#fff1dc}
@@ -4074,8 +4075,14 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
         P.opsparing ? pulje(P.opsparing.navn || "Opsparing", P.opsparing.saldo, P.opsparing.maal, "#7c3aed", priv(), !!P.inbox) : null,
         egne.map(p => pulje(p.navn, p.saldo, p.maal, "#7c3aed", priv(), !!P.inbox, P.inbox ? privSlet(p.navn) : null))),
       // kontantkisten (Oscar 30/10): ikke i Saxo og ikke med i d. 1, løn eller skat, kun til brændstof og kontante ting
-      P.kontanter ? [h("div", {class: "sx-g"}, "Kontanter (kisten)"), pulje("Kontanter", P.kontanter.saldo, false, "#7c3aed", priv(), !!P.inbox),
-        (P.kontanter.poster || []).length ? h("div", {class: "kh-hist"}, P.kontanter.poster.slice(0, 5).map(x => h("div", {}, h("span", {}, `${kortDato(x.dato)} ${x.tekst || (x.kr > 0 ? "sat ind" : "hævet")}`), h("b", {}, `${x.kr > 0 ? "+" : "−"}${krKort(Math.abs(x.kr))}`)))) : null] : null),
+      // kisten kan foldes sammen til titel og saldo, og historikken ligger bag "Se historik" (Oscar 2/11). Sammenfoldet huskes på enheden
+      P.kontanter ? (() => { const kort = lager.get("kisteLukket") === "1", ps = P.kontanter.poster || [];
+        return [h("div", {class: "sx-g fold", role: "button", "aria-expanded": String(!kort), onclick: () => { lager.set("kisteLukket", kort ? "0" : "1"); tegn(); }},
+            "Kontanter (kisten)", h("span", {}, kort ? "▸" : "▾")),
+          kort ? h("div", {class: "pulje"}, h("div", {class: "r1"}, h("b", {}, "Kontanter"), priv(), h("div", {class: "spacer"}), h("b", {}, `${krKort(P.kontanter.saldo)} kr.`)))
+          : [pulje("Kontanter", P.kontanter.saldo, false, "#7c3aed", priv(), !!P.inbox),
+            ps.length ? h("div", {class: "kh-se"}, h("button", {class: "mere-link", type: "button", onclick: () => { ØK.kisteHist = !ØK.kisteHist; tegn(); }}, ØK.kisteHist ? "Skjul historik" : `Se historik (${ps.length})`)) : null,
+            ØK.kisteHist && ps.length ? h("div", {class: "kh-hist"}, ps.map(x => h("div", {}, h("span", {}, `${kortDato(x.dato)} ${x.tekst || (x.kr > 0 ? "sat ind" : "hævet")}`), h("b", {}, `${x.kr > 0 ? "+" : "−"}${krKort(Math.abs(x.kr))}`)))) : null]]; })() : null),
     // ny pulje (Oscar 29/10): kategorien vælges først, så navn og mål. Privat oprettes i privat-data
     ØK.ny ? h("div", {class: "pk", style: "margin-top:8px"}, seg([["skyld", "Skyld"], ["fabz", "Fabz"], ...(P.inbox ? [["privat", "Privat"]] : [])], ØK.ny.kat, v => { ØK.ny.kat = v; tegn(); }),
         ØK.ny.kat ? [inp(ØK.ny, "navn", {placeholder: "Navn, fx Ny bil", style: "width:160px"}), inp(ØK.ny, "maal", {type: "number", inputmode: "numeric", placeholder: "Mål i kr.", style: "width:110px"}),
