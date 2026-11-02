@@ -401,7 +401,9 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .rd-mdr{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:8px}.rd-md{background:var(--bg);border-radius:10px;padding:7px 8px;font-size:12px;color:var(--svag);border-bottom:4px solid var(--fejl)}
 .rd-md b{display:block;font-size:15px;color:var(--tekst)}.rd-md.g{border-bottom-color:var(--ok)}.rd-md.y{border-bottom-color:var(--adv)}.rd-md.b{border-bottom-color:transparent}.rd-md.aab{background:transparent;border:1px dashed var(--linje)}
 .rd-st{display:flex;height:8px;border-radius:99px;overflow:hidden;background:var(--linje);margin:5px 0 4px}.rd-st i{display:block}.rd-st .s1{background:var(--ok)}.rd-st .s2{background:var(--accent)}.rd-st .s3{background:#a78bfa}
-.rd-loen .ok b{color:var(--ok)}.rd-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.rd-chip{background:var(--bg);border-radius:99px;padding:5px 12px;font-size:13px;color:var(--svag)}.rd-chip b{color:var(--ok);font-weight:600}.rd-chip.rd b{color:var(--fejl)}
+.rd-loen .ok b{color:var(--ok)}.md3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}.md3-k{border-radius:12px;padding:12px 14px;background:var(--ok-blid)}.md3-k.rd{background:var(--fejl-blid)}.md3-k .n{font-weight:600}.md3-k .s{font-size:20px;font-weight:800;margin-top:2px;color:var(--ok)}.md3-k.rd .s{color:var(--fejl)}.md3-k .f{font-size:13.5px;margin-top:2px}
+@media(max-width:700px){.md3{grid-template-columns:1fr}.md3-k{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}.md3-k .s{font-size:17px;margin:0}.md3-k .n{min-width:80px}}
+.rd-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.rd-chip{background:var(--bg);border-radius:99px;padding:5px 12px;font-size:13px;color:var(--svag)}.rd-chip b{color:var(--ok);font-weight:600}.rd-chip.rd b{color:var(--fejl)}
 @media (max-width:700px){.rd-mdr{grid-template-columns:repeat(3,1fr)}.rd-top .v{font-size:34px}.rd-tb .skjul{display:none}}
 .sk-k{border-radius:12px;padding:12px 14px;background:var(--bg);border-left:5px solid var(--linje);min-width:0;overflow-wrap:anywhere}
 .sk-k b{display:block;font-size:24px;letter-spacing:-.02em;line-height:1.1}.sk-k span{font-size:11.5px;color:var(--svag)}
@@ -3897,10 +3899,8 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   (sk.snart || []).forEach(u => gør.push(trin("y", u.forfald < iDag()
     ? [h("b", {}, `Fakturaen til ${u.kunde} forfaldt d. ${kortDato(u.forfald)}.`), ` Send ${krKort(u.skat)} kr. til Saxo (skat), når den betales.`]
     : [h("b", {}, `Du modtager snart ${krKort(u.kr)} kr. fra ${u.kunde}.`), ` Send ${krKort(u.skat)} kr. til Saxo (skat), når de er betalt.`])));
-  const P0 = ØK.P || {}, HB0 = P0.husbuffer, husMangler = HB0 ? Math.max(0, HB0.maerke - HB0.saldo) : P0.husleje_d1 ? Math.max(0, P0.husleje_d1.maal - (P0.husleje_d1.saldo || 0)) : 0;
-  const husNavn = HB0 ? "Husleje d. 1 + Buffer" : "Husleje d. 1";
-  if (husMangler) gør.push(trin("y", [h("b", {}, `Sæt ${krKort(husMangler)} kr. ind på ${husNavn} i Saxo${P0.d1 ? " inden " + kortDato(P0.d1.dato) : ""}.`)],
-    knap("✓ Sat ind", () => privatFlyt(husMangler, iDag(), husNavn, HB0 ? "husbuffer" : "husleje_d1"))));
+  const P0 = ØK.P || {}, HB0 = P0.husbuffer;
+  // "Sæt X ind på Husleje d. 1 + Buffer" er væk (Oscar 3/11): pengene kommer fra firmaet, og mangler der, står det i 3-måneders-oversigten
   // Overførsler i hånden (Oscar 2/11, skitse panel-overfoersler): én linje pr. overførsel med beløb, fra og til, reg.nr. og kontonr. på modtagerkontoen
   // (kun fra privat-data) og sit eget ✓. Faste overførsler (byen hver mandag osv.) er ikke med
   const ovL = [], nrT = k => !k || !(k.reg || k.kontonr || k.iban) ? null : k.iban ? ["Til IBAN ", h("b", {}, k.iban)] : ["Til reg. ", h("b", {}, k.reg || "?"), " konto ", h("b", {}, k.kontonr || "?")];
@@ -4149,17 +4149,23 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   }) : [];
   const lvNu = null;
   // Basis (Oscar 1/11): kun denne måned og 2 frem, dækket eller mangler, ingen beløb pr. måned. Bufferen dækker i rækkefølge
-  let buf2 = Math.max(0, ØK.P?.buffer?.saldo || 0);
-  const lvChips = LV?.basis && i0 >= 0 ? mo.maaneder.slice(i0, i0 + 3).map(x => {
-    const m = basisMd(x.ym) - x.kr, brugt = m > 0 ? Math.min(buf2, m) : 0;
+  // 3 måneder (Oscar 2/11, skitse panel-3-maaneder): pengene tælles, når de forventes på kontoen (kasse), og et overskud låses til næste måned,
+  // så det ikke kan bruges til Nyt anlæg. Det der stadig mangler, dækkes af bufferen over mærket, ellers står det som "Mangler X kr."
+  const HBl = ØK.P?.husbuffer; let buf2 = HBl ? Math.max(0, HBl.saldo - HBl.maerke) : Math.max(0, ØK.P?.buffer?.saldo || 0), carry = 0;
+  const md3 = LV?.basis && i0 >= 0 ? mo.maaneder.slice(i0, i0 + 4).map(x => ({ym: x.ym, ind: x.kasse ?? x.kr, need: basisMd(x.ym)})) : [];
+  const lvChips = md3.slice(0, 3).map((x, k) => {
+    const avail = x.ind + carry, m = Math.max(0, x.need - avail), brugt = m > 0 ? Math.min(buf2, m) : 0;
     buf2 -= brugt;
-    return {navn: MDL[Number(x.ym.slice(5, 7)) - 1].replace(/^./, c => c.toUpperCase()), m, brugt};
-  }) : [];
+    const nx = md3[k + 1], laast = nx ? Math.min(Math.max(0, avail - x.need), Math.max(0, nx.need - nx.ind)) : 0;
+    carry = laast;
+    return {navn: MDL[Number(x.ym.slice(5, 7)) - 1].replace(/^./, c => c.toUpperCase()), m, brugt, laast, til: nx ? MDL[Number(nx.ym.slice(5, 7)) - 1] : ""};
+  });
+  const laastNu = lvChips[0]?.laast || 0;   // denne måneds overskud, der er låst til næste måned, er ikke frit
   const lvS = LV ? Math.max(LV.kr * 1.6, ...lvMdr.map(x => x.kr)) : 1, lvP = v => `width:${(100 * v / lvS).toFixed(1)}%`;
   const rå = RD && !gammeltÅr ? h("div", {},
     h("div", {class: "rd-top"},
       h("div", {class: "t"}, "Frit at bruge på firmakontoen ", kilde("kontoudtog", RD.saldo_dato), kilde("Dinero", RD.kilder.moms)),
-      h("div", {class: "v" + (RD.frit < 0 ? " neg" : "")}, `${krKort(RD.frit)} kr.`),
+      h("div", {class: "v" + (RD.frit - laastNu < 0 ? " neg" : "")}, `${krKort(RD.frit - laastNu)} kr.`),
       RD.naar_betalt ? h("div", {class: "muted lille"}, `Når ${RD.naar_betalt.kunde} betaler ${krKort(RD.naar_betalt.kr)} d. ${kortDato(RD.naar_betalt.dato)}: ${krKort(RD.naar_betalt.frit)} kr.`) : null,
       h("div", {class: "rd-loen"},
         h("div", {}, `Løn til dig d. ${kortDato(RD.loen_dato)}`, h("b", {}, `${krKort(RD.loen_naeste)} kr.`)),
@@ -4171,8 +4177,9 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
           h("div", {class: lvNu.kr >= LV.kr ? "ok" : ""}, MDL[Number(lvNu.ym.slice(5, 7)) - 1].replace(/^./, c => c.toUpperCase()), h("b", {}, lvNu.kr >= LV.kr ? "✓ Dækket" : `mangler ${krKort(LV.kr - lvNu.kr)}`)),
           h("div", {}, `Til dig i ${MDL[Number(lvNu.ym.slice(5, 7)) - 1]}`, h("b", {}, `${krKort(lvNu.dig)} kr.`)),
           del.buffer ? h("div", {}, "Til bufferen", h("b", {}, `${krKort(lvNu.tilBuf)} kr.`)) : null) : null,
-        LV.basis ? h("div", {class: "rd-chips"}, lvChips.map(x => h("span", {class: "rd-chip" + (x.m > x.brugt ? " rd" : "")}, x.navn + " ",
-          h("b", {}, x.m <= 0 ? "✓ Dækket" : x.brugt === x.m ? "✓ Dækket af bufferen" : `mangler ${krKort(x.m - x.brugt)}`)))) :
+        LV.basis ? h("div", {class: "md3"}, lvChips.map(x => h("div", {class: "md3-k" + (x.m > x.brugt ? " rd" : "")}, h("div", {class: "n"}, x.navn),
+          h("div", {class: "s"}, x.m <= 0 ? "✓ Dækket" : x.brugt === x.m ? "✓ Dækket af bufferen" : `Mangler ${krKort(x.m - x.brugt)} kr.`),
+          x.laast ? h("div", {class: "f"}, `${krKort(x.laast)} kr. låst til ${x.til}`) : null))) :
         h("div", {class: "rd-mdr"}, lvMdr.map(x => x.tom ? h("div", {class: "rd-md aab"}, x.navn, h("b", {}, "–"), h("div", {class: "rd-st"}), "ikke booket endnu")
           : h("div", {class: "rd-md" + (LV.basis ? " b" : x.m <= 0 ? " g" : x.brugt === x.m ? " y" : "")}, x.navn, h("b", {}, krKort(x.kr)),
           LV.basis ? h("div", {class: "rd-st"}, h("i", {class: "s1", style: lvP(Math.min(x.kr, LV.kr))}), h("i", {class: "s2", style: lvP(Math.max(0, x.kr - LV.kr) * del.dig)}), h("i", {class: "s3", style: lvP(Math.max(0, x.kr - LV.kr) * del.buffer)})) : null,
