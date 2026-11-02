@@ -3963,13 +3963,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   if (bt.id && !bt.faerdig && bt.deadline && bt.deadline <= plusDage(iDag(), 2)) gør.push(trin(bt.deadline < iDag() ? "rd" : "y",
     [h("b", {}, "Tal-dag: hent månedens tal."), ` eIndkomst, kontoudtog, Saxo og Bliss. Ca. 15 minutter${bt.deadline < iDag() ? ", fristen var " + kortDato(bt.deadline) : ""}.`],
     knap("Start →", mål("guide:taldag"), true)));
-  gør.sort((a, b) => (a.classList.contains("rd") ? 0 : 1) - (b.classList.contains("rd") ? 0 : 1));
-  const vist = ØK.alle ? gør : gør.slice(0, 3), skjult = gør.slice(vist.length);
-  const bjælker = h("div", {class: "bjaelker"},
-    gør.length ? vist : mo.raad && (mo.raad.frit < 0 || mo.raad.advarsel) ? null : h("div", {class: "bj g"}, h("span", {class: "bj-t"}, h("b", {}, "✓ Alt er grønt."), " Pengene rækker, og skatten passer.")),
-    skjult.length ? h("button", {class: "mere-link", type: "button", onclick: () => { ØK.alle = true; tegn(); }},
-      `Vis ${skjult.length} mere (${skjult.map(x => x.querySelector("b")?.textContent.replace(/\.$/, "")).join(", ")})`) : null,
-    ØK.alle && gør.length > 3 ? h("button", {class: "mere-link", type: "button", onclick: () => { ØK.alle = false; tegn(); }}, "Vis kun de 3 første") : null);
+  // advarslen om det låste vises ikke som kort: den røde måned ved Basis siger det samme (Oscar 2/11)
   const l = (tx, v, ekstra) => h("div", {class: "l"}, h("span", {}, tx, ekstra ? h("span", {class: "muted lille", style: "margin-left:6px"}, ekstra) : null), h("b", {style: "white-space:nowrap"}, v));
   const fold = (titel, ...indhold) => {   // husker hvad der er foldet ud, når siden tegnes igen
     const d = h("details", {class: "sk-fold"}, h("summary", {}, titel), h("div", {class: "sk-fold-ind"}, indhold));
@@ -4134,7 +4128,6 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
           LV.basis ? h("div", {class: "rd-st"}, h("i", {class: "s1", style: lvP(Math.min(x.kr, LV.kr))}), h("i", {class: "s2", style: lvP(Math.max(0, x.kr - LV.kr) * del.dig)}), h("i", {class: "s3", style: lvP(Math.max(0, x.kr - LV.kr) * del.buffer)})) : null,
           x.m <= 0 ? (LV.basis ? [h("div", {}, "✓ basis"), h("div", {}, `+${krKort(x.dig)} til dig`), del.buffer ? h("div", {}, `+${krKort(x.tilBuf)} til bufferen`) : null] : "✓")
           : x.brugt === x.m ? `mangler ${krKort(x.m)}, dækket af bufferen (${krKort(x.rest)} tilbage)` : `mangler ${krKort(x.m - x.brugt)}${x.brugt ? " efter bufferen" : ""}`)))) : null),
-    RD.advarsel ? h("div", {class: "bj rd", style: "margin-top:8px"}, h("span", {class: "bj-t"}, h("b", {}, RD.advarsel.tekst))) : null,   // kun inden for 60 dage, jobs uden pris står øverst (Oscar 1/11)
     LV ? h("details", rdFold("leve"), h("summary", {}, LV.basis ? "Basis består af" : "For at leve af DJ, det består af", h("span", {class: "v"}, `${krKort(LV.kr)} kr.`)),
       h("div", {class: "rd-l"}, h("span", {}, "Firmaets faste udgifter ", h("span", {class: "muted"}, LV.F.linjer.slice(0, 4).map(x => `${x.navn} ${krKort(x.kr)}`).join(" · ") + (LV.F.linjer.length > 4 ? ` · ${LV.F.linjer.length - 4} andre ${krKort(LV.F.linjer.slice(4).reduce((t, x) => t + x.kr, 0))}` : "")), kilde("kontoudtog", LV.F.dato)), h("b", {}, krKort(LV.F.kr))),
       h("div", {class: "rd-l"}, h("span", {}, "Til dig privat ", priv(), h("span", {class: "muted"}, " " + LV.L.linjer.map(x => `${x.navn} ${krKort(x.kr)}`).join(" · ")), kilde(LV.basis ? "privat-data" : "snit 12 mdr., privat-data", LV.L.dato)), h("b", {}, krKort(LV.L.netto))),
@@ -4225,7 +4218,11 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
       knap(s ? "✓ Overført" : "✓ Set", () => kør("betaling-fordelt", [`--job=${r.navn}`, `--dato=${r.dato}`, `--skat=${s}`], {tekst: `${r.navn}: ${s ? krKort(s) + " kr. til Skat-puljen" : "set"}`, efter: ["betalinger", "mo"],
         med: () => { r.fordelt = {dato: iDag(), skat: s}; if (s) puljeMed("Skat", s); }}), true)));
   });
-  $("rod").replaceChildren(h("div", {class: "side bred skat-side"}, top, msKort, fejlBjælker(), betLinjer.length || prisBj.length ? h("div", {class: "bet-linjer", style: "margin-top:12px;display:grid;gap:8px"}, betLinjer, prisBj) : null, rå, bjælker, overblik, puljer, regFold, tjekFold, fordFold,
+  // alle "vær opmærksom" ét sted under Månedsskiftet, rød før gul før grøn (Oscar 2/11: "de kommer ikke samme sted")
+  const farve = x => x.classList.contains("rd") ? 0 : x.classList.contains("y") ? 1 : 2;
+  const alle = [...fejlBjælker(), ...betLinjer, ...prisBj, ...gør].map((x, i) => [x, i]).sort((a, b) => farve(a[0]) - farve(b[0]) || a[1] - b[1]).map(x => x[0]);
+  const bjælker = h("div", {class: "bjaelker bet-linjer"}, alle.length ? alle : mo.raad?.frit < 0 || mo.raad?.advarsel ? null : h("div", {class: "bj g"}, h("span", {class: "bj-t"}, h("b", {}, "✓ Alt er grønt."), " Pengene rækker, og skatten passer.")));
+  $("rod").replaceChildren(h("div", {class: "side bred skat-side"}, top, msKort, bjælker, rå, overblik, puljer, regFold, tjekFold, fordFold,
     h("div", {class: "overskrift", style: "margin-top:20px"}, "Penge ude"),
     h("div", {class: "sk-k4 sk-k2"},
       felt({f: ub.antal ? "y" : "g", tal: krKort(ub.kr), tekst: `kr. ubetalt (${ub.antal} ${ub.antal === 1 ? "faktura" : "fakturaer"}, inkl. moms)`}),
