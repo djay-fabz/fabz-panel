@@ -362,6 +362,7 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .pulje{background:var(--flade);border:1px solid var(--linje);border-radius:12px;padding:12px 14px;margin-top:8px}.pulje .r1{display:flex;align-items:baseline;gap:8px}.pbar{height:10px;border-radius:99px;background:var(--linje);margin:8px 0;overflow:hidden}.pbar i{display:block;height:100%;border-radius:99px}.pk{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .sx{background:var(--flade);border:1px solid var(--linje);border-radius:14px;overflow:hidden}.sx .pulje{border:0;border-radius:0;margin:0;border-bottom:1px solid var(--linje)}.sx .pulje:last-child{border-bottom:0}
 .hb-w{position:relative;padding-bottom:16px}.hb-w .pbar{position:relative}.hb-w .pbar s{position:absolute;top:0;bottom:0;width:2px;background:var(--tekst)}.hb-mk{position:absolute;bottom:0;transform:translateX(-50%);white-space:nowrap;font-size:11.5px;color:var(--svag)}
+.d1-h{font-weight:700;font-size:17px;margin-bottom:2px}.d1-g{font-size:12.5px;font-weight:600;color:var(--svag);text-transform:uppercase;letter-spacing:.05em;margin:12px 0 0}
 .ov-r{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--linje);flex-wrap:wrap}.ov-r:first-child{padding-top:0}.ov-r:last-child{border-bottom:0;padding-bottom:0}.ov-t{flex:1 1 300px;min-width:0}.ov-t b.rd-t{color:var(--fejl)}.ov-n{font-variant-numeric:tabular-nums;color:var(--svag);font-size:13.5px;margin-top:2px}.ov-n b{color:var(--tekst);letter-spacing:.02em}
 .hov{background:var(--fejl-blid);border:0;border-left:6px solid var(--fejl)}.hov h2{margin:0;font-size:20px}.hov p{margin:4px 0 12px}.hov textarea{width:100%;margin-bottom:8px}.hov-plan{margin-top:4px}.hov-svar{margin-top:8px;color:var(--svag)}.hov-svar b{color:var(--tekst)}
 .kuv-r{border-top:1px solid var(--linje)}.kuv-l{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;padding:12px 18px;cursor:pointer}.kuv-l span:first-child{flex:1}.kuv-l b{font-weight:600}.kuv-ch{color:var(--svagere);font-size:18px;transition:transform .15s}.kuv-r.aaben .kuv-ch{transform:rotate(90deg)}.kuv-d{padding:0 18px 12px}.kuv-d .pm{font-size:13px;color:var(--svag)}.kuv-d .btn{margin-top:8px}
@@ -3906,16 +3907,26 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   const ovL = [], nrT = k => !k || !(k.reg || k.kontonr || k.iban) ? null : k.iban ? ["Til IBAN ", h("b", {}, k.iban)] : ["Til reg. ", h("b", {}, k.reg || "?"), " konto ", h("b", {}, k.kontonr || "?")];
   const ovR = (id, tekst, nr, fn, rød, ekstra) => h("div", {class: "ov-r", "data-ov": id}, h("div", {class: "ov-t"}, h("b", {class: rød ? "rd-t" : ""}, tekst), ekstra || "", nr ? h("div", {class: "ov-n"}, nr) : null),
     knap("✓ Overført", fn, !ovL.length));
+  const saxoL = [];
   // Saxo til Lønkonto+ før d. 1 (Oscar 1/11, fabz_saxo): opgaven vises 3 bankdage før, frist kl. 13 på næstsidste bankdag. Beløbet kommer fra privat-data
   (D.opgaver || []).filter(o => o.saxo_d1 && o.status !== "Færdig" && iDag() >= (o.ikke_foer || "")).forEach(o => {
     const mk = HB0 && P0.d1?.dato === o.saxo_d1 ? HB0.maerke : null, x = mk != null ? Math.min(mk, Math.max(0, HB0.saldo)) : null, fr = dag(o.deadline);   // aldrig mere end der står (revision 1/11)
-    ovL.push(ovR("saxo-" + o.saxo_d1, `Overfør ${x != null ? krKort(x) + " kr. " : ""}fra Saxo til Lønkonto+ senest ${DAGE[fr.getDay()]} ${kortDato(o.deadline)} kl. 13`, nrT(P0.kontonr?.["Lønkonto+"]), () => {
+    if (x === 0) return;   // tom pulje: lønnen kommer fra firmaet (listen til d. 1, Oscar 3/11)
+    saxoL.push(ovR("saxo-" + o.saxo_d1, `Overfør ${x != null ? krKort(x) + " kr. " : ""}fra Saxo til Lønkonto+ senest ${DAGE[fr.getDay()]} ${kortDato(o.deadline)} kl. 13`, nrT(P0.kontonr?.["Lønkonto+"]), () => {
         if (x && P0.inbox) privatFlyt(-x, iDag(), "Husleje d. 1 + Buffer", "husbuffer");   // puljen opdateres
-        kør("faerdig", [String(o.id)], {tekst: `#${o.id} Overført fra Saxo`, efter: ["opgaver"], med: () => { o.status = "Færdig"; }}); }, iDag() >= o.deadline,
-      mk != null && x < mk ? ` Puljen mangler ${krKort(mk - x)} til d. ${kortDato(o.saxo_d1)}.` : ""));
+        kør("faerdig", [String(o.id)], {tekst: `#${o.id} Overført fra Saxo`, efter: ["opgaver"], med: () => { o.status = "Færdig"; }}); }, iDag() >= o.deadline));
   });
-  (P0.inbox ? P0.overfoersler || [] : []).forEach(o => ovL.push(ovR(o.id, `Overfør ${krKort(o.kr)} kr. fra ${o.fra} til ${o.til.replace(" (byen)", "")}${o.frist ? " senest " + kortDato(o.frist) : ""}`, nrT(o),
-    () => privatSend({kommando: "overfoert", id: o.id}, `Overført ${krKort(o.kr)} kr. til ${o.til.replace(" (byen)", "")}`), o.frist && iDag() >= o.frist)));
+  const ovP = P0.inbox ? P0.overfoersler || [] : [], d1L = ovP.filter(o => o.d1), tilN = o => o.til.replace(" (byen)", "");
+  ovP.filter(o => !o.d1).forEach(o => ovL.push(ovR(o.id, `Overfør ${krKort(o.kr)} kr. fra ${o.fra} til ${tilN(o)}${o.frist ? " senest " + kortDato(o.frist) : ""}`, nrT(o),
+    () => privatSend({kommando: "overfoert", id: o.id}, `Overført ${krKort(o.kr)} kr. til ${tilN(o)}`), o.frist && iDag() >= o.frist)));
+  // listen til d. 1 (Oscar 3/11, skitse panel-d1-liste): fra 2 bankdage før, i den rækkefølge det skal gøres; Saxo-linjen hører til gruppe 1
+  const d1R = o => ovR(o.id, o.gruppe === 1 ? `Overfør ${krKort(o.kr)} kr. fra ${o.fra} til ${tilN(o)}` : `Overfør ${krKort(o.kr)} kr. til ${tilN(o)}`, nrT(o),
+    () => privatSend({kommando: "overfoert", id: o.id}, `Overført ${krKort(o.kr)} kr. til ${tilN(o)}`), false, o.tekst ? ` (${o.tekst})` : "");
+  const d1Kort = d1L.length || (saxoL.length && P0.d1) ? h("div", {class: "kort2 ov-k d1-k", style: "margin-top:12px"},
+    h("div", {class: "d1-h"}, `Til ${kortDato(d1L[0]?.d1 || P0.d1.dato)}`),
+    h("div", {class: "d1-g"}, "1. Fra firmaet"), saxoL, d1L.filter(o => o.gruppe === 1).map(d1R),
+    d1L.some(o => o.gruppe === 2) ? [h("div", {class: "d1-g"}, "2. Fra Faste omkostninger"), d1L.filter(o => o.gruppe === 2).map(d1R)] : null) : null;
+  if (!d1Kort) ovL.unshift(...saxoL);
   // job uden pris (Oscar 1/11, skitse panel-advarsel): én bjælke pr. job, der åbner jobbet, så beløbet kan skrives der
   const prisBj = (mo.raad?.uden_pris_jobs || []).map(x => trin("y", [h("b", {}, `${x.navn} ${kortDato(x.dato)} har ingen pris.`)],
     knap("Åbn jobbet →", () => visJobNøgle(`${x.dato}|${x.navn.toLowerCase()}`), true)));   // over "Frit at bruge", som i skitsen
@@ -4331,8 +4342,8 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
           ØK.hov = "";
           kør("hov-plan", [`--ym=${HA.ym}`, `--mangler=${hovMangler}`, `--tekst=${tx}`], {tekst: "Plan sendt til Claude", efter: ["hov"],
             med: () => { (D.hov = D.hov || []).push({id: "…", ym: HA.ym, mangler: hovMangler, tekst: tx, tid: new Date().toISOString(), svar: null}); }}); }, true)]) : null;
-  const ovKort = ovL.length ? h("div", {class: "kort2 ov-k", style: "margin-top:12px"}, ovL) : null;
-  $("rod").replaceChildren(h("div", {class: "side bred skat-side"}, top, msKort, hovKort, ovKort, bjælker, rå, overblik, puljer, regFold, fbKort2, tjekFold, fordFold,
+  const ovKort0 = ovL.length ? h("div", {class: "kort2 ov-k", style: "margin-top:12px"}, ovL) : null;
+  $("rod").replaceChildren(h("div", {class: "side bred skat-side"}, top, msKort, hovKort, d1Kort, ovKort0, bjælker, rå, overblik, puljer, regFold, fbKort2, tjekFold, fordFold,
     h("div", {class: "overskrift", style: "margin-top:20px"}, "Penge ude"),
     h("div", {class: "sk-k4 sk-k2"},
       felt({f: ub.antal ? "y" : "g", tal: krKort(ub.kr), tekst: `kr. ubetalt (${ub.antal} ${ub.antal === 1 ? "faktura" : "fakturaer"}, inkl. moms)`}),
