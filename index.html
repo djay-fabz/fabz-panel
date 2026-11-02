@@ -3918,7 +3918,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   if (STa?.kvartal?.mangler) ovL.push(ovR("stroem-" + STa.kvartal.regning, `Overfør ${krKort(STa.kvartal.mangler)} kr. fra Saxo via Lønkonto+ til Faste omkostninger`,
     nrT(P0.kontonr?.["Faste omkostninger"]), () => { const el = (P0.delpuljer?.linjer || []).find(x => x.regninger); if (el) privatSend({kommando: "fra-buffer", navn: el.navn, kr: STa.kvartal.mangler}, `El +${krKort(STa.kvartal.mangler)} kr. fra Saxo`); }, false, " (Strøm)"));
   // en kuvert i minus står i Overførsler, ikke som rød bjælke (Oscar 2/11). Saxo udbetaler kun til Lønkonto+
-  (P0.inbox ? P0.delpuljer?.linjer || [] : []).filter(x => x.saldo < 0 && x.maal == null).forEach(x => { const til = x.konto || "Regninger";
+  (P0.inbox ? P0.delpuljer?.linjer || [] : []).filter(x => x.saldo < 0 && x.maal == null).forEach(x => { const til = x.konto || P0.delpuljer.konto || "Kort opsparing";
     ovL.push(ovR("kuvert-" + x.navn, `Overfør ${krKort(-x.saldo)} kr. fra Saxo via Lønkonto+ til ${til.replace(" (byen)", "")}`, nrT(P0.kontonr?.[til]),
       () => privatSend({kommando: "fra-buffer", navn: x.navn, kr: -x.saldo}, `${x.navn.replace(/ danmark$/i, "")} +${krKort(-x.saldo)} kr. fra Saxo`), false, ` (${x.navn.replace(/ danmark$/i, "")})`)); });
   // kontante jobs (Oscar 30/10): efter jobbet "Godkend: X kr. ligger i kontantkisten" -> betalingen godkendes i fabz-data, og kisten i privat-data får beløbet
@@ -4199,7 +4199,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
       const rg = x.regninger || [], [før, sen] = rg.length > 1 ? rg.slice(-2).map(q => q.kr) : [null, null], åben = ØK.kuvÅben === x.navn;
       return h("div", {class: "kuv-r" + (åben ? " aaben" : ""), "data-kuvert": x.navn},
         h("button", {class: "kuv-l", type: "button", "aria-expanded": String(åben), onclick: () => { ØK.kuvÅben = åben ? null : x.navn; tegn(); }},
-          h("span", {}, kuvNavn(x.navn)), h("b", {}, `${krKort(x.saldo)} kr.`), h("span", {class: "kuv-ch"}, "›")),
+          h("span", {}, kuvNavn(x.navn), h("span", {class: "muted"}, ` · ${x.konto || DP.konto}`)), h("b", {}, `${krKort(x.saldo)} kr.`), h("span", {class: "kuv-ch"}, "›")),   // hvilken konto pengene står på (Oscar 2/11)
         åben ? h("div", {class: "kuv-d"},
           h("div", {class: "pm"}, `${krKort(x.pr_md)} pr. md.`, x.kort ? ` · ${x.kort}` : x.regninger ? " · følger regningerne" : x.forfald ? ` · trækkes ${kortDato(x.forfald)}` : "",
             x.fra && x.fra > iDag() ? ` · fra ${kortDato(x.fra)}` : ""),
