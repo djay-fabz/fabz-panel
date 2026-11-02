@@ -4221,16 +4221,17 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
         h("div", {class: "fb-lab"}, ["j", "f", "m", "a", "m", "j", "j", "a", "s", "o", "n", "d"].map(x => h("span", {}, x))),
         h("div", {class: "fb-leg"}, h("i", {class: "b"}), String(FB.aar), h("i", {class: "a"}), String(FB.aar - 1))) : null); };
   const vkMangler = VK && VK.pr_md === 0 && iDag() < VK.forfald ? Math.max(0, VK.maal - VK.saldo) : 0;
-  // Strøm (Oscar 2/11, skitse panel-stroem): kvartalet mod kuverten El; grafen viser de sidste 14 dage med kl. 17-21 for sig (privat_stroem)
+  // Strøm (Oscar 2/11, skitse panel-stroem): næste træk (Goenergi: kvartalets opgørelse + næste aconto) mod kuverten El; grafen viser de sidste 14 dage med kl. 17-21 for sig (privat_stroem)
   const ST = P.stroem, stG = ØK.graf === "Strøm", stK = ST?.kvartal;
   const stKort = ST ? (() => { const dg = Object.entries(ST.dage || {}), mx = Math.max(0.1, ...dg.map(([, x]) => x.kwh));
     return h("div", {class: "kort2 fb st", "data-fb": "Strøm"}, h("b", {}, "Strøm"),
       h("div", {class: "fb-s " + (stK.mangler ? "neg" : "ok")}, stK.mangler ? `Mangler ${krKort(stK.mangler)} kr.` : "✓ Der er nok"),
       knap(stG ? "Skjul graf" : "Vis graf", () => { ØK.graf = stG ? null : "Strøm"; tegn(); }),
       stG ? h("div", {class: "fb-g"},
-        h("div", {class: "rd-l"}, h("span", {}, "Kvartal til nu"), h("b", {}, `${krKort(stK.til_nu)} kr.`)),
-        h("div", {class: "rd-l"}, h("span", {}, `Forventet til ${kortDato(stK.regning)}`), h("b", {}, `${krKort(stK.forventet)} kr.`)),
-        stK.kuvert ? h("div", {class: "rd-l"}, h("span", {}, `Kuverten El til ${kortDato(stK.regning)}`), h("b", {}, `${krKort(stK.kuvert)} kr.`)) : null,
+        h("div", {class: "rd-l"}, h("span", {}, `${MDL[Number(stK.start.slice(5, 7)) - 1].slice(0, 3)}-${MDL[(Number(stK.slut.slice(5, 7)) + 10) % 12].slice(0, 3)} forventet`), h("b", {}, `${krKort(stK.forventet)} kr.`)),
+        stK.aconto != null ? h("div", {class: "rd-l"}, h("span", {}, "Aconto betalt"), h("b", {}, `${krKort(Math.round(stK.aconto))} kr.`)) : null,
+        h("div", {class: "rd-l"}, h("span", {}, `Næste træk ${kortDato(stK.regning)}`), h("b", {}, `ca. ${krKort(stK.naeste)} kr.`)),
+        stK.kuvert ? h("div", {class: "rd-l"}, h("span", {}, `Kuverten El ${kortDato(stK.regning)}`), h("b", {}, `${krKort(stK.kuvert)} kr.`)) : null,
         h("div", {class: "fb-bars st-bars"}, dg.map(([, x]) => h("span", {class: "stak"}, h("i", {class: "b", style: `height:${100 * x.kwh_dyr / mx}%`}), h("i", {class: "a", style: `height:${100 * (x.kwh - x.kwh_dyr) / mx}%`})))),
         h("div", {class: "fb-lab"}, dg.map(([d]) => h("span", {}, String(Number(d.slice(8)))))),
         h("div", {class: "fb-leg"}, h("i", {class: "a"}), "kWh", h("i", {class: "b"}), "kl. 17-21")) : null); })() : null;
