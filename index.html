@@ -3812,6 +3812,7 @@ function privatMed(anm) {   // vis ændringen med det samme (Oscar 29/10); hentP
     if (fa && v != null && v < fa.kr) (P.overfoersler = P.overfoersler || []).unshift({id: `faste-${anm.maaned}-saxo`, kr: fa.kr - v, fra: "Saxo", til: "Lønkonto+", pulje: "husbuffer", ...(P.kontonr?.["Lønkonto+"] || {})});
     P.maanedsskifte = null;
   }
+  else if (anm.kommando === "forstaaet") (P.forstaaet = P.forstaaet || {})[anm.id] = anm.uge;
   else if (anm.kommando === "overfoert") {   // overførsel i hånden (Oscar 2/11): linjen væk, Saxo → Lønkonto+ (trin 1) trækkes fra puljen
     const o = (P.overfoersler || []).find(q => q.id === anm.id);
     P.overfoersler = (P.overfoersler || []).filter(q => q.id !== anm.id);
@@ -3850,6 +3851,12 @@ async function privatSend(anm, tekst) {   // Buffer, Opsparing og egne private p
 }
 // skatten af penge, der er kommet (Oscar 2/11): resten venter på kommende jobs og ubetalte fakturaer og er ikke rød
 const skatNu = sk => sk.mangler_nu != null ? sk.mangler_nu : sk.mangler_paa_kontoen || 0;
+function isoUge(d) {   // "ÅÅÅÅ-Wnn" (ISO-uge, mandag-søndag)
+  const x = new Date(d + "T12:00:00"), dag_ = (x.getDay() + 6) % 7;
+  x.setDate(x.getDate() - dag_ + 3);
+  const t1 = new Date(x.getFullYear(), 0, 4), n = 1 + Math.round(((x - t1) / 864e5 - 3 + ((t1.getDay() + 6) % 7)) / 7);
+  return `${x.getFullYear()}-W${String(n).padStart(2, "0")}`;
+}
 function puljeMed(navn, b) {   // Fabz-puljer og Skat-puljen: vis det nye tal med det samme (Oscar 29/10). kør() henter de rigtige tal efter workflowet og sætter tilbage ved fejl
   const mo = D.mo || {}, sk = mo.skat;
   if (navn === "Skat" && sk) {
@@ -3933,8 +3940,11 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   // strøm (Oscar 2/11, skitse panel-stroem): én gul bjælke, når over 25 % af strømmen to uger i træk lå kl. 17-21; kvartalet over kuverten El står i Overførsler
   const STa = P0.inbox ? P0.stroem : null;
   if (STa?.gammel) gør.push(trin("y", [h("b", {}, `Strømdata er ikke hentet i ${STa.gammel} dage.`), " Eloverblik-tokenet er måske udløbet: lav et nyt på eloverblik.dk. Indtil da sparer El op efter de gamle regninger."]));   // revision 2/11
-  if (STa?.advarsel) gør.push(trin("y", [h("b", {}, "I bruger meget strøm kl. 17-21."), ` ${STa.advarsel.andel} % af ugens strøm lå der, hvor den er dyrest.`
-    + (STa.advarsel.spar_md ? ` Vask og opvask efter kl. 21 sparer ca. ${krKort(STa.advarsel.spar_md)} kr. om måneden.` : "")]));
+  // info-advarsel med "Forstået" (Oscar 3/11): væk resten af ugen, kommer igen, hvis en senere uge også er over grænsen
+  const ugeNu = isoUge(iDag()), forstået = id => (P0.forstaaet || {})[id] === ugeNu;
+  if (STa?.advarsel && !forstået("stroem-1721")) gør.push(trin("y", [h("b", {}, "I bruger meget strøm kl. 17-21."), ` ${STa.advarsel.andel} % af ugens strøm lå der, hvor den er dyrest.`
+    + (STa.advarsel.spar_md ? ` Vask og opvask efter kl. 21 sparer ca. ${krKort(STa.advarsel.spar_md)} kr. om måneden.` : "")],
+    knap("Forstået", () => privatSend({kommando: "forstaaet", id: "stroem-1721", uge: ugeNu}, "Strøm-advarslen er væk resten af ugen"))));
   if (STa?.kvartal?.mangler) ovL.push(ovR("stroem-" + STa.kvartal.regning, `Overfør ${krKort(STa.kvartal.mangler)} kr. fra Saxo via Lønkonto+ til Faste omkostninger`,
     nrT(P0.kontonr?.["Faste omkostninger"]), () => { const el = (P0.delpuljer?.linjer || []).find(x => x.regninger); if (el) privatSend({kommando: "fra-buffer", navn: el.navn, kr: STa.kvartal.mangler}, `El +${krKort(STa.kvartal.mangler)} kr. fra Saxo`); }, false, " (Strøm)"));
   // en kuvert i minus står i Overførsler, ikke som rød bjælke (Oscar 2/11). Saxo udbetaler kun til Lønkonto+
