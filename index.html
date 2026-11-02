@@ -362,6 +362,8 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .pulje{background:var(--flade);border:1px solid var(--linje);border-radius:12px;padding:12px 14px;margin-top:8px}.pulje .r1{display:flex;align-items:baseline;gap:8px}.pbar{height:10px;border-radius:99px;background:var(--linje);margin:8px 0;overflow:hidden}.pbar i{display:block;height:100%;border-radius:99px}.pk{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .sx{background:var(--flade);border:1px solid var(--linje);border-radius:14px;overflow:hidden}.sx .pulje{border:0;border-radius:0;margin:0;border-bottom:1px solid var(--linje)}.sx .pulje:last-child{border-bottom:0}
 .hb-w{position:relative;padding-bottom:16px}.hb-w .pbar{position:relative}.hb-w .pbar s{position:absolute;top:0;bottom:0;width:2px;background:var(--tekst)}.hb-mk{position:absolute;bottom:0;transform:translateX(-50%);white-space:nowrap;font-size:11.5px;color:var(--svag)}
+.kuv{margin-top:12px;padding:0}.kuv-h{display:flex;gap:12px;flex-wrap:wrap;justify-content:space-between;align-items:baseline;padding:14px 18px;border-bottom:1px solid var(--linje)}.kuv-g{display:grid;grid-template-columns:repeat(4,1fr)}.kuv-k{padding:14px 18px;border-right:1px solid var(--linje)}.kuv-k:last-child{border-right:0}.kuv-k .s{font-size:26px;font-weight:800;margin:4px 0 2px}.kuv-k .s.neg{color:var(--fejl)}.kuv-k .pm{font-size:13px;color:var(--svag)}.kuv-k .tr{font-size:13px;margin-top:4px}.kuv-k .tr.op{color:var(--fejl)}.kuv-k .tr.ned{color:var(--ok)}.kuv-k .btn,.kuv-k .pk{margin-top:10px}
+@media(max-width:700px){.kuv-g{grid-template-columns:1fr 1fr}.kuv-k:nth-child(2n){border-right:0}.kuv-k:nth-child(-n+2){border-bottom:1px solid var(--linje)}.kuv-k .s{font-size:22px}}
 .ms-r{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.ms-i{margin-top:12px;padding-top:12px;border-top:1px solid var(--linje);color:var(--svag)}.ms-i b{color:var(--tekst)}
 .kh-hist{padding:0 14px 10px;font-size:12.5px;color:var(--svag)}.kh-hist div{display:flex;justify-content:space-between;gap:10px;padding:3px 0}.kh-hist b{font-weight:600}
 .sx-g{font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--svagere);padding:12px 14px 0;border-top:1px solid var(--linje)}.sx-g:first-child{border-top:0}
@@ -4147,18 +4149,23 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     ) : null;
   // Privat (Oscar 30/10): Regninger-kontoens delpuljer med "− Brugt", månedstjek, fordelingen og betalte klubjobs. Tallene regnes i privat-data
   const DP = P.delpuljer, br = ØK.brugt;
-  const regFold = DP ? h("details", rdFold("delpuljer", br ? {open: true} : {}), h("summary", {}, `${DP.konto}-kontoen `, priv(), kilde("opsparet fra", DP.start), h("span", {class: "v"}, `${krKort(DP.i_alt)} kr. låst`)),
-    DP.linjer.map(x => h("div", {class: "rd-l"}, h("span", {}, x.navn, h("span", {class: "muted"}, ` · ${krKort(x.pr_md)} pr. md.${x.auto ? " · trækkes automatisk" : ""}`),
-      x.brugt.length ? h("span", {class: "muted lille"}, " · " + x.brugt.map(b => `${b.kr < 0 ? "+" + krKort(-b.kr) : "−" + krKort(b.kr)} ${b.tekst || ""} ${kortDato(b.dato)}`.trim()).join(", ")) : null),
-      h("b", {class: x.saldo < 0 ? "neg" : ""}, krKort(x.saldo)))),
-    P.inbox ? h("div", {class: "pk", style: "padding:10px 16px;border-top:1px solid var(--linje)"},
-      br ? [sel([["", "Vælg"], ...DP.linjer.filter(x => !x.auto).map(x => [x.navn, x.navn])], br, "navn"),
-        inp(br, "kr", {type: "number", inputmode: "numeric", placeholder: "Beløb", style: "width:100px"}), datoInput(br.dato, v => { br.dato = v; }, {style: "width:120px"}),
-        inp(br, "tekst", {placeholder: "Fx nye bremser", style: "width:150px"}),
-        knap("Gem", () => { const b = Math.round(Number(br.kr)); if (!br.navn || !(b > 0)) return alert("Vælg og skriv beløbet");
-          ØK.brugt = null; privatSend({kommando: "brugt", navn: br.navn, kr: b, dato: br.dato, tekst: br.tekst || ""}, `${br.navn} −${krKort(b)} kr.`); }, true),
-        knap("Fortryd", () => { ØK.brugt = null; tegn(); })]
-      : knap("− Brugt", () => { ØK.brugt = {navn: "", dato: iDag()}; tegn(); })) : null) : null;
+  // Kuverter (Oscar 2/11, skitse panel-kuverter): Regninger-kontoens delpuljer og El (bliver på Faste omkostninger) som et lille overblik med Hæv.
+  // Automatiske (El, sygeforsikring) trækkes selv, når regningen kommer. Tallene regnes i privat-data
+  const kuvNavn = n => n.replace(/ danmark$/i, "");
+  const regFold = DP ? h("div", {class: "kort2 kuv"},
+    h("div", {class: "kuv-h"}, h("b", {}, "Kuverter"), h("span", {class: "muted lille"}, `fyldes fra Faste omkostninger d. 2 · i alt ${krKort(DP.linjer.reduce((s, x) => s + x.saldo, 0))} kr.`)),
+    h("div", {class: "kuv-g"}, DP.linjer.map(x => {
+      const rg = x.regninger || [], [før, sen] = rg.length > 1 ? rg.slice(-2).map(q => q.kr) : [null, null];
+      return h("div", {class: "kuv-k", "data-kuvert": x.navn}, h("b", {}, kuvNavn(x.navn)), h("div", {class: "s" + (x.saldo < 0 ? " neg" : "")}, `${krKort(x.saldo)} kr.`),
+        h("div", {class: "pm"}, `${krKort(x.pr_md)} pr. md.`, x.kort ? ` · ${x.kort}` : x.regninger ? " · følger elregningerne" : x.forfald ? ` · trækkes ${kortDato(x.forfald)}` : "",
+          x.fra && x.fra > iDag() ? ` · fra ${kortDato(x.fra)}` : ""),
+        sen != null && sen !== før ? h("div", {class: "tr " + (sen > før ? "op" : "ned")}, `${sen > før ? "↑ stiger" : "↓ falder"}: seneste ${krKort(sen)}, før ${krKort(før)}`) : null,
+        !x.auto && P.inbox ? (br && br.navn === x.navn ? h("div", {class: "pk"}, inp(br, "kr", {type: "number", inputmode: "numeric", placeholder: "Beløb", style: "width:90px"}),
+          knap("Gem", () => { const b = Math.round(Number(br.kr)); if (!(b > 0)) return alert("Skriv beløbet");
+            ØK.brugt = null; privatSend({kommando: "brugt", navn: x.navn, kr: b, dato: iDag(), tekst: ""}, `${kuvNavn(x.navn)} −${krKort(b)} kr.`); }, true),
+          knap("Fortryd", () => { ØK.brugt = null; tegn(); }))
+          : knap("Hæv", () => { ØK.brugt = {navn: x.navn, kr: ""}; tegn(); })) : null);
+    }))) : null;
   const MT = (P.maanedstjek || []).at(-1);
   const tjekFold = MT ? h("details", rdFold("tjek"), h("summary", {}, `Månedstjek ${MT.nr} af 3 · ${MT.maaned} `, kilde("Bliss", MT.data_til)),
     h("table", {class: "rd-tb"}, h("tr", {}, h("th", {}, "Konto"), h("th", {}, "Planlagt"), h("th", {}, "Faktisk"), h("th", {}, "Afvigelse")),
