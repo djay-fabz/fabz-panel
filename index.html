@@ -365,7 +365,9 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .ov-r{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--linje);flex-wrap:wrap}.ov-r:first-child{padding-top:0}.ov-r:last-child{border-bottom:0;padding-bottom:0}.ov-t{flex:1 1 300px;min-width:0}.ov-t b.rd-t{color:var(--fejl)}.ov-n{font-variant-numeric:tabular-nums;color:var(--svag);font-size:13.5px;margin-top:2px}.ov-n b{color:var(--tekst);letter-spacing:.02em}
 .hov{background:var(--fejl-blid);border:0;border-left:6px solid var(--fejl)}.hov h2{margin:0;font-size:20px}.hov p{margin:4px 0 12px}.hov textarea{width:100%;margin-bottom:8px}.hov-plan{margin-top:4px}.hov-svar{margin-top:8px;color:var(--svag)}.hov-svar b{color:var(--tekst)}
 .kuv-r{border-top:1px solid var(--linje)}.kuv-l{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;padding:12px 18px;cursor:pointer}.kuv-l span:first-child{flex:1}.kuv-l b{font-weight:600}.kuv-ch{color:var(--svagere);font-size:18px;transition:transform .15s}.kuv-r.aaben .kuv-ch{transform:rotate(90deg)}.kuv-d{padding:0 18px 12px}.kuv-d .pm{font-size:13px;color:var(--svag)}.kuv-d .btn{margin-top:8px}
-.fb-to{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.fb-s{font-weight:600;margin:4px 0 10px}.fb-s.ok{color:var(--ok)}.fb-s.neg{color:var(--fejl)}.fb-g{margin-top:12px}.fb-a{font-size:13px;font-weight:600;margin-bottom:6px}
+.fb-to{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.fb-to.tre{grid-template-columns:repeat(3,1fr)}.fb .rd-l{display:flex;justify-content:space-between;font-size:13.5px;padding:3px 0}.fb .rd-l b{font-weight:600}
+.st-bars span.stak{flex-direction:column-reverse;gap:0}.st-bars span.stak i{flex:none;width:100%;border-radius:0}.st-bars span.stak i:last-child{border-radius:2px 2px 0 0}.fb-leg i.a{background:#d1d5db}
+@media(max-width:700px){.fb-to.tre{grid-template-columns:1fr 1fr}.fb-to.tre .st{grid-column:1/-1}}.fb-s{font-weight:600;margin:4px 0 10px}.fb-s.ok{color:var(--ok)}.fb-s.neg{color:var(--fejl)}.fb-g{margin-top:12px}.fb-a{font-size:13px;font-weight:600;margin-bottom:6px}
 .fb-bars{display:flex;align-items:flex-end;gap:3px;height:60px}.fb-bars span{flex:1;display:flex;gap:1px;align-items:flex-end;height:100%}.fb-bars i{flex:1;border-radius:2px 2px 0 0;min-height:1px}.fb-bars i.a,.fb-leg i.a{background:#d1d5db}.fb-bars i.b,.fb-leg i.b{background:#d97706}
 .fb-lab{display:flex;gap:3px;font-size:10px;color:var(--svag);margin-top:2px}.fb-lab span{flex:1;text-align:center}.fb-leg{font-size:12px;color:var(--svag);margin-top:6px}.fb-leg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin:0 4px 0 8px;vertical-align:-1px}
 .kuv{margin-top:12px;padding:0}.kuv-h{display:flex;gap:12px;flex-wrap:wrap;justify-content:space-between;align-items:baseline;padding:14px 18px}.kuv-g{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--linje);border-radius:0 0 14px 14px;overflow:hidden}.kuv-k{padding:14px 18px;background:var(--flade)}.kuv-k .s{font-size:26px;font-weight:800;margin:4px 0 2px}.kuv-k .s.neg{color:var(--fejl)}.kuv-k .pm{font-size:13px;color:var(--svag)}.kuv-k .tr{font-size:13px;margin-top:4px}.kuv-k .tr.op{color:var(--fejl)}.kuv-k .tr.ned{color:var(--ok)}.kuv-k .btn,.kuv-k .pk{margin-top:10px}
@@ -3909,6 +3911,12 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   // job uden pris (Oscar 1/11, skitse panel-advarsel): én bjælke pr. job, der åbner jobbet, så beløbet kan skrives der
   const prisBj = (mo.raad?.uden_pris_jobs || []).map(x => trin("y", [h("b", {}, `${x.navn} ${kortDato(x.dato)} har ingen pris.`)],
     knap("Åbn jobbet →", () => visJobNøgle(`${x.dato}|${x.navn.toLowerCase()}`), true)));   // over "Frit at bruge", som i skitsen
+  // strøm (Oscar 2/11, skitse panel-stroem): én gul bjælke, når over 25 % af strømmen to uger i træk lå kl. 17-21; kvartalet over kuverten El står i Overførsler
+  const STa = P0.inbox ? P0.stroem : null;
+  if (STa?.advarsel) gør.push(trin("y", [h("b", {}, "I bruger meget strøm kl. 17-21."), ` ${STa.advarsel.andel} % af ugens strøm lå der, hvor den er dyrest.`
+    + (STa.advarsel.spar_md ? ` Vask og opvask efter kl. 21 sparer ca. ${krKort(STa.advarsel.spar_md)} kr. om måneden.` : "")]));
+  if (STa?.kvartal?.mangler) ovL.push(ovR("stroem-" + STa.kvartal.regning, `Overfør ${krKort(STa.kvartal.mangler)} kr. fra Saxo via Lønkonto+ til Faste omkostninger`,
+    nrT(P0.kontonr?.["Faste omkostninger"]), () => { const el = (P0.delpuljer?.linjer || []).find(x => x.regninger); if (el) privatSend({kommando: "fra-buffer", navn: el.navn, kr: STa.kvartal.mangler}, `El +${krKort(STa.kvartal.mangler)} kr. fra Saxo`); }, false, " (Strøm)"));
   // en kuvert i minus står i Overførsler, ikke som rød bjælke (Oscar 2/11). Saxo udbetaler kun til Lønkonto+
   (P0.inbox ? P0.delpuljer?.linjer || [] : []).filter(x => x.saldo < 0 && x.maal == null).forEach(x => { const til = x.konto || "Regninger";
     ovL.push(ovR("kuvert-" + x.navn, `Overfør ${krKort(-x.saldo)} kr. fra Saxo via Lønkonto+ til ${til.replace(" (byen)", "")}`, nrT(P0.kontonr?.[til]),
@@ -4213,8 +4221,22 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
         h("div", {class: "fb-lab"}, ["j", "f", "m", "a", "m", "j", "j", "a", "s", "o", "n", "d"].map(x => h("span", {}, x))),
         h("div", {class: "fb-leg"}, h("i", {class: "b"}), String(FB.aar), h("i", {class: "a"}), String(FB.aar - 1))) : null); };
   const vkMangler = VK && VK.pr_md === 0 && iDag() < VK.forfald ? Math.max(0, VK.maal - VK.saldo) : 0;
-  const fbKort2 = FB && FB.prognose ? h("div", {class: "fb-to"}, fbKort("Varme", !vkMangler, vkMangler, FB.varme, "enheder"),
-    fbKort("Vand", FB.prognose.vand.efter <= 0 || !vkMangler, 0, FB.vand, "m³")) : null;
+  // Strøm (Oscar 2/11, skitse panel-stroem): kvartalet mod kuverten El; grafen viser de sidste 14 dage med kl. 17-21 for sig (privat_stroem)
+  const ST = P.stroem, stG = ØK.graf === "Strøm", stK = ST?.kvartal;
+  const stKort = ST ? (() => { const dg = Object.entries(ST.dage || {}), mx = Math.max(0.1, ...dg.map(([, x]) => x.kwh));
+    return h("div", {class: "kort2 fb st", "data-fb": "Strøm"}, h("b", {}, "Strøm"),
+      h("div", {class: "fb-s " + (stK.mangler ? "neg" : "ok")}, stK.mangler ? `Mangler ${krKort(stK.mangler)} kr.` : "✓ Der er nok"),
+      knap(stG ? "Skjul graf" : "Vis graf", () => { ØK.graf = stG ? null : "Strøm"; tegn(); }),
+      stG ? h("div", {class: "fb-g"},
+        h("div", {class: "rd-l"}, h("span", {}, "Kvartal til nu"), h("b", {}, `${krKort(stK.til_nu)} kr.`)),
+        h("div", {class: "rd-l"}, h("span", {}, `Forventet til ${kortDato(stK.regning)}`), h("b", {}, `${krKort(stK.forventet)} kr.`)),
+        stK.kuvert ? h("div", {class: "rd-l"}, h("span", {}, `Kuverten El til ${kortDato(stK.regning)}`), h("b", {}, `${krKort(stK.kuvert)} kr.`)) : null,
+        h("div", {class: "fb-bars st-bars"}, dg.map(([, x]) => h("span", {class: "stak"}, h("i", {class: "b", style: `height:${100 * x.kwh_dyr / mx}%`}), h("i", {class: "a", style: `height:${100 * (x.kwh - x.kwh_dyr) / mx}%`})))),
+        h("div", {class: "fb-lab"}, dg.map(([d]) => h("span", {}, String(Number(d.slice(8)))))),
+        h("div", {class: "fb-leg"}, h("i", {class: "a"}), "kWh", h("i", {class: "b"}), "kl. 17-21")) : null); })() : null;
+  const fbKort2 = FB && FB.prognose || ST ? h("div", {class: "fb-to" + (ST && FB?.prognose ? " tre" : "")},
+    FB?.prognose ? fbKort("Varme", !vkMangler, vkMangler, FB.varme, "enheder") : null,
+    FB?.prognose ? fbKort("Vand", FB.prognose.vand.efter <= 0 || !vkMangler, 0, FB.vand, "m³") : null, stKort) : null;
   const MT = (P.maanedstjek || []).at(-1);
   const tjekFold = MT ? h("details", rdFold("tjek"), h("summary", {}, `Månedstjek ${MT.nr} af 3 · ${MT.maaned} `, kilde("Bliss", MT.data_til)),
     h("table", {class: "rd-tb"}, h("tr", {}, h("th", {}, "Konto"), h("th", {}, "Planlagt"), h("th", {}, "Faktisk"), h("th", {}, "Afvigelse")),
