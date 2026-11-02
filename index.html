@@ -4055,7 +4055,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
       P.inbox ? flytForm("Husleje d. 1 + Buffer") : null); };
   // Månedsskifte (Oscar 1/11, skitse panel-maanedsskifte-2): fra d. 1, til "Ja". Kun Faste omkostninger tjekkes (overførslerne derfra er automatiske),
   // byen er til oplysning. Puljerne holder han selv ajour med Sæt ind og Træk fra
-  const MS = P.inbox ? P.maanedsskifte : null, msF = MS?.felter?.[0];
+  const MS = P.inbox ? P.maanedsskifte : null, msF = MS?.felter?.find(f => f.konto === "Faste omkostninger");
   if (MS && ØK.ms?.maaned !== MS.maaned) ØK.ms = {maaned: MS.maaned, v: String(msF?.kr ?? "")};
   const msKort = MS && msF ? h("div", {class: "kort2 ms", style: "margin-top:12px"},
     h("div", {class: "ms-r"}, h("b", {}, `Står der ${krKort(msF.kr)} kr. på ${msF.konto}?`), h("span", {class: "pk"}, inp(ØK.ms, "v", {type: "number", inputmode: "numeric", style: "width:110px;text-align:right"}),
