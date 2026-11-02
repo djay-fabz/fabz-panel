@@ -3764,7 +3764,7 @@ function skatTjek(sk) {   // de fire punkter med farve og evt. handling, samme r
        tekst: `kr. B-skat rate ${sk.rate.rate}, ${dageTil < 0 ? "fristen var" : "senest"} ${kortDato(sk.rate.frist)}` + (sk.rate.opgave ? ` · opgave #${sk.rate.opgave}` : "")};
   const konto = sk.reserve == null ? {f: "", tal: "?", tekst: "kr. skal stå på Skat-kontoen (kommer med næste Dinero-hentning)"}
     : sk.saldo == null ? {f: "y", tal: krKort(sk.reserve), tekst: "kr. skal stå på Skat-kontoen, saldo mangler"}
-    : {f: sk.mangler_paa_kontoen ? "rd" : "g", tal: krKort(sk.saldo), tekst: `kr. på Skat-kontoen af ${krKort(sk.reserve)}` + (sk.mangler_paa_kontoen ? `, mangler ${krKort(sk.mangler_paa_kontoen)}` : ", dækker")};
+    : {f: skatNu(sk) ? "rd" : sk.mangler_paa_kontoen ? "y" : "g", tal: krKort(sk.saldo), tekst: `kr. på Skat-kontoen af ${krKort(sk.reserve)}` + (sk.mangler_paa_kontoen ? `, mangler ${krKort(sk.mangler_paa_kontoen)}` : ", dækker")};
   return {dageTil, rate, konto,
     felt: {f: sk.advarsel ? "y" : "g", tal: krKort(sk.forventet), tekst: `kr. forventet overskud, felt 221 er ${krKort(sk.felt_221)}`},
     skyld: {f: sk.skylder_mere ? "rd" : "g", tal: krKort(sk.skylder_mere), tekst: sk.skylder_mere ? "kr. på vej til at skylde ud over forskuddet" : "kr. at skylde, forskuddet passer"}};
@@ -3845,13 +3845,16 @@ async function privatSend(anm, tekst) {   // Buffer, Opsparing og egne private p
   if (sv && sv.status === "OK") besked({id: bid, klasse: "ok", titel: tekst + ": gemt", punkter: [sv.besked]});
   else besked({id: bid, klasse: "fejl", titel: tekst + ": ikke gemt", punkter: [sv ? sv.fejl : "Intet svar efter 15 minutter. Tjek Actions i privat-data.", "Siden er sat tilbage."]});
 }
+// skatten af penge, der er kommet (Oscar 2/11): resten venter på kommende jobs og ubetalte fakturaer og er ikke rød
+const skatNu = sk => sk.mangler_nu != null ? sk.mangler_nu : sk.mangler_paa_kontoen || 0;
 function puljeMed(navn, b) {   // Fabz-puljer og Skat-puljen: vis det nye tal med det samme (Oscar 29/10). kør() henter de rigtige tal efter workflowet og sætter tilbage ved fejl
   const mo = D.mo || {}, sk = mo.skat;
   if (navn === "Skat" && sk) {
     sk.saldo = (sk.saldo || 0) + b;
     if (sk.reserve != null) sk.mangler_paa_kontoen = Math.max(0, sk.reserve - sk.saldo);
+    if (sk.mangler_nu != null) sk.mangler_nu = Math.max(0, sk.mangler_nu - b);
     const L = mo.overblik?.linjer?.skat;
-    if (L) { L.kr = sk.saldo; L.f = sk.mangler_paa_kontoen ? "rd" : "g"; }
+    if (L) { L.kr = sk.saldo; L.f = skatNu(sk) ? "rd" : sk.mangler_paa_kontoen ? "y" : "g"; }
   } else { const p = (mo.overblik?.puljer || []).find(q => q.navn === navn); if (p) p.saldo += b; }
 }
 const rdFold = (id, ekstra = {}) => ({class: "rd-f", id: "rd-" + id, open: ØK.åbne.has(id), ontoggle: e => e.target.open ? ØK.åbne.add(id) : ØK.åbne.delete(id), ...ekstra});   // foldene husker, om de er åbne, når siden tegnes om
@@ -3887,8 +3890,13 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   if (gammeltÅr) gør.push(trin("y", [h("b", {}, `Skatteopsætningen gælder ${sk.aar}.`), " Følg opgaven Nyt skatteår, så skatten regnes for det nye år."]));
   ob.bjaelker.forEach(b => gør.push(trin(b.f, [h("b", {}, b.tekst), b.ekstra ? " " + b.ekstra : ""], b.knap && mål(b.mål) ? knap(b.knap, mål(b.mål), b.mål.startsWith("guide:")) : null)));
   if (sk.reserve != null && sk.saldo == null) gør.push(trin("y", [h("b", {}, "Skriv saldoen på Skat-puljen i Saxo.")], knap("Hurtig guide →", mål("guide:saxo"), true)));
-  else if (sk.mangler_paa_kontoen) gør.push(trin("rd", [h("b", {}, `Overfør ${krKort(sk.mangler_paa_kontoen)} kr. til Skat-puljen i Saxo.`)],
-    knap("✓ Jeg har overført", () => kør("pulje", ["flyt", "Skat", String(sk.mangler_paa_kontoen)], {tekst: `Skat-puljen +${krKort(sk.mangler_paa_kontoen)} kr.`, efter: ["mo"], med: () => puljeMed("Skat", sk.mangler_paa_kontoen)}))));
+  else if (skatNu(sk)) { const x = skatNu(sk);   // kun skat af penge, der er kommet (Oscar 2/11)
+    gør.push(trin("rd", [h("b", {}, `Overfør ${krKort(x)} kr. til Skat-puljen i Saxo.`)],
+      knap("✓ Jeg har overført", () => kør("pulje", ["flyt", "Skat", String(x)], {tekst: `Skat-puljen +${krKort(x)} kr.`, efter: ["mo"], med: () => puljeMed("Skat", x)})))); }
+  // 2 dage før en faktura forfalder (Oscar 2/11): gul, så skatten er klar, når pengene kommer
+  (sk.snart || []).forEach(u => gør.push(trin("y", u.forfald < iDag()
+    ? [h("b", {}, `Fakturaen til ${u.kunde} forfaldt d. ${kortDato(u.forfald)}.`), ` Send ${krKort(u.skat)} kr. til Saxo (skat), når den betales.`]
+    : [h("b", {}, `Du modtager snart ${krKort(u.kr)} kr. fra ${u.kunde}.`), ` Send ${krKort(u.skat)} kr. til Saxo (skat), når de er betalt.`])));
   const P0 = ØK.P || {}, HB0 = P0.husbuffer, husMangler = HB0 ? Math.max(0, HB0.maerke - HB0.saldo) : P0.husleje_d1 ? Math.max(0, P0.husleje_d1.maal - (P0.husleje_d1.saldo || 0)) : 0;
   const husNavn = HB0 ? "Husleje d. 1 + Buffer" : "Husleje d. 1";
   if (husMangler) gør.push(trin("y", [h("b", {}, `Sæt ${krKort(husMangler)} kr. ind på ${husNavn} i Saxo${P0.d1 ? " inden " + kortDato(P0.d1.dato) : ""}.`)],
@@ -4099,7 +4107,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   const puljer = h("div", {},
     h("div", {class: "overskrift", style: "margin-top:16px"}, `Saxo · ${krKort(iAlt)} kr. i alt`),
     h("div", {class: "sx"},
-      gruppe("Skyld (ikke dine penge)", gammeltÅr ? null : pulje("Skat", sk.saldo, sk.reserve, (sk.mangler_paa_kontoen ? "var(--fejl)" : "var(--ok)"), mk("s", "skyld")),
+      gruppe("Skyld (ikke dine penge)", gammeltÅr ? null : pulje("Skat", sk.saldo, sk.reserve, (skatNu(sk) ? "var(--fejl)" : sk.mangler_paa_kontoen ? "#d97706" : "var(--ok)"), mk("s", "skyld")),
         ob.puljer.filter(p => p.kategori === "skyld").map(fabzPulje)),
       gruppe("Fabz", ob.puljer.filter(p => p.kategori !== "skyld").map(fabzPulje)),
       gruppe("Privat", P.husbuffer ? hbPulje(P.husbuffer) : null, !P.husbuffer && P.husleje_d1 ? pulje("Husleje d. 1", P.husleje_d1.saldo, P.husleje_d1.maal, "#7c3aed", priv(), !!P.inbox) : null,
