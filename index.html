@@ -587,6 +587,7 @@ function tjek(r, hvad) {
   throw new Error(`${hvad}: GitHub svarede ${r.status}`);
 }
 async function laesFil(p) {
+  if (GQL && GQL.has(p)) { const v = GQL.get(p); return v === null ? null : new Response(v); }   // hentet i det samlede GraphQL-kald
   const r = await gh(`/repos/${REPO}/contents/${sti(p)}?ref=${BRANCH}&t=${Date.now()}`, {raw: true});
   if (r.status === 404) return null;
   tjek(r, p);
@@ -626,8 +627,36 @@ async function sikker(p, læs, std) {
   catch (e) { if (e.token) throw e; MANGLER.push(p.replace(/^data\//, "")); return std; }
 }
 const fil = (p, std = []) => sikker(p, async () => { const r = await laesFil(p); return r ? r.json() : std; }, std);
+// Alle datafiler i ét GraphQL-kald (3/11): ca. 1 sek. mod 2-11 sek. for 31 REST-kald, og ingen fejl 500. Fejler kaldet, eller er en fil
+// for stor (isTruncated), hentes den med REST som før. Bruges kun ved indlæsning; skrivning går stadig gennem inbox/.
+let GQL = null;
+const DATAFILER = ["kalender", "udstyr", "pakkelister", "opgaver", "jobpakkelister", "henvendelser", "dagsplaner", "ideer", "indtaegter", "typer", "salg", "festkort",
+  "klubkort", "salgslog", "klubkort_tekster", "strategi", "jobrute", "jobtider", "salgjobs", "kortmaaling", "salgslaering", "setups", "maanedsoversigt", "priser",
+  "leads", "betalinger", "fejl", "hov", "ugepakke", "mailoversigt", "vagter"].map(x => `data/${x}.json`).concat(["tools/klubkort/kort.json"]);
+async function hentSamlet() {
+  const t0 = performance.now();
+  try {
+    const q = `query{repository(owner:"${REPO.split("/")[0]}",name:"${REPO.split("/")[1]}"){` +
+      DATAFILER.map((p, i) => `f${i}:object(expression:${JSON.stringify(BRANCH + ":" + p)}){...on Blob{text isTruncated}}`).join(" ") + "}}";
+    const r = await fetch(API + "/graphql", {method: "POST", cache: "no-store", headers: {Authorization: "Bearer " + token, "Content-Type": "application/json"}, body: JSON.stringify({query: q})});
+    if (r.status === 401) throw Object.assign(new Error("Tokenen blev afvist. Tjek at den ikke er udløbet, og skift den."), {token: true});
+    const d = r.ok ? await r.json() : null, o = d?.data?.repository;
+    if (!o) return null;
+    const m = new Map();
+    DATAFILER.forEach((p, i) => { const b = o["f" + i]; if (b === null) m.set(p, null); else if (b && typeof b.text === "string" && !b.isTruncated) m.set(p, b.text); });
+    console.info(`Data hentet i ét kald på ${Math.round(performance.now() - t0)} ms`);
+    return m;
+  } catch (e) { if (e.token) throw e; return null; }
+}
 async function hentData() {
   MANGLER = [];
+  const t0 = performance.now();
+  GQL = await hentSamlet();
+  try { await hentDataFiler(); } finally { GQL = null; }
+  console.info(`Data indlæst på ${Math.round(performance.now() - t0)} ms` + (MANGLER.length ? `, mangler ${MANGLER.join(", ")}` : ""));
+  if (MANGLER.length) manglerBesked();
+}
+async function hentDataFiler() {
   const [kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, ideer, indtaegter, typer, salg, festkort, klubkort, salgslog, kkTekster] = await Promise.all([
     sikker("data/kalender.json", () => laesJson("data/kalender.json"), {begivenheder: []}), sikker("data/udstyr.json", () => laesJson("data/udstyr.json"), []),
     sikker("data/pakkelister.json", () => laesJson("data/pakkelister.json"), []), sikker("data/opgaver.json", () => laesJson("data/opgaver.json"), []),
@@ -650,7 +679,6 @@ async function hentData() {
     fil("data/mailoversigt.json", null),   // dagens mailoversigt (tools/mailoversigt.py via panel.yml ved Mødt ind)
     fil("data/vagter.json", null)]);   // vagter fra Planday/Deltaplan (tools/vagter.py i kalender.yml)
   Object.assign(D, {strategi, jobrute, jobtider, salgjobs, kortmaaling, salgslaering, setups, mo, priser, leads, betalinger, fejl, hov, ugepakke, mailoversigt, vagter});
-  if (MANGLER.length) manglerBesked();
 }
 function manglerBesked() {
   besked({id: "mangler", klasse: "adv", titel: "GitHub svarer ikke lige nu, prøver igen …", punkter: ["Kunne ikke hente: " + MANGLER.join(", ")],
