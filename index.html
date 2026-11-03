@@ -1064,13 +1064,13 @@ function betalingAfsnit(j, st) {
   const knap = !afholdt || laast ? null
     : dinero ? (r.send === "ok" ? h("span", {class: "pill grøn"}, `Faktura ${r.faktura_nr || ""} sendt`)
       : r.dinero?.guid ? h("button", {class: "btn godkend", type: "button", disabled: r.send === "bestilt", onclick: () => {   // Oscar 30/10: send fra jobbet, jobdatoen står i kommentaren
-          if (!confirm(`Send fakturaen til ${(r.kunde || {}).navn || j.navn}${(r.kunde || {}).mail ? " (" + r.kunde.mail + ")" : ""}? ${b ? kr(b * 1.25) + " inkl. moms, " : ""}netto 8 dage. Dinero bogfører og mailer den.`)) return;
+          if (!confirm(`Send fakturaen til ${(r.kunde || {}).navn || j.navn}${(r.kunde || {}).mail ? " (" + r.kunde.mail + ")" : ""}? ${b ? kr(b * 1.25) + " inkl. moms, " : ""}netto ${r.frist_dage || 8} dage. Dinero bogfører og mailer den.`)) return;
           kør("betaling-send", [`--job=${j.navn}`, `--dato=${j.dato}`], {tekst: `Send faktura: ${j.navn}`, efter, med: () => { r.send = "bestilt"; }}); }},
           r.send === "bestilt" ? "Sendes …" : r.bogfoert_nr ? `Send faktura ${r.bogfoert_nr} igen (bogført, ikke mailet)` : r.send === "fejl" ? "Prøv at sende igen" : "Send faktura")
       : h("button", {class: "btn godkend", type: "button", onclick: () => { if (confirm("Har du sendt fakturaen fra Dinero?")) godkend(); }}, "✓ Fakturaen er sendt"))
     : r.maade === "kontant" ? h("button", {class: "btn godkend", type: "button", disabled: !b, onclick: () => { if (confirm(`Har du fået ${kr(b)} kontant?`)) godkend(); }}, `✓ Betalt kontant${b ? " " + kr(b) : ""}`)
     : h("button", {class: "btn godkend", type: "button", onclick: () => { if (confirm(`Er ${b ? kr(b) + " fra " : ""}${j.navn} kommet ind på kontoen?`)) godkend(); }}, "✓ Betalt");
-  const linje = !o ? null : dinero ? (r.dinero?.link ? `Kladden ligger i Dinero${b ? " · " + kr(b * 1.25) + " inkl. moms" : ""} · netto 8 dage. Lukkes selv, når fakturaen er bogført.` : "Kladden blev ikke lavet. Lav fakturaen i Dinero og tryk Fakturaen er sendt.")
+  const linje = !o ? null : dinero ? (r.dinero?.link ? `Kladden ligger i Dinero${b ? " · " + kr(b * 1.25) + " inkl. moms" : ""} · netto ${r.frist_dage || 8} dage. Lukkes selv, når fakturaen er bogført.` : "Kladden blev ikke lavet. Lav fakturaen i Dinero og tryk Fakturaen er sendt.")
     : r.maade === "kontant" ? "Registreres som kontant indtægt og lukker opgaven."
     : "Tjek kontoen, og tryk når pengene er kommet.";
   // omkostninger og fortjeneste (Oscar 3/11)
