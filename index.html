@@ -307,6 +307,9 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .tb-linje{display:grid;grid-template-columns:minmax(0,1fr) 110px 36px;gap:8px;margin-bottom:8px}
 .tb-r{display:flex;justify-content:space-between;gap:12px;padding:2px 0}
 .tb-adv{margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--adv-blid);color:var(--adv)}
+.bet-omk{border-top:1px solid var(--linje);margin-top:10px;padding-top:10px}.bet-omk-r{display:flex;gap:8px;align-items:center;margin-top:6px}.bet-omk-n{flex:1;min-width:0}
+.bet-omk-r{flex-wrap:wrap}.bet-moms{display:flex;gap:5px;align-items:center;font-size:13px;color:var(--svag);white-space:nowrap}.bet-fortj{display:flex;justify-content:space-between;align-items:baseline;margin-top:10px;font-weight:600}.bet-fortj b{font-size:17px}
+.bet-forslag{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;border:1.5px dashed var(--accent);background:var(--accent-blid);border-radius:10px;padding:7px 10px}
 .bet{padding:12px 14px}.bet-rk{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.bet-in{width:110px;text-align:right;font-weight:600}.bet .jo-r{padding:10px 0 0;margin-top:10px}
 @media (max-width:700px){.bet .seg{display:flex;width:100%}.bet .seg button{flex:1}.bet .bet-in{flex:1;width:auto}.bet .btn.godkend,.bet .btn.primaer{flex:1;text-align:center}}
 .bf-tal{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}.bf-tal>div{background:var(--flade2);border:1px solid var(--linje);border-radius:12px;padding:12px 14px}
@@ -998,6 +1001,19 @@ function jobOpgaver(j, st) {
 // Dagen efter jobbet laver fabz.py betaling-opgaver én opgave (job_opgave "betaling"): Send faktura (kladde i Dinero) / Godkend betaling / Tjek at pengene er kommet.
 // Robotten bogfører aldrig og sender aldrig: Oscar sender fakturaen i Dinero og trykker ja her. Kontant tæller ikke i skat (Oscars valg).
 const BET_MAADER = [["kontant", "Kontant"], ["overfoersel", "Overførsel"], ["dinero", "Dinero"]];
+// Omkostninger på jobbet (Oscar 3/11, skitse panel-job-omkostninger A): anden DJ, scene osv. Med moms → gemmes ekskl. moms. Forslag fra sidste job hos samme kunde
+const OMK = {};   // kladder under redigering pr. job-nøgle
+const kundeOrd = n => (n || "").toLowerCase().replace(/\(.*?\)/g, " ").split(/[^a-zæøå0-9]+/).find(o => o.length >= 3) || "";
+function sidsteOmk(j) {
+  const ord = kundeOrd(j.navn), ud = [];
+  if (!ord) return null;
+  for (const r of D.betalinger || []) if (Array.isArray(r.omk) && r.omk.length && r.dato < j.dato && kundeOrd(r.navn) === ord)
+    ud.push({dato: r.dato, liste: r.omk.map(x => ({navn: x.navn, kr: x.indtastet ?? x.kr, moms: !!x.moms}))});
+  const medRk = new Set((D.betalinger || []).filter(r => Array.isArray(r.omk)).map(r => r.job_noegle));
+  for (const x of moMaaneder().flatMap(m => m.jobs || [])) if (x.omk > 0 && x.dato < j.dato && kundeOrd(x.navn) === ord && !medRk.has(`${x.dato}|${x.navn.toLowerCase()}`))
+    ud.push({dato: x.dato, liste: [{navn: x.omk_tekst || "Omkostninger", kr: x.omk, moms: false}]});
+  return ud.sort((a, b) => a.dato < b.dato ? 1 : -1)[0] || null;
+}
 const betMaadeTekst = m => (BET_MAADER.find(x => x[0] === m) || [m, m])[1];
 const betalingTilJob = j => (D.betalinger || []).find(r => r.job_noegle === jobNøgle(j)) || null;
 function betalingGaet(j) {   // samme regel som fabz_betaling.gaet, til jobs robotten ikke har set endnu (booking lagt ind efter morgenkørslen)
@@ -1044,6 +1060,33 @@ function betalingAfsnit(j, st) {
   const linje = !o ? null : dinero ? (r.dinero?.link ? `Kladden ligger i Dinero${b ? " · " + kr(b * 1.25) + " inkl. moms" : ""} · netto 8 dage. Lukkes selv, når fakturaen er bogført.` : "Kladden blev ikke lavet. Lav fakturaen i Dinero og tryk Fakturaen er sendt.")
     : r.maade === "kontant" ? "Registreres som kontant indtægt og lukker opgaven."
     : "Tjek kontoen, og tryk når pengene er kommet.";
+  // omkostninger og fortjeneste (Oscar 3/11)
+  const gemte = Array.isArray(r.omk) ? r.omk.map(x => ({navn: x.navn, kr: x.indtastet ?? x.kr, moms: !!x.moms, betalt: !!x.betalt})) : null;
+  const kladde = OMK[st.key], liste = kladde || gemte || [];
+  const ekskl = x => Math.round(Number(x.kr || 0) / (x.moms ? 1.25 : 1)), omkSum = liste.reduce((s, x) => s + ekskl(x), 0);
+  const forslag = !gemte && !kladde ? sidsteOmk(j) : null;
+  const gemOmk = l => { const ren = l.filter(x => (x.navn || "").trim() && Number(x.kr) > 0).map(x => ({navn: x.navn.trim(), kr: Number(x.kr), moms: !!x.moms, betalt: !!x.betalt}));
+    kør("betaling-omk", [`--job=${j.navn}`, `--dato=${j.dato}`, `--omk=${JSON.stringify(ren)}`], {tekst: `Omkostninger ${j.navn}`, efter: ["betalinger", "mo"],
+      med: () => { delete OMK[st.key]; const x = betalingTilJob(j) || (D.betalinger = [...(D.betalinger || []), {...r, gaet: false}]).at(-1);
+        x.omk = ren.map(y => ({navn: y.navn, kr: Math.round(y.kr / (y.moms ? 1.25 : 1)), moms: y.moms, indtastet: y.kr, betalt: y.betalt})); }}); };
+  const ret = l => { OMK[st.key] = l; tegn(); };
+  const omkDel = h("div", {class: "bet-omk"},
+    h("div", {class: "bet-rk"}, h("b", {class: "lille"}, "Omkostninger"), h("div", {class: "spacer"}),
+      h("button", {class: "btn lille", type: "button", onclick: () => ret([...liste.map(x => ({...x})), {navn: "", kr: "", moms: false}])}, "+ Tilføj")),
+    forslag ? h("div", {class: "bet-forslag"}, h("span", {}, `Sidst hos ${j.navn.split(" ")[0]} (${kortDato(forslag.dato)}): `,
+        h("b", {}, forslag.liste.map(x => `${x.navn} ${krKort(Number(x.kr))} kr.${x.moms ? " inkl. moms" : ""}`).join(", "))), h("div", {class: "spacer"}),
+      h("button", {class: "btn lille primaer", type: "button", onclick: () => gemOmk(forslag.liste)}, "Tilføj"),
+      h("button", {class: "btn lille", type: "button", onclick: () => gemOmk([])}, "Fjern")) : null,
+    liste.map((x, i) => h("div", {class: "bet-omk-r"},
+      h("input", {class: "input bet-omk-n", value: x.navn, placeholder: "Fx anden DJ", maxlength: "60", oninput: e => { (OMK[st.key] = OMK[st.key] || liste.map(y => ({...y})))[i].navn = e.target.value; }}),
+      h("input", {class: "input bet-in", type: "number", inputmode: "numeric", min: "1", value: x.kr, oninput: e => { (OMK[st.key] = OMK[st.key] || liste.map(y => ({...y})))[i].kr = e.target.value; }}),
+      h("label", {class: "bet-moms"}, h("input", {type: "checkbox", checked: x.moms, onchange: e => { const l = (OMK[st.key] || liste).map(y => ({...y})); l[i].moms = e.target.checked; ret(l); }}), "med moms"),
+      h("label", {class: "bet-moms"}, h("input", {type: "checkbox", checked: !!x.betalt, onchange: e => { const l = (OMK[st.key] || liste).map(y => ({...y})); l[i].betalt = e.target.checked; ret(l); }}), "betalt"),   // allerede betalt og bogført: trækkes ikke fra igen
+      h("button", {class: "btn ghost lille", type: "button", title: "Fjern", onclick: () => { const l = liste.filter((_, k) => k !== i); kladde ? ret(l) : gemOmk(l); }}, "✕"))),
+    kladde ? h("div", {class: "bet-rk", style: "margin-top:8px"}, h("div", {class: "spacer"}),
+      h("button", {class: "btn lille", type: "button", onclick: () => { delete OMK[st.key]; tegn(); }}, "Fortryd"),
+      h("button", {class: "btn lille primaer", type: "button", onclick: () => gemOmk(OMK[st.key])}, "Gem")) : null,
+    b ? h("div", {class: "bet-fortj"}, h("span", {}, "Fortjeneste"), h("b", {}, `${krKort(b - omkSum)} kr.`)) : null);
   const inp = h("input", {class: "input bet-in", type: "number", inputmode: "numeric", min: "1", value: b ?? "", disabled: laast,
     onchange: e => { if (Number(e.target.value) > 0) saet(r.maade, e.target.value); }});
   return h("div", {class: "gruppe", style: "margin-top:12px"},
@@ -1054,6 +1097,7 @@ function betalingAfsnit(j, st) {
         inp, h("span", {class: "muted lille"}, dinero ? "kr. ekskl. moms" : "kr."),
         dinero && b ? h("span", {class: "muted lille"}, `${kr(b * 1.25)} inkl. moms`) : null,
         h("div", {class: "spacer"}), knap),
+      omkDel,
       o ? h("div", {class: "jo-r"}, h("span", {class: "jo-m"}, "○"),
             h("span", {class: "jo-t", style: "flex:1"}, h("b", {}, o.titel), h("span", {class: "muted"}, linje))) : null));
 }
@@ -4315,7 +4359,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     const dele = [["skat", "Skat-puljen", skat], ["buffer", HB ? "Husleje d. 1 + Buffer" : "Buffer", tilBuf], ["opsparing", P.opsparing?.navn || "Opsparing", tilOps]].filter(d => d[2] > 0);
     if (!dele.length || dele.every(d => f[d[0]])) return;
     medLinje.add(x.id);
-    betLinjer.push(betL("g", [h("b", {}, `${x.fra} har betalt ${krKort(x.beloeb)} kr.`), ` Læg ${dele.map(([, n, b]) => `${krKort(b)} kr. i ${n}`).join(" og ")}.`],
+    betLinjer.push(betL("g", [h("b", {}, `${x.fra} har betalt ${krKort(x.beloeb)} kr.`), ` på Lønkonto+ (Danløn).`, ` Læg ${dele.map(([, n, b]) => `${krKort(b)} kr. i ${n}`).join(" og ")}.`],
       knap("✓ Overført", () => { const br = betFor(x); if (br) godkend(br, br.dato >= iDag()); dele.filter(d => !f[d[0]]).forEach(([del, n, b]) => {   // lukker også robottens opgave "Tjek at pengene er kommet"
         if (del === "skat") kør("pulje", ["flyt", "Skat", String(b)], {tekst: `Skat-puljen +${krKort(b)} kr.`, efter: ["mo"], med: () => puljeMed("Skat", b)});
         privatSend({kommando: "fordel", id: String(x.id), del, kr: b, job_kr: x.beloeb}, `${x.fra}: ${krKort(b)} kr. til ${n}`); }); }, true)));
@@ -4388,8 +4432,9 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
       h("div", {class: "sk-detalje"}, h("div", {class: "overskrift", style: "margin:0 0 4px"}, "Fabz (felt 221)"),
         h("div", {class: "liste"},
           l("Overskud til dato (Dinero)", krKort(sk.til_dato)),
+          sk.ikke_fradrag ? l("Uden fradrag (repræsentation 75 %, bøder og gebyrer)", "+" + krKort(sk.ikke_fradrag)) : null,
           l(`Kommende jobs resten af året (${sk.kommende_jobs.length})`, "+" + krKort(sk.kommende)),
-          l(`Løbende udgifter, skøn (${sk.md_tilbage} md.)`, "−" + krKort(sk.udgifter_skoen)),
+          l(`Løbende udgifter, firmaets faste (${String(sk.md_tilbage).replace(".", ",")} md.)`, "−" + krKort(sk.udgifter_skoen)),
           l("Forventet overskud", krKort(sk.forventet))),
         sk.uden_pris.length ? h("div", {class: "lille muted", style: "margin-top:6px"}, "Uden pris, ikke regnet med: " + sk.uden_pris.map(x => `${x.navn} ${kortDato(x.dato)}`).join(", ")) : null),
       bi ? h("div", {class: "sk-detalje"}, h("div", {class: "overskrift", style: "margin:0 0 4px"}, "B-indkomst ",
