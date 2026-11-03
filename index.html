@@ -4461,7 +4461,9 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     // ingen B-skat-rater tilbage: at rette feltet sparer ikke tillægget, det gør en frivillig indbetaling før nytår (revision 3/11)
     const frist = sk.restskat_frist ? `senest ${kortDato(sk.restskat_frist)} (rentefrit)` : "før nytår";   // 3 bankdage før 31/12 (fabz_skat)
     const op = v => Math.ceil(v / 100) * 100, indbetal = FS.rater_tilbage === false && sk.aar == år0 && (sk.mangler_paa_kontoen || 0) > 2000 ? Math.max((sk.restskat || 0) - (sk.restskat_betalt || 0), sk.mangler_paa_kontoen) : 0;   // hele restskatten (Skat-puljen + resten); prikken går, når puljen har den
-    if (n > 2000) return ["rd", `Skat ${sk.aar}: ${felter || `ca. ${krKort(n)} kr. for lidt i skat`}${indbetal > 2000 ? `, og indbetal ca. ${krKort(op(indbetal))} kr. ${frist}` : ""}`];
+    // ingen rater tilbage: indbetalingen er det, der sparer renter, så den står først; at rette felterne flytter intet hos Skat (revision 3/11)
+    if (indbetal > 2000 && Number(iDag().slice(5, 7)) >= 11) return ["rd", `Skat ${sk.aar}: indbetal ca. ${krKort(op(indbetal))} kr. ${frist}${felter ? `, og ${felter}` : ""}`];
+    if (n > 2000) return ["rd", `Skat ${sk.aar}: ${felter || `ca. ${krKort(n)} kr. for lidt i skat`}`];
     if (indbetal > 2000 && Number(iDag().slice(5, 7)) >= 11) return ["rd", `Skat ${sk.aar}: indbetal ca. ${krKort(op(indbetal))} kr. til Skat ${frist}, eller læg dem i Skat-puljen`];
     if (n >= 500) return ["y", `Skat ${sk.aar}: ${felter || `ca. ${krKort(n)} kr. for lidt i skat`}`];
     if (n < -5000) return ["y", `Skat ${sk.aar}: du betaler ca. ${krKort(-n)} kr. for meget`];
