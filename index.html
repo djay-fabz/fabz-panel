@@ -3985,11 +3985,16 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   // listen til d. 1 (Oscar 3/11, skitse panel-d1-liste): fra 2 bankdage før, i den rækkefølge det skal gøres; Saxo-linjen hører til gruppe 1
   const d1R = o => ovR(o.id, o.gruppe === 1 ? `Overfør ${krKort(o.kr)} kr. fra ${o.fra} til ${tilN(o)}` : `Overfør ${krKort(o.kr)} kr. til ${tilN(o)}`, nrT(o),
     () => privatSend({kommando: "overfoert", id: o.id}, `Overført ${krKort(o.kr)} kr. til ${tilN(o)}`), false, o.tekst ? ` (${o.tekst})` : "");
-  const d1Kort = d1L.length || (saxoL.length && P0.d1) ? h("div", {class: "kort2 ov-k d1-k", style: "margin-top:12px"},
-    h("div", {class: "d1-h"}, `Til ${kortDato(d1L[0]?.d1 || P0.d1.dato)}`),
-    h("div", {class: "d1-g"}, "1. Fra firmaet"), saxoL, d1L.filter(o => o.gruppe === 1).map(d1R),
-    d1L.some(o => o.gruppe === 2) ? [h("div", {class: "d1-g"}, "2. Fra Faste omkostninger"), d1L.filter(o => o.gruppe === 2).map(d1R)] : null) : null;
-  if (!d1Kort) ovL.unshift(...saxoL);
+  const klubD1 = [];   // klubjobs' fordeling, der ikke er flyttet endnu (fyldes længere nede, hvor fordelingen regnes)
+  const lavD1 = () => {
+    const g1 = d1L.filter(o => o.gruppe === 1), har = d1L.length || ((saxoL.length || klubD1.length) && P0.d1);
+    if (!har) { ovL.unshift(...saxoL); return null; }
+    return h("div", {class: "kort2 ov-k d1-k", style: "margin-top:12px"},
+      h("div", {class: "d1-h"}, `Til ${kortDato(d1L[0]?.d1 || P0.d1.dato)}`),
+      saxoL.length || g1.length ? [h("div", {class: "d1-g"}, "1. Fra firmaet"), saxoL, g1.map(d1R)] : null,
+      klubD1.length ? [h("div", {class: "d1-g"}, "Fra Lønkonto+ (klubjobs)"), klubD1.map(o => ovR(o.id, o.tekst, nrT(P0.kontonr?.Saxo), o.fn, false, ` (${o.hvem})`))] : null,
+      d1L.some(o => o.gruppe === 2) ? [h("div", {class: "d1-g"}, "2. Fra Faste omkostninger"), d1L.filter(o => o.gruppe === 2).map(d1R)] : null);
+  };
   // job uden pris (Oscar 1/11, skitse panel-advarsel): én bjælke pr. job, der åbner jobbet, så beløbet kan skrives der
   const prisBj = (mo.raad?.uden_pris_jobs || []).map(x => trin("y", [h("b", {}, `${x.navn} ${kortDato(x.dato)} har ingen pris.`)],
     knap("Åbn jobbet →", () => visJobNøgle(`${x.dato}|${x.navn.toLowerCase()}`), true)));   // over "Frit at bruge", som i skitsen
@@ -4372,7 +4377,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   const ord1 = s => s.toLowerCase().split(" ")[0];
   const indFor = r => (D.indtaegter || []).find(x => x.type === "B-indkomst" && x.dato === r.dato && ord1(x.fra) === ord1(r.navn));   // klubjobbet er allerede registreret
   const betFor = x => (D.betalinger || []).find(r => r.dato === x.dato && ord1(r.navn) === ord1(x.fra) && r.status !== "faerdig" && r.status !== "aflyst");
-  const betLinjer = [], medLinje = new Set();
+  const betLinjer = [], medLinje = new Set();   // klubD1 (listen til d. 1) er defineret før kortet
   // klubjobs (B-indkomst, ikke kontant), der er registreret og ikke fordelt: Skat → Husleje d. 1 + Buffer til målet → Opsparing
   if (FD) (D.indtaegter || []).filter(x => x.type === "B-indkomst" && x.dato >= FD.fra).forEach(x => {
     const f = FD.fordelt[x.id] || {}, skat = f.skat ? f.skat.kr : skatDel(x.beloeb), rest = x.beloeb - skat;
@@ -4381,10 +4386,13 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     const dele = [["skat", "Skat-puljen", skat], ["buffer", HB ? "Husleje d. 1 + Buffer" : "Buffer", tilBuf], ["opsparing", P.opsparing?.navn || "Opsparing", tilOps]].filter(d => d[2] > 0);
     if (!dele.length || dele.every(d => f[d[0]])) return;
     medLinje.add(x.id);
-    betLinjer.push(betL("g", [h("b", {}, `${x.fra} har betalt ${krKort(x.beloeb)} kr.`), ` på Lønkonto+ (Danløn).`, ` Læg ${dele.map(([, n, b]) => `${krKort(b)} kr. i ${n}`).join(" og ")}.`],
-      knap("✓ Overført", () => { const br = betFor(x); if (br) godkend(br, br.dato >= iDag()); dele.filter(d => !f[d[0]]).forEach(([del, n, b]) => {   // lukker også robottens opgave "Tjek at pengene er kommet"
-        if (del === "skat") kør("pulje", ["flyt", "Skat", String(b)], {tekst: `Skat-puljen +${krKort(b)} kr.`, efter: ["mo"], med: () => puljeMed("Skat", b)});
-        privatSend({kommando: "fordel", id: String(x.id), del, kr: b, job_kr: x.beloeb}, `${x.fra}: ${krKort(b)} kr. til ${n}`); }); }, true)));
+    const flyt = ([del, n, b]) => { const br = betFor(x); if (br) godkend(br, br.dato >= iDag());   // lukker også robottens opgave "Tjek at pengene er kommet"
+      if (del === "skat") kør("pulje", ["flyt", "Skat", String(b)], {tekst: `Skat-puljen +${krKort(b)} kr.`, efter: ["mo"], med: () => puljeMed("Skat", b)});
+      privatSend({kommando: "fordel", id: String(x.id), del, kr: b, job_kr: x.beloeb}, `${x.fra}: ${krKort(b)} kr. til ${n}`); };
+    // pengene står på Lønkonto+, til de flyttes: fordelingen kommer på listen til næste d. 1, med konto og reg.nr. (Oscar 3/11: Fox 30/10 kom efter 1/11-overførslerne)
+    if (P0.inbox && P0.d1) dele.filter(d => !f[d[0]]).forEach(d => klubD1.push({id: `klub-${x.id}-${d[0]}`, tekst: `Overfør ${krKort(d[2])} kr. fra Lønkonto+ til Saxo (${d[1]})`, hvem: `${x.fra} ${kortDato(x.dato)}`, fn: () => flyt(d)}));
+    else betLinjer.push(betL("g", [h("b", {}, `${x.fra} har betalt ${krKort(x.beloeb)} kr.`), ` på Lønkonto+ (Danløn).`, ` Læg ${dele.map(([, n, b]) => `${krKort(b)} kr. i ${n}`).join(" og ")}.`],
+      knap("✓ Overført", () => dele.filter(d => !f[d[0]]).forEach(flyt), true)));
   });
   (D.betalinger || []).filter(r => r.maade !== "kontant" && r.status !== "aflyst" && !r.fordelt && r.beloeb).sort((a, b) => a.dato.localeCompare(b.dato)).forEach(r => {
     const b = r.beloeb, iDg = iDag();
@@ -4425,6 +4433,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
           ØK.hov = "";
           kør("hov-plan", [`--ym=${HA.ym}`, `--mangler=${hovMangler}`, `--tekst=${tx}`], {tekst: "Plan sendt til Claude", efter: ["hov"],
             med: () => { (D.hov = D.hov || []).push({id: "…", ym: HA.ym, mangler: hovMangler, tekst: tx, tid: new Date().toISOString(), svar: null}); }}); }, true)]) : null;
+  const d1Kort = lavD1();
   const ovKort0 = ovL.length ? h("div", {class: "kort2 ov-k", style: "margin-top:12px"}, ovL) : null;
   const fsKort =
     gammeltÅr || !fsRækker.length ? null : FF ? h("div", {class: "fs-kort"},
