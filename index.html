@@ -1026,6 +1026,9 @@ function betalingAfsnit(j, st) {
       med: () => { const x = betalingTilJob(j); if (x) { x.status = "faerdig"; x.godkendt = iDag(); } if (o) { o.status = "Færdig"; o.faerdig_dato = iDag(); } }});
   };
   const b = r.beloeb != null ? Number(r.beloeb) : null, dinero = r.maade === "dinero";
+  // firmakunder betaler med faktura (Oscar 3/11): Overførsel kun for klubjobs (B-indkomst), eller hvis den allerede er valgt
+  const klubJob = moMaaneder().flatMap(m => m.jobs || []).some(x => x.dato === j.dato && (x.navn || "").toLowerCase() === j.navn.toLowerCase() && x.b_indkomst);
+  const maader = klubJob || r.maade === "overfoersel" ? BET_MAADER : BET_MAADER.filter(x => x[0] !== "overfoersel");
   const pill = r.status === "aflyst" ? ["", "Aflyst"] : laast ? ["grøn", r.bank_dato ? `Set i banken ${kortDato(r.bank_dato)}` : `Godkendt ${kortDato(r.godkendt || iDag())}`]
     : !afholdt ? ["blå", dinero ? "Dinero · faktura dagen efter" : r.maade === "kontant" ? "Kontant på dagen" : "Overførsel"]
     : dinero ? ["gul", "Faktura ikke sendt"] : r.maade === "kontant" ? ["gul", "Venter på dit ja"] : betaltSpørgsmål(r);
@@ -1047,7 +1050,7 @@ function betalingAfsnit(j, st) {
     h("div", {style: "display:flex;align-items:center;gap:8px;flex-wrap:wrap"}, h("div", {class: "overskrift", style: "margin:0"}, "Betaling"), h("span", {class: "pill " + pill[0]}, pill[1])),
     h("div", {class: "kort bet"},
       h("div", {class: "bet-rk"},
-        laast ? h("span", {class: "pill"}, betMaadeTekst(r.maade)) : seg(BET_MAADER, r.maade, v => saet(v, r.beloeb)),
+        laast ? h("span", {class: "pill"}, betMaadeTekst(r.maade)) : seg(maader, r.maade, v => saet(v, r.beloeb)),
         inp, h("span", {class: "muted lille"}, dinero ? "kr. ekskl. moms" : "kr."),
         dinero && b ? h("span", {class: "muted lille"}, `${kr(b * 1.25)} inkl. moms`) : null,
         h("div", {class: "spacer"}), knap),
