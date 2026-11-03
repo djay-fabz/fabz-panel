@@ -390,6 +390,13 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .sk .sk-hoved{justify-content:space-between}
 .sk-titel{font-size:17px;font-weight:600}
 .sk-k4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px}
+.sg{margin-top:12px;padding:14px 18px}.sg-t{font-size:12px;color:var(--svag);font-weight:600}.sg-v{font-size:26px;font-weight:800;color:var(--fejl);line-height:1.2;letter-spacing:-.01em}.sg-v.ok{color:var(--ok)}.sg-u{font-size:13px;font-weight:600}
+.sg-mdr{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin:10px 0 6px}.sg-md{border-radius:8px;padding:6px 9px;background:var(--ok-blid)}.sg-md.rd{background:var(--fejl-blid)}.sg-md .n{font-size:12px;font-weight:600}.sg-md .s{font-size:12.5px;font-weight:700;color:var(--ok)}.sg-md.rd .s{color:var(--fejl)}.sg-md .f{font-size:11px;color:var(--svag)}
+details.sg-r{margin:0;border:0;border-top:1px solid var(--linje);border-radius:0;background:none}details.sg-r>summary{padding:8px 0;font-weight:400;font-size:13.5px;gap:4px}details.sg-r>summary::before{content:none}details.sg-r[open]>summary::before{content:none}details.sg-r>summary>b{margin-left:auto;white-space:nowrap}details.sg-r>summary>b::after{content:" ›";color:var(--svagere)}details.sg-r .rd-l{padding-left:0;padding-right:0}
+.sg-linjer{margin-top:12px;background:var(--flade);border:1px solid var(--linje);border-radius:14px;overflow:hidden}details.sg-l{margin:0;border:0;border-radius:0}.sg-linjer>details.sg-l+details.sg-l{border-top:1px solid var(--linje)}details.sg-l>summary{font-weight:400}details.sg-l>summary::before{content:none}details.sg-l[open]>summary::before{content:none}details.sg-l>summary::after{content:"›";margin-left:auto;color:var(--svagere)}details.sg-l[open]>summary::after{content:"⌄"}
+.sg-ind{padding:4px 12px 12px}.sg-ek{color:var(--svagere)}.sg-prik{width:8px;height:8px;border-radius:50%;flex:none;background:var(--fejl)}.sg-prik.y{background:var(--adv)}
+.op-mk{font-size:12px;font-weight:600;padding:3px 9px;border-radius:99px;background:var(--ok-blid);color:var(--ok)}.op-mk.r{background:var(--fejl-blid);color:var(--fejl)}
+@media(max-width:700px){.sg-mdr{grid-template-columns:repeat(3,1fr)}.sg-v{font-size:22px}.sg-m,.sg-ek{display:none}}
 .rd-top{margin-top:14px;background:var(--flade);border:1px solid var(--linje);border-radius:16px;padding:16px 18px}.rd-top .t{font-size:13px;color:var(--svag);font-weight:600}
 .rd-top .v{font-size:40px;font-weight:800;letter-spacing:-.02em;line-height:1.1}.rd-top .v.neg{color:var(--fejl)}.rd-loen{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
 .rd-loen>div{flex:1;min-width:140px;background:var(--bg);border-radius:10px;padding:8px 12px;color:var(--svag);font-size:13px}.rd-loen b{display:block;font-size:18px;color:var(--tekst)}
@@ -3873,7 +3880,8 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   if (ØK.P === undefined) hentPrivat();
   const sk = (D.mo || {}).skat, mo = D.mo || {}, ob = mo.overblik || {linjer: {}, bjaelker: [], puljer: []}, P = ØK.P || {};
   const top = h("div", {class: "kh"}, h("h1", {}, "Økonomi og Skat"), h("div", {class: "spacer"}),
-    h("span", {class: "muted lille"}, `Overskud pr. ${(mo.drift_pr || mo.dinero_pr) ? visDato(mo.drift_pr || mo.dinero_pr) : "?"}`));
+    (() => { const d = [mo.drift_pr || mo.dinero_pr, mo.raad?.saldo_dato].filter(Boolean).sort()[0], gl = d && (dag(iDag()) - dag(d)) / 864e5 > 35;   // ét grønt/rødt opdateret-mærke (Oscar 3/11)
+      return d ? h("span", {class: "op-mk" + (gl ? " r" : "")}, `● Opdateret ${kortDato(d)}`) : null; })());
   if (!sk) return $("rod").replaceChildren(h("div", {class: "side bred"}, top, h("div", {class: "kort2 sk"},
     h("div", {class: "muted"}, "Skattetallene kommer med næste Dinero-hentning (hver morgen kl. 7)."))));
   const gammeltÅr = !!sk.forkert_aar;   // nyt år før skat.json er rettet: moms, bank og regninger vises stadig (revision 29/10)
@@ -4157,72 +4165,68 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   const bTekst = "kr. B-indkomst i år" + (sk.eindkomst ? `, eIndkomst pr. ${kortDato(sk.eindkomst.dato)}` : (bLinjer.length ? ` (${bLinjer.length} ${bLinjer.length === 1 ? "klubjob" : "klubjobs"})` : "") + (bt.tjekket_til ? `, tjekket på skat.dk til og med ${mdNavn(bt.tjekket_til)}` : ""));
   // Har jeg råd? (Oscar 30/10, skitse panel-raad-firmakonto): frit at bruge, løn-forslag, én advarsel, Låst og Fremtiden foldet. Tallene regnes i fabz_raad.py
   const RD = mo.raad, LV = leveAfDj(), i0 = (mo.maaneder || []).findIndex(x => x.nu);
-  // Bufferen dækker måned for måned (Oscar 31/10, skitse panel-leve-buffer): det, en måned tager, er der mindre af til den næste. Kun Buffer, ikke Husleje d. 1
-  let buf = Math.max(0, ØK.P?.buffer?.saldo || 0);
-  // Over basis deles det efter skat: halvt til dig, halvt til bufferen (privat-data basis.deling). Måneder uden jobs er "ikke booket endnu" og tager ikke af bufferen
-  const del = LV?.L.deling || {dig: 0, buffer: 0}, es = LV?.L.efter_skat || 0;
-  const basisMd = ym => { const bm = (LV?.L.maaneder || []).find(q => q.ym === ym); return bm ? LV.F.kr + bm.brutto : LV?.kr; };   // basis pr. måned (Oscar 1/11): afdrag der slutter, gør måneden billigere
-  const over = x => { const o = Math.max(0, x.kr - basisMd(x.ym)) * es; return {dig: Math.round(o * del.dig), tilBuf: Math.round(o * del.buffer)}; };
-  const lvMdr = LV && i0 >= 0 ? mo.maaneder.slice(i0 + 1, i0 + 7).map(x => {
-    const tom = LV.basis && !x.kr && !x.jobs.length, m = basisMd(x.ym) - x.kr, brugt = m > 0 && !tom ? Math.min(buf, m) : 0;
-    buf -= brugt;
-    return {navn: x.navn, kr: x.kr, m, brugt, rest: buf, tom, ...over(x)};
+  // Sælg for (Oscar 3/11, skitse panel-oekonomi-e): ikke "frit at bruge", men hvor meget der mangler for at dække måneden (basis), 6 måneder frem.
+  // Kæden starter i firmakontoens saldo i dag (fabz_raad.saelg_start: minus moms, sjældne, buffer og det, Skat-puljen mangler).
+  // Pengene tælles, når de forventes på kontoen (kasse). Et overskud ruller videre, til det er brugt. I indeværende år er skatten restskatten
+  // (Skat-puljen mangler, også efter nytår, til den er betalt), så basis er faste + nettoløn; fra næste år faste + løn med skat (revision 3/11). Bufferen over mærket dækker til sidst
+  const HBl = ØK.P?.husbuffer, år0 = String(sk.aar || iDag().slice(0, 4));   // skatteåret: restskatten dækker dets skat, senere år har løn med skat
+  const lønMd = ym => { const ms = LV?.L.maaneder || []; return ms.find(q => q.ym === ym) || ms.at(-1) || LV?.L; };
+  const basisMd = ym => LV ? LV.F.kr + (ym.startsWith(år0) ? lønMd(ym).netto : lønMd(ym).brutto) : 0;
+  let bufS = HBl ? Math.max(0, HBl.saldo - HBl.maerke) : Math.max(0, ØK.P?.buffer?.saldo || 0), carry = RD?.saelg ? RD.saelg.start : -Math.max(0, sk.mangler_paa_kontoen || 0), fra = "";   // start i saldoen i dag (revision 3/11)
+  const mdNavn6 = ym => MDL[Number(ym.slice(5, 7)) - 1].replace(/^./, c => c.toUpperCase());
+  const sælg = LV?.basis && i0 >= 0 ? mo.maaneder.slice(i0, i0 + 6).map((x, k) => {   // denne måned: kun det, der kommer fra i morgen, mod resten af månedens faste + løn til d. 1
+    const nu = k === 0 && RD?.saelg, ind = nu ? (x.kasse ?? x.kr) - (x.kasse_kommet || 0) : x.kasse ?? x.kr, need = nu ? RD.saelg.faste_nu + basisMd(x.ym) - LV.F.kr : basisMd(x.ym), avail = ind + carry, m = Math.max(0, Math.round(need - avail)), brugt = Math.min(bufS, m), af = ind < need && m === 0 ? fra : "";
+    bufS -= brugt;
+    carry = Math.max(0, avail - need);
+    if (ind > need) fra = MDL[Number(x.ym.slice(5, 7)) - 1];
+    return {ym: x.ym, navn: mdNavn6(x.ym), mangler: m - brugt, buf: brugt > 0, af};
   }) : [];
-  const lvNu = null;
-  // Basis (Oscar 1/11): kun denne måned og 2 frem, dækket eller mangler, ingen beløb pr. måned. Bufferen dækker i rækkefølge
-  // 3 måneder (Oscar 2/11, skitse panel-3-maaneder): pengene tælles, når de forventes på kontoen (kasse), og et overskud låses til næste måned,
-  // så det ikke kan bruges til Nyt anlæg. Det der stadig mangler, dækkes af bufferen over mærket, ellers står det som "Mangler X kr."
-  const HBl = ØK.P?.husbuffer; let buf2 = HBl ? Math.max(0, HBl.saldo - HBl.maerke) : Math.max(0, ØK.P?.buffer?.saldo || 0), carry = 0;
-  const md3 = LV?.basis && i0 >= 0 ? mo.maaneder.slice(i0, i0 + 4).map(x => ({ym: x.ym, ind: x.kasse ?? x.kr, need: basisMd(x.ym)})) : [];
-  const lvChips = md3.slice(0, 3).map((x, k) => {
-    const avail = x.ind + carry, m = Math.max(0, x.need - avail), brugt = m > 0 ? Math.min(buf2, m) : 0;
-    buf2 -= brugt;
-    const nx = md3[k + 1], laast = nx ? Math.min(Math.max(0, avail - x.need), Math.max(0, nx.need - nx.ind)) : 0;
-    carry = laast;
-    return {navn: MDL[Number(x.ym.slice(5, 7)) - 1].replace(/^./, c => c.toUpperCase()), m, brugt, laast, til: nx ? MDL[Number(nx.ym.slice(5, 7)) - 1] : ""};
-  });
-  const laastNu = lvChips[0]?.laast || 0;   // denne måneds overskud, der er låst til næste måned, er ikke frit
-  const lvS = LV ? Math.max(LV.kr * 1.6, ...lvMdr.map(x => x.kr)) : 1, lvP = v => `width:${(100 * v / lvS).toFixed(1)}%`;
-  const rå = RD && !gammeltÅr ? h("div", {},
-    h("div", {class: "rd-top"},
-      h("div", {class: "t"}, "Frit at bruge på firmakontoen ", kilde("kontoudtog", RD.saldo_dato), kilde("Dinero", RD.kilder.moms)),
-      h("div", {class: "v" + (RD.frit - laastNu < 0 ? " neg" : "")}, `${krKort(RD.frit - laastNu)} kr.`),
-      RD.naar_betalt ? h("div", {class: "muted lille"}, `Når ${RD.naar_betalt.kunde} betaler ${krKort(RD.naar_betalt.kr)} d. ${kortDato(RD.naar_betalt.dato)}: ${krKort(RD.naar_betalt.frit)} kr.`) : null,
-      h("div", {class: "rd-loen"},
-        h("div", {}, `Løn til dig d. ${kortDato(RD.loen_dato)}`, h("b", {}, `${krKort(RD.loen_naeste)} kr.`)),
-        h("div", {}, "Løn pr. md. derefter", h("b", {}, `${krKort(RD.loen_pr_md)} kr.`))),
-      LV ? h("div", {class: "rd-behov"},
-        h("div", {class: "t"}, LV.basis ? "Basis " : "For at leve af DJ skal du tjene ", kilde("Dinero", LV.F.dato), kilde("privat-data", LV.L.dato), kilde("forskud", LV.L.dato), ØK.P?.buffer ? kilde("Buffer", ØK.P.buffer.dato) : null),
-        h("div", {class: "v2"}, `${krKort(LV.kr)} kr./md. `, h("span", {class: "muted", style: "font-size:15px;font-weight:600"}, "ekskl. moms")),
-        lvNu ? h("div", {class: "rd-loen"},
-          h("div", {class: lvNu.kr >= LV.kr ? "ok" : ""}, MDL[Number(lvNu.ym.slice(5, 7)) - 1].replace(/^./, c => c.toUpperCase()), h("b", {}, lvNu.kr >= LV.kr ? "✓ Dækket" : `mangler ${krKort(LV.kr - lvNu.kr)}`)),
-          h("div", {}, `Til dig i ${MDL[Number(lvNu.ym.slice(5, 7)) - 1]}`, h("b", {}, `${krKort(lvNu.dig)} kr.`)),
-          del.buffer ? h("div", {}, "Til bufferen", h("b", {}, `${krKort(lvNu.tilBuf)} kr.`)) : null) : null,
-        LV.basis ? h("div", {class: "md3"}, lvChips.map(x => h("div", {class: "md3-k" + (x.m > x.brugt ? " rd" : "")}, h("div", {class: "n"}, x.navn),
-          h("div", {class: "s"}, x.m <= 0 ? "✓ Dækket" : x.brugt === x.m ? "✓ Dækket af bufferen" : `Mangler ${krKort(x.m - x.brugt)} kr.`),
-          x.laast ? h("div", {class: "f"}, `${krKort(x.laast)} kr. låst til ${x.til}`) : null))) :
-        h("div", {class: "rd-mdr"}, lvMdr.map(x => x.tom ? h("div", {class: "rd-md aab"}, x.navn, h("b", {}, "–"), h("div", {class: "rd-st"}), "ikke booket endnu")
-          : h("div", {class: "rd-md" + (LV.basis ? " b" : x.m <= 0 ? " g" : x.brugt === x.m ? " y" : "")}, x.navn, h("b", {}, krKort(x.kr)),
-          LV.basis ? h("div", {class: "rd-st"}, h("i", {class: "s1", style: lvP(Math.min(x.kr, LV.kr))}), h("i", {class: "s2", style: lvP(Math.max(0, x.kr - LV.kr) * del.dig)}), h("i", {class: "s3", style: lvP(Math.max(0, x.kr - LV.kr) * del.buffer)})) : null,
-          x.m <= 0 ? (LV.basis ? [h("div", {}, "✓ basis"), h("div", {}, `+${krKort(x.dig)} til dig`), del.buffer ? h("div", {}, `+${krKort(x.tilBuf)} til bufferen`) : null] : "✓")
-          : x.brugt === x.m ? `mangler ${krKort(x.m)}, dækket af bufferen (${krKort(x.rest)} tilbage)` : `mangler ${krKort(x.m - x.brugt)}${x.brugt ? " efter bufferen" : ""}`)))) : null),
-    LV ? h("details", rdFold("leve"), h("summary", {}, LV.basis ? "Basis består af" : "For at leve af DJ, det består af", h("span", {class: "v"}, `${krKort(LV.kr)} kr.`)),
+  const hul = sælg.find(x => x.mangler > 0), basisVis = LV ? LV.F.kr + lønMd(hul?.ym || sælg[1]?.ym || "").brutto : 0;
+  const del = LV?.L.deling || {dig: 0, buffer: 0};
+  const rRække = (id, venstre, højre, ...indhold) => h("details", rdFold(id, {class: "rd-f sg-r"}), h("summary", {}, h("span", {}, ...venstre), h("b", {}, højre)), ...indhold);
+  const ubS = mo.ubetalt || {antal: 0, kr: 0, liste: []}, ub1 = [...(ubS.liste || [])].sort((a, b) => a.forfald < b.forfald ? -1 : 1)[0];
+  const sælgKort = sælg.length ? h("div", {class: "kort2 sg"},
+    hul ? [h("div", {class: "sg-t"}, "Næste måned, der ikke er dækket"), h("div", {class: "sg-v"}, `Sælg for ${krKort(hul.mangler)} kr. mere`),
+      h("div", {class: "sg-u"}, `til ${hul.navn.toLowerCase()} `, h("span", {class: "muted"}, "· ekskl. moms"))]
+      : h("div", {class: "sg-v ok"}, `✓ Dækket ${sælg.length} måneder frem`),
+    h("div", {class: "sg-mdr"}, sælg.map(x => h("div", {class: "sg-md" + (x.mangler > 0 ? " rd" : "")}, h("div", {class: "n"}, x.navn),
+      h("div", {class: "s"}, x.mangler > 0 ? `Sælg ${krKort(x.mangler)}` : "✓ Dækket"), x.buf && !x.mangler ? h("div", {class: "f"}, "af bufferen") : x.af ? h("div", {class: "f"}, `af ${x.af}`) : null))),
+    rRække("leve", ["Basis pr. måned ", h("span", {class: "muted sg-m"}, `firmaets faste ${krKort(LV.F.kr)} + din løn med skat ${krKort(basisVis - LV.F.kr)}`)], `${krKort(basisVis)} kr.`,
       h("div", {class: "rd-l"}, h("span", {}, "Firmaets faste udgifter ", h("span", {class: "muted"}, LV.F.linjer.slice(0, 4).map(x => `${x.navn} ${krKort(x.kr)}`).join(" · ") + (LV.F.linjer.length > 4 ? ` · ${LV.F.linjer.length - 4} andre ${krKort(LV.F.linjer.slice(4).reduce((t, x) => t + x.kr, 0))}` : "")), kilde("kontoudtog", LV.F.dato)), h("b", {}, krKort(LV.F.kr))),
-      h("div", {class: "rd-l"}, h("span", {}, "Til dig privat ", priv(), h("span", {class: "muted"}, " " + LV.L.linjer.map(x => `${x.navn} ${krKort(x.kr)}`).join(" · ")), kilde(LV.basis ? "privat-data" : "snit 12 mdr., privat-data", LV.L.dato)), h("b", {}, krKort(LV.L.netto))),
-      h("div", {class: "rd-l"}, h("span", {}, "Skat af lønnen ", h("span", {class: "muted"}, `AM-bidrag 8 % ${krKort(LV.L.am)} · ${LV.L.traekprocent} % efter personfradrag ${krKort(Math.round(LV.L.personfradrag / 12))}/md. ${krKort(LV.L.skat)} · hvis DJ er din eneste indkomst, uden beskæftigelsesfradrag`), kilde("forskud", LV.L.dato)), h("b", {}, krKort(LV.L.brutto - LV.L.netto))),
-      LV.basis && LV.L.pause.length ? h("div", {class: "rd-l"}, h("span", {class: "muted"}, "Sat på pause: " + LV.L.pause.map(x => `${x.navn.split(" (")[0]} ${krKort(x.kr)}`).join(" · ")), h("b", {})) : null,
-      LV.basis ? h("div", {class: "rd-l"}, h("span", {}, "Over basis ", h("span", {class: "muted"}, del.buffer ? `efter skat, ${Math.round(del.dig * 100)} % til dig og ${Math.round(del.buffer * 100)} % til bufferen, til ${ØK.P?.husbuffer ? "Husleje d. 1 + Buffer" : "den"} er på ${krKort(LV.L.buffer_maal)} (3 måneders d. 1)` : "efter skat, alt til dig")),
-        h("b", {}, `${Math.round(del.dig * 100)} / ${Math.round(del.buffer * 100)}`)) : null) : null,
-    h("details", rdFold("laast"), h("summary", {}, "Låst", h("span", {class: "v"}, `${krKort(RD.laast)} kr.`)),
-      RD.linjer.map(x => h("div", {class: "rd-l"}, h("span", {}, x.navn,
-        x.hver ? h("span", {class: "muted"}, ` ${krKort(x.beloeb)}${x.naeste ? " d. " + kortDato(x.naeste) : ""} · ${krKort(x.pr_md)} pr. md.`) : null,
-        x.antal ? h("span", {class: "muted"}, ` (${x.antal})`) : null), h("b", {}, krKort(x.kr))))),
+      h("div", {class: "rd-l"}, h("span", {}, "Til dig privat ", priv(), h("span", {class: "muted"}, " " + LV.L.linjer.map(x => `${x.navn} ${krKort(x.kr)}`).join(" · ")), kilde("privat-data", LV.L.dato)), h("b", {}, krKort(LV.L.netto))),
+      h("div", {class: "rd-l"}, h("span", {}, "Skat af lønnen ", h("span", {class: "muted"}, `AM-bidrag 8 % ${krKort(LV.L.am)} · ${LV.L.traekprocent} % efter personfradrag ${krKort(Math.round(LV.L.personfradrag / 12))}/md. ${krKort(LV.L.skat)}`), kilde("forskud", LV.L.dato)), h("b", {}, krKort(LV.L.brutto - LV.L.netto))),
+      LV.L.pause.length ? h("div", {class: "rd-l"}, h("span", {class: "muted"}, "Sat på pause: " + LV.L.pause.map(x => `${x.navn.split(" (")[0]} ${krKort(x.kr)}`).join(" · ")), h("b", {})) : null,
+      h("div", {class: "rd-l"}, h("span", {}, "Over basis ", h("span", {class: "muted"}, del.buffer ? `efter skat, ${Math.round(del.dig * 100)} % til dig og ${Math.round(del.buffer * 100)} % til bufferen, til ${HBl ? "Husleje d. 1 + Buffer" : "den"} er på ${krKort(LV.L.buffer_maal)} (3 måneders d. 1)` : "efter skat, alt til dig")),
+        h("b", {}, `${Math.round(del.dig * 100)} / ${Math.round(del.buffer * 100)}`)),
+      h("div", {class: "rd-l"}, h("span", {}, "Opsparing: først når månederne er dækket og Husleje d. 1 + Buffer er fuld"), h("b", {}, `${krKort(HBl ? HBl.saldo : ØK.P?.buffer?.saldo || 0)} af ${krKort(LV.L.buffer_maal)}`))),
+    ubS.antal ? rRække("ubetalt", ["Kunder skylder ", h("span", {class: "muted sg-m"}, `${ubS.antal} ${ubS.antal === 1 ? "faktura" : "fakturaer"}${ub1 ? `, ${ub1.kunde.split(" ").slice(0, 2).join(" ")} ${kortDato(ub1.forfald)}` : ""}`)], `${krKort(ubS.kr)} kr.`,
+      h("div", {style: "padding:4px 0 8px"}, pengeListe())) : null) : null;
+  // Låst på firmakontoen (fabz_raad): moms, regninger, buffer og skat af penge, der er kommet. Vises nede og stille (Oscar 3/11)
+  const låstListe = RD && !gammeltÅr ? [
+    h("div", {class: "rd-l"}, h("span", {}, "Firmakontoen ", kilde("kontoudtog", RD.saldo_dato)), h("b", {}, `${krKort(RD.saldo)} kr.`)),
+    ...RD.linjer.map(x => h("div", {class: "rd-l"}, h("span", {}, x.navn,
+      x.hver ? h("span", {class: "muted"}, ` ${krKort(x.beloeb)}${x.naeste ? " d. " + kortDato(x.naeste) : ""} · ${krKort(x.pr_md)} pr. md.`) : null,
+      x.antal ? h("span", {class: "muted"}, ` (${x.antal})`) : null), h("b", {}, krKort(x.kr)))),
+    h("div", {class: "rd-l"}, h("b", {}, "Låst i alt"), h("b", {class: RD.frit < 0 ? "neg" : ""}, `${krKort(RD.laast)} kr.`)),
+    h("div", {class: "rd-l"}, h("span", {}, `Løn til dig d. ${kortDato(RD.loen_dato)} · pr. md. derefter`), h("b", {}, `${krKort(RD.loen_naeste)} · ${krKort(RD.loen_pr_md)}`)),
     h("details", rdFold("frem"), h("summary", {}, "Fremtiden på firmakontoen", h("span", {class: "v"}, `${krKort(RD.frem.at(-1).slut)} i ${RD.frem.at(-1).navn.toLowerCase()}`)),
       h("table", {class: "rd-tb"}, h("tr", {}, h("th", {}, "Måned"), h("th", {}, "Ind"), h("th", {}, "Ud"), h("th", {}, "Løn"), h("th", {}, "Slut"), h("th", {class: "skjul"}, "Låst")),
         RD.frem.map(x => h("tr", {}, h("td", {}, x.navn), h("td", {}, krKort(x.ind)),
           h("td", {}, krKort(x.ud), x.store.length ? h("span", {class: "muted skjul"}, " " + x.store.join(", ")) : null), h("td", {}, krKort(x.loen)),
           h("td", {class: x.slut < x.laast ? "neg" : ""}, krKort(x.slut)), h("td", {class: "skjul muted"}, krKort(x.laast)))))),
-    ) : null;
+  ] : [];
+  // prikker (Oscar 3/11, grænser fra revisionen): rød = koster penge, hvis der ikke handles; gul = kig på det; ellers ingen. Teksten siger hvorfor
+  const dageGl = d => d ? Math.round((dag(iDag()) - dag(d)) / 864e5) : 0, dageTil = d => Math.round((dag(d) - dag(iDag())) / 864e5);
+  const prik = f => f ? h("span", {class: "sg-prik " + f}) : null;
+  const låstStatus = (() => {
+    if (!RD || gammeltÅr) return [null, "Låst, puljer og kuverter"];
+    const gl = dageGl(RD.saldo_dato), buf = (RD.linjer.find(x => x.navn === "Buffer") || {}).kr || 0;
+    if (RD.frit < 0) return ["rd", `Firmakontoen mangler ${krKort(-RD.frit)} kr. til det låste`];
+    if (gl > 35) return ["rd", `Kontoudtoget er ${gl} dage gammelt`];
+    if (RD.frit < buf) return ["y", "Bufferen på firmakontoen er i brug"];
+    if (gl >= 14) return ["y", `Kontoudtoget er ${gl} dage gammelt`];
+    return [null, "Låst, puljer og kuverter"];
+  })();
   // Privat (Oscar 30/10): Regninger-kontoens delpuljer med "− Brugt", månedstjek, fordelingen og betalte klubjobs. Tallene regnes i privat-data
   const DP = P.delpuljer, br = ØK.brugt;
   // Kuverter (Oscar 2/11, skitse panel-kuverter): Regninger-kontoens delpuljer og El (bliver på Faste omkostninger) som et lille overblik med Hæv.
@@ -4353,17 +4357,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
           kør("hov-plan", [`--ym=${HA.ym}`, `--mangler=${hovMangler}`, `--tekst=${tx}`], {tekst: "Plan sendt til Claude", efter: ["hov"],
             med: () => { (D.hov = D.hov || []).push({id: "…", ym: HA.ym, mangler: hovMangler, tekst: tx, tid: new Date().toISOString(), svar: null}); }}); }, true)]) : null;
   const ovKort0 = ovL.length ? h("div", {class: "kort2 ov-k", style: "margin-top:12px"}, ovL) : null;
-  $("rod").replaceChildren(h("div", {class: "side bred skat-side"}, top, msKort, hovKort, d1Kort, ovKort0, bjælker, rå, overblik, puljer, regFold, fbKort2, tjekFold, fordFold,
-    h("div", {class: "overskrift", style: "margin-top:20px"}, "Penge ude"),
-    h("div", {class: "sk-k4 sk-k2"},
-      felt({f: ub.antal ? "y" : "g", tal: krKort(ub.kr), tekst: `kr. ubetalt (${ub.antal} ${ub.antal === 1 ? "faktura" : "fakturaer"}, inkl. moms)`}),
-      felt({f: ub.forfaldne ? "rd" : "g", tal: krKort(ub.forfaldne_kr), tekst: `kr. over forfald (${ub.forfaldne})`})),
-    gammeltÅr ? null : h("div", {class: "overskrift", style: "margin-top:16px"}, `Skat ${sk.aar}`),
-    gammeltÅr ? null : h("div", {class: "sk-k4 sk-k3"},
-      felt({f: t.felt.f === "g" && !sk.skylder_mere ? "g" : sk.skylder_mere ? "rd" : "y", tal: krKort(sk.forventet),
-        tekst: sk.skylder_mere ? `kr. forventet overskud, felt 221 er for lavt (${krKort(sk.felt_221)})` : sk.advarsel ? `kr. forventet overskud, felt 221 er ${krKort(sk.felt_221)}` : "kr. forventet overskud, felt 221 passer"}),
-      felt(t.rate),
-      felt({f: bUkendt.length ? "y" : "g", tal: krKort(sk.b_til_dato ?? sk.b_reg), tekst: bTekst})),
+  const fsKort =
     gammeltÅr || !fsRækker.length ? null : FF ? h("div", {class: "fs-kort"},
       h("div", {class: "fs-kh"}, `Forskudsopgørelse ${sk.aar}`, " ", h("span", {class: "pill gul"}, FF.svar && !FF.svar.fejl ? `Tjek ${FF.svar.punkter.length} ting` : "Skriv det, skat.dk viser")),
       fsSvar(FF.svar),
@@ -4385,9 +4379,8 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
           h("td", {}, krKort(f.nu)), h("td", {class: f.ret ? "ny" : "ok"}, f.ret ? krKort(f.skal) : `${krKort(f.skal)} ✓`)))),
       h("div", {class: "fs-fod"}, h("span", {}, "Samlet: ", h("b", {}, skatTekst(FS.netto)), FS.rater_tilbage === false ? " (ingen rater tilbage, det går op på årsopgørelsen)" : " end forskuddet nu"),
         h("span", {}, "Sidst opdateret ", h("b", {}, FS.opdateret ? kortDato(FS.opdateret) : "aldrig")),
-        h("span", {class: "fs-knap"}, knap("✓ Rettet på skat.dk", () => fsÅbn())))),
-    h("div", {class: "overskrift", style: "margin-top:16px"}, "Fold ud for detaljer"),
-    fold("Fakturaer og depositum", pengeListe()),
+        h("span", {class: "fs-knap"}, knap("✓ Rettet på skat.dk", () => fsÅbn()))));
+  const tallenBag =
     gammeltÅr ? null : fold("Skat: tallene bag",
       h("div", {class: "sk-detalje"}, h("div", {class: "overskrift", style: "margin:0 0 4px"}, "Fabz (felt 221)"),
         h("div", {class: "liste"},
@@ -4412,9 +4405,29 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
           bi ? l(`Fradraget sparer (${bi.traekprocent} % af ${krKort(bi.r29)})`, h("span", {style: "color:var(--ok)"}, "−" + krKort(bi.fradrag_vaerdi))) : null,
           l("Restskat, hvis året ender som forventet", krKort(sk.restskat || 0), `${String(sk.reserve_pct).replace(".", ",")} % af det, der ligger over felt 221 og ${bFelt ? "felt " + bFelt.felt : "B-indkomsten"}`),
           sk.b_skat_betalt ? l("B-skat betalt i år", krKort(sk.b_skat_betalt)) : null,
-          l("Skal stå i puljen", sk.reserve == null ? "?" : krKort(sk.reserve))))),
-    fold("Omsætning pr. måned", vejKort(false)),
-    fold("Registrér B-indkomst", bIndkomstKort(bLinjer))));
+          l("Skal stå i puljen", sk.reserve == null ? "?" : krKort(sk.reserve)))));
+  const skatStatus = (() => {
+    if (gammeltÅr) return [null, `Skat ${sk.aar}`];
+    const n = FS.netto || 0, r = sk.rate, rd = r ? dageTil(r.frist) : null, felter = fsRet.map(f => `ret felt ${f.felt} på skat.dk til ${krKort(f.skal)} kr. (nu ${krKort(f.nu)} kr.)`).join(" · ");   // præcist tal (Oscar 3/11)
+    if (r && rd < 4) return ["rd", `B-skat-rate ${krKort(r.beloeb)} kr. ${rd < 0 ? "er over fristen" : "d. " + kortDato(r.frist)}`];
+    // ingen B-skat-rater tilbage: at rette feltet sparer ikke tillægget, det gør en frivillig indbetaling før nytår (revision 3/11)
+    const frist = sk.restskat_frist ? `senest ${kortDato(sk.restskat_frist)} (rentefrit)` : "før nytår";   // 3 bankdage før 31/12 (fabz_skat)
+    const op = v => Math.ceil(v / 100) * 100, indbetal = FS.rater_tilbage === false && sk.aar == år0 && (sk.mangler_paa_kontoen || 0) > 2000 ? Math.max((sk.restskat || 0) - (sk.restskat_betalt || 0), sk.mangler_paa_kontoen) : 0;   // hele restskatten (Skat-puljen + resten); prikken går, når puljen har den
+    if (n > 2000) return ["rd", `Skat ${sk.aar}: ${felter || `ca. ${krKort(n)} kr. for lidt i skat`}${indbetal > 2000 ? `, og indbetal ca. ${krKort(op(indbetal))} kr. ${frist}` : ""}`];
+    if (indbetal > 2000 && Number(iDag().slice(5, 7)) >= 11) return ["rd", `Skat ${sk.aar}: indbetal ca. ${krKort(op(indbetal))} kr. til Skat ${frist}, eller læg dem i Skat-puljen`];
+    if (n >= 500) return ["y", `Skat ${sk.aar}: ${felter || `ca. ${krKort(n)} kr. for lidt i skat`}`];
+    if (n < -5000) return ["y", `Skat ${sk.aar}: du betaler ca. ${krKort(-n)} kr. for meget`];
+    if (r && rd <= 10) return ["y", `B-skat-rate ${krKort(r.beloeb)} kr. d. ${kortDato(r.frist)}`];
+    if ((sk.eindkomst_alder || 0) > 30) return ["y", `Skat ${sk.aar}: eIndkomst er ${sk.eindkomst_alder} dage gammel`];
+    return [null, `Skat ${sk.aar}`];
+  })();
+  const linje = (id, [f, tekst], ekstra, ...indhold) => h("details", rdFold(id, {class: "rd-f sg-l"}), h("summary", {}, prik(f), h("span", {class: "sg-lt"}, tekst, ekstra ? h("span", {class: "sg-ek"}, " · " + ekstra) : null)), h("div", {class: "sg-ind"}, ...indhold));
+  $("rod").replaceChildren(h("div", {class: "side bred skat-side"}, top, msKort, hovKort, d1Kort, ovKort0, bjælker, sælgKort,
+    h("div", {class: "sg-linjer"},
+      linje("skat", skatStatus, null, fsKort, tallenBag, fold("Registrér B-indkomst", bIndkomstKort(bLinjer))),
+      linje("laast", låstStatus, låstStatus[0] ? "låst, puljer, kuverter og detaljer" : "puljer, kuverter og detaljer",
+        låstListe, ubS.antal && sælgKort ? null : fold("Fakturaer og depositum", pengeListe()), overblik, puljer, regFold, fbKort2, tjekFold, fordFold, fold("Omsætning pr. måned", vejKort(false))))));
+
 }
 const felt_ = (etiket, el) => felt(etiket, el);   // formularfelt (felt er skygget i visSkat)
 // ---------- Guides (skitse 3c): skjulte sider, kun åbnet fra en bjælke eller Tal-dagen ----------
