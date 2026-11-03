@@ -748,7 +748,7 @@ function jobs(fortid = false) {   // fortid: også passerede jobs (link fra påm
 }
 // Vagter fra Planday/Deltaplan som jobs (Oscar 28/10: "Planday jobsne skal også hentes ind i jobs i panelet"). Data fra data/vagter.json
 // (tools/vagter.py), så de flyttes og forsvinder af sig selv, når vagten ændres eller aflyses. Nøglen "dato|vagt <sted>" kan bruges til opgaver.
-const VAGT_KILDE = {planday: "Planday", deltaplan: "Deltaplan"};
+const VAGT_KILDE = {planday: "Planday", planday_rekom: "Planday", deltaplan: "Deltaplan"};   // planday_rekom: Zwei (REKOM, 3/11)
 const vagtFirma = k => ((D.kalender?.kalendere || {})[k]?.navn || "").split(" - ").pop().replace(/\s+(ApS|A\/S|I\/S|IVS)$/i, "").trim() || VAGT_KILDE[k] || k;
 const vagtTid = v => v.heldag ? "Hele dagen" : `${v.start.slice(11, 16).replace(":", ".")}-${v.slut.slice(11, 16).replace(":", ".")}`;
 function vagtJobs() {
