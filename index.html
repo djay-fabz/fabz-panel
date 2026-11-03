@@ -3879,15 +3879,23 @@ function visSalg() {
   $("rod").replaceChildren(status, h("div", {class: "to", style: "padding-bottom:0"}, venstre, højre),
     h("div", {class: "side bred", style: "padding-top:8px"}, salgTop()));
 }
-function naesteLead() {   // samme regel som fabz.py salg-traek: ikke trukket, ikke i salg, A før B, nærmest først
+// Telefonnummeret ud af feltet (3/11: Eurofins havde "70 22 42 33 (Krak, ...)" og knappen viste hele teksten). Uden nummer: "Nummer mangler" + kontaktsiden.
+const tlfNr = t => { const m = /(\+?\d[\d ]{6,}\d)/.exec(String(t || "")); return m ? m[1].trim() : ""; };
+function ringKnap(s) {
+  const nr = tlfNr(s.telefon) || tlfNr(s.kontakt), side = /^https?:\/\//.test(s.kontaktside || "") ? s.kontaktside : null;
+  if (nr) return h("a", {class: "btn lille", style: "margin-top:6px;display:inline-block", href: "tel:" + nr.replace(/\s+/g, "")}, "Ring " + nr);
+  return side ? h("a", {class: "btn lille", style: "margin-top:6px;display:inline-block", href: side, target: "_blank", rel: "noopener"}, "Nummer mangler")
+    : h("span", {class: "pill rød-pill", style: "margin-top:6px;display:inline-block"}, "Nummer mangler");
+}
+function naesteLead() {   // samme regel som fabz.py salg-traek: ikke trukket, ikke i salg, har et telefonnummer, A før B, nærmest først
   const iSalg = new Set((D.salg || []).map(s => nøgle(s.navn)));
   const navn = r => (r.firma || "").replace(/\s*\(.*?\)\s*/g, " ").trim();
   const km = r => { const v = parseFloat(String(r.km || "999").replace(",", ".")); return isNaN(v) ? 999 : v; };
-  return (D.leads || []).filter(r => !r.trukket && !iSalg.has(nøgle(navn(r))) && !iSalg.has(nøgle(r.firma)))
+  return (D.leads || []).filter(r => !r.trukket && tlfNr(r.telefon) && !iSalg.has(nøgle(navn(r))) && !iSalg.has(nøgle(r.firma)))
     .sort((a, b) => (a.prioritet || "Z").localeCompare(b.prioritet || "Z") || km(a) - km(b))[0] || null;
 }
 function traekKnap() {   // Træk en kontakt (Oscar 26/10): næste firma fra leadlisten bliver en kunde, og åbner i detaljen
-  const r = naesteLead(), tilbage = (D.leads || []).filter(x => !x.trukket).length;
+  const r = naesteLead(), tilbage = (D.leads || []).filter(x => !x.trukket && tlfNr(x.telefon)).length;
   if (!r) return h("span", {class: "muted lille"}, "Leadlisten er tom");
   const navn = (r.firma || "").replace(/\s*\(.*?\)\s*/g, " ").trim();
   return h("button", {class: "btn primaer", type: "button", title: `Næste: ${navn}, ${r.by || ""} (${r.prioritet || "?"}, ${r.km || "?"} km). ${tilbage} tilbage i listen`,
@@ -5151,7 +5159,7 @@ function salgDetalje(s) {
       felt("Næste opfølgning", h("div", {class: "muted"}, s.naeste_opfoelgning ? dagNavnLang(s.naeste_opfoelgning) : "ingen dato")),
       felt("Senest kontakt", h("div", {class: "muted"}, s.senest_kontakt ? kortDatoÅr(s.senest_kontakt) : "–"))),
     s.kontakt || s.telefon ? h("div", {class: "info"}, h("div", {class: "etiket"}, "Kontaktperson"), h("div", {class: "pre"}, s.kontakt || ""),
-      s.telefon ? h("a", {class: "btn lille", style: "margin-top:6px;display:inline-block", href: "tel:" + String(s.telefon).replace(/\s+/g, "")}, "Ring " + s.telefon) : null) : null,
+      ringKnap(s)) : null,
     s.naeste ? h("div", {class: "info"}, h("div", {class: "etiket"}, "Næste skridt"), h("div", {class: "pre", style: "font-size:15px"}, s.naeste)) : null,
     s.linkedin_side || s.kontaktside ? h("div", {class: "rk", style: "gap:8px;flex-wrap:wrap;margin-top:6px"},
       s.linkedin_side ? h("a", {class: "btn lille", href: s.linkedin_side, target: "_blank", rel: "noopener"}, "LinkedIn-side") : null,
