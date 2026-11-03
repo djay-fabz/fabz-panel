@@ -4967,12 +4967,14 @@ function datoKnapper(st, k, felt) {
 }
 // Opkald med tryk (Oscar 31/10): ca. 10 sekunder efter hvert opkald, store knapper til telefonen. fabz.py salg-opkald gemmer det struktureret
 const OPK_FIK = [["svarede_ikke", "Svarede ikke"], ["reception", "Receptionen"], ["forkert", "Forkert person"], ["rigtig", "Den rigtige"]];
-const OPK_SAGDE = [["interesseret", "Interesseret"], ["fast_dj", "Fast DJ"], ["ikke_mig", "Ikke mig"], ["send_mail", "Send mail"], ["ikke_nu", "Ikke nu"], ["budget", "Budget"], ["andet", "Andet"]];
+const OPK_SAGDE = [["interesseret", "Interesseret"], ["fast_dj", "Fast DJ"], ["ikke_mig", "Ikke mig"], ["send_mail", "Send mail"], ["ikke_nu", "Ikke nu"], ["budget", "Budget"], ["henviste", "Henviste videre"], ["andet", "Andet"]];
 const OPK_SKRIDT = [["ring_uge", "Ring igen +1 uge", 7], ["ring_md", "Ring igen +1 md.", 30], ["mail", "Send mail", 7, "Kontaktet"], ["moede", "Møde", 7, "Møde aftalt"], ["tilbud", "Tilbud", 7, "Tilbud sendt"], ["nej", "Ikke interesseret", null, "Ikke nu"]];
 function opkaldBlok(s, k) {
-  const o = k.opk ||= {fik: null, sagde: [], skridt: null, rigtig: "", rigtigK: "", sender: false, aabning: null, note: ""};
+  const o = k.opk ||= {fik: null, sagde: [], skridt: null, rigtig: "", rigtigK: "", sender: false, aabning: null, note: "", hNavn: "", hMail: "", hTlf: ""};
+  const henvist = o.sagde.includes("henviste");   // "Henviste videre" (Oscar 3/11): den nye bliver hovedkontakt, ring i morgen
   const knap = (v, t, valgt, fn) => h("button", {type: "button", class: "opk-k" + (valgt ? " valgt" : ""), onclick: fn}, t);
   const gem = () => {
+    if (henvist) return gemHenvist();
     if (!o.fik || !o.skridt) { alert("Vælg hvem du fik fat i og næste skridt."); return; }
     const args = [`--fik=${o.fik}`, `--skridt=${o.skridt}`, ...(o.sagde.length ? [`--sagde=${o.sagde.join(",")}`] : []),
       ...(o.rigtig.trim() ? [`--rigtig=${o.rigtig.trim()}`] : []), ...(o.rigtigK.trim() ? [`--rigtig-kontakt=${o.rigtigK.trim()}`] : []), ...(o.sender ? ["--sender-videre"] : []),
@@ -4985,6 +4987,21 @@ function opkaldBlok(s, k) {
       SG.k = {naeste: s.naeste || ""};
     }});
   };
+  const gemHenvist = () => {
+    const navn = o.hNavn.trim(), mail = o.hMail.trim(), tlf = o.hTlf.trim();
+    if (!o.fik || !navn) { alert("Vælg hvem du fik fat i, og skriv navnet på den, du blev henvist til."); return; }
+    const fra = (o.rigtig.trim() || (s.kontakt || "").split(/\s*[,·(]\s*/)[0]).replace(/^(via|ingen|ukendt)\b.*$/i, "");
+    const args = [`--fik=${o.fik}`, `--sagde=${o.sagde.join(",")}`, `--henvist-navn=${navn}`, ...(mail ? [`--henvist-mail=${mail}`] : []), ...(tlf ? [`--henvist-tlf=${tlf}`] : []),
+      ...(o.rigtig.trim() ? [`--rigtig=${o.rigtig.trim()}`] : []), ...(o.aabning ? [`--aabning=${o.aabning}`] : []), ...(o.note.trim() ? [`--note=${o.note.trim()}`] : []), "--", s.navn];
+    kør("salg-opkald", args, {tekst: `${s.navn}: henvist til ${navn}`, efter: ["salg", "salgslog"], med: () => {
+      (D.salgslog ||= []).push({dato: iDag(), navn: s.navn, kanal: "Telefon", tekst: `Opkald: ${fra || "de"} henviste til ${navn}`, opkald: {fik: o.fik, sagde: o.sagde, skridt: "henvist", henvist: navn}});
+      s.historik = ((s.historik || "") + ` ${iDag()}: Opkald: ${fra || "de"} henviste til ${navn}`).trim();
+      s.kontakt = [navn, mail, tlf].filter(Boolean).join(" · "); if (tlf) s.telefon = tlf;
+      s.naeste = `Ring til ${navn}` + (tlf ? ` (${tlf})` : "") + (fra ? `. Nævn at ${fra.split(" ")[0]} henviste dig` : "");
+      s.senest_kontakt = iDag(); s.naeste_opfoelgning = plusDage(iDag(), 1); if (s.status === "Ikke kontaktet") s.status = "Kontaktet";
+      SG.k = {naeste: s.naeste};
+    }});
+  };
   return h("div", {class: "afslut opkald"},
     h("div", {class: "etiket"}, "Fik fat i"),
     h("div", {class: "opk-grid"}, OPK_FIK.map(([v, t]) => knap(v, t, o.fik === v, () => { o.fik = o.fik === v ? null : v; tegn(); }))),
@@ -4995,8 +5012,12 @@ function opkaldBlok(s, k) {
     h("div", {class: "etiket", style: "margin-top:10px"}, "Hvad sagde de"),
     h("div", {class: "chips"}, OPK_SAGDE.map(([v, t]) => h("button", {type: "button", class: "chip opk-c" + (o.sagde.includes(v) ? " aktiv" : ""),
       onclick: () => { o.sagde = o.sagde.includes(v) ? o.sagde.filter(x => x !== v) : [...o.sagde, v]; tegn(); }}, t))),
-    h("div", {class: "etiket", style: "margin-top:10px"}, "Næste skridt"),
-    h("div", {class: "opk-grid"}, OPK_SKRIDT.map(([v, t]) => knap(v, t, o.skridt === v, () => { o.skridt = o.skridt === v ? null : v; tegn(); }))),
+    henvist ? h("div", {class: "opk-henvist"},
+      h("input", {class: "input", style: "margin-top:8px", value: o.hNavn, placeholder: "Navn", oninput: e => { o.hNavn = e.target.value; }}),
+      h("input", {class: "input", style: "margin-top:6px", type: "email", value: o.hMail, placeholder: "Mail", oninput: e => { o.hMail = e.target.value; }}),
+      h("input", {class: "input", style: "margin-top:6px", type: "tel", value: o.hTlf, placeholder: "Tlf", oninput: e => { o.hTlf = e.target.value; }})) : null,
+    henvist ? null : [h("div", {class: "etiket", style: "margin-top:10px"}, "Næste skridt"),
+      h("div", {class: "opk-grid"}, OPK_SKRIDT.map(([v, t]) => knap(v, t, o.skridt === v, () => { o.skridt = o.skridt === v ? null : v; tegn(); })))],
     h("div", {class: "etiket", style: "margin-top:10px"}, "Åbning"),
     h("div", {class: "chips"}, ["A", "B"].map(v => h("button", {type: "button", class: "chip opk-c" + (o.aabning === v ? " aktiv" : ""), onclick: () => { o.aabning = o.aabning === v ? null : v; tegn(); }}, v))),
     h("input", {class: "input", style: "margin-top:8px", value: o.note, placeholder: "Note (valgfri)", oninput: e => { o.note = e.target.value; }}),
