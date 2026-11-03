@@ -649,14 +649,25 @@ function nytId(præfiks) {
   return `${præfiks}-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}-${Math.random().toString(36).slice(2, 6)}`;
 }
 // lægger en anmodning i inbox/ og venter på svaret fra fabz.py inbox
+// GitHub svarer af og til 500/502/503 eller mister forbindelsen. Det er ikke en fejl i anmodningen: der læses bare igen (3/11, Ranum-omkostning
+// blev vist som "ikke gemt", selvom den var gemt). Kun et rigtigt svar med FEJL giver "ikke gemt".
+const forbigående = e => /GitHub svarede 5\d\d|Failed to fetch|NetworkError|Load failed|network/i.test(e?.message || "");
+async function laesSvar(id) {
+  try { const r = await laesFil(`inbox/svar/${id}.json`); return r ? await r.json() : null; }
+  catch (e) { if (forbigående(e)) return null; throw e; }
+}
+async function behandlet(id) {   // anmodningen er fjernet fra inbox/, når fabz.py har behandlet den
+  for (let i = 0; i < 3; i++) { try { return (await laesFil(`inbox/${id}.json`)) === null; } catch (e) { if (!forbigående(e)) return false; await sleep(2000); } }
+  return false;
+}
 async function anmod(præfiks, krav, besked) {
   const id = nytId(præfiks);
   await skrivFil(`inbox/${id}.json`, krav, besked);
   const start = Date.now();
   while (Date.now() - start < 240000) {
     await sleep(1500);
-    const r = await laesFil(`inbox/svar/${id}.json`);
-    if (r) return r.json();
+    const sv = await laesSvar(id);
+    if (sv) return sv;
   }
   return null;
 }
@@ -698,10 +709,10 @@ async function iBaggrunden(præfiks, krav, commit, {tekst, ok, fejl}) {
       while (!sv && Date.now() - start < 900000) {   // efter 4 min: "I kø", og der ventes op til 15 min, før det kaldes en fejl (29/10)
         await sleep(Date.now() - start < 240000 ? 1500 : 5000);
         if (!iKø && Date.now() - start >= 240000) { iKø = true; besked({id, klasse: "kø", titel: tekst + ": I kø, gemmes om lidt"}); }
-        const r = await laesFil(`inbox/svar/${id}.json`);
-        if (r) sv = await r.json();
+        sv = await laesSvar(id);
       }
     } catch (e) { sv = {status: "FEJL", fejl: e.message}; }
+    if (!sv && await behandlet(id)) sv = {status: "OK", advarsler: [], info: ["Svaret kunne ikke læses fra GitHub, men anmodningen er behandlet."]};
     if (!sv) sv = {status: "FEJL", fejl: "Intet svar efter 15 minutter. Tjek Actions i fabz-data."};
     if (sv.status === "FEJL") {
       let håndteret = false;
