@@ -557,17 +557,32 @@ function seg(valg, aktiv, f) {
 
 // ---------- GitHub ----------
 const sti = p => p.split("/").map(encodeURIComponent).join("/");
-function gh(path, {method = "GET", body, raw = false} = {}) {
-  return fetch(API + path, {
+// Højst 5 læsninger ad gangen: 25 samtidige kald gav 2 fejl 500, enkelte kald efter hinanden ingen (3/11).
+const GH_MAKS = 5, ghVenter = [];
+let ghAktive = 0;
+async function ghPlads() { while (ghAktive >= GH_MAKS) await new Promise(ok => ghVenter.push(ok)); ghAktive++; }
+function ghFri() { ghAktive--; const næste = ghVenter.shift(); if (næste) næste(); }
+// GitHub giver af og til 500/502/503 eller mister forbindelsen (3/11: 1 ud af ca. 6 kald). Læsninger (GET) prøves derfor igen op til 4 gange.
+// Skrivninger prøves ikke igen her: de har deres egen håndtering (skrivFil ved 409/422).
+async function gh(path, {method = "GET", body, raw = false} = {}) {
+  const kald = () => fetch(API + path, {
     method, cache: "no-store",
     headers: {Authorization: "Bearer " + token, Accept: raw ? "application/vnd.github.raw+json" : "application/vnd.github+json",
               ...(body ? {"Content-Type": "application/json"} : {})},
     body: body ? JSON.stringify(body) : undefined
   });
+  if (method !== "GET") return kald();
+  for (let forsøg = 0; ; forsøg++) {
+    let r;
+    await ghPlads();
+    try { r = await kald(); } catch (e) { if (forsøg >= 3) throw e; await sleep(700 * 2 ** forsøg); continue; } finally { ghFri(); }
+    if (r.status < 500 || forsøg >= 3) return r;
+    await sleep(700 * 2 ** forsøg);
+  }
 }
 function tjek(r, hvad) {
   if (r.ok) return r;
-  if (r.status === 401) throw new Error("Tokenen blev afvist. Tjek at den ikke er udløbet, og skift den.");
+  if (r.status === 401) throw Object.assign(new Error("Tokenen blev afvist. Tjek at den ikke er udløbet, og skift den."), {token: true});
   if (r.status === 403 || r.status === 404) throw new Error(`Ingen adgang til ${hvad}. Tjek at tokenen gælder ${REPO} med Contents og Actions (read/write).`);
   throw new Error(`${hvad}: GitHub svarede ${r.status}`);
 }
@@ -603,35 +618,51 @@ function skrivFil(p, obj, besked) {
   skriveKø = job.catch(() => {});
   return job;
 }
+// Én fil, der ikke kan hentes, stopper ikke resten (3/11): den får en tom standard og står i MANGLER, så der vises en advarsel.
+// Kun en afvist token (401) stopper alt og viser tokenboksen.
+let MANGLER = [];
+async function sikker(p, læs, std) {
+  try { const v = await læs(); return v ?? std; }
+  catch (e) { if (e.token) throw e; MANGLER.push(p.replace(/^data\//, "")); return std; }
+}
+const fil = (p, std = []) => sikker(p, async () => { const r = await laesFil(p); return r ? r.json() : std; }, std);
 async function hentData() {
+  MANGLER = [];
   const [kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, ideer, indtaegter, typer, salg, festkort, klubkort, salgslog, kkTekster] = await Promise.all([
-    ...["data/kalender.json", "data/udstyr.json", "data/pakkelister.json", "data/opgaver.json"].map(laesJson), laesJobpl(),
-    ...["data/henvendelser.json", "data/dagsplaner.json", "data/ideer.json", "data/indtaegter.json", "data/typer.json", "data/salg.json", "data/festkort.json", "data/klubkort.json", "data/salgslog.json"].map(p => laesFil(p).then(r => r ? r.json() : [])),
-    laesKkTekster()]);
+    sikker("data/kalender.json", () => laesJson("data/kalender.json"), {begivenheder: []}), sikker("data/udstyr.json", () => laesJson("data/udstyr.json"), []),
+    sikker("data/pakkelister.json", () => laesJson("data/pakkelister.json"), []), sikker("data/opgaver.json", () => laesJson("data/opgaver.json"), []),
+    sikker("data/jobpakkelister.json", laesJobpl, []),
+    ...["data/henvendelser.json", "data/dagsplaner.json", "data/ideer.json", "data/indtaegter.json", "data/typer.json", "data/salg.json", "data/festkort.json", "data/klubkort.json", "data/salgslog.json"].map(p => fil(p)),
+    sikker("data/klubkort_tekster.json", laesKkTekster, [])]);
   D = {kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, ideer, indtaegter, typer, salg, festkort, klubkort, salgslog, kkTekster};
-  const st = await laesFil("data/strategi.json");
-  D.strategi = st ? await st.json() : {};
-  const jr = await laesFil("data/jobrute.json");
-  D.jobrute = jr ? await jr.json() : {};
-  D.jobtider = await laesValgfri("data/jobtider.json");
-  D.salgjobs = await laesValgfri("data/salgjobs.json");
-  D.kortmaaling = await laesValgfri("data/kortmaaling.json");   // scanninger og tilmeldinger pr. kort (tools/kortmaaling.mjs hver nat)   // hvilket firma i Salg et job kom fra (fabz.py salg-job)
-  D.salgslaering = await laesValgfri("data/salgslaering.json");   // forslag fra opkaldene (Tal på Salg)   // spilletid gemt på jobbet (fabz.py spilletid)
-  const su = await laesFil("data/setups.json");
-  D.setups = su ? await su.json() : {grupper: [], setups: []};
-  const mo = await laesFil("data/maanedsoversigt.json");   // omsætning pr. måned med trafiklys, regnet af fabz.py maanedsoversigt --gem
-  D.mo = mo ? await mo.json() : null;
-  const pr = await laesFil("data/priser.json");   // pakkerne i Tilbud (samme priser som fabz-tilbud/priser.md, tjekkes med tools/priser.py)
-  D.priser = pr ? await pr.json() : null;
-  D.leads = await laesValgfri("data/leads.json");   // leadlisten (Træk en kontakt)
-  D.betalinger = await laesValgfri("data/betalinger.json");
-  D.fejl = await laesValgfri("data/fejl.json");
-  D.hov = await laesValgfri("data/hov.json");   // Hov: Oscars planer og Claudes svar (fabz_hov, Oscar 2/11)   // robotternes fejl (tools/meld_fejl.py -> fabz.py fejl-ny), vises som rød bjælke
-  D.ugepakke = await laesValgfri("data/ugepakke.json");   // ugens bogføring (fabz_bogholder.py): robottens forslag, Oscar godkender   // betaling pr. job (fabz_betaling.py): måde, beløb, opgave, Dinero-kladde
-  const mo2 = await laesFil("data/mailoversigt.json");   // dagens mailoversigt (tools/mailoversigt.py via panel.yml ved Mødt ind)
-  D.mailoversigt = mo2 ? await mo2.json() : null;
-  const vg = await laesFil("data/vagter.json");   // vagter fra Planday/Deltaplan (tools/vagter.py i kalender.yml)
-  D.vagter = vg ? await vg.json() : null;
+  const [strategi, jobrute, jobtider, salgjobs, kortmaaling, salgslaering, setups, mo, priser, leads, betalinger, fejl, hov, ugepakke, mailoversigt, vagter] = await Promise.all([
+    fil("data/strategi.json", {}), fil("data/jobrute.json", {}), fil("data/jobtider.json"), fil("data/salgjobs.json"),   // hvilket firma i Salg et job kom fra (fabz.py salg-job)
+    fil("data/kortmaaling.json"),   // scanninger og tilmeldinger pr. kort (tools/kortmaaling.mjs hver nat)
+    fil("data/salgslaering.json"),   // forslag fra opkaldene (Tal på Salg)
+    fil("data/setups.json", {grupper: [], setups: []}),
+    fil("data/maanedsoversigt.json", null),   // omsætning pr. måned med trafiklys, regnet af fabz.py maanedsoversigt --gem
+    fil("data/priser.json", null),   // pakkerne i Tilbud (samme priser som fabz-tilbud/priser.md, tjekkes med tools/priser.py)
+    fil("data/leads.json"),   // leadlisten (Træk en kontakt)
+    fil("data/betalinger.json"),   // betaling pr. job (fabz_betaling.py): måde, beløb, opgave, Dinero-kladde
+    fil("data/fejl.json"),   // robotternes fejl (tools/meld_fejl.py -> fabz.py fejl-ny), vises som rød bjælke
+    fil("data/hov.json"),   // Hov: Oscars planer og Claudes svar (fabz_hov, Oscar 2/11)
+    fil("data/ugepakke.json"),   // ugens bogføring (fabz_bogholder.py): robottens forslag, Oscar godkender
+    fil("data/mailoversigt.json", null),   // dagens mailoversigt (tools/mailoversigt.py via panel.yml ved Mødt ind)
+    fil("data/vagter.json", null)]);   // vagter fra Planday/Deltaplan (tools/vagter.py i kalender.yml)
+  Object.assign(D, {strategi, jobrute, jobtider, salgjobs, kortmaaling, salgslaering, setups, mo, priser, leads, betalinger, fejl, hov, ugepakke, mailoversigt, vagter});
+  if (MANGLER.length) manglerBesked();
+}
+function manglerBesked() {
+  besked({id: "mangler", klasse: "adv", titel: "GitHub svarer ikke lige nu, prøver igen …", punkter: ["Kunne ikke hente: " + MANGLER.join(", ")],
+    handling: ["Prøv igen nu", () => genhentMangler()]});
+  clearTimeout(manglerBesked.t);
+  manglerBesked.t = setTimeout(genhentMangler, 15000);
+}
+async function genhentMangler() {
+  clearTimeout(manglerBesked.t);
+  try { await hentData(); } catch { return manglerBesked(); }
+  if (!MANGLER.length) { fjernBesked(beskeder.find(b => b.id === "mangler")); besked({id: "mangler-ok", klasse: "ok", titel: "Alle data er hentet"}); }
+  opfrisk();
 }
 async function laesKkTekster() {   // Oscars rettede tekster, ellers standardteksterne fra tools/klubkort
   const r = await laesFil("data/klubkort_tekster.json");
@@ -5163,7 +5194,14 @@ async function start() {
   token = token || lager.get(TOKEN_KEY);
   if (!token) { visOpsaet(); return; }
   $("rod").replaceChildren(h("div", {class: "tom"}, "Henter data …"));
-  try { await hentData(); } catch (e) { visOpsaet(e.message); return; }
+  for (let forsøg = 0; ; forsøg++) {   // tokenboksen kun ved afvist token; ellers ventes der og prøves igen, og tokenen bliver
+    try { await hentData(); break; }
+    catch (e) {
+      if (e.token) { visOpsaet(e.message); return; }
+      $("rod").replaceChildren(h("div", {class: "tom"}, "GitHub svarer ikke lige nu, prøver igen …", h("div", {class: "muted lille", style: "margin-top:6px"}, e.message)));
+      await sleep(Math.min(30000, 3000 * (forsøg + 1)));
+    }
+  }
   S = null; L = null;
   const hj = /^#job=(.+)$/.exec(location.hash);
   if (hj) { fane = "pakkelister"; JH = decodeURIComponent(hj[1]); history.replaceState(null, "", location.pathname + location.search); }
