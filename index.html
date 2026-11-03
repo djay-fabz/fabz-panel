@@ -347,7 +347,7 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 /* salg: statuskort (uge, måned, vejen) */
 .sk-top{display:grid;gap:14px}
 .fold-frem{display:flex;align-items:center;gap:12px;flex-wrap:wrap;width:100%;text-align:left;cursor:pointer;border:0;font:inherit;color:inherit}.fold-frem:hover{background:var(--hover)}.fold-luk{border:0;background:none;padding:0;cursor:pointer;font-family:inherit;text-align:left}
-.nedtonet{opacity:.55}.opk-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.opk-k{padding:13px 8px;border-radius:12px;border:1px solid var(--linje);background:var(--flade2);font-weight:500}.opk-k.valgt{background:var(--accent-blid);border-color:var(--accent);color:var(--accent)}.opk-c{padding:8px 13px}.opk-gem{width:100%;margin-top:12px;padding:13px;font-size:16px}.kform{display:flex}.kform button{flex:1}.tragt{display:grid;gap:6px;margin-top:10px}.tr{display:flex;align-items:center;gap:10px}.tr-lab{width:120px;flex:none;color:var(--svag);font-size:12.5px}.tr .muted{white-space:nowrap}.tr-bar{background:var(--linje);border-radius:7px;padding:4px 8px;font-weight:600;font-size:13px;min-width:28px}.tr-bar.g{background:var(--ok-blid);color:var(--ok)}.salg-del{margin-top:6px}.tal-md{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px}.tal-md td,.tal-md th{padding:6px;border-top:1px solid var(--linje);text-align:right}.tal-md th{color:var(--svagere);font-weight:600;font-size:11px;text-transform:uppercase}.tal-md td:first-child,.tal-md th:first-child{text-align:left}.kompakt{margin-top:10px;background:var(--flade);border:1px solid var(--linje);border-radius:12px;max-height:62vh;overflow:auto}
+.nedtonet{opacity:.55}.opk-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.opk-k{padding:13px 8px;border-radius:12px;border:1px solid var(--linje);background:var(--flade2);font-weight:500}.opk-k.valgt{background:var(--accent-blid);border-color:var(--accent);color:var(--accent)}.opk-c{padding:8px 13px}.opk-gem{width:100%;margin-top:12px;padding:13px;font-size:16px}.kform{display:flex}.kform button{flex:1}.tragt{display:grid;gap:6px;margin-top:10px}.tr{display:flex;align-items:center;gap:10px}.tr-lab{width:120px;flex:none;color:var(--svag);font-size:12.5px}.tr .muted{white-space:nowrap}.tr-bar{background:var(--linje);border-radius:7px;padding:4px 8px;font-weight:600;font-size:13px;min-width:28px}.tr-bar.g{background:var(--ok-blid);color:var(--ok)}.salg-del{margin-top:6px}.mål-liste{padding:0}.mål-r{display:grid;grid-template-columns:12px 1fr auto 14px;gap:10px;align-items:center;width:100%;text-align:left;padding:10px 12px;border:0;border-top:1px solid var(--linje);background:none;color:inherit;font:inherit;cursor:pointer}.mål-r:first-child{border-top:0}.mål-n{min-width:0}.mål-n b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mål-t{font-weight:600;white-space:nowrap}.mål-prik{width:10px;height:10px;border-radius:50%;background:var(--svag)}.mål-prik.g{background:var(--ok)}.mål-prik.rd{background:var(--rød, #f07a7a)}.mål-prik.gr{background:#3a4352}.mål-det{padding:10px 12px 14px 34px;border-top:1px dashed var(--linje)}.kk-sted{margin-top:4px}.kk-sted .chip{padding:3px 9px;font-size:12px}.tal-md{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px}.tal-md td,.tal-md th{padding:6px;border-top:1px solid var(--linje);text-align:right}.tal-md th{color:var(--svagere);font-weight:600;font-size:11px;text-transform:uppercase}.tal-md td:first-child,.tal-md th:first-child{text-align:left}.kompakt{margin-top:10px;background:var(--flade);border:1px solid var(--linje);border-radius:12px;max-height:62vh;overflow:auto}
 .kompakt-r{display:flex;gap:10px;align-items:baseline;width:100%;text-align:left;border:0;border-top:1px solid var(--linje);background:none;padding:8px 12px;font-size:13.5px}.kompakt-r:first-child{border-top:0}.kompakt-r:hover,.kompakt-r.valgt{background:var(--hover)}
 .kompakt-r .ap-dot{align-self:center}.k-navn{font-weight:600;white-space:nowrap}.k-vej{color:var(--svag);white-space:nowrap}.k-naeste{color:var(--svag);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media (max-width:700px){.kompakt-r{flex-wrap:wrap;row-gap:0}.k-naeste{flex-basis:100%;padding-left:20px}}
@@ -614,7 +614,8 @@ async function hentData() {
   const jr = await laesFil("data/jobrute.json");
   D.jobrute = jr ? await jr.json() : {};
   D.jobtider = await laesValgfri("data/jobtider.json");
-  D.salgjobs = await laesValgfri("data/salgjobs.json");   // hvilket firma i Salg et job kom fra (fabz.py salg-job)
+  D.salgjobs = await laesValgfri("data/salgjobs.json");
+  D.kortmaaling = await laesValgfri("data/kortmaaling.json");   // scanninger og tilmeldinger pr. kort (tools/kortmaaling.mjs hver nat)   // hvilket firma i Salg et job kom fra (fabz.py salg-job)
   D.salgslaering = await laesValgfri("data/salgslaering.json");   // forslag fra opkaldene (Tal på Salg)   // spilletid gemt på jobbet (fabz.py spilletid)
   const su = await laesFil("data/setups.json");
   D.setups = su ? await su.json() : {grupper: [], setups: []};
@@ -1799,6 +1800,13 @@ function kkFordel(kk) {   // 1 tekst = 4 gange, 2 = 2+2, 3 = 2+1+1, flere end 4 
   kk.linjer.forEach(l => l.antal = 0);
   med.forEach((l, i) => l.antal = n > 4 ? 1 : Math.floor(4 / n) + (i < 4 % n ? 1 : 0));
 }
+// Steder og sæsoner (Oscar 3/11): stedet kommer med i QR-kampagnen (k3-toilet), så Måling kan vise, hvor et kort virker.
+// Tekster i en sæsonkategori foreslås kun, når jobbet ligger i sæsonen ("teksterne skal være aktuelle").
+const KK_STEDER = ["Toilet", "Bar", "DJ-pult", "Indgang", "Bord"];
+const kkSted = m => { const t = kkSlug(m); return !t ? "" : /toilet|wc/.test(t) ? "Toilet" : /bar/.test(t) ? "Bar" : /dj|pult/.test(t) ? "DJ-pult" : /indgang|dor|garderobe/.test(t) ? "Indgang" : /bord/.test(t) ? "Bord" : m; };
+const KK_SÆSON = {jdag: ["10-25", "11-14"], jul: ["11-15", "12-31"], nytaar: ["12-27", "01-02"], fastelavn: ["02-01", "03-05"]};
+const kkISæson = (t, dato) => { const s = KK_SÆSON[t.kategori]; if (!s) return true; const md = String(dato || iDag()).slice(5, 10);
+  return s[0] <= s[1] ? md >= s[0] && md <= s[1] : md >= s[0] || md <= s[1]; };
 function klubkortBlok(j, st, gentegn) {
   const rec = klubkortTilJob(j), tekster = D.kkTekster || [];
   const fraTekst = (t, a = 0, maerke = "") => ({tekst: t ? t.tekst : "", svar: t?.svar || "", antal: a, maerke, åbenSvar: !!t?.svar, åbenMk: !!maerke});
@@ -1822,7 +1830,7 @@ function klubkortBlok(j, st, gentegn) {
       const t = kkRens(l.tekst); if (!t || !(l.antal > 0)) return;
       const ny = kkSamme(t) + "|" + kkSamme(l.svar);
       const nr = kendt(l)?.nr || nye.get(ny) || (nye.set(ny, næste), næste++);
-      let mk = kkSlug(l.maerke) || `k${nr}`, base = mk, n = 2;
+      let mk = `k${nr}` + (kkSlug(l.maerke) ? "-" + kkSlug(l.maerke) : ""), base = mk, n = 2;   // tekst og sted: k3-toilet (måling)
       while (brugt.has(mk)) mk = `${base}-${n++}`;
       brugt.add(mk);
       for (let i = 0; i < l.antal; i++) ud.push({tekst: t, svar: kkRens(l.svar).replace(/\n/g, " "), kamp: `${kampagne}-${mk}`});
@@ -1887,8 +1895,8 @@ function klubkortBlok(j, st, gentegn) {
         h("textarea", {class: "kk-ta", rows: 3, value: l.tekst, oninput: e => { l.tekst = e.target.value; opdater(); }}),
         l.åbenSvar ? h("input", {class: "kk-in", placeholder: "Svar", value: l.svar, oninput: e => { l.svar = e.target.value; opdater(); }}) : null,
         h("div", {class: "kk-mr"},
-          l.åbenMk ? h("input", {class: "kk-mk", placeholder: "Mærke", value: l.maerke, oninput: e => { l.maerke = e.target.value; opdater(); }})
-            : h("button", {class: "kk-link", type: "button", onclick: () => { l.åbenMk = true; gentegn(); }}, "+ mærke"),
+          h("div", {class: "chips kk-sted"}, KK_STEDER.map(v => h("button", {type: "button", class: "chip" + (kkSted(l.maerke) === v ? " aktiv" : ""),
+            onclick: () => { l.maerke = kkSted(l.maerke) === v ? "" : v; gentegn(); }}, v))),
           l.åbenSvar ? null : h("button", {class: "kk-link", type: "button", onclick: () => { l.åbenSvar = true; gentegn(); }}, "+ svar")),
         fejl, fakta),
       h("div", {class: "kk-step"}, h("button", {type: "button", onclick: () => antal(-1)}, "−"), antalB[i] = h("b", {}, String(l.antal || 0)),
@@ -1897,7 +1905,7 @@ function klubkortBlok(j, st, gentegn) {
   };
   const tidligere = () => {
     const her = new Set((D.klubkort || []).filter(r => nøgle(r.job) === nøgle(j.navn)).flatMap(r => r.kort || []));
-    const liste = tekster.filter(t => t.aktiv !== false && kkKanPrintes(t)).sort((a, b) => her.has(b.nr) - her.has(a.nr) || b.nr - a.nr);
+    const liste = tekster.filter(t => t.aktiv !== false && kkKanPrintes(t) && kkISæson(t, j.dato)).sort((a, b) => her.has(b.nr) - her.has(a.nr) || b.nr - a.nr);
     return h("div", {class: "kk-tidl"}, liste.map(t => h("div", {class: "kk-tl"},
       h("span", {class: "kk-bp" + (her.has(t.nr) ? " b" : ""), title: her.has(t.nr) ? "Brugt her før" : null}),
       h("span", {class: "fyld"}, t.tekst.replace(/\n/g, " "), t.svar ? h("span", {class: "muted"}, " " + t.svar) : null),
@@ -2218,7 +2226,7 @@ async function gemLager() {
 }
 
 // ---------- fælles: kør fabz.py-kommandoer fra panelet ----------
-const FILER = {jobtider: "data/jobtider.json", salgjobs: "data/salgjobs.json", salgslaering: "data/salgslaering.json", henvendelser: "data/henvendelser.json", opgaver: "data/opgaver.json", betalinger: "data/betalinger.json", ugepakke: "data/ugepakke.json", dagsplaner: "data/dagsplaner.json",
+const FILER = {jobtider: "data/jobtider.json", kortmaaling: "data/kortmaaling.json", salgjobs: "data/salgjobs.json", salgslaering: "data/salgslaering.json", henvendelser: "data/henvendelser.json", opgaver: "data/opgaver.json", betalinger: "data/betalinger.json", ugepakke: "data/ugepakke.json", dagsplaner: "data/dagsplaner.json",
                ideer: "data/ideer.json", indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json", salgslog: "data/salgslog.json", mo: "data/maanedsoversigt.json", strategi: "data/strategi.json", leads: "data/leads.json", mailoversigt: "data/mailoversigt.json", vagter: "data/vagter.json", fejl: "data/fejl.json", hov: "data/hov.json"};
 async function laesValgfri(p) { const r = await laesFil(p); return r ? r.json() : []; }
 async function genindlæs(navne) { await Promise.all(navne.map(async n => { D[n] = n === "kkTekster" ? await laesKkTekster() : await laesValgfri(FILER[n]); })); }
@@ -3285,6 +3293,7 @@ function visTilbud() {
 // ---------- Kort: festkort og klubkort til et job, og klubkortenes tekster ----------
 const KT = {job: null, slags: null, red: {}, ny: {tekst: "", svar: ""}};
 function visKort() {
+  if (KT.side === "Måling") return visMaaling();
   const js = jobs();
   if (!KT.job || !js.some(j => jobNøgle(j) === KT.job)) { const f = js.find(erKlub) || js[0]; KT.job = f ? jobNøgle(f) : null; KT.slags = null; KT.fk = KT.kk = null; }
   const j = js.find(x => jobNøgle(x) === KT.job);
@@ -3338,8 +3347,9 @@ function visKort() {
         h("button", {class: "btn ghost lille", type: "button", disabled: venter, onclick: () => skjul(k)}, k.aktiv === false ? "Vis igen" : "Skjul")));
   };
   $("rod").replaceChildren(h("div", {class: "side"},
-    h("h1", {}, "Skilte"),
-    h("div", {class: "muted"}, "Festkort (visitkort og barskilt) og klubkort med QR-kode til et job. Målene er faste: teksten tilpasses feltet, QR-kode og skærelinjer flytter sig aldrig."),
+    h("div", {style: "display:flex;align-items:center;gap:10px;flex-wrap:wrap"}, h("h1", {style: "margin:0"}, "Skilte"), h("div", {class: "spacer"}),
+      seg(["Skilte", "Måling"], "Skilte", v => { KT.side = v; tegn(); })),
+    h("div", {class: "muted", style: "margin-top:8px"}, "Festkort (visitkort og barskilt) og klubkort med QR-kode til et job. Målene er faste: teksten tilpasses feltet, QR-kode og skærelinjer flytter sig aldrig."),
     h("div", {class: "jobliste", style: "margin-top:16px"},
       js.length ? js.flatMap(række) : tom("Ingen kommende jobs. Hent jobs under Pakkelister.")),
     h("div", {class: "gruppe"}, h("div", {class: "overskrift"}, "Klubkortenes tekster"),
@@ -3351,6 +3361,84 @@ function visKort() {
           tekstfelt(KT.ny, "tekst", {rows: 3, placeholder: "Fx Vidste du godt, at …"}),
           inp(KT.ny, "svar", {placeholder: "Sidste linje i rødt (valgfri)"})),
         h("button", {class: "btn primaer", type: "button", style: "margin-top:8px", onclick: opret}, "Opret kort")))));
+}
+
+// ---------- Måling af festkort og klubkort (Oscar 3/11): scanninger fra Framer og tilmeldinger fra Mailchimp (data/kortmaaling.json hver nat).
+// Grøn = blandt de bedste, rød = blandt de dårligste, grå = for få scanninger endnu. Klubkort fører til Instagram, så her tælles scanninger.
+const MÅL_MIN = 5;   // under så mange scanninger (og kun hængt op én gang) er det for tidligt at sige noget
+function målFarver(rækker, tal) {
+  const med = rækker.filter(r => !r.få).sort((a, b) => tal(b) - tal(a)), n = med.length, tredjedel = Math.max(1, Math.floor(n / 3));
+  rækker.forEach(r => { r.farve = r.få ? "gr" : n < 2 ? "" : med.indexOf(r) < tredjedel ? "g" : med.indexOf(r) >= n - tredjedel ? "rd" : ""; });
+}
+function målKlub(M) {
+  const scan = M.scan || {}, tekster = D.kkTekster || [], recs = D.klubkort || [];
+  const pr = {}, steder = {};
+  const tekst = nr => (tekster.find(t => t.nr === nr) || {}).tekst || "";
+  Object.entries(scan).forEach(([k, v]) => {
+    const m = /^(klub-\d{4}-\d{2}-\d{2}(?:-\d+)?)-(.+)$/.exec(k); if (!m) return;
+    const rec = recs.find(r => r.kampagne === m[1]);
+    let nr = null, sted = "";
+    const km = /^k(\d+)(?:-\d+)?(?:-(.+?))?(?:-\d+)?$/.exec(m[2]);
+    if (km) { nr = Number(km[1]); sted = kkSted(km[2] || ""); }
+    else { const l = (rec?.linjer || []).find(x => x.mk === m[2] || kkSlug(x.maerke) === m[2]); nr = l?.nr ?? null; sted = kkSted(l?.maerke || m[2]); }
+    if (nr == null) return;
+    const x = pr[nr] ||= {nr, scan: 0, jobs: new Set(), steder: {}};
+    x.scan += v.scan; if (rec) x.jobs.add(rec.job + " " + kortDato(rec.dato));
+    if (sted) { (x.steder[sted] ||= {scan: 0, n: 0}); x.steder[sted].scan += v.scan; x.steder[sted].n++; (steder[sted] ||= {scan: 0, n: 0}); steder[sted].scan += v.scan; steder[sted].n++; }
+  });
+  recs.forEach(r => (r.linjer || (r.kort || []).map(nr => ({nr}))).forEach(l => { const x = pr[l.nr] ||= {nr: l.nr, scan: 0, jobs: new Set(), steder: {}}; x.jobs.add(r.job + " " + kortDato(r.dato)); }));
+  const rækker = Object.values(pr).map(x => ({...x, tekst: tekst(x.nr), hængt: x.jobs.size, prGang: x.jobs.size ? x.scan / x.jobs.size : 0}))
+    .filter(x => x.tekst).map(x => ({...x, få: x.scan < MÅL_MIN && x.hængt < 2}));
+  målFarver(rækker, r => r.prGang);
+  return {rækker: rækker.sort((a, b) => (a.farve === "gr") - (b.farve === "gr") || b.prGang - a.prGang), steder};
+}
+function målFest(M) {
+  const scan = M.scan || {}, kilde = M.kilde || {}, fest = M.fest || {};
+  const rækker = (D.festkort || []).map(r => { const s = scan[r.kampagne] || {}, t = kilde[r.kampagne] ?? fest[r.dato] ?? 0;
+    return {...r, scan: s.scan || 0, tilmeldt: t, få: r.dato >= iDag() || (s.scan || 0) < MÅL_MIN}; });
+  målFarver(rækker, r => r.scan + 5 * r.tilmeldt);
+  return rækker.sort((a, b) => (a.farve === "gr") - (b.farve === "gr") || b.dato.localeCompare(a.dato));
+}
+function visMaaling() {
+  const M = D.kortmaaling && !Array.isArray(D.kortmaaling) ? D.kortmaaling : {};
+  const slags = KT.målSlags || "Festkort", åben = KT.målÅben;
+  const timer = M.opdateret ? (Date.now() - new Date(M.opdateret)) / 36e5 : null, frisk = timer != null && timer < 36 && !(M.fejl || []).length;
+  const tal = (b, t) => h("div", {class: "sk-k b"}, h("b", {}, b), h("span", {}, t));
+  const pil = id => h("span", {class: "muted"}, åben === id ? "▾" : "▸");
+  const klik = id => () => { KT.målÅben = åben === id ? null : id; tegn(); };
+  let indhold;
+  if (slags === "Festkort") {
+    const rk = målFest(M), sc = rk.reduce((a, r) => a + r.scan, 0), ti = rk.reduce((a, r) => a + r.tilmeldt, 0);
+    indhold = [h("div", {class: "sk-k4 sk-k3"}, tal(sc, "scanninger"), tal(ti, "tilmeldt"), tal(sc ? Math.round(100 * ti / sc) + " %" : "–", "tilmelder sig")),
+      rk.length ? h("div", {class: "kort mål-liste", style: "margin-top:12px"}, rk.flatMap(r => [
+        h("button", {type: "button", class: "mål-r", onclick: klik("f" + r.kampagne)}, h("span", {class: "mål-prik " + r.farve}),
+          h("span", {class: "mål-n"}, h("b", {}, r.navne), h("span", {class: "muted lille"}, kortDato(r.dato) + (r.dato >= iDag() ? " · ikke holdt endnu" : r.få ? " · for få endnu" : ""))),
+          h("span", {class: "mål-t"}, `${r.scan} · ${r.tilmeldt}`), pil("f" + r.kampagne)),
+        åben === "f" + r.kampagne ? h("div", {class: "mål-det"}, `${r.scan} scanninger, ${(M.scan || {})[r.kampagne]?.folk || 0} forskellige telefoner, ${r.tilmeldt} tilmeldt. Kampagne ${r.kampagne}.`) : null]))
+        : tom("Ingen festkort lavet endnu.")];
+  } else {
+    const {rækker, steder} = målKlub(M), sc = rækker.reduce((a, r) => a + r.scan, 0), jobs = new Set((D.klubkort || []).map(r => r.job_noegle)).size;
+    const st = Object.entries(steder).map(([k, v]) => [k, v.scan / v.n]).sort((a, b) => b[1] - a[1]);
+    indhold = [h("div", {class: "sk-k4 sk-k3"}, tal(sc, "scanninger"), tal(jobs, "jobs med klubkort"), tal(jobs ? (sc / jobs).toFixed(1).replace(".", ",") : "–", "scanninger pr. job")),
+      st.length ? h("div", {class: "chips", style: "margin-top:12px"}, st.map(([k, v]) => h("span", {class: "chip"}, k + " ", h("b", {}, v.toFixed(1).replace(".", ",")), " pr. kort"))) : null,
+      rækker.length ? h("div", {class: "kort mål-liste", style: "margin-top:12px"}, rækker.flatMap(r => {
+        const bedst = Object.entries(r.steder).sort((a, b) => b[1].scan / b[1].n - a[1].scan / a[1].n)[0];
+        return [h("button", {type: "button", class: "mål-r", onclick: klik("k" + r.nr)}, h("span", {class: "mål-prik " + r.farve}),
+          h("span", {class: "mål-n"}, h("b", {}, `Nr. ${r.nr} · ${r.tekst.replace(/\n/g, " ")}`),
+            h("span", {class: "muted lille"}, r.få ? "For få scanninger endnu" : bedst ? "Bedst: " + bedst[0] : `Hængt ${r.hængt} gange`)),
+          h("span", {class: "mål-t"}, `${r.scan} · ${r.hængt}×`), pil("k" + r.nr)),
+        åben === "k" + r.nr ? h("div", {class: "mål-det"}, h("div", {class: "pre", style: "font-size:15px"}, r.tekst),
+          Object.keys(r.steder).length ? h("div", {class: "chips", style: "margin-top:8px"}, Object.entries(r.steder).map(([k, v]) => h("span", {class: "chip"}, k + " ", h("b", {}, String(Math.round(v.scan / v.n))), " scan/kort"))) : null,
+          h("div", {class: "muted lille", style: "margin-top:8px"}, [...r.jobs].join(" · "))) : null];
+      })) : tom("Ingen klubkort lavet endnu.")];
+  }
+  $("rod").replaceChildren(h("div", {class: "side"},
+    h("div", {style: "display:flex;align-items:center;gap:10px;flex-wrap:wrap"}, h("h1", {style: "margin:0"}, "Måling"),
+      h("span", {class: "pill " + (frisk ? "grøn" : "rød-pill")}, M.opdateret ? "Opdateret " + kortDato(M.opdateret.slice(0, 10)) : "Ingen tal endnu"),
+      h("div", {class: "spacer"}), seg(["Skilte", "Måling"], "Måling", v => { KT.side = v; tegn(); })),
+    (M.fejl || []).length ? h("div", {class: "svar fejl", style: "margin-top:10px"}, h("b", {}, "Tallene kunne ikke hentes"), h("div", {}, M.fejl.join(" · "))) : null,
+    h("div", {style: "margin-top:12px"}, seg(["Festkort", "Klubkort"], slags, v => { KT.målSlags = v; KT.målÅben = null; tegn(); })),
+    indhold));
 }
 
 // ---------- Kørsel: køretid og tidsplan mellem flere adresser (kommandoen rute, OpenStreetMap) ----------
