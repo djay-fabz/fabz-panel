@@ -4505,7 +4505,8 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
       const ind = indFor(r);
       if (ind && !medLinje.has(ind.id)) betLinjer.push(betL("g", [h("b", {}, `${r.navn} har betalt ${krKort(ind.beloeb)} kr.`), " Det er fordelt."], knap("✓ Luk opgaven", () => godkend(r, r.dato >= iDg), true)));   // fordelt, men robottens opgave er åben
       if (r.maade !== "overfoersel" || ind) return;   // registreret klubjob står som grøn linje ovenfor   // Dinero: robottens opgave "Send faktura" klarer det, indtil fakturaen er sendt
-      if (r.dato < iDg) betLinjer.push(betL("rd", [h("b", {}, `${r.navn} mangler ${krKort(b)} kr.`), ` (job ${kortDato(r.dato)})`], knap("✓ Kommet", () => godkend(r))));
+      if (r.dato < iDg && r.venter) betLinjer.push(betL("y", [h("b", {}, `${r.navn} ${kortDato(r.dato)} venter: ${krKort(b)} kr.`), ` ${r.venter}`], knap("✓ Kommet", () => godkend(r))));   // aftalt senere (Oscar 3/11)
+      else if (r.dato < iDg) betLinjer.push(betL("rd", [h("b", {}, `${r.navn} mangler ${krKort(b)} kr.`), ` (job ${kortDato(r.dato)})`], knap("✓ Kommet", () => godkend(r))));
       else if (førJob(r.navn) && iDg >= torsdagFør(r.dato)) betLinjer.push(betL("y", [h("b", {}, `${r.navn} betaler for ${DAGE[dag(r.dato).getDay()]} ${kortDato(r.dato)}.`)], knap("✓ Kommet", () => godkend(r, true))));
       return;
     }
