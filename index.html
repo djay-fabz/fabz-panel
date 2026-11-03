@@ -397,7 +397,8 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .sg-mdr{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin:10px 0 6px}.sg-md{border-radius:8px;padding:6px 9px;background:var(--ok-blid)}.sg-md.rd{background:var(--fejl-blid)}.sg-md .n{font-size:12px;font-weight:600}.sg-md .s{font-size:12.5px;font-weight:700;color:var(--ok)}.sg-md.rd .s{color:var(--fejl)}.sg-md .f{font-size:11px;color:var(--svag)}
 details.sg-r{margin:0;border:0;border-top:1px solid var(--linje);border-radius:0;background:none}details.sg-r>summary{padding:8px 0;font-weight:400;font-size:13.5px;gap:4px}details.sg-r>summary::before{content:none}details.sg-r[open]>summary::before{content:none}details.sg-r>summary>b{margin-left:auto;white-space:nowrap}details.sg-r>summary>b::after{content:" ›";color:var(--svagere)}details.sg-r .rd-l{padding-left:0;padding-right:0}
 .sg-linjer{margin-top:12px;background:var(--flade);border:1px solid var(--linje);border-radius:14px;overflow:hidden}details.sg-l{margin:0;border:0;border-radius:0}.sg-linjer>details.sg-l+details.sg-l{border-top:1px solid var(--linje)}details.sg-l>summary{font-weight:400}details.sg-l>summary::before{content:none}details.sg-l[open]>summary::before{content:none}details.sg-l>summary::after{content:"›";margin-left:auto;color:var(--svagere)}details.sg-l[open]>summary::after{content:"⌄"}
-.sg-ind{padding:4px 12px 12px}.sg-ek{color:var(--svagere)}.sg-prik{width:8px;height:8px;border-radius:50%;flex:none;background:var(--fejl)}.sg-prik.y{background:var(--adv)}
+.sg-ind{padding:4px 12px 12px}.sg-h{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 4px;font-weight:600}.sg-h .sg-prik{margin-top:1px}.sg-ht{flex:1;min-width:180px}
+.sg-under{margin-top:6px;border:1px solid var(--linje);border-radius:10px;overflow:hidden}.sg-under>details.sg-l{border:0;border-radius:0}.sg-under>details.sg-l+details.sg-l{border-top:1px solid var(--linje)}.sg-ek{color:var(--svagere)}.sg-prik{width:8px;height:8px;border-radius:50%;flex:none;background:var(--fejl)}.sg-prik.y{background:var(--adv)}
 .op-mk{font-size:12px;font-weight:600;padding:3px 9px;border-radius:99px;background:var(--ok-blid);color:var(--ok)}.op-mk.r{background:var(--fejl-blid);color:var(--fejl)}
 @media(max-width:700px){.sg-mdr{grid-template-columns:repeat(3,1fr)}.sg-v{font-size:22px}.sg-m,.sg-ek{display:none}}
 .rd-top{margin-top:14px;background:var(--flade);border:1px solid var(--linje);border-radius:16px;padding:16px 18px}.rd-top .t{font-size:13px;color:var(--svag);font-weight:600}
@@ -4254,7 +4255,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     ...RD.linjer.map(x => h("div", {class: "rd-l"}, h("span", {}, x.navn,
       x.hver ? h("span", {class: "muted"}, ` ${krKort(x.beloeb)}${x.naeste ? " d. " + kortDato(x.naeste) : ""} · ${krKort(x.pr_md)} pr. md.`) : null,
       x.antal ? h("span", {class: "muted"}, ` (${x.antal})`) : null), h("b", {}, krKort(x.kr)))),
-    h("div", {class: "rd-l"}, h("b", {}, "Låst i alt"), h("b", {class: RD.frit < 0 ? "neg" : ""}, `${krKort(RD.laast)} kr.`)),
+    h("div", {class: "rd-l"}, h("b", {}, "Låst i alt"), h("b", {}, `${krKort(RD.laast)} kr.`)),   // bare en sum, aldrig rød (Oscar 3/11)
     h("div", {class: "rd-l"}, h("span", {}, `Løn til dig d. ${kortDato(RD.loen_dato)} · pr. md. derefter`), h("b", {}, `${krKort(RD.loen_naeste)} · ${krKort(RD.loen_pr_md)}`)),
     h("details", rdFold("frem"), h("summary", {}, "Fremtiden på firmakontoen", h("span", {class: "v"}, `${krKort(RD.frem.at(-1).slut)} i ${RD.frem.at(-1).navn.toLowerCase()}`)),
       h("table", {class: "rd-tb"}, h("tr", {}, h("th", {}, "Måned"), h("th", {}, "Ind"), h("th", {}, "Ud"), h("th", {}, "Løn"), h("th", {}, "Slut"), h("th", {class: "skjul"}, "Låst")),
@@ -4265,14 +4266,35 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   // prikker (Oscar 3/11, grænser fra revisionen): rød = koster penge, hvis der ikke handles; gul = kig på det; ellers ingen. Teksten siger hvorfor
   const dageGl = d => d ? Math.round((dag(iDag()) - dag(d)) / 864e5) : 0, dageTil = d => Math.round((dag(d) - dag(iDag())) / 864e5);
   const prik = f => f ? h("span", {class: "sg-prik " + f}) : null;
-  const låstStatus = (() => {
-    if (!RD || gammeltÅr) return [null, "Låst, puljer og kuverter"];
-    const gl = dageGl(RD.saldo_dato), buf = (RD.linjer.find(x => x.navn === "Buffer") || {}).kr || 0;
-    if (RD.frit < 0) return ["rd", `Firmakontoen mangler ${krKort(-RD.frit)} kr. til det låste`];
-    if (gl > 35) return ["rd", `Kontoudtoget er ${gl} dage gammelt`];
-    if (RD.frit < buf) return ["y", "Bufferen på firmakontoen er i brug"];
-    if (gl >= 14) return ["y", `Kontoudtoget er ${gl} dage gammelt`];
-    return [null, "Låst, puljer og kuverter"];
+  // Firmakontoen delt op (Oscar 3/11, skitse panel-oekonomi-kategorier): saldoen dækker i den rækkefølge, tingene skal betales.
+  // Prik kun på den post, hvor pengene ikke rækker: rød for moms og regninger, gul for bufferen. Overskriften er kun navn og prik
+  const værst = l => l.includes("rd") ? "rd" : l.includes("y") ? "y" : null;
+  const fk = (() => {
+    if (!RD || gammeltÅr) return null;
+    const ln = RD.linjer, sum = f => ln.filter(f).reduce((s, x) => s + x.kr, 0), gl = dageGl(RD.saldo_dato);
+    // hvornår pengene skal bruges: moms på opgavens frist, regningerne på den sidste regning de næste 30 dage, sjældne på den næste, skat og buffer nu
+    const M_ = ob.linjer.moms || {}, R_ = ob.linjer.regninger || {liste: []}, mOp = (D.opgaver || []).find(o => o.moms_periode && o.moms_periode === M_.forrige?.fra && o.status !== "Færdig");
+    const sjN = ln.filter(x => x.hver && x.naeste).map(x => x.naeste).sort()[0];
+    const poster = [
+      {id: "moms", navn: "Moms", kr: sum(x => x.navn === "Moms"), f: "rd", senest: mOp?.deadline || M_.forrige?.frist || M_.nu?.frist},
+      {id: "reg", navn: "Regninger", kr: sum(x => x.navn.startsWith("Regninger")), f: "rd", senest: (R_.liste || []).map(y => y.dato).sort().at(-1)},
+      {id: "sj", navn: "Sjældne regninger", kr: sum(x => x.hver), f: "rd", senest: sjN},
+      {id: "skat", navn: "Skat af betalte jobs", kr: sum(x => x.navn.startsWith("Skat af")), f: "y"},
+      {id: "buf", navn: "Buffer", kr: sum(x => x.navn === "Buffer"), f: "y"}].filter(x => x.kr > 0);
+    // mangler der nu, men en sendt faktura forfalder senest 3 dage før posten skal bruges, er den gul (Oscar 3/11, revision: kun sendte fakturaer,
+    // 3 dages luft, fordi kunder betaler for sent). Dækker kun et job, der ikke er faktureret endnu, er den rød med "send fakturaen"
+    const fakt = ((mo.ubetalt || {}).liste || []), minus3 = d => { const x = dag(d); x.setDate(x.getDate() - 3); return x.toISOString().slice(0, 10); };
+    const ufakt = (D.betalinger || []).filter(b => b.maade === "dinero" && !["faerdig", "aflyst"].includes(b.status) && b.dato < iDag() && b.beloeb);
+    let rest = RD.saldo, brugt = 0;
+    for (const x of poster) {
+      x.mangler = Math.max(0, x.kr - Math.max(0, rest)); rest -= x.kr; brugt += x.kr;
+      const kommer = x.senest ? fakt.filter(y => y.forfald && y.forfald <= minus3(x.senest)).reduce((s, y) => s + y.kr, 0) : 0;
+      x.naar = x.mangler && x.senest && RD.saldo + kommer >= brugt;
+      x.send = x.mangler && !x.naar && x.f === "rd" && ufakt.length && RD.saldo + kommer + ufakt.reduce((s, b) => s + b.beloeb * 1.25, 0) >= brugt ? ufakt.map(b => b.navn.split(" (")[0]) : null;
+      x.prik = !x.mangler ? null : x.naar ? "y" : x.f;
+    }
+    const alder = gl > 35 ? "rd" : gl >= 14 ? "y" : null;
+    return {poster, gl, alder, prik: værst([alder, ...poster.map(x => x.prik)])};
   })();
   // Privat (Oscar 30/10): Regninger-kontoens delpuljer med "− Brugt", månedstjek, fordelingen og betalte klubjobs. Tallene regnes i privat-data
   const DP = P.delpuljer, br = ØK.brugt;
@@ -4461,31 +4483,49 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   const rfKort = rfTekst ? h("div", {class: "bj skat-gør rd", style: "margin:4px 0 10px"}, h("span", {class: "bj-t skat-tekst"}, h("b", {}, rfTekst + ".")),
     RF.ikke_gemt ? null : knap("✓ Betalt", () => { if (confirm(`Har du betalt restskatten for ${RF.aar}?`)) kør("skat-restskat-luk", ["betalt"], {tekst: `Restskat ${RF.aar} betalt`, efter: ["mo", "opgaver"]}); }),
     RF.ikke_gemt ? null : knap(`Lagt på skatten for ${RF.naeste_aar}`, () => { if (confirm(`Skal restskatten for ${RF.aar} lægges på din skat for ${RF.naeste_aar} med tillæg?`)) kør("skat-restskat-luk", ["lagt"], {tekst: `Restskat ${RF.aar} lagt på skatten for ${RF.naeste_aar}`, efter: ["mo", "opgaver"]}); })) : null;
-  const skatStatus = (() => {
-    if (rfTekst) return [RF.rest > 2000 ? "rd" : "y", rfTekst];
-    if (gammeltÅr) return [null, `Skat ${sk.aar}`];
-    const n = FS.netto || 0, r = sk.rate, rd = r ? dageTil(r.frist) : null, felter = fsRet.map(f => `ret felt ${f.felt} på skat.dk til ${krKort(f.skal)} kr. (nu ${krKort(f.nu)} kr.)`).join(" · ");   // præcist tal (Oscar 3/11)
-    if (r && rd < 4) return ["rd", `B-skat-rate ${krKort(r.beloeb)} kr. ${rd < 0 ? "er over fristen" : "d. " + kortDato(r.frist)}`];
-    // ingen B-skat-rater tilbage: at rette feltet sparer ikke tillægget, det gør en frivillig indbetaling før nytår (revision 3/11)
-    const frist = sk.restskat_frist ? `senest ${kortDato(sk.restskat_frist)} (rentefrit)` : "før nytår";   // 3 bankdage før 31/12 (fabz_skat)
-    const op = v => Math.ceil(v / 100) * 100, indbetal = FS.rater_tilbage === false && sk.aar == år0 && (sk.mangler_paa_kontoen || 0) > 100 ? Math.max((sk.restskat || 0) - (sk.restskat_betalt || 0), sk.mangler_paa_kontoen) : 0;   // hele restskatten (Skat-puljen + resten); prikken går, når puljen har den
-    // ingen rater tilbage: indbetalingen er det, der sparer renter, så den står først; at rette felterne flytter intet hos Skat (revision 3/11)
-    if (indbetal > 100 && Number(iDag().slice(5, 7)) >= 11) return [indbetal > 2000 ? "rd" : "y", `Skat ${sk.aar}: indbetal ca. ${krKort(op(indbetal))} kr. ${frist}${felter ? `, og ${felter}` : ""}`];   // rød over 2.000, gul under
-    if (n > 2000) return ["rd", `Skat ${sk.aar}: ${felter || `ca. ${krKort(n)} kr. for lidt i skat`}`];
-    if (indbetal > 2000 && Number(iDag().slice(5, 7)) >= 11) return ["rd", `Skat ${sk.aar}: indbetal ca. ${krKort(op(indbetal))} kr. til Skat ${frist}, eller læg dem i Skat-puljen`];
-    if (n >= 500) return ["y", `Skat ${sk.aar}: ${felter || `ca. ${krKort(n)} kr. for lidt i skat`}`];
-    if (n < -5000) return ["y", `Skat ${sk.aar}: du betaler ca. ${krKort(-n)} kr. for meget`];
-    if (r && rd <= 10) return ["y", `B-skat-rate ${krKort(r.beloeb)} kr. d. ${kortDato(r.frist)}`];
-    if ((sk.eindkomst_alder || 0) > 30) return ["y", `Skat ${sk.aar}: eIndkomst er ${sk.eindkomst_alder} dage gammel`];
-    return [null, `Skat ${sk.aar}`];
+  // Skat: én handling pr. linje, når den åbnes (Oscar 3/11: "der skal ikke stå en roman"); overskriften er kun "Skat 2026" og prikken
+  const skatH = (() => {
+    const ud = [], n = FS.netto || 0, r = sk.rate, rd = r ? dageTil(r.frist) : null, op = v => Math.ceil(v / 100) * 100;
+    if (rfTekst) ud.push([RF.rest > 2000 ? "rd" : "y", RF.tillaeg ? rfTekst : `Indbetal ${rfKr} kr. for ${RF.aar} nu`, rfKort]);
+    if (gammeltÅr) return ud;
+    const indbetal = FS.rater_tilbage === false && sk.aar == år0 && (sk.mangler_paa_kontoen || 0) > 100 ? Math.max((sk.restskat || 0) - (sk.restskat_betalt || 0), sk.mangler_paa_kontoen) : 0;
+    if (indbetal > 100 && Number(iDag().slice(5, 7)) >= 11) ud.push([indbetal > 2000 ? "rd" : "y", `Indbetal ${krKort(op(indbetal))} kr. senest ${kortDato(sk.restskat_frist)}`]);
+    if (r && rd <= 10) ud.push([rd < 4 ? "rd" : "y", `Betal B-skat-rate ${krKort(r.beloeb)} kr. senest ${kortDato(r.frist)}`]);
+    for (const f of fsRet) ud.push([FS.rater_tilbage && n > 2000 ? "rd" : "y", `Ret felt ${f.felt} til ${krKort(f.skal)} kr. (nu ${krKort(f.nu)})`]);
+    if (!fsRet.length && n < -5000) ud.push(["y", `Sæt forskuddet ned: du betaler ca. ${krKort(-n)} kr. for meget`]);
+    if ((sk.eindkomst_alder || 0) > 30) ud.push(["y", `Hent eIndkomst igen (${sk.eindkomst_alder} dage gammel)`]);
+    return ud;
   })();
-  const linje = (id, [f, tekst], ekstra, ...indhold) => h("details", rdFold(id, {class: "rd-f sg-l"}), h("summary", {}, prik(f), h("span", {class: "sg-lt"}, tekst, ekstra ? h("span", {class: "sg-ek"}, " · " + ekstra) : null)), h("div", {class: "sg-ind"}, ...indhold));
+  const hRk = ([f, tekst, ekstra]) => h("div", {class: "sg-h"}, prik(f), h("span", {class: "sg-ht"}, tekst), ekstra || null);
+  const linje = (id, f, navn, ...indhold) => h("details", rdFold(id, {class: "rd-f sg-l"}), h("summary", {}, h("span", {class: "sg-lt"}, navn), prik(f)), h("div", {class: "sg-ind"}, ...indhold));
+  const fkPost = x => {
+    const M = ob.linjer.moms || {}, R = ob.linjer.regninger || {liste: []}, mo_ = (D.opgaver || []).find(o => o.moms_periode && o.moms_periode === M.forrige?.fra && o.status !== "Færdig");
+    const hand = x.mangler ? [[x.prik, x.id === "buf" ? `Bufferen mangler ${krKort(x.mangler)} kr.`
+      : x.naar ? `Mangler ${krKort(x.mangler)} kr. nu, men pengene kommer ind før ${kortDato(x.senest)}`
+      : x.send ? `Mangler ${krKort(x.mangler)} kr.: send fakturaen til ${[...new Set(x.send)].join(" og ")}`
+      : `Mangler ${krKort(x.mangler)} kr. på firmakontoen${x.senest ? " til " + kortDato(x.senest) : ""}`]] : [];
+    if (x.id === "moms" && M.forrige) hand.push([x.mangler ? x.prik : null, `Betal ${krKort(M.forrige.kr)} kr. senest ${kortDato(mo_?.deadline || M.forrige.frist)}`]);
+    if (x.id === "skat") hand.push([null, `Overfør ${krKort(x.kr)} kr. til Skat-puljen`]);
+    const rk = (navn, m, v) => h("div", {class: "rd-l"}, h("span", {}, navn, m ? h("span", {class: "muted"}, " · " + m) : null), h("b", {}, v));
+    const detaljer = x.id === "moms" ? [M.forrige ? rk(`${kortDato(M.forrige.fra)}-${kortDato(M.forrige.til)}`, `Skats frist ${kortDato(M.forrige.frist)}`, `${krKort(M.forrige.kr)} kr.`) : null,
+        M.nu ? rk(`${kortDato(M.nu.fra)}-${kortDato(M.nu.til)} til nu`, `frist ${kortDato(M.nu.frist)}`, `${krKort(M.nu.kr)} kr.`) : null]
+      : x.id === "reg" ? (R.liste || []).map(y => rk(y.navn, kortDato(y.dato), `${krKort(y.beloeb)} kr.`))
+      : x.id === "sj" ? RD.linjer.filter(y => y.hver).map(y => rk(y.navn, `${krKort(y.beloeb)}${y.naeste ? " d. " + kortDato(y.naeste) : ""}`, `${krKort(y.kr)} kr.`))
+      : [];
+    return linje("fk-" + x.id, x.prik, x.navn, hand.map(hRk), detaljer, rk("I alt", null, `${krKort(x.kr)} kr.`));
+  };
+  const fkIndhold = fk ? [
+    fk.alder ? hRk([fk.alder, `Opdater kontoudtoget (${fk.gl} dage gammelt)`, knap("Opdater →", mål("guide:bank"))]) : null,
+    h("div", {class: "rd-l"}, h("span", {}, "Saldo ", kilde("kontoudtog", RD.saldo_dato)), h("b", {}, `${krKort(RD.saldo)} kr.`)),
+    h("div", {class: "sg-under"}, fk.poster.map(fkPost))] : [];
   $("rod").replaceChildren(h("div", {class: "side bred skat-side"}, top, msKort, hovKort, d1Kort, ovKort0, bjælker, sælgKort,
     h("div", {class: "sg-linjer"},
-      linje("skat", skatStatus, null, rfKort, fsKort, tallenBag, fold("Registrér B-indkomst", bIndkomstKort(bLinjer))),
-      linje("laast", låstStatus, låstStatus[0] ? "låst, puljer, kuverter og detaljer" : "puljer, kuverter og detaljer",
-        låstListe, ubS.antal && sælgKort ? null : fold("Fakturaer og depositum", pengeListe()), overblik, puljer, regFold, fbKort2, tjekFold, fordFold, fold("Omsætning pr. måned", vejKort(false))))));
-
+      linje("skat", værst(skatH.map(x => x[0])), `Skat ${sk.aar}`, skatH.map(hRk), fsKort, tallenBag, fold("Registrér B-indkomst", bIndkomstKort(bLinjer))),
+      fk ? linje("firma", fk.prik, "Firmakonto", ...fkIndhold) : null,
+      linje("saxo", null, "Saxo og kontanter", puljer),
+      regFold ? linje("kuv", null, "Kuverter", regFold) : null,
+      fbKort2 ? linje("fvs", null, "Varme, Vand og Strøm", fbKort2) : null,
+      linje("detaljer", null, "Detaljer", låstListe, ubS.antal && sælgKort ? null : fold("Fakturaer og depositum", pengeListe()), overblik, tjekFold, fordFold, fold("Omsætning pr. måned", vejKort(false))))));
 }
 const felt_ = (etiket, el) => felt(etiket, el);   // formularfelt (felt er skygget i visSkat)
 // ---------- Guides (skitse 3c): skjulte sider, kun åbnet fra en bjælke eller Tal-dagen ----------
