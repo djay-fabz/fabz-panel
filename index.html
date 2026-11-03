@@ -3899,7 +3899,7 @@ function traekKnap() {   // Træk en kontakt (Oscar 26/10): næste firma fra lea
   if (!r) return h("span", {class: "muted lille"}, "Leadlisten er tom");
   const navn = (r.firma || "").replace(/\s*\(.*?\)\s*/g, " ").trim();
   return h("button", {class: "btn primaer", type: "button", title: `Næste: ${navn}, ${r.by || ""} (${r.prioritet || "?"}, ${r.km || "?"} km). ${tilbage} tilbage i listen`,
-    onclick: () => kør("salg-traek", [`--id=${r.id}`], {tekst: `Trukket: ${navn}`, efter: ["salg", "leads"], med: () => {
+    onclick: () => kør("salg-traek", [`--id=${r.id}`], {tekst: `Trukket: ${navn}`, efter: ["salg", "leads", "opgaver"], med: () => {
       r.trukket = iDag();
       const ny = {navn, type: "Ny virksomhed", status: "Ikke kontaktet", naeste: r.aabner || "", kontakt: [r.rolle_navn, r.rolle, r.telefon].filter(Boolean).join(" · "),
         naeste_opfoelgning: iDag(), telefon: r.telefon || "", linkedin_side: r.linkedin_side || "", kontaktside: r.kontaktside || "",
@@ -4882,7 +4882,7 @@ function logKontaktForm() {   // kører fabz.py salg-kontakt: logger kontakten o
         if (!st.navn) { alert("Vælg en kunde. Er det en ny, så brug + Ny kunde først."); return; }
         if (!st.tekst.trim()) { alert("Skriv kort, hvad der skete."); return; }
         const navn = st.navn, tekst = st.tekst.trim(), kanal = st.kanal, opf = st.opf;
-        kør("salg-kontakt", ["--kanal", kanal, ...(opf ? ["--opfoelgning", opf] : []), "--", navn, tekst], {tekst: `Kontakt: ${navn}`, efter: ["salg", "salgslog"],
+        kør("salg-kontakt", ["--kanal", kanal, ...(opf ? ["--opfoelgning", opf] : []), "--", navn, tekst], {tekst: `Kontakt: ${navn}`, efter: ["salg", "salgslog", "opgaver"],
           med: () => { (D.salgslog ||= []).push({dato: iDag(), navn, kanal, tekst}); const k = (D.salg || []).find(x => x.navn === navn); if (k && opf) k.naeste_opfoelgning = opf; SG.log = null; }});
       }}, "Gem kontakten"),
       h("button", {class: "btn ghost", type: "button", onclick: () => { SG.log = null; tegn(); }}, "Fortryd")));
@@ -4988,7 +4988,7 @@ function opkaldBlok(s, k) {
       ...(o.rigtig.trim() ? [`--rigtig=${o.rigtig.trim()}`] : []), ...(o.rigtigK.trim() ? [`--rigtig-kontakt=${o.rigtigK.trim()}`] : []), ...(o.sender ? ["--sender-videre"] : []),
       ...(o.aabning ? [`--aabning=${o.aabning}`] : []), ...(o.note.trim() ? [`--note=${o.note.trim()}`] : []), "--", s.navn];
     const sk = OPK_SKRIDT.find(x => x[0] === o.skridt), dage = o.sender && (sk[2] == null || sk[2] > 7) ? 7 : sk[2];
-    kør("salg-opkald", args, {tekst: `${s.navn}: opkald`, efter: ["salg", "salgslog"], med: () => {
+    kør("salg-opkald", args, {tekst: `${s.navn}: opkald`, efter: ["salg", "salgslog", "opgaver"], med: () => {
       (D.salgslog ||= []).push({dato: iDag(), navn: s.navn, kanal: "Telefon", tekst: "Opkald", opkald: {fik: o.fik, sagde: o.sagde, skridt: o.skridt, aabning: o.aabning || undefined}});
       s.senest_kontakt = iDag(); if (dage != null) s.naeste_opfoelgning = plusDage(iDag(), dage); else delete s.naeste_opfoelgning;
       if (sk[3]) s.status = sk[3]; else if (o.fik !== "svarede_ikke" && s.status === "Ikke kontaktet") s.status = "Kontaktet";
@@ -5001,7 +5001,7 @@ function opkaldBlok(s, k) {
     const fra = (o.rigtig.trim() || (s.kontakt || "").split(/\s*[,·(]\s*/)[0]).replace(/^(via|ingen|ukendt)\b.*$/i, "");
     const args = [`--fik=${o.fik}`, `--sagde=${o.sagde.join(",")}`, `--henvist-navn=${navn}`, ...(mail ? [`--henvist-mail=${mail}`] : []), ...(tlf ? [`--henvist-tlf=${tlf}`] : []),
       ...(o.rigtig.trim() ? [`--rigtig=${o.rigtig.trim()}`] : []), ...(o.aabning ? [`--aabning=${o.aabning}`] : []), ...(o.note.trim() ? [`--note=${o.note.trim()}`] : []), "--", s.navn];
-    kør("salg-opkald", args, {tekst: `${s.navn}: henvist til ${navn}`, efter: ["salg", "salgslog"], med: () => {
+    kør("salg-opkald", args, {tekst: `${s.navn}: henvist til ${navn}`, efter: ["salg", "salgslog", "opgaver"], med: () => {
       (D.salgslog ||= []).push({dato: iDag(), navn: s.navn, kanal: "Telefon", tekst: `Opkald: ${fra || "de"} henviste til ${navn}`, opkald: {fik: o.fik, sagde: o.sagde, skridt: "henvist", henvist: navn}});
       s.historik = ((s.historik || "") + ` ${iDag()}: Opkald: ${fra || "de"} henviste til ${navn}`).trim();
       s.kontakt = [navn, mail, tlf].filter(Boolean).join(" · "); if (tlf) s.telefon = tlf;
@@ -5131,7 +5131,7 @@ function talKort() {
 }
 function salgDetalje(s) {
   if (!s) return tom("Kunden findes ikke længere.");
-  const k = SG.k, efter = ["salg"];
+  const k = SG.k, efter = ["salg", "opgaver"];   // opfølgningen bliver en opgave (fabz_salg.opf_opgave)
   const opf = datoInput(k.opfoelgning, v => { k.opfoelgning = v; });
   const registrér = () => {
     const tekst = (k.tekst || "").trim();
