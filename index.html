@@ -4258,8 +4258,8 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
       knap("✓ Overført", () => kør("pulje", ["flyt", "Skat", String(x)], {tekst: `Skat-puljen +${krKort(x)} kr.`, efter: ["mo"], med: () => puljeMed("Skat", x)})))); }
   // 2 dage før en faktura forfalder (Oscar 2/11): gul, så skatten er klar, når pengene kommer
   // ✓ Overført på hvert banner (Oscar 5/11: pengene var kommet, men der var ikke noget at trykke på); kontoudtoget ser pengene: "har betalt"
-  // skat fra job, hvor pengene ER kommet, men beløbet ikke er overført (Oscar 5/11): rød, med job og beløb, ét tryk
-  (D.jobstatus?.jobs || []).filter(j => j.status === "skylder").forEach(j => { const q = (D.betalinger || []).find(y => y.job_noegle === j.job_noegle), s = (j.skylder || []).reduce((t, x) => t + x.kr, 0);
+  // skat fra job, hvor pengene ER kommet, men beløbet ikke er overført (Oscar 5/11): rød, med job og beløb, ét tryk. Også når jobbet mangler andet, fx B-indkomst.dk (Ranum 19/6)
+  (D.jobstatus?.jobs || []).filter(j => (j.skylder || []).length && j.status !== "aflyst").forEach(j => { const q = (D.betalinger || []).find(y => y.job_noegle === j.job_noegle), s = (j.skylder || []).reduce((t, x) => t + x.kr, 0);
     const sendt = tx => kør("betaling-fordelt", [`--job=${q?.navn}`, `--dato=${q?.dato}`, `--skat=${s}`, "--ret", ...(j.fordelt?.brugt ? [`--brugt=${j.fordelt.brugt}`] : [])], {tekst: typeof tx === "string" ? tx : `Skat-puljen +${krKort(s)} kr.`, efter: ["betalinger", "jobstatus", "mo"], med: () => { j.status = "faerdig"; j.skylder = []; puljeMed("Skat", s); }});
     if (q && s) gør.push(trin("rd", [h("b", {}, `${j.navn} ${kortDato(j.dato)}: overfør ${krKort(s)} kr. til Skat fra firmakontoen eller Lønkonto+.`), nrT(P0kontoSaxo()) ? h("div", {class: "ov-n"}, nrT(P0kontoSaxo())) : null],
       [fraBufferKnap(s, `skat:${j.job_noegle}`, sendt), knap("✓ Overført", () => sendt())])); });
