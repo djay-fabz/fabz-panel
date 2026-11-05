@@ -4683,7 +4683,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   // også et ældre job, der først er kommet efter FD.fra (Oscar 5/11: Fox 17/10 godkendt 5/11). Fundet i kalenderen med åben betaling: ikke kommet endnu, ✓ Kommet står nedenfor
   // én status pr. job (Oscar 5/11): et færdigt job kommer aldrig igen som en besked
   const jobNr = id => (D.jobstatus?.jobs || []).find(j => j.indtaegt_id === id), jobFærdig = r => ["faerdig", "skylder"].includes((D.jobstatus?.jobs || []).find(j => j.job_noegle === r.job_noegle)?.status);
-  const kommetSent = x => (D.betalinger || []).some(r => r.indtaegt_id === x.id && (r.godkendt || "") >= FD.fra && !r.venter);   // venter (fx "Jan overfører i næste uge"): pengene er ikke på kontoen, ingen overførsel
+  const kommetSent = x => (D.betalinger || []).some(r => r.indtaegt_id === x.id && (r.betalt_dato || r.godkendt || "") >= FD.fra && !r.venter);   // venter (fx "Jan overfører i næste uge"): pengene er ikke på kontoen, ingen overførsel
   if (FD) (D.indtaegter || []).filter(x => x.type === "B-indkomst" && (x.dato >= FD.fra || kommetSent(x)) && !(x.auto && betFor(x))).forEach(x => {
     if (FD.fordelt[x.id]?.brugt || jobNr(x.id)?.fordelt) return;   // jobstatus: pengene er fordelt eller brugt, intet at flytte (Oscar 5/11)
     const f = FD.fordelt[x.id] || {}, skat = f.skat ? f.skat.kr : skatDel(x.beloeb), rest = x.beloeb - skat;
@@ -4710,7 +4710,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
       const fv = (D.jobstatus?.jobs || []).find(j => j.job_noegle === r.job_noegle)?.forventet;
       // hvor pengene skal hen, når de er kommet (Oscar 5/11): beløb og konto, ligesom overførselslinjen
       const tilSaxo = () => { const s = Math.min(Math.round(b * andel), Math.max(0, skatRest)), nr = nrT(P0.kontonr?.Saxo); return [h("div", {}, `Overfør ${krKort(b)} kr. fra Lønkonto+ til Saxo: ${krKort(s)} kr. Skat-puljen · ${krKort(b - s)} kr. ${HB ? "Husleje d. 1 + Buffer" : "Buffer"}`), nr ? h("div", {class: "ov-n"}, nr) : null]; };
-      if (fv) { if (iDg >= fv) betLinjer.push(betL(iDg > fv ? "rd" : "y", r.venter ? [h("b", {}, `${r.navn} ${kortDato(r.dato)} venter: ${krKort(b)} kr.`), ` ${r.venter}`] : [h("b", {}, iDg > fv ? `${r.navn} mangler ${krKort(b)} kr.` : `${r.navn} betaler for ${DAGE[dag(r.dato).getDay()]} ${kortDato(r.dato)}.`), iDg > fv ? ` (job ${kortDato(r.dato)})` : "", ...tilSaxo()], betaltKnap(r, iso => godkend(r, r.dato >= iDg, iso)))); return; }
+      if (fv) { if (iDg >= fv) betLinjer.push(betL(iDg > fv ? "rd" : "y", r.venter ? [h("b", {}, `${r.navn} ${kortDato(r.dato)} venter: ${krKort(b)} kr.`), ` ${r.venter}`] : [h("b", {}, iDg > fv ? `${r.navn} mangler ${krKort(b)} kr.` : `${r.navn} betaler for ${DAGE[dag(r.dato).getDay()]} ${kortDato(r.dato)}.`), iDg > fv ? ` (job ${kortDato(r.dato)})` : "", ...(iDg > fv ? [] : tilSaxo())], betaltKnap(r, iso => godkend(r, r.dato >= iDg, iso)))); return; }
       if (r.dato < iDg && r.venter) betLinjer.push(betL("y", [h("b", {}, `${r.navn} ${kortDato(r.dato)} venter: ${krKort(b)} kr.`), ` ${r.venter}`], betaltKnap(r, iso => godkend(r, false, iso))));   // aftalt senere (Oscar 3/11)
       else if (r.dato < iDg) betLinjer.push(betL("rd", [h("b", {}, `${r.navn} mangler ${krKort(b)} kr.`), ` (job ${kortDato(r.dato)})`], betaltKnap(r, iso => godkend(r, false, iso))));
       else if (førJob(r.navn) && iDg >= torsdagFør(r.dato)) betLinjer.push(betL("y", [h("b", {}, `${r.navn} betaler for ${DAGE[dag(r.dato).getDay()]} ${kortDato(r.dato)}.`)], betaltKnap(r, iso => godkend(r, true, iso))));
@@ -4719,7 +4719,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     // kommet, men betalingsdatoen mangler (Fox 17/10, godkendt før knappen kom): B-indkomst.dk venter på datoen
     if (r.maade === "overfoersel" && erB(r.navn) && r.indtaegt_id && !r.betalt_dato && (r.godkendt || "") >= "2026-11-05") {
       betLinjer.push(betL("y", [h("b", {}, `${r.navn} ${kortDato(r.dato)}: hvornår blev de ${krKort(b)} kr. betalt?`)], betaltKnap(r, iso => godkend(r, false, iso)))); return; }
-    if (erB(r.navn) || (r.godkendt || r.dato) < (FD?.fra || "2026-10-30")) return;   // klubjobs står ovenfor (indtægter), gamle betalinger er gjort
+    if (erB(r.navn) || (r.betalt_dato || r.godkendt || r.dato) < (FD?.fra || "2026-10-30")) return;   // klubjobs står ovenfor (indtægter), gamle betalinger er gjort
     const ub = r.maade === "dinero" ? (mo.ubetalt?.liste || []).find(u => u.nr === r.faktura_nr) : null;
     if (sk.snart_overfoert?.[r.faktura_nr] || (sk.snart || []).some(u => u.nr === r.faktura_nr)) return;   // skatten er sendt fra banneret, eller banneret står der (ét sted)
     if (r.maade === "dinero" && (!r.faktura_nr || ub)) {
