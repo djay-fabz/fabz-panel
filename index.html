@@ -402,6 +402,11 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .sg-mdr{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin:10px 0 6px}.sg-md{border-radius:8px;padding:6px 9px;background:var(--ok-blid)}.sg-md.rd{background:var(--fejl-blid)}.sg-md .n{font-size:12px;font-weight:600}.sg-md .s{font-size:12.5px;font-weight:700;color:var(--ok)}.sg-md.rd .s{color:var(--fejl)}.sg-md .f{font-size:11px;color:var(--svag)}
 details.sg-r{margin:0;border:0;border-top:1px solid var(--linje);border-radius:0;background:none}details.sg-r>summary{padding:8px 0;font-weight:400;font-size:13.5px;gap:4px}details.sg-r>summary::before{content:none}details.sg-r[open]>summary::before{content:none}details.sg-r>summary>b{margin-left:auto;white-space:nowrap}details.sg-r>summary>b::after{content:" ›";color:var(--svagere)}details.sg-r .rd-l{padding-left:0;padding-right:0}
 .bet-seddel{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px}
+.bj-knap{width:100%;text-align:left;border-top:0;border-right:0;border-bottom:0;font:inherit;color:inherit;cursor:pointer;justify-content:space-between}.bj-pil{font-weight:600;color:var(--adv)}
+.gl-job{margin-top:12px}.gl-job h2{margin:0}.gl-p{justify-content:flex-start;margin-top:10px;padding-left:0}.mg{display:flex;flex-direction:column}.mg-s{order:2;margin-top:10px}.mg.søger .mg-s{order:0;margin:0 0 6px}.mg.søger>.mg-l:first-child{display:none}.mg-l:empty{display:none}
+.mg-r{display:flex;align-items:center;gap:14px;width:100%;padding:10px 0;border:0;border-top:1px solid var(--linje);background:none;font:inherit;color:inherit;text-align:left;cursor:pointer;flex-wrap:wrap}.mg-l>.mg-r:first-child{border-top:0}.mg-r:hover{background:var(--hover)}.mg-tom{padding:10px 0}
+.mg-d{width:36px;text-align:center;flex:none;display:flex;flex-direction:column;line-height:1.1}.mg-d b{font-size:17px}.mg-d span{font-size:10.5px;color:var(--svag);letter-spacing:.04em}.mg-t{flex:1 1 180px;min-width:0;display:flex;flex-direction:column}.mg-p{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+@media(max-width:700px){.mg-p{flex-basis:100%;justify-content:flex-start;padding-left:50px}}
 .sg-linjer{margin-top:12px;background:var(--flade);border:1px solid var(--linje);border-radius:14px;overflow:hidden}details.sg-l{margin:0;border:0;border-radius:0}.sg-linjer>details.sg-l+details.sg-l{border-top:1px solid var(--linje)}details.sg-l>summary{font-weight:400}details.sg-l>summary::before{content:none}details.sg-l[open]>summary::before{content:none}details.sg-l>summary::after{content:"›";margin-left:auto;color:var(--svagere)}details.sg-l[open]>summary::after{content:"⌄"}
 .sg-ind{padding:4px 12px 12px}.sg-h{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 4px;font-weight:600}.sg-h .sg-prik{margin-top:1px}.sg-ht{flex:1;min-width:180px}
 .sg-under{margin-top:6px;border:1px solid var(--linje);border-radius:10px;overflow:hidden}.sg-under>details.sg-l{border:0;border-radius:0}.sg-under>details.sg-l+details.sg-l{border-top:1px solid var(--linje)}.sg-ek{color:var(--svagere)}.sg-prik{width:8px;height:8px;border-radius:50%;flex:none;background:var(--fejl)}.sg-prik.y{background:var(--adv)}
@@ -969,6 +974,8 @@ function visJobs() {
   if (JH && !j0) {   // jobbet er gledet ud af kalenderen (den gemmer kun fra i går): betalingen kender det stadig, ellers vis opgaven om sangene
     const br = (D.betalinger || []).find(r => r.job_noegle === JH);
     if (br) return visJobSide({navn: br.navn, dato: br.dato, sted: br.sted || "", besk: "", afholdt: true});
+    const js_ = (D.jobstatus?.jobs || []).find(x => x.job_noegle === JH);   // gammelt job uden betalingsrække, åbnet fra søgningen i Mangler noget
+    if (js_) return visGammeltJob(js_);
     const so = D.opgaver.find(o => o.job_noegle === JH && o.job_opgave === "sangene" && o.status !== "Færdig");
     JH = null;
     if (so) { fane = "opgaver"; OP.vis = "opgave"; OP.valgt = so.id; return tegn(); }
@@ -4205,6 +4212,38 @@ function puljeMed(navn, b) {   // Fabz-puljer og Skat-puljen: vis det nye tal me
     if (L) { L.kr = sk.saldo; L.f = skatNu(sk) ? "rd" : sk.mangler_paa_kontoen ? "y" : "g"; }
   } else { const p = (mo.overblik?.puljer || []).find(q => q.navn === navn); if (p) p.saldo += b; }
 }
+// Mangler noget (skitse panel-mangler-noget): læser jobstatus, regner ikke status ud selv. Kun det, der er nået: jobbet er afholdt, eller betalingsdagen er kommet
+// gammelt job uden betalingsrække: kun at se (revision 5/11), ingen knapper, så et afsluttet job ikke kan få en betalingsrække ved en fejl
+function visGammeltJob(j) {
+  const MÅDE = {dinero: "Faktura", overfoersel: "Overførsel", kontant: "Kontant"}, dele = jobMangler(j);
+  $("rod").replaceChildren(h("div", {class: "side"},
+    h("button", {class: "btn ghost lille", type: "button", onclick: () => { JH = null; fane = "oekonomi"; tegn(); window.scrollTo(0, 0); }}, "← Tilbage"),
+    h("div", {class: "kort2 gl-job"}, h("h2", {}, j.navn), h("div", {class: "muted"}, kortDato(j.dato) + " " + j.dato.slice(0, 4)),
+      h("div", {class: "rd-l"}, h("span", {}, "Beløb"), h("b", {}, j.kr != null ? `${krKort(j.kr)} kr.` : "Ukendt")),
+      h("div", {class: "rd-l"}, h("span", {}, "Betaling"), h("b", {}, MÅDE[j.maade] || j.maade)),
+      j.kommet?.dato ? h("div", {class: "rd-l"}, h("span", {}, "Kommet"), h("b", {}, kortDato(j.kommet.dato))) : null,
+      h("div", {class: "mg-p gl-p"}, j.status === "aflyst" ? h("span", {class: "pill gr"}, "Aflyst") : dele.length ? dele.map(x => h("span", {class: "pill y"}, x)) : h("span", {class: "pill g"}, "Færdig")))));
+}
+const MANGLER_NAVN = {betaling: "Betaling", "skat og fordeling": "Skat", faktura: "Faktura"};
+const jobMangler = j => { const nået = j.dato < iDag(); return [...new Set([...(j.mangler || []).map(m => MANGLER_NAVN[m] || m), ...((j.skylder || []).length ? ["Skat"] : []),
+  ...(nået && (j.sedler || []).some(x => x.status === "mangler") ? ["Honorarseddel"] : [])])]; };
+const jobsDerMangler = () => (D.jobstatus?.jobs || []).filter(j => j.status !== "aflyst" && (j.dato < iDag() || (j.forventet && j.forventet <= iDag())) && jobMangler(j).length).sort((a, b) => a.dato.localeCompare(b.dato));
+function manglerDel() {
+  const betR = k => (D.betalinger || []).find(r => r.job_noegle === k);
+  const række = (j, medÅr) => { const d = dag(j.dato), ug = DAGE[d.getDay()], sted = (betR(j.job_noegle)?.sted || "").split(",").at(-1).trim().replace(/^\d+\s*/, ""), dele = jobMangler(j);
+    return h("button", {class: "mg-r", type: "button", onclick: () => visJobNøgle(j.job_noegle)},
+      h("span", {class: "mg-d"}, h("b", {}, String(d.getDate())), h("span", {}, MDR_K[d.getMonth()].toUpperCase())),
+      h("span", {class: "mg-t"}, h("b", {}, j.navn), h("span", {class: "muted lille"}, [ug[0].toUpperCase() + ug.slice(1), medÅr ? j.dato.slice(0, 4) : null, sted || null].filter(Boolean).join(" · "))),
+      h("span", {class: "mg-p"}, j.status === "aflyst" ? h("span", {class: "pill gr"}, "Aflyst") : dele.length ? dele.map(x => h("span", {class: "pill y"}, x)) : h("span", {class: "pill g"}, "Færdig"))); };
+  const liste = h("div", {class: "mg-l"}, jobsDerMangler().map(j => række(j, false))), fund = h("div", {class: "mg-l"});
+  const søg = () => { const q = (ØK.mSøg || "").trim().toLowerCase(); boks.classList.toggle("søger", !!q); if (!q) return fund.replaceChildren();
+    const ens = (D.jobstatus?.jobs || []).filter(j => j.dato <= iDag() && `${j.navn} ${betR(j.job_noegle)?.sted || ""} ${kortDato(j.dato)} ${j.dato}`.toLowerCase().includes(q)).sort((a, b) => b.dato.localeCompare(a.dato)).slice(0, 30);
+    fund.replaceChildren(...(ens.length ? ens.map(j => række(j, true)) : [h("div", {class: "mg-tom muted lille"}, "Intet job fundet")])); };
+  const inp = h("input", {class: "input mg-s", type: "search", placeholder: "Søg i tidligere job", value: ØK.mSøg || "", oninput: e => { ØK.mSøg = e.target.value; søg(); }});
+  const boks = h("div", {class: "mg"}, liste, fund, inp);
+  søg();
+  return boks;
+}
 const rdFold = (id, ekstra = {}) => ({class: "rd-f", id: "rd-" + id, open: ØK.åbne.has(id), ontoggle: e => e.target.open ? ØK.åbne.add(id) : ØK.åbne.delete(id), ...ekstra});   // foldene husker, om de er åbne, når siden tegnes om
 function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker med det der er galt, overblik, puljer i Saxo, detaljer
   if (ØK.guide) return visGuide(ØK.guide);
@@ -4744,7 +4783,10 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   });
   // alle "vær opmærksom" ét sted under Månedsskiftet, rød før gul før grøn (Oscar 2/11: "de kommer ikke samme sted")
   const farve = x => x.classList.contains("rd") ? 0 : x.classList.contains("y") ? 1 : 2;
-  const alle = [...fejlBjælker(), ...betLinjer, ...prisBj, ...gør].map((x, i) => [x, i]).sort((a, b) => farve(a[0]) - farve(b[0]) || a[1] - b[1]).map(x => x[0]);
+  const nMangler = jobsDerMangler().length;
+  const manglerBj = nMangler ? [h("button", {class: "bj y bj-knap", type: "button", onclick: () => { ØK.åbne.add("mangler"); tegn(); setTimeout(() => document.getElementById("rd-mangler")?.scrollIntoView({behavior: "smooth", block: "start"}), 50); }},
+    h("span", {class: "bj-t"}, h("b", {}, `${nMangler} ${nMangler === 1 ? "job mangler" : "jobs mangler"} din opmærksomhed`)), h("span", {class: "bj-pil"}, "›"))] : [];
+  const alle = [...fejlBjælker(), ...betLinjer, ...prisBj, ...gør, ...manglerBj].map((x, i) => [x, i]).sort((a, b) => farve(a[0]) - farve(b[0]) || a[1] - b[1]).map(x => x[0]);
   const bjælker = h("div", {class: "bjaelker bet-linjer"}, alle.length ? alle : mo.raad?.frit < 0 || mo.raad?.advarsel ? null : h("div", {class: "bj g"}, h("span", {class: "bj-t"}, h("b", {}, "✓ Alt er grønt."), " Pengene rækker, og skatten passer.")));
   // Hov (Oscar 2/11, skitse panel-hov-kuverter-2): højst 30 dage før firmakontoen og bufferen ikke rækker (fabz_raad advarsel_dage 30, minus det
   // ledige i Husleje d. 1 + Buffer over mærket). Oscar skriver sin plan, og en planlagt Claude-opgave svarer (fabz.py hov-svar)
@@ -4865,6 +4907,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     h("div", {class: "sg-under"}, fk.poster.map(fkPost))] : [];
   $("rod").replaceChildren(h("div", {class: "side bred skat-side"}, top, msKort, hovKort, d1Kort, ovKort0, bjælker, sælgKort,
     h("div", {class: "sg-linjer"},
+      linje("mangler", null, nMangler ? h("span", {}, "Mangler noget ", h("span", {class: "pill y"}, String(nMangler))) : "Mangler noget", manglerDel()),
       linje("skat", værst(skatH.map(x => x[0])), `Skat ${sk.aar}`, skatH.map(hRk), fsKort, tallenBag, fold("Registrér B-indkomst", bIndkomstKort(bLinjer))),
       fk ? linje("firma", fk.prik, "Firmakonto", ...fkIndhold) : null,
       kasseL.length ? linje("kasse", null, h("span", {}, "Kassen"), h("div", {class: "sg-under"}, kasseL.map(j => h("div", {class: "rd-l"}, h("span", {}, `${kortDato(j.forventet)} ${j.navn}`), h("b", {}, `${krKort(j.maade === "dinero" ? j.plan.ekskl + j.plan.moms : j.plan.ekskl)} kr.`)))), h("div", {class: "rd-l"}, h("span", {}, "I alt"), h("b", {}, `${krKort(kasseL.reduce((s, j) => s + (j.maade === "dinero" ? j.plan.ekskl + j.plan.moms : j.plan.ekskl), 0))} kr.`))) : null,
