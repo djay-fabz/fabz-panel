@@ -1167,6 +1167,36 @@ function honorarDel(j, st, r) {
       }}, "Læg i Gmail")));
 }
 const SEDDEL = {}, FLYT_LÅST = new Set();
+// Upload af honorarseddel direkte fra browseren til Oscars Drive (Oscar 5/11). drive.file: panelet ser kun sine egne filer. Intet går gennem GitHub, kun linket gemmes. Client ID er ikke hemmeligt
+const DRIVE = {id: "685896965051-cqt5se806ut2c7s7mq9l4j88ntg5sd0b.apps.googleusercontent.com", tok: null, til: 0, klient: null, mappe: null, aktiv: null};
+function driveForbered() {
+  if (window.google?.accounts?.oauth2 || document.getElementById("gsi")) return;
+  document.head.append(h("script", {id: "gsi", src: "https://accounts.google.com/gsi/client", async: true}));
+}
+const driveKlar = () => DRIVE.tok && Date.now() < DRIVE.til;
+function driveLogin(færdig) {   // popup kræver et tryk: filvælgeren åbnes derfor med endnu et tryk bagefter
+  if (!window.google?.accounts?.oauth2) return alert("Google er ikke klar endnu. Prøv igen om lidt, eller brug Indsæt link.");
+  DRIVE.klient ||= google.accounts.oauth2.initTokenClient({client_id: DRIVE.id, scope: "https://www.googleapis.com/auth/drive.file", callback: () => {}});
+  DRIVE.klient.callback = sv => { if (sv.error || !sv.access_token) return alert("Google gav ikke adgang. Brug Indsæt link."); DRIVE.tok = sv.access_token; DRIVE.til = Date.now() + (Number(sv.expires_in) || 3600) * 900; færdig(); };
+  DRIVE.klient.requestAccessToken();
+}
+async function driveApi(url, opt = {}) {
+  const sv = await fetch(url, {...opt, headers: {...(opt.headers || {}), Authorization: `Bearer ${DRIVE.tok}`}});
+  if (sv.status === 401) DRIVE.tok = null;
+  if (!sv.ok) throw new Error(`Drive svarede ${sv.status}`);
+  return sv.json();
+}
+const driveDel = (meta, type, krop) => { const g = "fabz" + Date.now(); return {g, krop: new Blob([`--${g}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${g}\r\nContent-Type: ${type}\r\n\r\n`, krop, `\r\n--${g}--`])}; };
+async function driveUpload(fil, navn) {   // filnavnet bygges af job og hjælper, aldrig af filens eget navn (kan indeholde CPR)
+  if (!DRIVE.mappe) {
+    const q = encodeURIComponent(`name='Fabz honorarsedler' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+    DRIVE.mappe = (await driveApi(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`)).files?.[0]?.id
+      || (await driveApi("https://www.googleapis.com/drive/v3/files?fields=id", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name: "Fabz honorarsedler", mimeType: "application/vnd.google-apps.folder"})})).id;
+  }
+  const end = (/\.(pdf|png|jpe?g|heic)$/i.exec(fil.name) || [".pdf"])[0].toLowerCase(), d = driveDel({name: navn.replace(/[^\p{L}\p{N} ._-]/gu, "") + end, parents: [DRIVE.mappe]}, fil.type || "application/octet-stream", fil);
+  const r = await driveApi("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink", {method: "POST", headers: {"Content-Type": `multipart/related; boundary=${d.g}`}, body: d.krop});
+  return r.webViewLink;
+}
 function betalingAfsnit(j, st) {
   const r = betalingTilJob(j) || {...betalingGaet(j), job_noegle: st.key};
   const afholdt = j.afholdt || j.dato < iDag();
@@ -1208,7 +1238,8 @@ function betalingAfsnit(j, st) {
     : r.maade === "kontant" ? "Registreres som kontant indtægt og lukker opgaven."
     : "Tjek kontoen, og tryk når pengene er kommet.";
   // omkostninger og fortjeneste (Oscar 3/11)
-  const gemte = Array.isArray(r.omk) ? r.omk.map(x => ({navn: x.navn, kr: x.indtastet ?? x.kr, moms: !!x.moms, betalt: !!x.betalt, ...(x.type ? {type: x.type} : {}), ...(x.seddel ? {seddel: x.seddel} : {}), ...(x.seddel_betalt ? {seddel_betalt: x.seddel_betalt} : {})})) : null;
+  const tilGemt = x => ({navn: x.navn, kr: x.indtastet ?? x.kr, moms: !!x.moms, betalt: !!x.betalt, ...(x.type ? {type: x.type} : {}), ...(x.seddel ? {seddel: x.seddel} : {}), ...(x.seddel_betalt ? {seddel_betalt: x.seddel_betalt} : {})});
+  const gemte = Array.isArray(r.omk) ? r.omk.map(tilGemt) : null;
   const kladde = OMK[st.key], liste = kladde || gemte || [];
   const ekskl = x => Math.round(Number(x.kr || 0)), omkSum = liste.reduce((s, x) => s + ekskl(x), 0);   // "+ moms": beløbet er ekskl. moms (Oscar 3/11)
   const forslag = !gemte && !kladde ? sidsteOmk(j) : null;
@@ -1219,10 +1250,23 @@ function betalingAfsnit(j, st) {
   const ret = l => { OMK[st.key] = l; tegn(); };
   // honorarseddel på omkostningen (Oscar 5/11, skitse panel-honorarseddel-a): type, status og upload. Filen ligger i Drive, panelet gemmer kun linket
   const omkRet = (i, ænd) => { const l = (OMK[st.key] || liste).map((y, k) => k === i ? {...y, ...ænd} : {...y}); kladde ? ret(l) : gemOmk(l); };
+  // sedlen gemmes på navn i den nyeste række, ikke på den linje, der blev trykket på: listen kan have ændret sig under uploaden (revision 5/11)
+  const gemSeddel = (navn, l) => { const kl = OMK[st.key], nu = kl || (betalingTilJob(j)?.omk || []).map(tilGemt), k = nu.findIndex(y => y.navn === navn && y.type === "honorar" && !y.seddel);
+    if (k < 0) { tegn(); return alert(`${navn} står ikke længere på jobbet, så sedlen er ikke gemt på en linje. Filen ligger i Drive: ${l}`); }
+    const ny = nu.map((y, n) => n === k ? {...y, seddel: l} : {...y}); kl ? ret(ny) : gemOmk(ny); };
   const omkType = (x, i) => h("div", {class: "bet-seddel"},
     seg([["omk", "Omkostning"], ["honorar", "Honorarseddel"], ["firma", "Firma"]], x.type || "omk", v => omkRet(i, v === "honorar" ? {type: "honorar", moms: false} : {type: v === "firma" ? "firma" : undefined, seddel: undefined, seddel_betalt: undefined})),
     x.type === "honorar" ? [h("span", {class: "pill " + (x.seddel_betalt ? "g" : x.seddel ? "y" : "rd")}, x.seddel_betalt ? "Betalt" : x.seddel ? "Uploadet" : "Mangler"), h("div", {class: "spacer"}),
-      x.seddel ? h("a", {class: "btn lille", href: x.seddel, target: "_blank", rel: "noopener"}, "Åbn") : h("button", {class: "btn lille primaer", type: "button", onclick: () => { SEDDEL[st.key + i] = true; window.open("https://drive.google.com/drive/my-drive", "_blank", "noopener"); tegn(); }}, "+ Upload"),
+      x.seddel ? h("a", {class: "btn lille", href: x.seddel, target: "_blank", rel: "noopener"}, "Åbn") : (driveForbered(), [
+        h("button", {class: "btn lille primaer", type: "button", disabled: !!DRIVE.aktiv, onclick: () => {
+          if (!driveKlar()) return driveLogin(() => tegn());
+          const f = h("input", {type: "file", accept: "application/pdf,image/*", onchange: async () => { const fil = f.files[0]; if (!fil) return;
+            if (fil.size > 5 * 1024 * 1024) return alert("Filen er over 5 MB. Læg den selv i Drive, og brug Indsæt link.");
+            DRIVE.aktiv = st.key + x.navn; tegn();   // én upload ad gangen i hele panelet
+            try { const l = await driveUpload(fil, `Honorarseddel ${j.navn} ${j.dato} ${x.navn}`); DRIVE.aktiv = null; gemSeddel(x.navn, l); }
+            catch (e) { DRIVE.aktiv = null; SEDDEL[st.key + i] = true; tegn(); alert(`Upload fejlede: ${e.message}. Læg den selv i Drive, og brug Indsæt link.`); } }});
+          f.click(); }}, DRIVE.aktiv === st.key + x.navn ? "Uploader …" : driveKlar() ? "Vælg fil" : "+ Upload"),
+        SEDDEL[st.key + i] ? null : h("button", {class: "btn ghost lille", type: "button", onclick: () => { SEDDEL[st.key + i] = true; tegn(); }}, "Indsæt link")]),
       !x.seddel && SEDDEL[st.key + i] ? h("input", {class: "input", style: "max-width:220px", placeholder: "Link fra Drive", onchange: e => { const v = e.target.value.trim(); if (/^https:\/\/(drive|docs)\.google\.com\//.test(v)) { delete SEDDEL[st.key + i]; omkRet(i, {seddel: v}); } else e.target.style.borderColor = "#c0392b"; }}) : null,
       x.seddel && !x.seddel_betalt ? h("button", {class: "btn lille", type: "button", onclick: () => omkRet(i, {seddel_betalt: iDag()})}, "✓ Betalt") : null] : null);
   const omkDel = h("div", {class: "bet-omk"},
