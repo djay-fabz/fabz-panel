@@ -1099,6 +1099,16 @@ const BET_RØD_DAGE = 8;
 const betalingDage = r => Math.round((dag(iDag()) - dag(r.dato)) / 864e5);
 const betaltSpørgsmål = r => betalingDage(r) > BET_RØD_DAGE ? ["rød-pill", `Ikke betalt · ${betalingDage(r)} dage`] : ["", `Er ${r.navn} betalt?`];
 const åbneOverførsler = () => (D.betalinger || []).filter(r => r.maade === "overfoersel" && !["faerdig", "aflyst"].includes(r.status) && r.dato < iDag());
+// ✓ Betalt på klubjobs (Oscar 5/11): datofelt med i dag, som kan rettes. Datoen bliver pay_date i B-indkomst.dk, jobdatoen er uændret
+const BETALT_DATO = {};
+function betaltKnap(r, fn) {
+  const nøgle = r.job_noegle || `${r.dato}|${r.navn}`;
+  const felt = datoInput(BETALT_DATO[nøgle] || iDag(), v => { BETALT_DATO[nøgle] = v; }, {"aria-label": "Betalt dato"});
+  return h("span", {class: "skat-input"}, felt, h("button", {class: "btn lille primaer", type: "button", onclick: () => {
+    const iso = laesDato(felt.value);
+    if (!iso || iso > iDag()) { felt.style.borderColor = "#c0392b"; felt.title = "Skriv en dato, der ikke er i fremtiden, som 23.10.2026"; return; }
+    fn(iso); }}, "✓ Betalt"));
+}
 function betalingAfsnit(j, st) {
   const r = betalingTilJob(j) || {...betalingGaet(j), job_noegle: st.key};
   const afholdt = j.afholdt || j.dato < iDag();
@@ -1108,10 +1118,10 @@ function betalingAfsnit(j, st) {
   const args = (maade, beloeb) => [`--job=${j.navn}`, `--dato=${j.dato}`, `--maade=${maade}`, ...(beloeb != null && beloeb !== "" ? [`--beloeb=${beloeb}`] : [])];
   const saet = (maade, beloeb) => kør("betaling-saet", args(maade, beloeb), {tekst: `Betaling ${j.navn}: ${betMaadeTekst(maade)}`, efter,
     med: () => { const x = betalingTilJob(j) || (D.betalinger = [...(D.betalinger || []), {...r, gaet: false}]).at(-1); x.maade = maade; if (beloeb != null && beloeb !== "") x.beloeb = Number(beloeb); x.kilde = "oscar"; }});
-  const godkend = async () => {   // uden række i filen (kun gæt): gem valget først, så godkend
+  const godkend = async betalt => {   // uden række i filen (kun gæt): gem valget først, så godkend
     if (r.gaet) { const sv = await kørOgVent("betaling-saet", args(r.maade, r.beloeb)); if (!sv || sv.status === "FEJL") return sendFejl("Betaling " + j.navn, new Error(sv?.fejl || "intet svar")); }
-    kør("betaling-godkend", [`--job=${j.navn}`, `--dato=${j.dato}`, "--tving"], {tekst: `Betaling godkendt: ${j.navn}`, efter,
-      med: () => { const x = betalingTilJob(j); if (x) { x.status = "faerdig"; x.godkendt = iDag(); } if (o) { o.status = "Færdig"; o.faerdig_dato = iDag(); } }});
+    kør("betaling-godkend", [`--job=${j.navn}`, `--dato=${j.dato}`, "--tving", ...(betalt ? [`--betalt=${betalt}`] : [])], {tekst: `Betaling godkendt: ${j.navn}`, efter,
+      med: () => { const x = betalingTilJob(j); if (x) { x.status = "faerdig"; x.godkendt = iDag(); if (betalt) x.betalt_dato = betalt; } if (o) { o.status = "Færdig"; o.faerdig_dato = iDag(); } }});
   };
   const b = r.beloeb != null ? Number(r.beloeb) : null, dinero = r.maade === "dinero";
   // firmakunder betaler med faktura (Oscar 3/11): Overførsel kun for klubjobs (B-indkomst), eller hvis den allerede er valgt
@@ -1128,7 +1138,7 @@ function betalingAfsnit(j, st) {
           r.send === "bestilt" ? "Sendes …" : r.bogfoert_nr ? `Send faktura ${r.bogfoert_nr} igen (bogført, ikke mailet)` : r.send === "fejl" ? "Prøv at sende igen" : "Send faktura")
       : h("button", {class: "btn godkend", type: "button", onclick: () => { if (confirm("Har du sendt fakturaen fra Dinero?")) godkend(); }}, "✓ Fakturaen er sendt"))
     : r.maade === "kontant" ? h("button", {class: "btn godkend", type: "button", disabled: !b, onclick: () => { if (confirm(`Har du fået ${kr(b)} kontant?`)) godkend(); }}, `✓ Betalt kontant${b ? " " + kr(b) : ""}`)
-    : h("button", {class: "btn godkend", type: "button", onclick: () => { if (confirm(`Er ${b ? kr(b) + " fra " : ""}${j.navn} kommet ind på kontoen?`)) godkend(); }}, "✓ Betalt");
+    : betaltKnap(r, iso => godkend(iso));
   const linje = !o ? null : dinero ? (r.dinero?.link ? `Kladden ligger i Dinero${b ? " · " + kr(b * 1.25) + " inkl. moms" : ""} · netto ${r.frist_dage || 8} dage. Lukkes selv, når fakturaen er bogført.` : "Kladden blev ikke lavet. Lav fakturaen i Dinero og tryk Fakturaen er sendt.")
     : r.maade === "kontant" ? "Registreres som kontant indtægt og lukker opgaven."
     : "Tjek kontoen, og tryk når pengene er kommet.";
@@ -2503,8 +2513,7 @@ function visIDag() {
               return h("div", {class: "mini"}, h("span", {class: "pill " + sp[0]}, sp[0] ? `${betalingDage(r)} dage` : "betalt?"),
                 h("button", {class: "mini link", type: "button", style: "flex:1;border:0;padding:0", onclick: () => { fane = "pakkelister"; S = null; JH = r.job_noegle; tegn(); window.scrollTo(0, 0); }},
                   h("span", {}, `${r.navn} · ${kortDato(r.dato)}` + (r.beloeb ? ` · ${krKort(r.beloeb)} kr.` : ""))),
-                h("button", {class: "btn lille", type: "button", onclick: () => { if (!confirm(`Er ${r.beloeb ? krKort(r.beloeb) + " kr. fra " : ""}${r.navn} kommet ind på kontoen?`)) return;
-                  kør("betaling-godkend", [`--job=${r.navn}`, `--dato=${r.dato}`, "--tving"], {tekst: `Betalt: ${r.navn}`, efter: ["betalinger", "opgaver"], med: () => { r.status = "faerdig"; r.godkendt = iDag(); }}); }}, "✓ Betalt")); }),
+                betaltKnap(r, iso => kør("betaling-godkend", [`--job=${r.navn}`, `--dato=${r.dato}`, "--tving", `--betalt=${iso}`], {tekst: `Betalt: ${r.navn}`, efter: ["betalinger", "opgaver", "indtaegter", "mo"], med: () => { r.status = "faerdig"; r.godkendt = iDag(); r.betalt_dato = iso; }}))); }),
             ub && ub.forfaldne ? h("button", {class: "mini link", type: "button", onclick: () => { fane = "oekonomi"; tegn(); }},
               h("span", {class: "pill rd"}, `${ub.forfaldne} over forfald`), h("span", {}, `${krKort(ub.forfaldne_kr)} kr. · send rykker i Dinero`)) : null,
             dm.map(j => h("button", {class: "mini link", type: "button", onclick: () => { fane = "oekonomi"; tegn(); }},
@@ -4576,7 +4585,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   const erB = navn => (sk.b_kunder || []).some(k => navn.toLowerCase().includes(k.toLowerCase().split(" ")[0]));
   const førJob = navn => (RD?.regler?.betaler_foer || []).some(n => navn.toLowerCase().includes(n.toLowerCase()));
   const torsdagFør = iso => { const x = dag(iso); x.setDate(x.getDate() - ((x.getDay() + 3) % 7 || 7)); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`; };
-  const godkend = (r, tving) => kør("betaling-godkend", [`--job=${r.navn}`, `--dato=${r.dato}`, ...(tving ? ["--tving"] : [])], {tekst: `${r.navn}: pengene er kommet`, efter: ["betalinger", "opgaver", "indtaegter", "mo"], med: () => { r.status = "faerdig"; r.godkendt = iDag(); }});
+  const godkend = (r, tving, betalt) => kør("betaling-godkend", [`--job=${r.navn}`, `--dato=${r.dato}`, ...(tving ? ["--tving"] : []), ...(betalt ? [`--betalt=${betalt}`] : [])], {tekst: `${r.navn}: pengene er kommet`, efter: ["betalinger", "opgaver", "indtaegter", "mo"], med: () => { r.status = "faerdig"; r.godkendt = iDag(); if (betalt) r.betalt_dato = betalt; }});
   const ord1 = s => s.toLowerCase().split(" ")[0];
   const indFor = r => (D.indtaegter || []).find(x => x.type === "B-indkomst" && x.dato === r.dato && ord1(x.fra) === ord1(r.navn));   // klubjobbet er allerede registreret
   const betFor = x => (D.betalinger || []).find(r => r.dato === x.dato && ord1(r.navn) === ord1(x.fra) && r.status !== "faerdig" && r.status !== "aflyst");
@@ -4605,11 +4614,14 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
       const ind0 = indFor(r), ind = ind0?.auto ? null : ind0;
       if (ind && !medLinje.has(ind.id)) betLinjer.push(betL("g", [h("b", {}, `${r.navn} har betalt ${krKort(ind.beloeb)} kr.`), " Det er fordelt."], knap("✓ Luk opgaven", () => godkend(r, r.dato >= iDg), true)));   // fordelt, men robottens opgave er åben
       if (r.maade !== "overfoersel" || ind) return;   // registreret klubjob står som grøn linje ovenfor   // Dinero: robottens opgave "Send faktura" klarer det, indtil fakturaen er sendt
-      if (r.dato < iDg && r.venter) betLinjer.push(betL("y", [h("b", {}, `${r.navn} ${kortDato(r.dato)} venter: ${krKort(b)} kr.`), ` ${r.venter}`], knap("✓ Kommet", () => godkend(r))));   // aftalt senere (Oscar 3/11)
-      else if (r.dato < iDg) betLinjer.push(betL("rd", [h("b", {}, `${r.navn} mangler ${krKort(b)} kr.`), ` (job ${kortDato(r.dato)})`], knap("✓ Kommet", () => godkend(r))));
-      else if (førJob(r.navn) && iDg >= torsdagFør(r.dato)) betLinjer.push(betL("y", [h("b", {}, `${r.navn} betaler for ${DAGE[dag(r.dato).getDay()]} ${kortDato(r.dato)}.`)], knap("✓ Kommet", () => godkend(r, true))));
+      if (r.dato < iDg && r.venter) betLinjer.push(betL("y", [h("b", {}, `${r.navn} ${kortDato(r.dato)} venter: ${krKort(b)} kr.`), ` ${r.venter}`], betaltKnap(r, iso => godkend(r, false, iso))));   // aftalt senere (Oscar 3/11)
+      else if (r.dato < iDg) betLinjer.push(betL("rd", [h("b", {}, `${r.navn} mangler ${krKort(b)} kr.`), ` (job ${kortDato(r.dato)})`], betaltKnap(r, iso => godkend(r, false, iso))));
+      else if (førJob(r.navn) && iDg >= torsdagFør(r.dato)) betLinjer.push(betL("y", [h("b", {}, `${r.navn} betaler for ${DAGE[dag(r.dato).getDay()]} ${kortDato(r.dato)}.`)], betaltKnap(r, iso => godkend(r, true, iso))));
       return;
     }
+    // kommet, men betalingsdatoen mangler (Fox 17/10, godkendt før knappen kom): B-indkomst.dk venter på datoen
+    if (r.maade === "overfoersel" && erB(r.navn) && r.indtaegt_id && !r.betalt_dato && (r.godkendt || "") >= "2026-11-05") {
+      betLinjer.push(betL("y", [h("b", {}, `${r.navn} ${kortDato(r.dato)}: hvornår blev de ${krKort(b)} kr. betalt?`)], betaltKnap(r, iso => godkend(r, false, iso)))); return; }
     if (erB(r.navn) || (r.godkendt || r.dato) < (FD?.fra || "2026-10-30")) return;   // klubjobs står ovenfor (indtægter), gamle betalinger er gjort
     const ub = r.maade === "dinero" ? (mo.ubetalt?.liste || []).find(u => u.nr === r.faktura_nr) : null;
     if (sk.snart_overfoert?.[r.faktura_nr]) return;   // skatten er sendt fra banneret, før fakturaen blev betalt
