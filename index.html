@@ -4397,7 +4397,6 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   if (skV && skV.tilstand !== "afventer") { const T = skV.tilstand, X = skV.mangler, Xk = krKort(X), F = kortDato(skV.frist), P_ = skV.fra_pulje || 0, B = (skV.lonkonto || 0) + P_, A = skV.firma ?? X, nok = (mo.raad?.frit ?? 0) >= A;
     const fraHvor = (B ? `${krKort(A)} kr. fra firmakontoen og ${krKort(B)} kr. fra Lønkonto+` : `${krKort(A)} kr. fra firmakontoen`), saxoT = P_ ? ` Flyt først ${krKort(P_)} kr. fra Skat-puljen i Saxo til Lønkonto+ senest ${kortDato(skV.saxo_frist)}.` : "";
     const betalt = knap("✓ Betalt", () => kør("skat-venter", ["--betalt", `--kr=${A + B}`, `--lonkonto=${B}`, `--saxo=${P_}`], {tekst: `Skat betalt: ${krKort(A + B)} kr.`, efter: ["mo"], med: () => { skV.tilstand = "afventer"; }}));
-    if (T === "venter") gør.push(trin("y", [h("b", {}, `Skatten venter på ${skV.kunde}.`), ` ${krKort(A + B)} kr. skal betales til Skat senest ${F}${B ? `: ${krKort(A)} kr. fra firmakontoen og ${krKort(B)} kr. fra Lønkonto+` : ""}.` + saxoT + (skV.forventet ? ` De betaler ca. ${kortDato(skV.forventet)}.` : "")]));
     if (T === "forfalden") gør.push(trin("rd", [h("b", {}, `${skV.kunde} mangler ${krKort(skV.kr)} kr.`), ` (forfald ${kortDato(skV.forventet)}). ${krKort(A + B)} kr. skal betales til Skat senest ${F}. Ring til dem nu.` + saxoT], betalt));
     if (T === "sidste") gør.push(trin("rd", nok ? [h("b", {}, `Betal ${fraHvor} til Skattekontoen senest ${F},`), ` også selv om ${skV.kunde} ikke har betalt.`] : [h("b", {}, `${skV.kunde} mangler ${krKort(skV.kr)} kr.`), ` Firmakontoen kan ikke betale ${krKort(A)} kr. til Skat senest ${F} uden dem. Ring til dem nu.`], betalt));
     if (T === "efter") gør.push(trin("rd", [h("b", {}, `Restskatten er ikke betalt: ${krKort(A + B)} kr.`), ` Fristen var ${F}.`], betalt));
@@ -4985,7 +4984,10 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     if (gammeltÅr) return ud;
     // restskatten (Oscar 5/11): ingen samlet rød linje for penge, der ikke er tjent endnu. Rolig påmindelse fra 1/12 om det, der er kommet ind
     if (FS.rater_tilbage === false && sk.aar == år0 && (sk.restskat_nu || 0) > 100 && iDag() >= `${år0}-12-01`) ud.push(["y", sk.restskat_besked?.tekst || ""]);
-    (D.jobstatus?.jobs || []).filter(j => j.status === "skylder").forEach(j => j.skylder.forEach(x => ud.push(["rd", `${j.navn} ${kortDato(j.dato)}: ${krKort(x.kr)} kr. i skat er ikke overført`])));
+    // skatten venter på en kunde (Oscar 5/11): beløb og frist står her, banneret kommer først, når kunden har betalt eller betalingsdagen er nået
+    if (skV && skV.tilstand !== "afventer") { const Pv = skV.fra_pulje || 0, Bv = (skV.lonkonto || 0) + Pv, Av = skV.firma ?? skV.mangler;
+      ud.push([null, `${krKort(Av + Bv)} kr. skal betales til Skat senest ${kortDato(skV.frist)}${Bv ? `: ${krKort(Av)} kr. fra firmakontoen og ${krKort(Bv)} kr. fra Lønkonto+` : ""}. Venter på ${skV.kunde}.` + (Pv ? ` Flyt først ${krKort(Pv)} kr. fra Skat-puljen i Saxo til Lønkonto+ senest ${kortDato(skV.saxo_frist)}.` : "")]); }
+    (D.jobstatus?.jobs || []).filter(j => j.status === "skylder").forEach(j => j.skylder.forEach(x => ud.push([skV ? null : "rd", `${j.navn} ${kortDato(j.dato)}: ${krKort(x.kr)} kr. i skat ${skV ? "venter" : "er ikke overført"}`])));
     if (r && rd <= 10) ud.push([rd < 4 ? "rd" : "y", `Betal B-skat-rate ${krKort(r.beloeb)} kr. senest ${kortDato(r.frist)}`]);
     for (const f of fsRet) ud.push([FS.rater_tilbage && n > 2000 ? "rd" : "y", `Ret felt ${f.felt} til ${krKort(f.skal)} kr. (nu ${krKort(f.nu)})`]);
     if (!fsRet.length && n < -5000) ud.push(["y", `Sæt forskuddet ned: du betaler ca. ${krKort(-n)} kr. for meget`]);
