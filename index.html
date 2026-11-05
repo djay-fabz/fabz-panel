@@ -4092,7 +4092,7 @@ function privatMed(anm) {   // vis ændringen med det samme (Oscar 29/10); hentP
     P.overfoersler = (P.overfoersler || []).filter(q => q.id !== anm.id);
     if (o?.pulje === "husbuffer" && P.husbuffer) hbSæt(P, Math.max(0, P.husbuffer.saldo - o.kr));
   }
-  else if (anm.pulje === "husbuffer") hbSæt(P, (P.husbuffer?.saldo || 0) + anm.beloeb);
+  else if (anm.pulje === "husbuffer") { hbSæt(P, (P.husbuffer?.saldo || 0) + anm.beloeb); }
   else { const x = anm.pulje === "opsparing" ? P.opsparing : anm.pulje === "buffer" ? P.buffer : anm.pulje === "husleje_d1" ? P.husleje_d1 : anm.pulje === "kontanter" ? P.kontanter : (P.puljer || []).find(q => q.navn === anm.pulje); if (x) x.saldo = (x.saldo || 0) + anm.beloeb;
     if (x && anm.pulje === "kontanter") x.poster = [{dato: anm.dato || iDag(), kr: anm.beloeb, tekst: anm.tekst || ""}, ...(x.poster || [])]; }
 }
@@ -4451,9 +4451,12 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   const lønMd = ym => { const ms = LV?.L.maaneder || []; return ms.find(q => q.ym === ym) || ms.at(-1) || LV?.L; };
   const basisMd = ym => LV ? LV.F.kr + (ym.startsWith(år0) ? lønMd(ym).netto : lønMd(ym).brutto) : 0;
   let bufS = HBl ? Math.max(0, HBl.saldo - HBl.maerke) : Math.max(0, ØK.P?.buffer?.saldo || 0), carry = RD?.saelg ? RD.saelg.start : -Math.max(0, sk.mangler_paa_kontoen || 0), fra = "";   // start i saldoen i dag (revision 3/11)
+  // puljen under mærket (Oscar 5/11): d. 1 flytter den til Faste omkostninger (d1_liste), så firmaet betaler tilsvarende mindre i løn. Over mærket tæller bufS.
+  // Bufferen er efter skat: i skatteåret 1:1 (basis er nettolønnen), derefter sparer hver krone 1 / efter_skat i løn med skat (revision 5/11)
+  const ekstraLøn = ym => { const e = HBl ? Math.max(0, Math.min(HBl.saldo, HBl.maerke)) : 0; return !e || ym.startsWith(år0) ? e : Math.round(e / (LV?.L.efter_skat || 1)); };
   const mdNavn6 = ym => MDL[Number(ym.slice(5, 7)) - 1].replace(/^./, c => c.toUpperCase());
   const sælg = LV?.basis && i0 >= 0 ? mo.maaneder.slice(i0, i0 + 6).map((x, k) => {   // denne måned: kun det, der kommer fra i morgen, mod resten af månedens faste + løn til d. 1
-    const nu = k === 0 && RD?.saelg, ind = nu ? (x.kasse ?? x.kr) - (x.kasse_kommet || 0) : x.kasse ?? x.kr, need = nu ? RD.saelg.faste_nu + basisMd(x.ym) - LV.F.kr : basisMd(x.ym), avail = ind + carry, m = Math.max(0, Math.round(need - avail)), brugt = Math.min(bufS, m), af = ind < need && m === 0 ? fra : "";
+    const nu = k === 0 && RD?.saelg, ind = nu ? (x.kasse ?? x.kr) - (x.kasse_kommet || 0) : x.kasse ?? x.kr, need = nu ? RD.saelg.faste_nu + basisMd(x.ym) - LV.F.kr - ekstraLøn(x.ym) : basisMd(x.ym), avail = ind + carry, m = Math.max(0, Math.round(need - avail)), brugt = Math.min(bufS, m), af = ind < need && m === 0 ? fra : "";
     bufS -= brugt;
     carry = Math.max(0, avail - need);
     if (ind > need) fra = MDL[Number(x.ym.slice(5, 7)) - 1];
