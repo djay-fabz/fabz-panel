@@ -4155,11 +4155,16 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   if (sk.reserve != null && sk.saldo == null) gør.push(trin("y", [h("b", {}, "Skriv saldoen på Skat-puljen i Saxo.")], knap("Hurtig guide →", mål("guide:saxo"), true)));
   else if (skatNu(sk)) { const x = skatNu(sk);   // kun skat af penge, der er kommet (Oscar 2/11)
     gør.push(trin("rd", [h("b", {}, `Overfør ${krKort(x)} kr. til Skat-puljen i Saxo.`)],
-      knap("✓ Jeg har overført", () => kør("pulje", ["flyt", "Skat", String(x)], {tekst: `Skat-puljen +${krKort(x)} kr.`, efter: ["mo"], med: () => puljeMed("Skat", x)})))); }
+      knap("✓ Overført", () => kør("pulje", ["flyt", "Skat", String(x)], {tekst: `Skat-puljen +${krKort(x)} kr.`, efter: ["mo"], med: () => puljeMed("Skat", x)})))); }
   // 2 dage før en faktura forfalder (Oscar 2/11): gul, så skatten er klar, når pengene kommer
-  (sk.snart || []).forEach(u => gør.push(trin("y", u.forfald < iDag()
+  // ✓ Overført på hvert banner (Oscar 5/11: pengene var kommet, men der var ikke noget at trykke på); kontoudtoget ser pengene: "har betalt"
+  (sk.snart || []).forEach(u => gør.push(trin("y", u.indbetalt
+    ? [h("b", {}, `${u.kunde} har betalt ${krKort(u.kr)} kr.`), ` Send ${krKort(u.skat)} kr. til Saxo (skat).`]
+    : u.forfald < iDag()
     ? [h("b", {}, `Fakturaen til ${u.kunde} forfaldt d. ${kortDato(u.forfald)}.`), ` Send ${krKort(u.skat)} kr. til Saxo (skat), når den betales.`]
-    : [h("b", {}, `Du modtager snart ${krKort(u.kr)} kr. fra ${u.kunde}.`), ` Send ${krKort(u.skat)} kr. til Saxo (skat), når de er betalt.`])));
+    : [h("b", {}, `Du modtager snart ${krKort(u.kr)} kr. fra ${u.kunde}.`), ` Send ${krKort(u.skat)} kr. til Saxo (skat), når de er betalt.`],
+    u.nr != null ? knap("✓ Overført", () => kør("skat-snart-overfoert", [`--nr=${u.nr}`, `--kr=${u.skat}`], {tekst: `Skat-puljen +${krKort(u.skat)} kr.`, efter: ["mo"],
+      med: () => { puljeMed("Skat", u.skat); sk.snart = sk.snart.filter(y => y !== u); (sk.snart_overfoert = sk.snart_overfoert || {})[u.nr] = {kr: u.skat}; }})) : null)));
   const P0 = ØK.P || {}, HB0 = P0.husbuffer;
   // "Sæt X ind på Husleje d. 1 + Buffer" er væk (Oscar 3/11): pengene kommer fra firmaet, og mangler der, står det i 3-måneders-oversigten
   // Overførsler i hånden (Oscar 2/11, skitse panel-overfoersler): én linje pr. overførsel med beløb, fra og til, reg.nr. og kontonr. på modtagerkontoen
@@ -4182,19 +4187,15 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   // listen til d. 1 (Oscar 3/11, skitse panel-d1-liste): fra 2 bankdage før, i den rækkefølge det skal gøres; Saxo-linjen hører til gruppe 1
   const d1R = o => ovR(o.id, o.gruppe === 1 ? `Overfør ${krKort(o.kr)} kr. fra ${o.fra} til ${tilN(o)}` : `Overfør ${krKort(o.kr)} kr. til ${tilN(o)}`, nrT(o),
     () => privatSend({kommando: "overfoert", id: o.id}, `Overført ${krKort(o.kr)} kr. til ${tilN(o)}`), false, o.tekst ? ` (${o.tekst})` : "");
-  const klubD1 = [];   // klubjobs' fordeling, der ikke er flyttet endnu (fyldes længere nede, hvor fordelingen regnes)
+  const klubD1 = [];   // klubjobs' fordeling, der ikke er flyttet endnu (fyldes længere nede, hvor fordelingen regnes): står i Overførsler med det samme, ikke på kortet til d. 1
   const lavD1 = () => {
-    // hele kortet først fra 2 bankdage før d. 1 (Oscar 3/11: "hvorfor ser jeg allerede det en hel måned før?"), også klubjobs. Ingen undtagelser
+    // de faste d. 1-overførsler først fra 2 bankdage før d. 1 (Oscar 3/11). Penge, der er kommet, venter ikke (Oscar 5/11)
     const tid = P0.d1 && iDag() >= (P0.d1.vis_fra || P0.d1.dato);
-    const g1 = d1L.filter(o => o.gruppe === 1), har = d1L.length || (tid && (saxoL.length || klubD1.length));
+    const g1 = d1L.filter(o => o.gruppe === 1), har = d1L.length || (tid && saxoL.length);
     if (!har) { ovL.unshift(...saxoL); return null; }
     return h("div", {class: "kort2 ov-k d1-k", style: "margin-top:12px"},
       h("div", {class: "d1-h"}, `Til ${kortDato(d1L[0]?.d1 || P0.d1.dato)}`),
       saxoL.length || g1.length ? [h("div", {class: "d1-g"}, "1. Fra firmaet"), saxoL, g1.map(d1R)] : null,
-      // alle klubjobs' dele går fra Lønkonto+ til Saxo: én overførsel med det samlede beløb og fordelingen under (Oscar 3/11). ✓ registrerer hele fordelingen
-      klubD1.length ? [h("div", {class: "d1-g"}, "Fra Lønkonto+ (klubjobs)"),
-        ovR("klub-saxo", `Overfør ${krKort(klubD1.reduce((s, o) => s + o.kr, 0))} kr. fra Lønkonto+ til Saxo`, nrT(P0.kontonr?.Saxo), () => klubD1.forEach(o => o.fn()), false,
-          [` (${[...new Set(klubD1.map(o => o.hvem))].join(", ")})`, h("div", {class: "muted lille"}, klubD1.map(o => `${krKort(o.kr)} kr. ${o.pulje === "Skat-puljen" ? "Skat-puljen" : o.pulje}`).join(" · "))])] : null,
       d1L.some(o => o.gruppe === 2) ? [h("div", {class: "d1-g"}, "2. Fra Faste omkostninger"), d1L.filter(o => o.gruppe === 2).map(d1R)] : null);
   };
   // job uden pris (Oscar 1/11, skitse panel-advarsel): én bjælke pr. job, der åbner jobbet, så beløbet kan skrives der
@@ -4581,7 +4582,9 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   const betFor = x => (D.betalinger || []).find(r => r.dato === x.dato && ord1(r.navn) === ord1(x.fra) && r.status !== "faerdig" && r.status !== "aflyst");
   const betLinjer = [], medLinje = new Set();   // klubD1 (listen til d. 1) er defineret før kortet
   // klubjobs (B-indkomst, ikke kontant), der er registreret og ikke fordelt: Skat → Husleje d. 1 + Buffer til målet → Opsparing
-  if (FD) (D.indtaegter || []).filter(x => x.type === "B-indkomst" && x.dato >= FD.fra).forEach(x => {
+  // også et ældre job, der først er kommet efter FD.fra (Oscar 5/11: Fox 17/10 godkendt 5/11). Fundet i kalenderen med åben betaling: ikke kommet endnu, ✓ Kommet står nedenfor
+  const kommetSent = x => (D.betalinger || []).some(r => r.indtaegt_id === x.id && (r.godkendt || "") >= FD.fra && !r.venter);   // venter (fx "Jan overfører i næste uge"): pengene er ikke på kontoen, ingen overførsel
+  if (FD) (D.indtaegter || []).filter(x => x.type === "B-indkomst" && (x.dato >= FD.fra || kommetSent(x)) && !(x.auto && betFor(x))).forEach(x => {
     const f = FD.fordelt[x.id] || {}, skat = f.skat ? f.skat.kr : skatDel(x.beloeb), rest = x.beloeb - skat;
     const plads = HB ? HB.maal - HB.saldo : (P.buffer?.maal || 0) - (P.buffer?.saldo || 0);
     const tilBuf = Math.max(0, Math.min(rest, plads + (f.buffer?.kr || 0))), tilOps = rest - tilBuf;
@@ -4591,7 +4594,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     const flyt = ([del, n, b]) => { const br = betFor(x); if (br && br.status !== "faerdig") godkend(br, br.dato >= iDag());   // kun én gang, også når flere dele trykkes samlet   // lukker også robottens opgave "Tjek at pengene er kommet"
       if (del === "skat") kør("pulje", ["flyt", "Skat", String(b)], {tekst: `Skat-puljen +${krKort(b)} kr.`, efter: ["mo"], med: () => puljeMed("Skat", b)});
       privatSend({kommando: "fordel", id: String(x.id), del, kr: b, job_kr: x.beloeb}, `${x.fra}: ${krKort(b)} kr. til ${n}`); };
-    // pengene står på Lønkonto+, til de flyttes: fordelingen kommer på listen til næste d. 1, med konto og reg.nr. (Oscar 3/11: Fox 30/10 kom efter 1/11-overførslerne)
+    // pengene står på Lønkonto+, til de flyttes: fordelingen står i Overførsler med det samme, med konto og reg.nr. (Oscar 5/11)
     if (P0.inbox && P0.d1) dele.filter(d => !f[d[0]]).forEach(d => klubD1.push({id: `klub-${x.id}-${d[0]}`, kr: d[2], pulje: d[1], hvem: `${x.fra} ${kortDato(x.dato)}`, fn: () => flyt(d)}));
     else betLinjer.push(betL("g", [h("b", {}, `${x.fra} har betalt ${krKort(x.beloeb)} kr.`), ` på Lønkonto+ (Danløn).`, ` Læg ${dele.map(([, n, b]) => `${krKort(b)} kr. i ${n}`).join(" og ")}.`],
       knap("✓ Overført", () => dele.filter(d => !f[d[0]]).forEach(flyt), true)));
@@ -4599,7 +4602,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   (D.betalinger || []).filter(r => r.maade !== "kontant" && r.status !== "aflyst" && !r.fordelt && r.beloeb).sort((a, b) => a.dato.localeCompare(b.dato)).forEach(r => {
     const b = r.beloeb, iDg = iDag();
     if (r.status !== "faerdig") {
-      const ind = indFor(r);
+      const ind0 = indFor(r), ind = ind0?.auto ? null : ind0;
       if (ind && !medLinje.has(ind.id)) betLinjer.push(betL("g", [h("b", {}, `${r.navn} har betalt ${krKort(ind.beloeb)} kr.`), " Det er fordelt."], knap("✓ Luk opgaven", () => godkend(r, r.dato >= iDg), true)));   // fordelt, men robottens opgave er åben
       if (r.maade !== "overfoersel" || ind) return;   // registreret klubjob står som grøn linje ovenfor   // Dinero: robottens opgave "Send faktura" klarer det, indtil fakturaen er sendt
       if (r.dato < iDg && r.venter) betLinjer.push(betL("y", [h("b", {}, `${r.navn} ${kortDato(r.dato)} venter: ${krKort(b)} kr.`), ` ${r.venter}`], knap("✓ Kommet", () => godkend(r))));   // aftalt senere (Oscar 3/11)
@@ -4609,6 +4612,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     }
     if (erB(r.navn) || (r.godkendt || r.dato) < (FD?.fra || "2026-10-30")) return;   // klubjobs står ovenfor (indtægter), gamle betalinger er gjort
     const ub = r.maade === "dinero" ? (mo.ubetalt?.liste || []).find(u => u.nr === r.faktura_nr) : null;
+    if (sk.snart_overfoert?.[r.faktura_nr]) return;   // skatten er sendt fra banneret, før fakturaen blev betalt
     if (r.maade === "dinero" && (!r.faktura_nr || ub)) {
       if (ub && ub.forfald < iDg) betLinjer.push(betL("rd", [h("b", {}, `${r.navn} mangler ${krKort(ub.kr)} kr.`), ` (faktura ${ub.nr}, forfald ${kortDato(ub.forfald)})`], null));
       return;
@@ -4636,6 +4640,10 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
           ØK.hov = "";
           kør("hov-plan", [`--ym=${HA.ym}`, `--mangler=${hovMangler}`, `--tekst=${tx}`], {tekst: "Plan sendt til Claude", efter: ["hov"],
             med: () => { (D.hov = D.hov || []).push({id: "…", ym: HA.ym, mangler: hovMangler, tekst: tx, tid: new Date().toISOString(), svar: null}); }}); }, true)]) : null;
+  // alle klubjobs' dele går fra Lønkonto+ til Saxo: én overførsel med det samlede beløb og fordelingen under (Oscar 3/11). ✓ registrerer hele fordelingen
+  if (klubD1.length) { const pr = {}; klubD1.forEach(o => { pr[o.pulje] = (pr[o.pulje] || 0) + o.kr; });
+    ovL.unshift(ovR("klub-saxo", `Overfør ${krKort(klubD1.reduce((s, o) => s + o.kr, 0))} kr. fra Lønkonto+ til Saxo`, nrT(P0.kontonr?.Saxo), () => klubD1.forEach(o => o.fn()), false,
+      [` (${[...new Set(klubD1.map(o => o.hvem))].join(", ")})`, h("div", {class: "muted lille"}, Object.entries(pr).map(([n, k]) => `${krKort(k)} kr. ${n}`).join(" · "))])); }
   const d1Kort = lavD1();
   const ovKort0 = ovL.length ? h("div", {class: "kort2 ov-k", style: "margin-top:12px"}, ovL) : null;
   const fsKort =
