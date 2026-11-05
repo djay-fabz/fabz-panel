@@ -401,6 +401,7 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .sg{margin-top:12px;padding:14px 18px}.sg-t{font-size:12px;color:var(--svag);font-weight:600}.sg-v{font-size:26px;font-weight:800;color:var(--fejl);line-height:1.2;letter-spacing:-.01em}.sg-v.ok{color:var(--ok)}.sg-u{font-size:13px;font-weight:600}
 .sg-mdr{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin:10px 0 6px}.sg-md{border-radius:8px;padding:6px 9px;background:var(--ok-blid)}.sg-md.rd{background:var(--fejl-blid)}.sg-md .n{font-size:12px;font-weight:600}.sg-md .s{font-size:12.5px;font-weight:700;color:var(--ok)}.sg-md.rd .s{color:var(--fejl)}.sg-md .f{font-size:11px;color:var(--svag)}
 details.sg-r{margin:0;border:0;border-top:1px solid var(--linje);border-radius:0;background:none}details.sg-r>summary{padding:8px 0;font-weight:400;font-size:13.5px;gap:4px}details.sg-r>summary::before{content:none}details.sg-r[open]>summary::before{content:none}details.sg-r>summary>b{margin-left:auto;white-space:nowrap}details.sg-r>summary>b::after{content:" ›";color:var(--svagere)}details.sg-r .rd-l{padding-left:0;padding-right:0}
+.bet-seddel{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px}
 .sg-linjer{margin-top:12px;background:var(--flade);border:1px solid var(--linje);border-radius:14px;overflow:hidden}details.sg-l{margin:0;border:0;border-radius:0}.sg-linjer>details.sg-l+details.sg-l{border-top:1px solid var(--linje)}details.sg-l>summary{font-weight:400}details.sg-l>summary::before{content:none}details.sg-l[open]>summary::before{content:none}details.sg-l>summary::after{content:"›";margin-left:auto;color:var(--svagere)}details.sg-l[open]>summary::after{content:"⌄"}
 .sg-ind{padding:4px 12px 12px}.sg-h{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 4px;font-weight:600}.sg-h .sg-prik{margin-top:1px}.sg-ht{flex:1;min-width:180px}
 .sg-under{margin-top:6px;border:1px solid var(--linje);border-radius:10px;overflow:hidden}.sg-under>details.sg-l{border:0;border-radius:0}.sg-under>details.sg-l+details.sg-l{border-top:1px solid var(--linje)}.sg-ek{color:var(--svagere)}.sg-prik{width:8px;height:8px;border-radius:50%;flex:none;background:var(--fejl)}.sg-prik.y{background:var(--adv)}
@@ -1049,8 +1050,8 @@ function visVagtSide(v) {   // vagtens side: dato, tider, sted, kilde, kollision
 // Opgaver og konklusioner på jobbet (Oscar 27/10: "hvilket karaokesystem var det?"). Færdige opgaver viser konklusionen, åbne deres frist.
 // Pakkeliste- og skilteopgaverne står i deres egne afsnit, så de vises kun her, mens de er åbne.
 function jobOpgaver(j, st) {
-  const alle = D.opgaver.filter(o => o.job_noegle === st.key && !(o.job_opgave === "betaling" && o.status !== "Færdig"));   // betaling-opgaven står i Betaling, mens den er åben
-  st = {...st, åbne: st.åbne.filter(o => o.job_opgave !== "betaling")};
+  const alle = D.opgaver.filter(o => o.job_noegle === st.key && !(["betaling", "honorar"].includes(o.job_opgave) && o.status !== "Færdig"));   // betaling-opgaven står i Betaling, mens den er åben
+  st = {...st, åbne: st.åbne.filter(o => !["betaling", "honorar"].includes(o.job_opgave))};
   const færdige = alle.filter(o => o.status === "Færdig" && !["pakkeliste", "festkort"].includes(opgaveSlags(o))).sort((a, b) => (b.faerdig_dato || "").localeCompare(a.faerdig_dato || ""));
   const åbn = o => { JOÅ = JOÅ === o.id ? null : o.id; tegn(); };   // folder opgaven ud på jobbet (Oscar 28/10), samme visning som på Opgaver
   const sendt = o => kør("sangene-sendt", [`--dato=${j.dato}`, `--job=${j.navn}`], {tekst: "Sangene sendt", efter: ["opgaver"],
@@ -1158,6 +1159,7 @@ function honorarDel(j, st, r) {
         honorarVent();
       }}, "Læg i Gmail")));
 }
+const SEDDEL = {};
 function betalingAfsnit(j, st) {
   const r = betalingTilJob(j) || {...betalingGaet(j), job_noegle: st.key};
   const afholdt = j.afholdt || j.dato < iDag();
@@ -1199,29 +1201,38 @@ function betalingAfsnit(j, st) {
     : r.maade === "kontant" ? "Registreres som kontant indtægt og lukker opgaven."
     : "Tjek kontoen, og tryk når pengene er kommet.";
   // omkostninger og fortjeneste (Oscar 3/11)
-  const gemte = Array.isArray(r.omk) ? r.omk.map(x => ({navn: x.navn, kr: x.indtastet ?? x.kr, moms: !!x.moms, betalt: !!x.betalt})) : null;
+  const gemte = Array.isArray(r.omk) ? r.omk.map(x => ({navn: x.navn, kr: x.indtastet ?? x.kr, moms: !!x.moms, betalt: !!x.betalt, ...(x.type ? {type: x.type} : {}), ...(x.seddel ? {seddel: x.seddel} : {}), ...(x.seddel_betalt ? {seddel_betalt: x.seddel_betalt} : {})})) : null;
   const kladde = OMK[st.key], liste = kladde || gemte || [];
   const ekskl = x => Math.round(Number(x.kr || 0)), omkSum = liste.reduce((s, x) => s + ekskl(x), 0);   // "+ moms": beløbet er ekskl. moms (Oscar 3/11)
   const forslag = !gemte && !kladde ? sidsteOmk(j) : null;
-  const gemOmk = l => { const ren = l.filter(x => (x.navn || "").trim() && Number(x.kr) > 0).map(x => ({navn: x.navn.trim(), kr: Number(x.kr), moms: !!x.moms, betalt: !!x.betalt}));
+  const gemOmk = l => { const ren = l.filter(x => (x.navn || "").trim() && Number(x.kr) > 0).map(x => ({navn: x.navn.trim(), kr: Number(x.kr), moms: !!x.moms, betalt: !!x.betalt, ...(x.type === "honorar" ? {type: "honorar", ...(x.seddel ? {seddel: x.seddel} : {}), ...(x.seddel_betalt ? {seddel_betalt: x.seddel_betalt} : {})} : {})}));
     kør("betaling-omk", [`--job=${j.navn}`, `--dato=${j.dato}`, `--omk=${JSON.stringify(ren)}`], {tekst: `Omkostninger ${j.navn}`, efter: ["betalinger", "mo"],
       med: () => { delete OMK[st.key]; const x = betalingTilJob(j) || (D.betalinger = [...(D.betalinger || []), {...r, gaet: false}]).at(-1);
         x.omk = ren.map(y => ({navn: y.navn, kr: Math.round(y.kr), moms: y.moms, indtastet: y.kr, betalt: y.betalt})); }}); };
   const ret = l => { OMK[st.key] = l; tegn(); };
+  // honorarseddel på omkostningen (Oscar 5/11, skitse panel-honorarseddel-a): type, status og upload. Filen ligger i Drive, panelet gemmer kun linket
+  const omkRet = (i, ænd) => { const l = (OMK[st.key] || liste).map((y, k) => k === i ? {...y, ...ænd} : {...y}); kladde ? ret(l) : gemOmk(l); };
+  const omkType = (x, i) => h("div", {class: "bet-seddel"},
+    seg([["omk", "Omkostning"], ["honorar", "Honorarseddel"]], x.type === "honorar" ? "honorar" : "omk", v => omkRet(i, v === "honorar" ? {type: "honorar", moms: false} : {type: undefined, seddel: undefined})),
+    x.type === "honorar" ? [h("span", {class: "pill " + (x.seddel_betalt ? "g" : x.seddel ? "y" : "rd")}, x.seddel_betalt ? "Betalt" : x.seddel ? "Uploadet" : "Mangler"), h("div", {class: "spacer"}),
+      x.seddel ? h("a", {class: "btn lille", href: x.seddel, target: "_blank", rel: "noopener"}, "Åbn") : h("button", {class: "btn lille primaer", type: "button", onclick: () => { SEDDEL[st.key + i] = true; window.open("https://drive.google.com/drive/my-drive", "_blank", "noopener"); tegn(); }}, "+ Upload"),
+      !x.seddel && SEDDEL[st.key + i] ? h("input", {class: "input", style: "max-width:220px", placeholder: "Link fra Drive", onchange: e => { const v = e.target.value.trim(); if (/^https:\/\/(drive|docs)\.google\.com\//.test(v)) { delete SEDDEL[st.key + i]; omkRet(i, {seddel: v}); } else e.target.style.borderColor = "#c0392b"; }}) : null,
+      x.seddel && !x.seddel_betalt ? h("button", {class: "btn lille", type: "button", onclick: () => omkRet(i, {seddel_betalt: iDag()})}, "✓ Betalt") : null] : null);
   const omkDel = h("div", {class: "bet-omk"},
     h("div", {class: "bet-rk"}, h("b", {class: "lille"}, "Omkostninger"), h("div", {class: "spacer"}),
       h("button", {class: "btn lille", type: "button", onclick: () => ret([...liste.map(x => ({...x})), {navn: "", kr: "", moms: false}])}, "+ Tilføj")),
     forslag ? h("div", {class: "bet-forslag"}, h("span", {}, `Sidst hos ${j.navn.split(" ")[0]} (${kortDato(forslag.dato)}): `,
         h("b", {}, forslag.liste.map(x => `${x.navn} ${krKort(Number(x.kr))} kr.${x.moms ? " + moms" : ""}`).join(", "))), h("div", {class: "spacer"}),
-      h("button", {class: "btn lille primaer", type: "button", onclick: () => gemOmk(forslag.liste)}, "Tilføj"),
+      h("button", {class: "btn lille primaer", type: "button", onclick: () => gemOmk(forslag.liste.map(({seddel, seddel_betalt, betalt, ...y}) => y))}, "Tilføj"),
       h("button", {class: "btn lille", type: "button", onclick: () => gemOmk([])}, "Fjern")) : null,
     liste.map((x, i) => h("div", {class: "bet-omk-r"},
       h("input", {class: "input bet-omk-n", value: x.navn, placeholder: "Fx anden DJ", maxlength: "60", oninput: e => { (OMK[st.key] = OMK[st.key] || liste.map(y => ({...y})))[i].navn = e.target.value; }}),
       h("input", {class: "input bet-in", type: "number", inputmode: "numeric", min: "1", value: x.kr, oninput: e => { (OMK[st.key] = OMK[st.key] || liste.map(y => ({...y})))[i].kr = e.target.value; }}),
-      h("label", {class: "bet-moms"}, h("input", {type: "checkbox", checked: x.moms, onchange: e => { const l = (OMK[st.key] || liste).map(y => ({...y})); l[i].moms = e.target.checked; ret(l); }}), "+ moms"),
+      x.type === "honorar" ? null : h("label", {class: "bet-moms"}, h("input", {type: "checkbox", checked: x.moms, onchange: e => { const l = (OMK[st.key] || liste).map(y => ({...y})); l[i].moms = e.target.checked; ret(l); }}), "+ moms"),
       x.moms && Number(x.kr) > 0 ? h("span", {class: "muted lille"}, `betales ${krKort(Math.round(Number(x.kr) * 1.25))}`) : null,
-      h("label", {class: "bet-moms"}, h("input", {type: "checkbox", checked: !!x.betalt, onchange: e => { const l = (OMK[st.key] || liste).map(y => ({...y})); l[i].betalt = e.target.checked; ret(l); }}), "betalt"),   // allerede betalt og bogført: trækkes ikke fra igen
-      h("button", {class: "btn ghost lille", type: "button", title: "Fjern", onclick: () => { const l = liste.filter((_, k) => k !== i); kladde ? ret(l) : gemOmk(l); }}, "✕"))),
+      x.type === "honorar" ? null : h("label", {class: "bet-moms"}, h("input", {type: "checkbox", checked: !!x.betalt, onchange: e => { const l = (OMK[st.key] || liste).map(y => ({...y})); l[i].betalt = e.target.checked; ret(l); }}), "betalt"),   // allerede betalt og bogført: trækkes ikke fra igen
+      h("button", {class: "btn ghost lille", type: "button", title: "Fjern", onclick: () => { const l = liste.filter((_, k) => k !== i); kladde ? ret(l) : gemOmk(l); }}, "✕"),
+      omkType(x, i))),
     kladde ? h("div", {class: "bet-rk", style: "margin-top:8px"}, h("div", {class: "spacer"}),
       h("button", {class: "btn lille", type: "button", onclick: () => { delete OMK[st.key]; tegn(); }}, "Fortryd"),
       h("button", {class: "btn lille primaer", type: "button", onclick: () => gemOmk(OMK[st.key])}, "Gem")) : null,
