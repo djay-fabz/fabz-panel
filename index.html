@@ -4265,6 +4265,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   const t = skatTjek(sk);
   const ub = mo.ubetalt || {antal: 0, kr: 0, forfaldne: 0, forfaldne_kr: 0, liste: []};
   const felt = (x, navn) => h("div", {class: "sk-k " + x.f}, h("b", {}, x.tal), h("span", {}, x.tekst), navn ? h("span", {class: "sk-navn"}, navn) : null);
+  const skV = sk.venter && sk.venter.tilstand !== "aendret" ? sk.venter : null;
   const gør = [];   // bjælkerne øverst (Oscar 28/10): hvad der er galt, med én handling hver, rødt først
   const trin = (f, tekst, ekstra) => h("div", {class: "bj skat-gør " + f}, h("span", {class: "bj-t skat-tekst"}, tekst), ekstra || null);
   const knap = (tx, fn, primær) => h("button", {class: "btn lille" + (primær ? " primaer" : ""), type: "button", onclick: fn}, tx);
@@ -4292,19 +4293,32 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     b.luk ? lukBj(b.id, b.tal, "✓ Ordnet") : b.knap && mål(b.mål) ? knap(b.knap, mål(b.mål), b.mål.startsWith("guide:")) : null)));
   if (mo.raad?.advarsel90) gør.push(trin("rd", [h("b", {}, "Du kan ikke betale dine regninger om 3 måneder"), " med de jobs, du har inde."], lukBj("dage90", mo.raad.advarsel90.tal, "Luk")));
   if (sk.reserve != null && sk.saldo == null) gør.push(trin("y", [h("b", {}, "Skriv saldoen på Skat-puljen i Saxo.")], knap("Hurtig guide →", mål("guide:saxo"), true)));
-  else if (skatNu(sk)) { const x = skatNu(sk);   // kun skat af penge, der er kommet (Oscar 2/11)
+  else if (skatNu(sk) && !skV?.betalt) { const x = skatNu(sk);   // kun skat af penge, der er kommet (Oscar 2/11)
     gør.push(trin("rd", [h("b", {}, `Overfør ${krKort(x)} kr. til Skat-puljen i Saxo.`)],
       knap("✓ Overført", () => kør("pulje", ["flyt", "Skat", String(x)], {tekst: `Skat-puljen +${krKort(x)} kr.`, efter: ["mo"], med: () => puljeMed("Skat", x)})))); }
+  // skatten venter på en kunde (Oscar 5/11, skitse panel-skat-venter): løn, frist og beløb står, ingen overførsel før kunden har betalt. Pengene går direkte til Skattekontoen: Saxo kan ikke nå det
+  if (sk.venter?.tilstand === "aendret") gør.push(trin("rd", [h("b", {}, `Jobbet hos ${sk.venter.kunde} er ændret.`), " Skatten venter ikke længere."], knap("✓ Set", () => kør("skat-venter", ["--slut"], {tekst: "Skatten venter ikke længere", efter: ["mo"], med: () => { sk.venter = null; }}))));
+  if (skV && skV.tilstand !== "afventer") { const T = skV.tilstand, X = skV.mangler, Xk = krKort(X), F = kortDato(skV.frist), nok = (mo.raad?.frit ?? 0) >= X;
+    const betalt = knap("✓ Betalt", () => kør("skat-venter", ["--betalt", `--kr=${X}`], {tekst: `Skat betalt: ${Xk} kr.`, efter: ["mo"], med: () => { skV.tilstand = "afventer"; }}));
+    if (T === "venter") gør.push(trin("y", [h("b", {}, `Skatten venter på ${skV.kunde}.`), ` ${Xk} kr. skal betales til Skat senest ${F}.` + (skV.forventet ? ` De betaler ca. ${kortDato(skV.forventet)}.` : "")]));
+    if (T === "forfalden") gør.push(trin("rd", [h("b", {}, `${skV.kunde} mangler ${krKort(skV.kr)} kr.`), ` (forfald ${kortDato(skV.forventet)}). ${Xk} kr. skal betales til Skat senest ${F}. Ring til dem nu.`], betalt));
+    if (T === "sidste") gør.push(trin("rd", nok ? [h("b", {}, `Betal ${Xk} kr. fra firmakontoen til Skattekontoen senest ${F},`), ` også selv om ${skV.kunde} ikke har betalt.`] : [h("b", {}, `${skV.kunde} mangler ${krKort(skV.kr)} kr.`), ` Firmakontoen kan ikke betale ${Xk} kr. til Skat senest ${F} uden dem. Ring til dem nu.`], betalt));
+    if (T === "efter") gør.push(trin("rd", [h("b", {}, `Restskatten er ikke betalt: ${Xk} kr.`), ` Fristen var ${F}.`], betalt));
+    if (T === "betalt") gør.push(trin("rd", [h("b", {}, `${skV.kunde} har betalt ${krKort(skV.kr)} kr.`), iDag() > skV.frist ? ` Fristen var ${F}. Betal ${Xk} kr. fra firmakontoen til Skattekontoen nu.` : ` Betal ${Xk} kr. fra firmakontoen til Skattekontoen senest ${F}.`], betalt));
+    const rd_ = mo.raad, lk = rd_?.loen_klub;
+    if (T === "venter" && rd_?.loen_dato && lk) { const kl_ = Math.round(lk.kr / 100) * 100;
+      gør.push(trin("g", [h("b", {}, `Løn d. ${kortDato(rd_.loen_dato)}: ca. ${krKort(rd_.loen_naeste + kl_)} kr.`), ` ${krKort(rd_.loen_naeste)} kr. fra firmakontoen${kl_ ? ` og ${krKort(kl_)} kr. fra klubjobs` : ""}.` + lk.forfaldne.map(q => ` + ${krKort(Math.round(q.kr / 100) * 100)} kr. fra ${q.navn}, når de betaler.`).join("")])); }
+  }
   // 2 dage før en faktura forfalder (Oscar 2/11): gul, så skatten er klar, når pengene kommer
   // ✓ Overført på hvert banner (Oscar 5/11: pengene var kommet, men der var ikke noget at trykke på); kontoudtoget ser pengene: "har betalt"
   // skat fra job, hvor pengene ER kommet, men beløbet ikke er overført (Oscar 5/11): rød, med job og beløb, ét tryk. Også når jobbet mangler andet, fx B-indkomst.dk (Ranum 19/6)
-  (D.jobstatus?.jobs || []).filter(j => (j.skylder || []).length && j.status !== "aflyst").forEach(j => { const q = (D.betalinger || []).find(y => y.job_noegle === j.job_noegle), s = (j.skylder || []).reduce((t, x) => t + x.kr, 0);
+  (skV ? [] : D.jobstatus?.jobs || []).filter(j => (j.skylder || []).length && j.status !== "aflyst").forEach(j => { const q = (D.betalinger || []).find(y => y.job_noegle === j.job_noegle), s = (j.skylder || []).reduce((t, x) => t + x.kr, 0);
     const sendt = tx => kør("betaling-fordelt", [`--job=${q?.navn}`, `--dato=${q?.dato}`, `--skat=${s}`, "--ret", ...(j.fordelt?.brugt ? [`--brugt=${j.fordelt.brugt}`] : [])], {tekst: typeof tx === "string" ? tx : `Skat-puljen +${krKort(s)} kr.`, efter: ["betalinger", "jobstatus", "mo"], med: () => { j.status = "faerdig"; j.skylder = []; puljeMed("Skat", s); }});
     if (q && s) gør.push(trin("rd", [h("b", {}, `${j.navn} ${kortDato(j.dato)}: overfør ${krKort(s)} kr. til Skat fra firmakontoen eller Lønkonto+.`), nrT(P0kontoSaxo()) ? h("div", {class: "ov-n"}, nrT(P0kontoSaxo())) : null],
       [fraBufferKnap(s, `skat:${j.job_noegle}`, sendt), knap("✓ Overført", () => sendt())])); });
   // penge ind: egen skat + det, kontoen kan bære, til job i farezonen (Oscar 5/11). Råd = saldo − moms og regninger 30 dage − løn næste d. 1
   let zRest = sk.forud?.mangler || 0, råd = (ob.linjer?.erhverv?.kr || 0) - (ob.linjer?.erhverv?.behov || 0) - ((ØK.P || {}).basis?.netto || 0);
-  (sk.snart || []).forEach(u => { const z = Math.max(0, Math.min(zRest, råd - u.skat)); zRest -= z; råd -= u.skat + z;
+  (skV ? [] : sk.snart || []).forEach(u => { const z = Math.max(0, Math.min(zRest, råd - u.skat)); zRest -= z; råd -= u.skat + z;
     gør.push(trin("g", [h("b", {}, `Du har fået ${krKort(u.kr)} kr. fra ${u.kunde}.`), ` Overfør ${krKort(u.skat + z)} kr. til Skat${z ? `: ${krKort(u.skat)} kr. for jobbet og ${krKort(z)} kr. til job, der kommer sent` : ""}.`, nrT(P0kontoSaxo()) ? h("div", {class: "ov-n"}, nrT(P0kontoSaxo())) : null],
     u.nr != null ? (() => { const sendt = tx => kør("skat-snart-overfoert", [`--nr=${u.nr}`, `--kr=${u.skat}`, ...(z ? [`--forud=${z}`] : [])], {tekst: typeof tx === "string" ? tx : `Skat-puljen +${krKort(u.skat + z)} kr.`, efter: ["mo", "jobstatus"],
       med: () => { puljeMed("Skat", u.skat + z); sk.snart = sk.snart.filter(y => y !== u); (sk.snart_overfoert = sk.snart_overfoert || {})[u.nr] = {kr: u.skat}; }}); return [fraBufferKnap(u.skat + z, `skat:faktura:${u.nr}`, sendt), knap("✓ Overført", () => sendt())]; })() : null)); });
@@ -4739,7 +4753,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     const f = FD.fordelt[x.id] || {}, skat = f.skat ? f.skat.kr : skatDel(x.beloeb), rest = x.beloeb - skat;
     const plads = HB ? HB.maal - HB.saldo : (P.buffer?.maal || 0) - (P.buffer?.saldo || 0);
     const tilBuf = Math.max(0, Math.min(rest, plads + (f.buffer?.kr || 0))), tilOps = rest - tilBuf;
-    const dele = [["skat", "Skat-puljen", skat], ["buffer", HB ? "Husleje d. 1 + Buffer" : "Buffer", tilBuf], ["opsparing", P.opsparing?.navn || "Opsparing", tilOps]].filter(d => d[2] > 0);
+    const dele = [["skat", "Skat-puljen", skat], ["buffer", HB ? "Husleje d. 1 + Buffer" : "Buffer", tilBuf], ["opsparing", P.opsparing?.navn || "Opsparing", tilOps]].filter(d => d[2] > 0 && !(skV && d[0] === "skat"));   // skatten venter: den del bliver på Lønkonto+
     if (!dele.length || dele.every(d => f[d[0]])) return;
     medLinje.add(x.id);
     const flyt = ([del, n, b]) => { const br = betFor(x); if (br && br.status !== "faerdig") godkend(br, br.dato >= iDag());   // kun én gang, også når flere dele trykkes samlet   // lukker også robottens opgave "Tjek at pengene er kommet"
@@ -4759,7 +4773,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
       // beskeden vises fra den forventede betalingsdag (jobstatus, Oscar 5/11: Fox torsdag før, ellers jobdato + 8)
       const fv = (D.jobstatus?.jobs || []).find(j => j.job_noegle === r.job_noegle)?.forventet;
       // hvor pengene skal hen, når de er kommet (Oscar 5/11): beløb og konto, ligesom overførselslinjen
-      const tilSaxo = () => { const s = Math.min(Math.round(b * andel), Math.max(0, skatRest)), nr = nrT(P0.kontonr?.Saxo); return [h("div", {}, `Overfør ${krKort(b)} kr. fra Lønkonto+ til Saxo: ${krKort(s)} kr. Skat-puljen · ${krKort(b - s)} kr. ${HB ? "Husleje d. 1 + Buffer" : "Buffer"}`), nr ? h("div", {class: "ov-n"}, nr) : null]; };
+      const tilSaxo = () => { const s = Math.min(Math.round(b * andel), Math.max(0, skatRest)), nr = nrT(P0.kontonr?.Saxo); return [h("div", {}, skV ? `Overfør ${krKort(b - s)} kr. fra Lønkonto+ til Saxo: ${HB ? "Husleje d. 1 + Buffer" : "Buffer"}` : `Overfør ${krKort(b)} kr. fra Lønkonto+ til Saxo: ${krKort(s)} kr. Skat-puljen · ${krKort(b - s)} kr. ${HB ? "Husleje d. 1 + Buffer" : "Buffer"}`), nr ? h("div", {class: "ov-n"}, nr) : null]; };
       if (fv) { if (iDg >= fv) betLinjer.push(betL(iDg > fv ? "rd" : "y", r.venter ? [h("b", {}, `${r.navn} ${kortDato(r.dato)} venter: ${krKort(b)} kr.`), ` ${r.venter}`] : [h("b", {}, iDg > fv ? `${r.navn} mangler ${krKort(b)} kr.` : `${r.navn} betaler for ${DAGE[dag(r.dato).getDay()]} ${kortDato(r.dato)}.`), iDg > fv ? ` (job ${kortDato(r.dato)})` : "", ...(iDg > fv ? [] : tilSaxo())], betaltKnap(r, iso => godkend(r, r.dato >= iDg, iso)))); return; }
       if (r.dato < iDg && r.venter) betLinjer.push(betL("y", [h("b", {}, `${r.navn} ${kortDato(r.dato)} venter: ${krKort(b)} kr.`), ` ${r.venter}`], betaltKnap(r, iso => godkend(r, false, iso))));   // aftalt senere (Oscar 3/11)
       else if (r.dato < iDg) betLinjer.push(betL("rd", [h("b", {}, `${r.navn} mangler ${krKort(b)} kr.`), ` (job ${kortDato(r.dato)})`], betaltKnap(r, iso => godkend(r, false, iso))));
@@ -4773,11 +4787,11 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     const ub = r.maade === "dinero" ? (mo.ubetalt?.liste || []).find(u => u.nr === r.faktura_nr) : null;
     if (sk.snart_overfoert?.[r.faktura_nr] || (sk.snart || []).some(u => u.nr === r.faktura_nr)) return;   // skatten er sendt fra banneret, eller banneret står der (ét sted)
     if (r.maade === "dinero" && (!r.faktura_nr || ub)) {
-      if (ub && ub.forfald < iDg && !ub.indbetalt) betLinjer.push(betL("rd", [h("b", {}, `${r.navn} mangler ${krKort(ub.kr)} kr.`), ` (faktura ${ub.nr}, forfald ${kortDato(ub.forfald)})`], null));
+      if (ub && ub.forfald < iDg && !ub.indbetalt && !(skV && r.job_noegle === skV.job)) betLinjer.push(betL("rd", [h("b", {}, `${r.navn} mangler ${krKort(ub.kr)} kr.`), ` (faktura ${ub.nr}, forfald ${kortDato(ub.forfald)})`], null));
       return;
     }
-    const s = skatDel(b), vist = r.maade === "dinero" ? Math.round(b * 1.25) : b;
-    betLinjer.push(betL("g", [h("b", {}, `Du har fået ${krKort(vist)} kr. fra ${r.navn}.`), s ? ` Overfør ${krKort(s)} kr. til Skat.` : " Skat-puljen er dækket, pengene bliver på firmakontoen.", s && nrT(P0.kontonr?.Saxo) ? h("div", {class: "ov-n"}, nrT(P0.kontonr?.Saxo)) : null],
+    const s = skV ? 0 : skatDel(b), vist = r.maade === "dinero" ? Math.round(b * 1.25) : b;
+    betLinjer.push(betL("g", [h("b", {}, `Du har fået ${krKort(vist)} kr. fra ${r.navn}.`), s ? ` Overfør ${krKort(s)} kr. til Skat.` : skV ? "" : " Skat-puljen er dækket, pengene bliver på firmakontoen.", s && nrT(P0.kontonr?.Saxo) ? h("div", {class: "ov-n"}, nrT(P0.kontonr?.Saxo)) : null],
       knap(s ? "✓ Overført" : "✓ Set", () => kør("betaling-fordelt", [`--job=${r.navn}`, `--dato=${r.dato}`, `--skat=${s}`], {tekst: `${r.navn}: ${s ? krKort(s) + " kr. til Skat-puljen" : "set"}`, efter: ["betalinger", "mo"],
         med: () => { r.fordelt = {dato: iDag(), skat: s}; if (s) puljeMed("Skat", s); }}), true)));
   });
