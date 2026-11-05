@@ -907,7 +907,7 @@ function tegnTop() {
   const aktiv = v => fane === v || (v === "pakkelister" && (fane === "kort" || fane === "rute"));
   const gå = v => { fane = v; MERE = false; if (v === "oekonomi") ØK.guide = null; if (v === "salg") SG.fremÅben = false; if (v === "pakkelister") { JH = null; S = null; } tegn(); window.scrollTo(0, 0); };
   const hoved = [["idag", "I dag"], ["opgaver", "Opgaver"], ["pakkelister", "Jobs"], ["foresp", "Forespørgsler"], ["salg", "Salg"], ["oekonomi", "Økonomi og Skat", "Økonomi"]];   // Salg i hovedbjælken (Oscar 25/10). Økonomi og Skat ud af Mere (Oscar 28/10: intet gemt væk)
-  const mere = [["tilbud", "Tilbud"], ["bogforing", "Bogføring"], ["lager", "Lager"], ["pakker", "Pakker"], ["ideer", "Idéer"]];   // Pakker: trin og regler til "Pak jobbet" (Oscar 27/10)   // Økonomi: penge ude, til dig, privat (Oscar 26/10: Salg skal kun være salg)
+  const mere = [["tilbud", "Tilbud"], ...(ugepakkeTom() && fane !== "bogforing" ? [] : [["bogforing", "Bogføring"]]), ["lager", "Lager"], ["pakker", "Pakker"], ["ideer", "Idéer"]];   // Pakker: trin og regler til "Pak jobbet" (Oscar 27/10)   // Økonomi: penge ude, til dig, privat (Oscar 26/10: Salg skal kun være salg)
   top.replaceChildren(
     h("span", {class: "brand"}, "Fabz"),
     h("nav", {class: "tabs"},
@@ -1329,8 +1329,9 @@ function betalingAfsnit(j, st) {
 // Robotten foreslår, Oscar godkender med ét ja. Den bogfører aldrig og sender aldrig: Godkend udfylder Dineros kladder og laver Gmail-udkast.
 const BF = {valgte: null, uge: null, åben: null, svar: {}};   // svar: {punkt-id: {konto, region}} til spørgsmål om nye leverandører
 const bfKr = (v, valuta) => v == null || v === "" ? "beløb ukendt" : Number(v).toLocaleString("da-DK", {minimumFractionDigits: 2, maximumFractionDigits: 2}) + (valuta && valuta !== "DKK" ? " " + valuta : " kr.");
+const ugepakkeTom = () => !(D.ugepakke && !Array.isArray(D.ugepakke) && D.ugepakke.punkter?.length);   // tom pakke: Bogføring står ikke i menuen (kodegennemgang 5/11)
 function visBogfoering() {
-  const pk = D.ugepakke && !Array.isArray(D.ugepakke) ? D.ugepakke : null;
+  const pk = ugepakkeTom() ? null : D.ugepakke;
   if (!pk) return $("rod").replaceChildren(h("div", {class: "side"}, h("h1", {}, "Ugens bogføring"), tom("Robotten laver ugens pakke tirsdag morgen. Der er ingen endnu.")));
   if (BF.uge !== pk.uge) { BF.uge = pk.uge; BF.valgte = new Set(pk.punkter.filter(p => p.valgt).map(p => p.id)); BF.sikre = new Set(pk.punkter.filter(p => p.sikker).map(p => p.id)); BF.åben = null; }
   for (const p of pk.punkter) if (p.sikker && !BF.sikre.has(p.id)) { BF.sikre.add(p.id); if (p.valgt) BF.valgte.add(p.id); }   // besvaret ny leverandør tæller straks med i Godkend
