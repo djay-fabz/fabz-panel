@@ -4241,9 +4241,12 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   (D.jobstatus?.jobs || []).filter(j => j.status === "skylder").forEach(j => { const q = (D.betalinger || []).find(y => y.job_noegle === j.job_noegle), s = (j.skylder || []).reduce((t, x) => t + x.kr, 0);
     if (q && s) gør.push(trin("rd", [h("b", {}, `${j.navn} ${kortDato(j.dato)}: overfør ${krKort(s)} kr. til Skat fra firmakontoen eller Lønkonto+.`), nrT(P0kontoSaxo()) ? h("div", {class: "ov-n"}, nrT(P0kontoSaxo())) : null],
       knap("✓ Overført", () => kør("betaling-fordelt", [`--job=${q.navn}`, `--dato=${q.dato}`, `--skat=${s}`, "--ret", ...(j.fordelt?.brugt ? [`--brugt=${j.fordelt.brugt}`] : [])], {tekst: `Skat-puljen +${krKort(s)} kr.`, efter: ["betalinger", "jobstatus", "mo"], med: () => { j.status = "faerdig"; j.skylder = []; puljeMed("Skat", s); }})))); });
-  (sk.snart || []).forEach(u => gør.push(trin("g", [h("b", {}, `Du har fået ${krKort(u.kr)} kr. fra ${u.kunde}.`), ` Overfør ${krKort(u.skat)} kr. til Skat.`, nrT(P0kontoSaxo()) ? h("div", {class: "ov-n"}, nrT(P0kontoSaxo())) : null],
-    u.nr != null ? knap("✓ Overført", () => kør("skat-snart-overfoert", [`--nr=${u.nr}`, `--kr=${u.skat}`], {tekst: `Skat-puljen +${krKort(u.skat)} kr.`, efter: ["mo"],
-      med: () => { puljeMed("Skat", u.skat); sk.snart = sk.snart.filter(y => y !== u); (sk.snart_overfoert = sk.snart_overfoert || {})[u.nr] = {kr: u.skat}; }})) : null)));
+  // penge ind: egen skat + det, kontoen kan bære, til job i farezonen (Oscar 5/11). Råd = saldo − moms og regninger 30 dage − løn næste d. 1
+  let zRest = sk.forud?.mangler || 0, råd = (ob.linjer?.erhverv?.kr || 0) - (ob.linjer?.erhverv?.behov || 0) - ((ØK.P || {}).basis?.netto || 0);
+  (sk.snart || []).forEach(u => { const z = Math.max(0, Math.min(zRest, råd - u.skat)); zRest -= z; råd -= u.skat + z;
+    gør.push(trin("g", [h("b", {}, `Du har fået ${krKort(u.kr)} kr. fra ${u.kunde}.`), ` Overfør ${krKort(u.skat + z)} kr. til Skat${z ? `: ${krKort(u.skat)} kr. for jobbet og ${krKort(z)} kr. til job, der kommer sent` : ""}.`, nrT(P0kontoSaxo()) ? h("div", {class: "ov-n"}, nrT(P0kontoSaxo())) : null],
+    u.nr != null ? knap("✓ Overført", () => kør("skat-snart-overfoert", [`--nr=${u.nr}`, `--kr=${u.skat}`, ...(z ? [`--forud=${z}`] : [])], {tekst: `Skat-puljen +${krKort(u.skat + z)} kr.`, efter: ["mo", "jobstatus"],
+      med: () => { puljeMed("Skat", u.skat + z); sk.snart = sk.snart.filter(y => y !== u); (sk.snart_overfoert = sk.snart_overfoert || {})[u.nr] = {kr: u.skat}; }})) : null)); });
   const P0 = ØK.P || {}, HB0 = P0.husbuffer;
   // "Sæt X ind på Husleje d. 1 + Buffer" er væk (Oscar 3/11): pengene kommer fra firmaet, og mangler der, står det i 3-måneders-oversigten
   // Overførsler i hånden (Oscar 2/11, skitse panel-overfoersler): én linje pr. overførsel med beløb, fra og til, reg.nr. og kontonr. på modtagerkontoen
