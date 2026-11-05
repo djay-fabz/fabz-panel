@@ -4453,10 +4453,13 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   let bufS = HBl ? Math.max(0, HBl.saldo - HBl.maerke) : Math.max(0, ØK.P?.buffer?.saldo || 0), carry = RD?.saelg ? RD.saelg.start : -Math.max(0, sk.mangler_paa_kontoen || 0), fra = "";   // start i saldoen i dag (revision 3/11)
   // puljen under mærket (Oscar 5/11): d. 1 flytter den til Faste omkostninger (d1_liste), så firmaet betaler tilsvarende mindre i løn. Over mærket tæller bufS.
   // Bufferen er efter skat: i skatteåret 1:1 (basis er nettolønnen), derefter sparer hver krone 1 / efter_skat i løn med skat (revision 5/11)
-  const ekstraLøn = ym => { const e = HBl ? Math.max(0, Math.min(HBl.saldo, HBl.maerke)) : 0; return !e || ym.startsWith(år0) ? e : Math.round(e / (LV?.L.efter_skat || 1)); };
+  // De følgende d. 1 kommer sidste måneds Buffer til Saxo tilbage som løn på samme måde (Oscar 5/11: "bruges til løn"): betalt som udgift den ene måned, dækning den næste
+  const iLøn = (ym, e) => !e || ym.startsWith(år0) ? e : Math.round(e / (LV?.L.efter_skat || 1));
+  const ekstraLøn = ym => iLøn(ym, HBl ? Math.max(0, Math.min(HBl.saldo, HBl.maerke)) : 0);
+  const fraBuffer = (ym, forrige) => iLøn(ym, HBl ? Math.min(lønMd(forrige)?.til_buffer || 0, HBl.maerke) : 0);
   const mdNavn6 = ym => MDL[Number(ym.slice(5, 7)) - 1].replace(/^./, c => c.toUpperCase());
   const sælg = LV?.basis && i0 >= 0 ? mo.maaneder.slice(i0, i0 + 6).map((x, k) => {   // denne måned: kun det, der kommer fra i morgen, mod resten af månedens faste + løn til d. 1
-    const nu = k === 0 && RD?.saelg, ind = nu ? (x.kasse ?? x.kr) - (x.kasse_kommet || 0) : x.kasse ?? x.kr, need = nu ? RD.saelg.faste_nu + basisMd(x.ym) - LV.F.kr - ekstraLøn(x.ym) : basisMd(x.ym), avail = ind + carry, m = Math.max(0, Math.round(need - avail)), brugt = Math.min(bufS, m), af = ind < need && m === 0 ? fra : "";
+    const nu = k === 0 && RD?.saelg, ind = nu ? (x.kasse ?? x.kr) - (x.kasse_kommet || 0) : x.kasse ?? x.kr, need = nu ? RD.saelg.faste_nu + basisMd(x.ym) - LV.F.kr - ekstraLøn(x.ym) : basisMd(x.ym) - (k > 0 ? fraBuffer(x.ym, mo.maaneder[i0 + k - 1].ym) : 0), avail = ind + carry, m = Math.max(0, Math.round(need - avail)), brugt = Math.min(bufS, m), af = ind < need && m === 0 ? fra : "";
     bufS -= brugt;
     carry = Math.max(0, avail - need);
     if (ind > need) fra = MDL[Number(x.ym.slice(5, 7)) - 1];
