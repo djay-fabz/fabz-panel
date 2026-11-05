@@ -1086,7 +1086,7 @@ function sidsteOmk(j) {
   const ord = kundeOrd(j.navn), ud = [];
   if (!ord) return null;
   for (const r of D.betalinger || []) if (Array.isArray(r.omk) && r.omk.length && r.dato < j.dato && kundeOrd(r.navn) === ord)
-    ud.push({dato: r.dato, liste: r.omk.map(x => ({navn: x.navn, kr: x.indtastet ?? x.kr, moms: !!x.moms}))});
+    ud.push({dato: r.dato, liste: r.omk.map(x => ({navn: x.navn, kr: x.indtastet ?? x.kr, moms: !!x.moms, ...(x.type === "firma" ? {type: "firma"} : {})}))});
   const medRk = new Set((D.betalinger || []).filter(r => Array.isArray(r.omk)).map(r => r.job_noegle));
   for (const x of moMaaneder().flatMap(m => m.jobs || [])) if (x.omk > 0 && x.dato < j.dato && kundeOrd(x.navn) === ord && !medRk.has(`${x.dato}|${x.navn.toLowerCase()}`))
     ud.push({dato: x.dato, liste: [{navn: x.omk_tekst || "Omkostninger", kr: x.omk, moms: false}]});
@@ -1205,15 +1205,15 @@ function betalingAfsnit(j, st) {
   const kladde = OMK[st.key], liste = kladde || gemte || [];
   const ekskl = x => Math.round(Number(x.kr || 0)), omkSum = liste.reduce((s, x) => s + ekskl(x), 0);   // "+ moms": beløbet er ekskl. moms (Oscar 3/11)
   const forslag = !gemte && !kladde ? sidsteOmk(j) : null;
-  const gemOmk = l => { const ren = l.filter(x => (x.navn || "").trim() && Number(x.kr) > 0).map(x => ({navn: x.navn.trim(), kr: Number(x.kr), moms: !!x.moms, betalt: !!x.betalt, ...(x.type === "honorar" ? {type: "honorar", ...(x.seddel ? {seddel: x.seddel} : {}), ...(x.seddel_betalt ? {seddel_betalt: x.seddel_betalt} : {})} : {})}));
+  const gemOmk = l => { const ren = l.filter(x => (x.navn || "").trim() && Number(x.kr) > 0).map(x => ({navn: x.navn.trim(), kr: Number(x.kr), moms: !!x.moms, betalt: !!x.betalt, ...(x.type === "firma" ? {type: "firma"} : {}), ...(x.type === "honorar" ? {type: "honorar", ...(x.seddel ? {seddel: x.seddel} : {}), ...(x.seddel_betalt ? {seddel_betalt: x.seddel_betalt} : {})} : {})}));
     kør("betaling-omk", [`--job=${j.navn}`, `--dato=${j.dato}`, `--omk=${JSON.stringify(ren)}`], {tekst: `Omkostninger ${j.navn}`, efter: ["betalinger", "mo"],
       med: () => { delete OMK[st.key]; const x = betalingTilJob(j) || (D.betalinger = [...(D.betalinger || []), {...r, gaet: false}]).at(-1);
-        x.omk = ren.map(y => ({navn: y.navn, kr: Math.round(y.kr), moms: y.moms, indtastet: y.kr, betalt: y.betalt})); }}); };
+        x.omk = ren.map(y => ({navn: y.navn, kr: Math.round(y.kr), moms: y.moms, indtastet: y.kr, betalt: y.betalt, ...(y.type ? {type: y.type} : {}), ...(y.seddel ? {seddel: y.seddel} : {}), ...(y.seddel_betalt ? {seddel_betalt: y.seddel_betalt} : {})})); }}); };
   const ret = l => { OMK[st.key] = l; tegn(); };
   // honorarseddel på omkostningen (Oscar 5/11, skitse panel-honorarseddel-a): type, status og upload. Filen ligger i Drive, panelet gemmer kun linket
   const omkRet = (i, ænd) => { const l = (OMK[st.key] || liste).map((y, k) => k === i ? {...y, ...ænd} : {...y}); kladde ? ret(l) : gemOmk(l); };
   const omkType = (x, i) => h("div", {class: "bet-seddel"},
-    seg([["omk", "Omkostning"], ["honorar", "Honorarseddel"]], x.type === "honorar" ? "honorar" : "omk", v => omkRet(i, v === "honorar" ? {type: "honorar", moms: false} : {type: undefined, seddel: undefined})),
+    seg([["omk", "Omkostning"], ["honorar", "Honorarseddel"], ["firma", "Firma"]], x.type || "omk", v => omkRet(i, v === "honorar" ? {type: "honorar", moms: false} : {type: v === "firma" ? "firma" : undefined, seddel: undefined, seddel_betalt: undefined})),
     x.type === "honorar" ? [h("span", {class: "pill " + (x.seddel_betalt ? "g" : x.seddel ? "y" : "rd")}, x.seddel_betalt ? "Betalt" : x.seddel ? "Uploadet" : "Mangler"), h("div", {class: "spacer"}),
       x.seddel ? h("a", {class: "btn lille", href: x.seddel, target: "_blank", rel: "noopener"}, "Åbn") : h("button", {class: "btn lille primaer", type: "button", onclick: () => { SEDDEL[st.key + i] = true; window.open("https://drive.google.com/drive/my-drive", "_blank", "noopener"); tegn(); }}, "+ Upload"),
       !x.seddel && SEDDEL[st.key + i] ? h("input", {class: "input", style: "max-width:220px", placeholder: "Link fra Drive", onchange: e => { const v = e.target.value.trim(); if (/^https:\/\/(drive|docs)\.google\.com\//.test(v)) { delete SEDDEL[st.key + i]; omkRet(i, {seddel: v}); } else e.target.style.borderColor = "#c0392b"; }}) : null,
