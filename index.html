@@ -4610,6 +4610,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   // også et ældre job, der først er kommet efter FD.fra (Oscar 5/11: Fox 17/10 godkendt 5/11). Fundet i kalenderen med åben betaling: ikke kommet endnu, ✓ Kommet står nedenfor
   const kommetSent = x => (D.betalinger || []).some(r => r.indtaegt_id === x.id && (r.godkendt || "") >= FD.fra && !r.venter);   // venter (fx "Jan overfører i næste uge"): pengene er ikke på kontoen, ingen overførsel
   if (FD) (D.indtaegter || []).filter(x => x.type === "B-indkomst" && (x.dato >= FD.fra || kommetSent(x)) && !(x.auto && betFor(x))).forEach(x => {
+    if (FD.fordelt[x.id]?.brugt) return;   // pengene er brugt, intet at flytte (Oscar 5/11: Fox 30/10)
     const f = FD.fordelt[x.id] || {}, skat = f.skat ? f.skat.kr : skatDel(x.beloeb), rest = x.beloeb - skat;
     const plads = HB ? HB.maal - HB.saldo : (P.buffer?.maal || 0) - (P.buffer?.saldo || 0);
     const tilBuf = Math.max(0, Math.min(rest, plads + (f.buffer?.kr || 0))), tilOps = rest - tilBuf;
