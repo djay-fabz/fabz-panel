@@ -663,7 +663,7 @@ const fil = (p, std = []) => sikker(p, async () => { const r = await laesFil(p);
 // Alle datafiler i ét GraphQL-kald (3/11): ca. 1 sek. mod 2-11 sek. for 31 REST-kald, og ingen fejl 500. Fejler kaldet, eller er en fil
 // for stor (isTruncated), hentes den med REST som før. Bruges kun ved indlæsning; skrivning går stadig gennem inbox/.
 let GQL = null;
-const DATAFILER = ["kalender", "udstyr", "pakkelister", "opgaver", "jobpakkelister", "henvendelser", "dagsplaner", "ideer", "indtaegter", "typer", "salg", "festkort",
+const DATAFILER = ["kalender", "udstyr", "pakkelister", "opgaver", "jobpakkelister", "henvendelser", "dagsplaner", "indtaegter", "typer", "salg", "festkort",
   "klubkort", "salgslog", "klubkort_tekster", "strategi", "jobrute", "jobtider", "salgjobs", "kortmaaling", "salgslaering", "setups", "maanedsoversigt", "priser",
   "leads", "betalinger", "honorarsedler", "jobstatus", "fejl", "hov", "ugepakke", "mailoversigt", "vagter"].map(x => `data/${x}.json`).concat(["tools/klubkort/kort.json"]);
 async function hentSamlet() {
@@ -690,13 +690,13 @@ async function hentData() {
   if (MANGLER.length) manglerBesked();
 }
 async function hentDataFiler() {
-  const [kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, ideer, indtaegter, typer, salg, festkort, klubkort, salgslog, kkTekster] = await Promise.all([
+  const [kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, indtaegter, typer, salg, festkort, klubkort, salgslog, kkTekster] = await Promise.all([
     sikker("data/kalender.json", () => laesJson("data/kalender.json"), {begivenheder: []}), sikker("data/udstyr.json", () => laesJson("data/udstyr.json"), []),
     sikker("data/pakkelister.json", () => laesJson("data/pakkelister.json"), []), sikker("data/opgaver.json", () => laesJson("data/opgaver.json"), []),
     sikker("data/jobpakkelister.json", laesJobpl, []),
-    ...["data/henvendelser.json", "data/dagsplaner.json", "data/ideer.json", "data/indtaegter.json", "data/typer.json", "data/salg.json", "data/festkort.json", "data/klubkort.json", "data/salgslog.json"].map(p => fil(p)),
+    ...["data/henvendelser.json", "data/dagsplaner.json", "data/indtaegter.json", "data/typer.json", "data/salg.json", "data/festkort.json", "data/klubkort.json", "data/salgslog.json"].map(p => fil(p)),
     sikker("data/klubkort_tekster.json", laesKkTekster, [])]);
-  D = {kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, ideer, indtaegter, typer, salg, festkort, klubkort, salgslog, kkTekster};
+  D = {kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, indtaegter, typer, salg, festkort, klubkort, salgslog, kkTekster};
   const [strategi, jobrute, jobtider, salgjobs, kortmaaling, salgslaering, setups, mo, priser, leads, betalinger, honorarsedler, jobstatus, fejl, hov, ugepakke, mailoversigt, vagter] = await Promise.all([
     fil("data/strategi.json", {}), fil("data/jobrute.json", {}), fil("data/jobtider.json"), fil("data/salgjobs.json"),   // hvilket firma i Salg et job kom fra (fabz.py salg-job)
     fil("data/kortmaaling.json"),   // scanninger og tilmeldinger pr. kort (tools/kortmaaling.mjs hver nat)
@@ -907,7 +907,7 @@ function tegnTop() {
   const aktiv = v => fane === v || (v === "pakkelister" && (fane === "kort" || fane === "rute"));
   const gå = v => { fane = v; MERE = false; if (v === "oekonomi") ØK.guide = null; if (v === "salg") SG.fremÅben = false; if (v === "pakkelister") { JH = null; S = null; } tegn(); window.scrollTo(0, 0); };
   const hoved = [["idag", "I dag"], ["opgaver", "Opgaver"], ["pakkelister", "Jobs"], ["foresp", "Forespørgsler"], ["salg", "Salg"], ["oekonomi", "Økonomi og Skat", "Økonomi"]];   // Salg i hovedbjælken (Oscar 25/10). Økonomi og Skat ud af Mere (Oscar 28/10: intet gemt væk)
-  const mere = [["tilbud", "Tilbud"], ...(ugepakkeTom() && fane !== "bogforing" ? [] : [["bogforing", "Bogføring"]]), ["lager", "Lager"], ["pakker", "Pakker"], ["ideer", "Idéer"]];   // Pakker: trin og regler til "Pak jobbet" (Oscar 27/10)   // Økonomi: penge ude, til dig, privat (Oscar 26/10: Salg skal kun være salg)
+  const mere = [["tilbud", "Tilbud"], ...(ugepakkeTom() && fane !== "bogforing" ? [] : [["bogforing", "Bogføring"]]), ["lager", "Lager"], ["pakker", "Pakker"]];   // Pakker: trin og regler til "Pak jobbet" (Oscar 27/10)   // Økonomi: penge ude, til dig, privat (Oscar 26/10: Salg skal kun være salg)
   top.replaceChildren(
     h("span", {class: "brand"}, "Fabz"),
     h("nav", {class: "tabs"},
@@ -925,7 +925,7 @@ document.addEventListener("click", () => { if (MERE) { MERE = false; tegnTop(); 
 function tegn() {
   document.body.classList.remove("bar-synlig");
   tegnTop();
-  const vis = {idag: visIDag, bogforing: visBogfoering, tilbud: visTilbud, opgaver: visOpgaver, foresp: visForesp, salg: visSalg, oekonomi: visSkat, pakker: visPakker, ideer: visIdeer, lager: visLager, kort: visKort, rute: visRute}[fane];
+  const vis = {idag: visIDag, bogforing: visBogfoering, tilbud: visTilbud, opgaver: visOpgaver, foresp: visForesp, salg: visSalg, oekonomi: visSkat, pakker: visPakker, lager: visLager, kort: visKort, rute: visRute}[fane];
   if (vis) vis();
   else if (S) visEditor();
   else visJobs();
@@ -1049,7 +1049,6 @@ function visJobSide(j) {   // alt til ét job samlet: pakkeliste, kort, kørsel,
     tider.length ? h("div", {class: "muted lille", style: "margin-top:6px"}, tider.join(" · ")) : null,
     j.afholdt ? null : h("button", {class: "btn lille", type: "button", style: "margin-top:10px", onclick: () => tbStart(tbFraJob(j))}, "Lav tilbud"),
     betalingAfsnit(j, st),
-    salgKoblBlok(j),
     jobOpgaver(j, st),
     spilletidBlok(j),
     afsnit("Pakkeliste", st.pak[0].toUpperCase() + st.pak.slice(1), st.klar, h("button", {class: "btn primaer lille", type: "button", onclick: () => åbnJob(j)}, "Åbn pakkeliste")),
@@ -2479,7 +2478,7 @@ async function gemLager() {
 
 // ---------- fælles: kør fabz.py-kommandoer fra panelet ----------
 const FILER = {jobstatus: "data/jobstatus.json", jobtider: "data/jobtider.json", kortmaaling: "data/kortmaaling.json", salgjobs: "data/salgjobs.json", salgslaering: "data/salgslaering.json", henvendelser: "data/henvendelser.json", opgaver: "data/opgaver.json", betalinger: "data/betalinger.json", honorarsedler: "data/honorarsedler.json", ugepakke: "data/ugepakke.json", dagsplaner: "data/dagsplaner.json",
-               ideer: "data/ideer.json", indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json", salgslog: "data/salgslog.json", mo: "data/maanedsoversigt.json", strategi: "data/strategi.json", leads: "data/leads.json", mailoversigt: "data/mailoversigt.json", vagter: "data/vagter.json", fejl: "data/fejl.json", hov: "data/hov.json"};
+               indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json", salgslog: "data/salgslog.json", mo: "data/maanedsoversigt.json", strategi: "data/strategi.json", leads: "data/leads.json", mailoversigt: "data/mailoversigt.json", vagter: "data/vagter.json", fejl: "data/fejl.json", hov: "data/hov.json"};
 async function laesValgfri(p) { const r = await laesFil(p); return r ? r.json() : []; }
 async function genindlæs(navne) { await Promise.all(navne.map(async n => { D[n] = n === "kkTekster" ? await laesKkTekster() : await laesValgfri(FILER[n]); })); }
 const plusDage = (iso, n) => { const d = dag(iso); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
@@ -3180,63 +3179,6 @@ function hentIcs(x) {
   const url = URL.createObjectURL(new Blob([linjer.join("\r\n") + "\r\n"], {type: "text/calendar"}));
   const a = h("a", {href: url, download: `DJ ${x.kunde || "job"} ${x.eventdato}.ics`});
   document.body.append(a); a.click(); a.remove();
-}
-
-// ---------- Idéer ----------
-const I_STATUS = ["Ny idé", "Klar til start", "I gang", "Parkeret", "Færdig", "Droppet"];
-const I_KAT = ["DJ Fabz", "Hjem", "Sundhed & sport", "Oplevelser", "Personligt", "Andet"];
-const IDE = {ny: {kategori: "DJ Fabz"}, åben: null, alle: false};
-function visIdeer() {
-  if (!I_KAT.includes(IDE.ny.kategori)) IDE.ny.kategori = "DJ Fabz";
-  const rows = (D.ideer || []).slice();
-  const orden = ["I gang", "Klar til start", "Ny idé", "Parkeret", "Færdig", "Droppet"];
-  const gem = () => {
-    const t = (IDE.ny.tekst || "").trim();
-    if (!t) return;
-    const titel = t.split("\n")[0].slice(0, 80).trim();
-    const j = {ide: titel, kategori: IDE.ny.kategori, sektioner: {"Dit råinput": t}};
-    kør("ide-ny", ["@json"], {json: j, tekst: `Idé '${titel}'`, efter: ["ideer"], med: () => {
-      D.ideer.push({id: "…", ide: titel, kategori: j.kategori, status: "Ny idé", sektioner: j.sektioner, oprettet: iDag()});
-      IDE.ny.tekst = "";
-    }});
-  };
-  const tf = h("textarea", {class: "input", rows: 3, placeholder: "Skriv idéen, som du ville sige den. Første linje bliver titlen.", value: IDE.ny.tekst || "",
-    oninput: e => { IDE.ny.tekst = e.target.value; }, onkeydown: e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) gem(); }});
-  const grupper = orden.filter(s => IDE.alle || !["Færdig", "Droppet"].includes(s)).map(s => [s, rows.filter(i => i.status === s)]).filter(([, l]) => l.length);
-  $("rod").replaceChildren(h("div", {class: "side"},
-    h("h1", {}, "Idéer"),
-    h("div", {class: "kort2", style: "margin-top:16px"},
-      tf,
-      h("div", {class: "rk", style: "margin-top:8px"}, sel(I_KAT, IDE.ny, "kategori"), h("div", {class: "spacer"}),
-        h("span", {class: "muted lille"}, "⌘ + Enter"), h("button", {class: "btn primaer", type: "button", onclick: gem}, "Gem idé"))),
-    grupper.map(([s, l]) => h("div", {class: "gruppe"}, h("div", {class: "overskrift"}, `${s} (${l.length})`),
-      h("div", {class: "kort"}, l.sort((a, b) => b.id - a.id || 0).map(ideRække)))),
-    h("button", {class: "btn ghost lille", type: "button", style: "margin-top:14px", onclick: () => { IDE.alle = !IDE.alle; tegn(); }},
-      IDE.alle ? "Skjul færdige og droppede" : "Vis færdige og droppede")));
-}
-function ideRække(i) {
-  const åben = IDE.åben === i.id;
-  const sætStatus = s => {
-    const args = [String(i.id), `status=${s}`];
-    if (s === "Parkeret") {
-      const d = prompt("Hvornår skal du se på den igen? (åååå-mm-dd)", plusDage(iDag(), 30));
-      if (d === null) return;
-      if (d.trim()) args.push(`se_igen=${d.trim()}`);
-    }
-    kør("ide-ret", args, {tekst: `Idé I${i.id}: ${s}`, efter: ["ideer"], med: () => { i.status = s; }});
-  };
-  return h("div", {class: "idé" + (åben ? " åben" : "")},
-    h("button", {type: "button", class: "r række", disabled: i.id === "…", onclick: () => { IDE.åben = åben ? null : i.id; tegn(); }},
-      h("div", {class: "n"}, h("div", {class: "titel"}, i.ide, i.id === "…" ? h("span", {class: "muted lille"}, "  gemmes …") : null),
-        h("div", {class: "meta"}, h("span", {}, i.kategori || ""), i.indsats ? h("span", {}, i.indsats.split(" (")[0]) : null,
-          i.mangler_svar ? h("span", {class: "gul-t"}, "mangler svar") : null,
-          i.status === "Parkeret" && i.se_igen ? h("span", {class: i.se_igen <= iDag() ? "rød" : ""}, "se igen " + kortDato(i.se_igen)) : null))),
-    åben ? h("div", {class: "idé-krop"},
-      i.kort ? h("p", {}, i.kort) : null,
-      ...[["hvorfor", "Hvorfor"], ["hvornaar", "Hvornår"], ["naeste", "Næste skridt"]].map(([k, n]) => i[k] ? h("div", {class: "info"}, h("div", {class: "etiket"}, n), h("div", {class: "pre"}, i[k])) : null),
-      ...Object.entries(i.sektioner || {}).map(([n, t]) => h("div", {class: "info"}, h("div", {class: "etiket"}, n), h("div", {class: "pre"}, t))),
-      h("div", {class: "etiket", style: "margin-top:10px"}, "Status"),
-      seg(I_STATUS, i.status, s => { if (s !== i.status) sætStatus(s); })) : null);
 }
 
 // ---------- Tilbud (Oscar 27/10) ----------
@@ -5378,36 +5320,7 @@ function opkaldBlok(s, k) {
     h("input", {class: "input", style: "margin-top:8px", value: o.note, placeholder: "Note (valgfri)", oninput: e => { o.note = e.target.value; }}),
     h("button", {class: "btn primaer opk-gem", type: "button", onclick: gem}, "Gem opkald"));
 }
-// Kom fra (Salg) (Oscar 31/10): kobler bookingen til firmaet, så lukkeraten og kr. pr. opkald kan regnes. Forslaget kommer fra kundenavnet.
-const salgJob = j => (D.salgjobs || []).find(r => r.job_noegle === jobNøgle(j)) || null;
-function salgForslag(j) {
-  const jn = nøgle(j.navn);
-  return (D.salg || []).find(s => { const sn = nøgle(s.navn).split(",")[0].trim(); const f = sn.split(/\s+/)[0];
-    return sn.length >= 3 && (jn.includes(sn) || (f.length >= 4 && new RegExp(`\\b${f.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`).test(jn))); }) || null;
-}
 const førsteOpkald = n => (D.salgslog || []).filter(x => x.opkald && x.navn === n).map(x => x.dato).sort()[0] || null;
-function salgKoblBlok(j) {
-  const r = salgJob(j), fs = r ? null : salgForslag(j);
-  if (!r && !fs && !SG.koblÅben) return h("button", {class: "btn ghost lille", type: "button", style: "margin-top:10px", onclick: () => { SG.koblÅben = true; tegn(); }}, "Kom fra Salg?");
-  const vaerdi = r ? r.salg : fs ? fs.navn : "";
-  const tekst = s => { const fo = førsteOpkald(s.navn); return s.navn + (fo ? ` (opkald ${kortDato(fo)})` : ""); };
-  const navne = (D.salg || []).filter(s => s.navn !== vaerdi).sort((a, b) => a.navn.localeCompare(b.navn, "da"));
-  const valgt = (D.salg || []).find(s => s.navn === vaerdi);
-  return h("div", {class: "gruppe", style: "margin-top:12px"},
-    h("div", {style: "display:flex;align-items:center;gap:8px"}, h("div", {class: "overskrift", style: "margin:0"}, "Kom fra (Salg)"),
-      !r && fs ? h("span", {class: "pill gul"}, "Forslag") : null),
-    h("select", {class: "input salg-kobl", style: "margin-top:8px", onchange: e => {
-      const fra = e.target.value;
-      kør("salg-job", [`--job=${j.navn}`, `--dato=${j.dato}`, `--fra=${fra}`], {tekst: `${j.navn}: kom fra ${fra || "ingen"}`, efter: ["salgjobs"],
-        med: () => { D.salgjobs = [...(D.salgjobs || []).filter(x => x.job_noegle !== jobNøgle(j)), {job_noegle: jobNøgle(j), dato: j.dato, job: j.navn, salg: fra}]; SG.koblÅben = false; }});
-    }},
-      !r && fs ? h("option", {value: "", selected: true, disabled: true}, "Vælg …") : null,
-      valgt ? h("option", {value: valgt.navn, selected: !!r && !!r.salg}, tekst(valgt)) : null,
-      h("option", {value: "", selected: !!r && !r.salg}, "Ingen (kom selv)"),
-      navne.map(s => h("option", {value: s.navn}, tekst(s)))),
-    !r && fs ? h("button", {class: "btn lille", type: "button", style: "margin-top:8px", onclick: () => kør("salg-job", [`--job=${j.navn}`, `--dato=${j.dato}`, `--fra=${fs.navn}`],
-      {tekst: `${j.navn}: kom fra ${fs.navn}`, efter: ["salgjobs"], med: () => { D.salgjobs = [...(D.salgjobs || []), {job_noegle: jobNøgle(j), dato: j.dato, job: j.navn, salg: fs.navn}]; }})}, `Ja, ${fs.navn}`) : null);
-}
 // Lukkerate (Oscar 31/10): bookinger fra firmaer, der er ringet til, pr. opkald og pr. samtale med den rigtige, kr. pr. opkald og fordelt på måneden for første opkald
 function lukkeTal(alle) {
   const job = r => jobs(true).find(x => jobNøgle(x) === r.job_noegle);
