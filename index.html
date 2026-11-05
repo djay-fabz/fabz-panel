@@ -825,7 +825,7 @@ function opfrisk() {
 function jobs(fortid = false) {   // fortid: også passerede jobs (link fra påmindelsen dagen efter festen)
   const idag = fortid ? "0000" : iDag();
   return (D.kalender?.begivenheder || []).filter(e => e.kalender === "bookinger").map(e => {
-    const m = /^\s*DJ\s*:\s*(.+)/i.exec(e.titel || "");
+    const m = /^\s*(?:DJ|Bryllup|Privat|Erhverv)\s*:\s*(.+)/i.exec(e.titel || "");   // samme regel som BOOKING_TITEL i fabz_kerne.py
     return m ? {navn: m[1].trim(), dato: e.start.slice(0, 10), sted: e.sted || "", besk: e.beskrivelse || ""} : null;
   }).filter(j => j && j.dato >= idag).sort((a, b) => a.dato.localeCompare(b.dato) || a.navn.localeCompare(b.navn));
 }
