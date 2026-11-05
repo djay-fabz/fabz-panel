@@ -1247,7 +1247,7 @@ function betalingAfsnit(j, st) {
   const inp = h("input", {class: "input bet-in", type: "number", inputmode: "numeric", min: "1", value: b ?? "", disabled: laast,
     onchange: e => { if (Number(e.target.value) > 0) saet(r.maade, e.target.value); }});
   return h("div", {class: "gruppe", style: "margin-top:12px"},
-    h("div", {style: "display:flex;align-items:center;gap:8px;flex-wrap:wrap"}, h("div", {class: "overskrift", style: "margin:0"}, "Betaling"), h("span", {class: "pill " + pill[0]}, pill[1])),
+    h("div", {style: "display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px"}, h("div", {class: "overskrift", style: "margin:0"}, "Betaling"), h("span", {class: "pill " + pill[0]}, pill[1])),
     h("div", {class: "kort bet"},
       h("div", {class: "bet-rk"},
         laast ? h("span", {class: "pill"}, betMaadeTekst(r.maade)) : seg(maader, r.maade, v => saet(v, r.beloeb)),
