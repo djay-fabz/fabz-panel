@@ -4180,11 +4180,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
       knap("✓ Overført", () => kør("pulje", ["flyt", "Skat", String(x)], {tekst: `Skat-puljen +${krKort(x)} kr.`, efter: ["mo"], med: () => puljeMed("Skat", x)})))); }
   // 2 dage før en faktura forfalder (Oscar 2/11): gul, så skatten er klar, når pengene kommer
   // ✓ Overført på hvert banner (Oscar 5/11: pengene var kommet, men der var ikke noget at trykke på); kontoudtoget ser pengene: "har betalt"
-  (sk.snart || []).forEach(u => gør.push(trin("y", u.indbetalt
-    ? [h("b", {}, `${u.kunde} har betalt ${krKort(u.kr)} kr.`), ` Send ${krKort(u.skat)} kr. til Saxo (skat).`]
-    : u.forfald < iDag()
-    ? [h("b", {}, `Fakturaen til ${u.kunde} forfaldt d. ${kortDato(u.forfald)}.`), ` Send ${krKort(u.skat)} kr. til Saxo (skat), når den betales.`]
-    : [h("b", {}, `Du modtager snart ${krKort(u.kr)} kr. fra ${u.kunde}.`), ` Send ${krKort(u.skat)} kr. til Saxo (skat), når de er betalt.`],
+  (sk.snart || []).forEach(u => gør.push(trin("y", [h("b", {}, `Du har modtaget betaling for ${u.kunde}.`), ` Overfør ${krKort(u.skat)} kr. til Skat i Saxo.`],
     u.nr != null ? knap("✓ Overført", () => kør("skat-snart-overfoert", [`--nr=${u.nr}`, `--kr=${u.skat}`], {tekst: `Skat-puljen +${krKort(u.skat)} kr.`, efter: ["mo"],
       med: () => { puljeMed("Skat", u.skat); sk.snart = sk.snart.filter(y => y !== u); (sk.snart_overfoert = sk.snart_overfoert || {})[u.nr] = {kr: u.skat}; }})) : null)));
   const P0 = ØK.P || {}, HB0 = P0.husbuffer;
@@ -4459,7 +4455,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   const fraBuffer = (ym, forrige) => iLøn(ym, HBl ? Math.min(lønMd(forrige)?.til_buffer || 0, HBl.maerke) : 0);
   const mdNavn6 = ym => MDL[Number(ym.slice(5, 7)) - 1].replace(/^./, c => c.toUpperCase());
   const sælg = LV?.basis && i0 >= 0 ? mo.maaneder.slice(i0, i0 + 6).map((x, k) => {   // denne måned: kun det, der kommer fra i morgen, mod resten af månedens faste + løn til d. 1
-    const nu = k === 0 && RD?.saelg, ind = nu ? (x.kasse ?? x.kr) - (x.kasse_kommet || 0) : x.kasse ?? x.kr, need = nu ? RD.saelg.faste_nu + basisMd(x.ym) - LV.F.kr - ekstraLøn(x.ym) : basisMd(x.ym) - (k > 0 ? fraBuffer(x.ym, mo.maaneder[i0 + k - 1].ym) : 0), avail = ind + carry, m = Math.max(0, Math.round(need - avail)), brugt = Math.min(bufS, m), af = ind < need && m === 0 ? fra : "";
+    const nu = k === 0 && RD?.saelg, ind = nu ? (x.tjent ?? x.kasse ?? x.kr) - (x.kasse_kommet || 0) : x.tjent ?? x.kasse ?? x.kr, need = nu ? RD.saelg.faste_nu + basisMd(x.ym) - LV.F.kr - ekstraLøn(x.ym) : basisMd(x.ym) - (k > 0 ? fraBuffer(x.ym, mo.maaneder[i0 + k - 1].ym) : 0), avail = ind + carry, m = Math.max(0, Math.round(need - avail)), brugt = Math.min(bufS, m), af = ind < need && m === 0 ? fra : "";
     bufS -= brugt;
     carry = Math.max(0, avail - need);
     if (ind > need) fra = MDL[Number(x.ym.slice(5, 7)) - 1];
@@ -4623,7 +4619,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     if (!dele.length || dele.every(d => f[d[0]])) return;
     medLinje.add(x.id);
     const flyt = ([del, n, b]) => { const br = betFor(x); if (br && br.status !== "faerdig") godkend(br, br.dato >= iDag());   // kun én gang, også når flere dele trykkes samlet   // lukker også robottens opgave "Tjek at pengene er kommet"
-      if (del === "skat") kør("pulje", ["flyt", "Skat", String(b)], {tekst: `Skat-puljen +${krKort(b)} kr.`, efter: ["mo"], med: () => puljeMed("Skat", b)});
+      if (del === "skat") kør("pulje", ["flyt", "Skat", String(b), `--art=B-indkomst`, `--job=${(D.betalinger || []).find(q => q.indtaegt_id === x.id)?.job_noegle || `${x.dato}|${x.fra.toLowerCase()}`}`], {tekst: `Skat-puljen +${krKort(b)} kr.`, efter: ["mo"], med: () => puljeMed("Skat", b)});
       privatSend({kommando: "fordel", id: String(x.id), del, kr: b, job_kr: x.beloeb}, `${x.fra}: ${krKort(b)} kr. til ${n}`); };
     // pengene står på Lønkonto+, til de flyttes: fordelingen står i Overførsler med det samme, med konto og reg.nr. (Oscar 5/11)
     if (P0.inbox && P0.d1) dele.filter(d => !f[d[0]]).forEach(d => klubD1.push({id: `klub-${x.id}-${d[0]}`, kr: d[2], pulje: d[1], hvem: `${x.fra} ${kortDato(x.dato)}`, bet: x.id, r: (D.betalinger || []).find(q => q.indtaegt_id === x.id) || betFor(x), fn: () => flyt(d)}));
@@ -4636,6 +4632,9 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
       const ind0 = indFor(r), ind = ind0?.auto ? null : ind0;
       if (ind && !medLinje.has(ind.id)) betLinjer.push(betL("g", [h("b", {}, `${r.navn} har betalt ${krKort(ind.beloeb)} kr.`), " Det er fordelt."], knap("✓ Luk opgaven", () => godkend(r, r.dato >= iDg), true)));   // fordelt, men robottens opgave er åben
       if (r.maade !== "overfoersel" || ind) return;   // registreret klubjob står som grøn linje ovenfor   // Dinero: robottens opgave "Send faktura" klarer det, indtil fakturaen er sendt
+      // beskeden vises fra den forventede betalingsdag (jobstatus, Oscar 5/11: Fox torsdag før, ellers jobdato + 8)
+      const fv = (D.jobstatus?.jobs || []).find(j => j.job_noegle === r.job_noegle)?.forventet;
+      if (fv) { if (iDg >= fv) betLinjer.push(betL(iDg > fv ? "rd" : "y", r.venter ? [h("b", {}, `${r.navn} ${kortDato(r.dato)} venter: ${krKort(b)} kr.`), ` ${r.venter}`] : [h("b", {}, iDg > fv ? `${r.navn} mangler ${krKort(b)} kr.` : `${r.navn} betaler for ${DAGE[dag(r.dato).getDay()]} ${kortDato(r.dato)}.`), iDg > fv ? ` (job ${kortDato(r.dato)})` : ""], betaltKnap(r, iso => godkend(r, r.dato >= iDg, iso)))); return; }
       if (r.dato < iDg && r.venter) betLinjer.push(betL("y", [h("b", {}, `${r.navn} ${kortDato(r.dato)} venter: ${krKort(b)} kr.`), ` ${r.venter}`], betaltKnap(r, iso => godkend(r, false, iso))));   // aftalt senere (Oscar 3/11)
       else if (r.dato < iDg) betLinjer.push(betL("rd", [h("b", {}, `${r.navn} mangler ${krKort(b)} kr.`), ` (job ${kortDato(r.dato)})`], betaltKnap(r, iso => godkend(r, false, iso))));
       else if (førJob(r.navn) && iDg >= torsdagFør(r.dato)) betLinjer.push(betL("y", [h("b", {}, `${r.navn} betaler for ${DAGE[dag(r.dato).getDay()]} ${kortDato(r.dato)}.`)], betaltKnap(r, iso => godkend(r, true, iso))));
@@ -4646,13 +4645,13 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
       betLinjer.push(betL("y", [h("b", {}, `${r.navn} ${kortDato(r.dato)}: hvornår blev de ${krKort(b)} kr. betalt?`)], betaltKnap(r, iso => godkend(r, false, iso)))); return; }
     if (erB(r.navn) || (r.godkendt || r.dato) < (FD?.fra || "2026-10-30")) return;   // klubjobs står ovenfor (indtægter), gamle betalinger er gjort
     const ub = r.maade === "dinero" ? (mo.ubetalt?.liste || []).find(u => u.nr === r.faktura_nr) : null;
-    if (sk.snart_overfoert?.[r.faktura_nr]) return;   // skatten er sendt fra banneret, før fakturaen blev betalt
+    if (sk.snart_overfoert?.[r.faktura_nr] || (sk.snart || []).some(u => u.nr === r.faktura_nr)) return;   // skatten er sendt fra banneret, eller banneret står der (ét sted)
     if (r.maade === "dinero" && (!r.faktura_nr || ub)) {
       if (ub && ub.forfald < iDg && !ub.indbetalt) betLinjer.push(betL("rd", [h("b", {}, `${r.navn} mangler ${krKort(ub.kr)} kr.`), ` (faktura ${ub.nr}, forfald ${kortDato(ub.forfald)})`], null));
       return;
     }
     const s = skatDel(b), vist = r.maade === "dinero" ? Math.round(b * 1.25) : b;
-    betLinjer.push(betL("g", [h("b", {}, `${r.navn} har betalt ${krKort(vist)} kr.`), s ? ` Overfør ${krKort(s)} kr. til Skat-puljen, resten bliver på firmakontoen.` : " Skat-puljen er dækket, pengene bliver på firmakontoen."],
+    betLinjer.push(betL("g", [h("b", {}, `Du har modtaget betaling for ${r.navn}.`), s ? ` Overfør ${krKort(s)} kr. til Skat i Saxo.` : " Skat-puljen er dækket, pengene bliver på firmakontoen."],
       knap(s ? "✓ Overført" : "✓ Set", () => kør("betaling-fordelt", [`--job=${r.navn}`, `--dato=${r.dato}`, `--skat=${s}`], {tekst: `${r.navn}: ${s ? krKort(s) + " kr. til Skat-puljen" : "set"}`, efter: ["betalinger", "mo"],
         med: () => { r.fordelt = {dato: iDag(), skat: s}; if (s) puljeMed("Skat", s); }}), true)));
   });
