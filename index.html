@@ -637,7 +637,7 @@ const fil = (p, std = []) => sikker(p, async () => { const r = await laesFil(p);
 let GQL = null;
 const DATAFILER = ["kalender", "udstyr", "pakkelister", "opgaver", "jobpakkelister", "henvendelser", "dagsplaner", "ideer", "indtaegter", "typer", "salg", "festkort",
   "klubkort", "salgslog", "klubkort_tekster", "strategi", "jobrute", "jobtider", "salgjobs", "kortmaaling", "salgslaering", "setups", "maanedsoversigt", "priser",
-  "leads", "betalinger", "fejl", "hov", "ugepakke", "mailoversigt", "vagter"].map(x => `data/${x}.json`).concat(["tools/klubkort/kort.json"]);
+  "leads", "betalinger", "jobstatus", "fejl", "hov", "ugepakke", "mailoversigt", "vagter"].map(x => `data/${x}.json`).concat(["tools/klubkort/kort.json"]);
 async function hentSamlet() {
   const t0 = performance.now();
   try {
@@ -669,7 +669,7 @@ async function hentDataFiler() {
     ...["data/henvendelser.json", "data/dagsplaner.json", "data/ideer.json", "data/indtaegter.json", "data/typer.json", "data/salg.json", "data/festkort.json", "data/klubkort.json", "data/salgslog.json"].map(p => fil(p)),
     sikker("data/klubkort_tekster.json", laesKkTekster, [])]);
   D = {kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, ideer, indtaegter, typer, salg, festkort, klubkort, salgslog, kkTekster};
-  const [strategi, jobrute, jobtider, salgjobs, kortmaaling, salgslaering, setups, mo, priser, leads, betalinger, fejl, hov, ugepakke, mailoversigt, vagter] = await Promise.all([
+  const [strategi, jobrute, jobtider, salgjobs, kortmaaling, salgslaering, setups, mo, priser, leads, betalinger, jobstatus, fejl, hov, ugepakke, mailoversigt, vagter] = await Promise.all([
     fil("data/strategi.json", {}), fil("data/jobrute.json", {}), fil("data/jobtider.json"), fil("data/salgjobs.json"),   // hvilket firma i Salg et job kom fra (fabz.py salg-job)
     fil("data/kortmaaling.json"),   // scanninger og tilmeldinger pr. kort (tools/kortmaaling.mjs hver nat)
     fil("data/salgslaering.json"),   // forslag fra opkaldene (Tal på Salg)
@@ -677,13 +677,13 @@ async function hentDataFiler() {
     fil("data/maanedsoversigt.json", null),   // omsætning pr. måned med trafiklys, regnet af fabz.py maanedsoversigt --gem
     fil("data/priser.json", null),   // pakkerne i Tilbud (samme priser som fabz-tilbud/priser.md, tjekkes med tools/priser.py)
     fil("data/leads.json"),   // leadlisten (Træk en kontakt)
-    fil("data/betalinger.json"),   // betaling pr. job (fabz_betaling.py): måde, beløb, opgave, Dinero-kladde
+    fil("data/betalinger.json"), fil("data/jobstatus.json"),   // betaling pr. job (fabz_betaling.py): måde, beløb, opgave, Dinero-kladde
     fil("data/fejl.json"),   // robotternes fejl (tools/meld_fejl.py -> fabz.py fejl-ny), vises som rød bjælke
     fil("data/hov.json"),   // Hov: Oscars planer og Claudes svar (fabz_hov, Oscar 2/11)
     fil("data/ugepakke.json"),   // ugens bogføring (fabz_bogholder.py): robottens forslag, Oscar godkender
     fil("data/mailoversigt.json", null),   // dagens mailoversigt (tools/mailoversigt.py via panel.yml ved Mødt ind)
     fil("data/vagter.json", null)]);   // vagter fra Planday/Deltaplan (tools/vagter.py i kalender.yml)
-  Object.assign(D, {strategi, jobrute, jobtider, salgjobs, kortmaaling, salgslaering, setups, mo, priser, leads, betalinger, fejl, hov, ugepakke, mailoversigt, vagter});
+  Object.assign(D, {strategi, jobrute, jobtider, salgjobs, kortmaaling, salgslaering, setups, mo, priser, leads, betalinger, jobstatus, fejl, hov, ugepakke, mailoversigt, vagter});
 }
 function manglerBesked() {
   besked({id: "mangler", klasse: "adv", titel: "GitHub svarer ikke lige nu, prøver igen …", punkter: ["Kunne ikke hente: " + MANGLER.join(", ")],
@@ -1077,7 +1077,7 @@ function jobOpgaver(j, st) {
 // ---------- Betaling pr. job (Oscar 29/10, bogholder-robot del 1): Kontant · Overførsel · Dinero. Robotten gætter, Oscar retter med ét tryk.
 // Dagen efter jobbet laver fabz.py betaling-opgaver én opgave (job_opgave "betaling"): Send faktura (kladde i Dinero) / Godkend betaling / Tjek at pengene er kommet.
 // Robotten bogfører aldrig og sender aldrig: Oscar sender fakturaen i Dinero og trykker ja her. Kontant tæller ikke i skat (Oscars valg).
-const BET_MAADER = [["kontant", "Kontant"], ["overfoersel", "Overførsel"], ["dinero", "Dinero"]];
+const BET_MAADER = [["dinero", "Dinero"], ["overfoersel", "B-indkomst"], ["kontant", "Kontant"]];   // overfoersel = B-indkomst: Danløn eller overførsel, se via (Oscar 5/11)
 // Omkostninger på jobbet (Oscar 3/11, skitse panel-job-omkostninger A): anden DJ, scene osv. Med moms → gemmes ekskl. moms. Forslag fra sidste job hos samme kunde
 const OMK = {};   // kladder under redigering pr. job-nøgle
 const kundeOrd = n => (n || "").toLowerCase().replace(/\(.*?\)/g, " ").split(/[^a-zæøå0-9]+/).find(o => o.length >= 3) || "";
@@ -1131,7 +1131,7 @@ function betalingAfsnit(j, st) {
   const b = r.beloeb != null ? Number(r.beloeb) : null, dinero = r.maade === "dinero";
   // firmakunder betaler med faktura (Oscar 3/11): Overførsel kun for klubjobs (B-indkomst), eller hvis den allerede er valgt
   const klubJob = moMaaneder().flatMap(m => m.jobs || []).some(x => x.dato === j.dato && (x.navn || "").toLowerCase() === j.navn.toLowerCase() && x.b_indkomst);
-  const maader = klubJob || r.maade === "overfoersel" ? BET_MAADER : BET_MAADER.filter(x => x[0] !== "overfoersel");
+  const maader = BET_MAADER;
   const pill = r.status === "aflyst" ? ["", "Aflyst"] : laast ? ["grøn", r.bank_dato ? `Set i banken ${kortDato(r.bank_dato)}` : `Godkendt ${kortDato(r.godkendt || iDag())}`]
     : !afholdt ? ["blå", dinero ? "Dinero · faktura dagen efter" : r.maade === "kontant" ? "Kontant på dagen" : "Overførsel"]
     : dinero ? ["gul", "Faktura ikke sendt"] : r.maade === "kontant" ? ["gul", "Venter på dit ja"] : betaltSpørgsmål(r);
@@ -2312,7 +2312,7 @@ async function gemLager() {
 }
 
 // ---------- fælles: kør fabz.py-kommandoer fra panelet ----------
-const FILER = {jobtider: "data/jobtider.json", kortmaaling: "data/kortmaaling.json", salgjobs: "data/salgjobs.json", salgslaering: "data/salgslaering.json", henvendelser: "data/henvendelser.json", opgaver: "data/opgaver.json", betalinger: "data/betalinger.json", ugepakke: "data/ugepakke.json", dagsplaner: "data/dagsplaner.json",
+const FILER = {jobstatus: "data/jobstatus.json", jobtider: "data/jobtider.json", kortmaaling: "data/kortmaaling.json", salgjobs: "data/salgjobs.json", salgslaering: "data/salgslaering.json", henvendelser: "data/henvendelser.json", opgaver: "data/opgaver.json", betalinger: "data/betalinger.json", ugepakke: "data/ugepakke.json", dagsplaner: "data/dagsplaner.json",
                ideer: "data/ideer.json", indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json", salgslog: "data/salgslog.json", mo: "data/maanedsoversigt.json", strategi: "data/strategi.json", leads: "data/leads.json", mailoversigt: "data/mailoversigt.json", vagter: "data/vagter.json", fejl: "data/fejl.json", hov: "data/hov.json"};
 async function laesValgfri(p) { const r = await laesFil(p); return r ? r.json() : []; }
 async function genindlæs(navne) { await Promise.all(navne.map(async n => { D[n] = n === "kkTekster" ? await laesKkTekster() : await laesValgfri(FILER[n]); })); }
@@ -4611,9 +4611,11 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   const betLinjer = [], medLinje = new Set();   // klubD1 (listen til d. 1) er defineret før kortet
   // klubjobs (B-indkomst, ikke kontant), der er registreret og ikke fordelt: Skat → Husleje d. 1 + Buffer til målet → Opsparing
   // også et ældre job, der først er kommet efter FD.fra (Oscar 5/11: Fox 17/10 godkendt 5/11). Fundet i kalenderen med åben betaling: ikke kommet endnu, ✓ Kommet står nedenfor
+  // én status pr. job (Oscar 5/11): et færdigt job kommer aldrig igen som en besked
+  const jobNr = id => (D.jobstatus?.jobs || []).find(j => j.indtaegt_id === id), jobFærdig = r => ["faerdig", "skylder"].includes((D.jobstatus?.jobs || []).find(j => j.job_noegle === r.job_noegle)?.status);
   const kommetSent = x => (D.betalinger || []).some(r => r.indtaegt_id === x.id && (r.godkendt || "") >= FD.fra && !r.venter);   // venter (fx "Jan overfører i næste uge"): pengene er ikke på kontoen, ingen overførsel
   if (FD) (D.indtaegter || []).filter(x => x.type === "B-indkomst" && (x.dato >= FD.fra || kommetSent(x)) && !(x.auto && betFor(x))).forEach(x => {
-    if (FD.fordelt[x.id]?.brugt) return;   // pengene er brugt, intet at flytte (Oscar 5/11: Fox 30/10)
+    if (FD.fordelt[x.id]?.brugt || jobNr(x.id)?.fordelt) return;   // jobstatus: pengene er fordelt eller brugt, intet at flytte (Oscar 5/11)
     const f = FD.fordelt[x.id] || {}, skat = f.skat ? f.skat.kr : skatDel(x.beloeb), rest = x.beloeb - skat;
     const plads = HB ? HB.maal - HB.saldo : (P.buffer?.maal || 0) - (P.buffer?.saldo || 0);
     const tilBuf = Math.max(0, Math.min(rest, plads + (f.buffer?.kr || 0))), tilOps = rest - tilBuf;
@@ -4624,11 +4626,11 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
       if (del === "skat") kør("pulje", ["flyt", "Skat", String(b)], {tekst: `Skat-puljen +${krKort(b)} kr.`, efter: ["mo"], med: () => puljeMed("Skat", b)});
       privatSend({kommando: "fordel", id: String(x.id), del, kr: b, job_kr: x.beloeb}, `${x.fra}: ${krKort(b)} kr. til ${n}`); };
     // pengene står på Lønkonto+, til de flyttes: fordelingen står i Overførsler med det samme, med konto og reg.nr. (Oscar 5/11)
-    if (P0.inbox && P0.d1) dele.filter(d => !f[d[0]]).forEach(d => klubD1.push({id: `klub-${x.id}-${d[0]}`, kr: d[2], pulje: d[1], hvem: `${x.fra} ${kortDato(x.dato)}`, fn: () => flyt(d)}));
+    if (P0.inbox && P0.d1) dele.filter(d => !f[d[0]]).forEach(d => klubD1.push({id: `klub-${x.id}-${d[0]}`, kr: d[2], pulje: d[1], hvem: `${x.fra} ${kortDato(x.dato)}`, bet: x.id, r: (D.betalinger || []).find(q => q.indtaegt_id === x.id) || betFor(x), fn: () => flyt(d)}));
     else betLinjer.push(betL("g", [h("b", {}, `${x.fra} har betalt ${krKort(x.beloeb)} kr.`), ` på Lønkonto+ (Danløn).`, ` Læg ${dele.map(([, n, b]) => `${krKort(b)} kr. i ${n}`).join(" og ")}.`],
       knap("✓ Overført", () => dele.filter(d => !f[d[0]]).forEach(flyt), true)));
   });
-  (D.betalinger || []).filter(r => r.maade !== "kontant" && r.status !== "aflyst" && !r.fordelt && r.beloeb).sort((a, b) => a.dato.localeCompare(b.dato)).forEach(r => {
+  (D.betalinger || []).filter(r => r.maade !== "kontant" && r.status !== "aflyst" && !r.fordelt && r.beloeb && !jobFærdig(r)).sort((a, b) => a.dato.localeCompare(b.dato)).forEach(r => {
     const b = r.beloeb, iDg = iDag();
     if (r.status !== "faerdig") {
       const ind0 = indFor(r), ind = ind0?.auto ? null : ind0;
@@ -4674,7 +4676,9 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
             med: () => { (D.hov = D.hov || []).push({id: "…", ym: HA.ym, mangler: hovMangler, tekst: tx, tid: new Date().toISOString(), svar: null}); }}); }, true)]) : null;
   // alle klubjobs' dele går fra Lønkonto+ til Saxo: én overførsel med det samlede beløb og fordelingen under (Oscar 3/11). ✓ registrerer hele fordelingen
   if (klubD1.length) { const pr = {}; klubD1.forEach(o => { pr[o.pulje] = (pr[o.pulje] || 0) + o.kr; });
-    ovL.unshift(ovR("klub-saxo", `Overfør ${krKort(klubD1.reduce((s, o) => s + o.kr, 0))} kr. fra Lønkonto+ til Saxo`, nrT(P0.kontonr?.Saxo), () => klubD1.forEach(o => o.fn()), false,
+    ovL.unshift(ovR("klub-saxo", `Overfør ${krKort(klubD1.reduce((s, o) => s + o.kr, 0))} kr. fra Lønkonto+ til Saxo`, nrT(P0.kontonr?.Saxo), () => { klubD1.forEach(o => o.fn()); const pr1 = {};   // jobstatus: samme tryk markerer jobbene fordelt
+        klubD1.forEach(o => { (pr1[o.bet] = pr1[o.bet] || {r: o.r, skat: 0}); if (o.pulje === "Skat-puljen") pr1[o.bet].skat += o.kr; });
+        Object.values(pr1).filter(q => q.r).forEach(q => kør("betaling-fordelt", [`--job=${q.r.navn}`, `--dato=${q.r.dato}`, `--skat=${q.skat}`, "--uden-pulje"], {tekst: `${q.r.navn}: fordelt`, efter: ["betalinger", "jobstatus"], med: () => { q.r.fordelt = {dato: iDag(), skat: q.skat}; }})); }, false,
       [` (${[...new Set(klubD1.map(o => o.hvem))].join(", ")})`, h("div", {class: "muted lille"}, Object.entries(pr).map(([n, k]) => `${krKort(k)} kr. ${n}`).join(" · "))])); }
   const d1Kort = lavD1();
   const ovKort0 = ovL.length ? h("div", {class: "kort2 ov-k", style: "margin-top:12px"}, ovL) : null;
