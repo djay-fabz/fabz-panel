@@ -1768,7 +1768,7 @@ function tegnListe() {
   const fod = h("div", {class: "lfod"},
     h("div", {class: "resume lille", style: advN ? "color:var(--adv)" : "color:var(--svag)"},
       `${linjer.length} linjer · ${stk} stk` + (advN ? ` · ${advN} advarsler` : "") + (S.transport ? "" : " · vælg transport")),
-    låst ? h("button", {class: "btn primaer stor", type: "button", onclick: hentGodkendtPdf}, "Hent PDF")
+    låst ? h("button", {class: "btn primaer stor", type: "button", disabled: optaget, onclick: hentGodkendtPdf}, optaget ? "Arbejder …" : "Hent PDF")
       : linjer.length && !S.transport && !optaget
         ? h("button", {class: "btn stor", type: "button", style: "border-color:var(--adv);color:var(--adv)",   // tydeligt hvad der mangler (Oscar 28/10)
             onclick: () => { const el = $("trin-transport"); if (el) { el.scrollIntoView({behavior: "smooth", block: "center"}); el.classList.add("markeret"); setTimeout(() => el.classList.remove("markeret"), 1200); } }},
@@ -1797,12 +1797,32 @@ function sætTransport(v) {   // fra toppen af listen eller fra sidste trin i "P
   S.transport = v; S.rørt = true;
   tegnVælger(); tegnListe();
 }
-async function hentGodkendtPdf() {   // den PDF, der blev lavet til jobbet (pdf/<navn> - dd.mm.åååå.pdf), uden at lave en ny
-  const j = S.job, navn = (S.jobNavn || j.navn).trim(), fil = `${navn} - ${j.dato.slice(8, 10)}.${j.dato.slice(5, 7)}.${j.dato.slice(0, 4)}.pdf`;
-  const r = await laesFil("pdf/" + fil);
-  if (!r) { alert(`Fandt ikke ${fil}. Tryk Genåbn liste, og lav PDF'en igen.`); return; }
-  const a = h("a", {href: URL.createObjectURL(new Blob([await r.arrayBuffer()], {type: "application/pdf"})), download: fil});
-  document.body.append(a); a.click(); a.remove();
+async function hentGodkendtPdf() {   // den PDF, der blev lavet til jobbet (pdf/<navn> - dd.mm.åååå.pdf). PDF'er slettes efter 3 dage: mangler filen, laves den igen fra den godkendte liste
+  if (optaget) return;
+  const mig = S, j = S.job, navn = (S.jobNavn || j.navn).trim();
+  let fil = `${navn} - ${j.dato.slice(8, 10)}.${j.dato.slice(5, 7)}.${j.dato.slice(0, 4)}.pdf`;
+  optaget = true;
+  tegnListe();
+  try {
+    let r = await laesFil("pdf/" + fil);
+    if (!r) {
+      sætSvar("", "Laver pakkelisten … det tager typisk 15-30 sekunder.");
+      const sv = await anmod("pakkeliste", pakkelisteKrav(navn), `Panel: pakkeliste ${navn}`);
+      if (!sv) { if (S === mig) sætSvar("fejl", "Intet svar efter 4 minutter.", ["Tjek kørslen under Actions i fabz-data. Anmodningen ligger stadig i inbox/."]); return; }
+      if (sv.status === "FEJL") { if (S === mig) sætSvar("fejl", "Fejl, ingen PDF.", [sv.fejl]); return; }
+      fil = decodeURIComponent(sv.pdf.split("/").pop());
+      r = await laesFil(sv.pdf);
+      if (S === mig) sætSvar(sv.status === "ADVARSEL" ? "adv" : "ok", r ? "Pakkelisten er lavet" : "PDF'en kunne ikke hentes.", sv.advarsler.map(a => "Advarsel: " + a));
+      if (!r) return;
+    }
+    const a = h("a", {href: URL.createObjectURL(new Blob([await r.arrayBuffer()], {type: "application/pdf"})), download: fil});
+    document.body.append(a); a.click(); a.remove();
+  } catch (e) {
+    if (S === mig) sætSvar("fejl", "Det gik galt.", [e.message]);
+  } finally {
+    optaget = false;
+    if (S === mig) tegnListe();
+  }
 }
 const ANLEDNING = {bryllup: "Bryllup", privatfest: "Fest", erhverv: "Firmafest", efterskole: "Fest"};
 function gætAnledning(j) {
@@ -2149,14 +2169,17 @@ function tegnSvar() {
       h("a", {class: "btn primaer", href: s.link, target: "_blank", rel: "noopener", style: "margin:0"}, "Åbn PDF og print"),
       h("a", {class: "btn", href: s.link, download: s.filnavn || "Pakkeliste.pdf", style: "margin:0"}, "Hent PDF")) : null) : "");
 }
+function pakkelisteKrav(navn) {
+  const linjer = Object.values(S.l).filter(l => l.antal > 0)
+    .map(l => ({udstyr: l.udstyr, antal: l.antal, ...(l.note?.trim() ? {note: l.note.trim()} : {})}));
+  return {type: "pakkeliste", job: navn, dato: S.job?.dato || null, transport: S.transport, linjer, pdf: true,
+    udgangspunkt: S.base?.navn || null, gem: "kun_job", anlaeg: anlægGem(), job_navn: S.job?.navn || null};   // job_navn: kalenderens navn, så listen huskes på jobbet selv om PDF'en hedder noget andet
+}
 async function send(hvad) {   // "pdf": lav PDF (gemmer intet), "gem": gem som liste til andre jobs
   if (hvad === "gem") return gemSomListe();
   const navn = (S.jobNavn || "").trim();
   if (!navn) { alert("Skriv et navn til PDF'en."); return; }
-  const linjer = Object.values(S.l).filter(l => l.antal > 0)
-    .map(l => ({udstyr: l.udstyr, antal: l.antal, ...(l.note?.trim() ? {note: l.note.trim()} : {})}));
-  const krav = {type: "pakkeliste", job: navn, dato: S.job?.dato || null, transport: S.transport, linjer, pdf: true,
-    udgangspunkt: S.base?.navn || null, gem: "kun_job", anlaeg: anlægGem(), job_navn: S.job?.navn || null};   // job_navn: kalenderens navn, så listen huskes på jobbet selv om PDF'en hedder noget andet
+  const krav = pakkelisteKrav(navn), linjer = krav.linjer;
   const mig = S;
   optaget = true;
   tegnListe();
