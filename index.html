@@ -3859,7 +3859,8 @@ function visSalg() {
     h("div", {class: "cc-træk"}, traekKnap()),
     trukneIDag.map(s => h("button", {type: "button", class: "kort2 cc-kort" + (SG.vis === "s" && SG.valgt === s.navn ? " valgt" : ""), onclick: () => salgÅbn(s.navn)},
       h("div", {class: "cc-navn"}, s.navn), h("div", {class: "muted lille"}, s.kontakt || ""), s.naeste ? h("div", {style: "margin-top:6px"}, s.naeste) : null)),
-    h("div", {class: "kort2", style: "margin-top:12px"}, h("div", {class: "overskrift", style: "margin:0"}, "Ugens cold call"), h("div", {class: "cc-tal"}, `${ugeTræk} af 10`))];
+    h("div", {class: "kort2", style: "margin-top:12px"}, h("div", {class: "overskrift", style: "margin:0"}, "Ugens cold call"), h("div", {class: "cc-tal"}, `${ugeTræk} af 10`)),
+    indgangListe()];
   const venstre = h("div", {class: "liste-kol"},
     h("div", {class: "kh"}, h("h1", {}, "Kunder"), h("div", {class: "spacer"}),
       h("button", {class: "btn", type: "button", onclick: () => { SG.vis = "ny"; SG.ny = {type: "Ny virksomhed", status: "Ikke kontaktet"}; tegn(); }}, "+ Ny kunde")),
@@ -3887,21 +3888,31 @@ function ringKnap(s) {
   return side ? h("a", {class: "btn lille", style: "margin-top:6px;display:inline-block", href: side, target: "_blank", rel: "noopener"}, "Nummer mangler")
     : h("span", {class: "pill rød-pill", style: "margin-top:6px;display:inline-block"}, "Nummer mangler");
 }
-function naesteLead() {   // samme regel som fabz.py salg-traek: ikke trukket, ikke i salg, har et telefonnummer, A før B, nærmest først
+// Køen til Træk (Pers liste, Oscar 5/11): samme regel som fabz_leads.i_koe og koe_noegle. Tæt på Silkeborg, så resten, så lavt overskud; størst overskud først.
+const TÆT_PÅ = ["Silkeborg", "Ikast-Brande", "Skanderborg", "Favrskov", "Herning", "Viborg"];
+const leadKø = () => (D.leads || []).filter(r => !r.trukket && !r.pause && !r.kraever_indgang && tlfNr(r.telefon));
+const leadTrin = r => r.lav_overskud ? 2 : TÆT_PÅ.includes(r.kommune) ? 0 : 1;
+function indgangListe() {   // over 500 ansatte: ringes ikke koldt, de kræver en indgang via netværk
+  const l = (D.leads || []).filter(r => r.kraever_indgang && !r.trukket).sort((a, b) => (b.ansatte || 0) - (a.ansatte || 0));
+  if (!l.length) return null;
+  return h("details", {class: "kort2 cc-indgang", style: "margin-top:12px"}, h("summary", {class: "overskrift", style: "margin:0;cursor:pointer"}, `Kræver indgang (${l.length})`),
+    h("div", {class: "liste", style: "margin-top:8px"}, l.map(r => h("div", {class: "l"}, h("span", {}, r.firma), h("span", {class: "muted lille"}, `${r.ansatte || "?"} ansatte · ${r.direktoer || ""}`)))));
+}
+function naesteLead() {   // samme regel som fabz.py salg-traek: i køen, ikke i salg
   const iSalg = new Set((D.salg || []).map(s => nøgle(s.navn)));
   const navn = r => (r.firma || "").replace(/\s*\(.*?\)\s*/g, " ").trim();
-  const km = r => { const v = parseFloat(String(r.km || "999").replace(",", ".")); return isNaN(v) ? 999 : v; };
-  return (D.leads || []).filter(r => !r.trukket && tlfNr(r.telefon) && !iSalg.has(nøgle(navn(r))) && !iSalg.has(nøgle(r.firma)))
-    .sort((a, b) => (a.prioritet || "Z").localeCompare(b.prioritet || "Z") || km(a) - km(b))[0] || null;
+  return leadKø().filter(r => !iSalg.has(nøgle(navn(r))) && !iSalg.has(nøgle(r.firma)))
+    .sort((a, b) => leadTrin(a) - leadTrin(b) || (b.aars_resultat || 0) - (a.aars_resultat || 0) || a.id - b.id)[0] || null;
 }
 function traekKnap() {   // Træk en kontakt (Oscar 26/10): næste firma fra leadlisten bliver en kunde, og åbner i detaljen
-  const r = naesteLead(), tilbage = (D.leads || []).filter(x => !x.trukket && tlfNr(x.telefon)).length;
+  const r = naesteLead(), tilbage = leadKø().length;
   if (!r) return h("span", {class: "muted lille"}, "Leadlisten er tom");
   const navn = (r.firma || "").replace(/\s*\(.*?\)\s*/g, " ").trim();
   return h("button", {class: "btn primaer", type: "button", title: `Næste: ${navn}, ${r.by || ""} (${r.prioritet || "?"}, ${r.km || "?"} km). ${tilbage} tilbage i listen`,
     onclick: () => kør("salg-traek", [`--id=${r.id}`], {tekst: `Trukket: ${navn}`, efter: ["salg", "leads", "opgaver"], med: () => {
       r.trukket = iDag();
-      const ny = {navn, type: "Ny virksomhed", status: "Ikke kontaktet", naeste: r.aabner || "", kontakt: [r.rolle_navn, r.rolle, r.telefon].filter(Boolean).join(" · "),
+      const ny = {navn, type: "Ny virksomhed", status: "Ikke kontaktet", naeste: r.direktoer ? `Spørg efter ${r.direktoer}, eller hvem der står for jeres fester` : r.aabner || "",
+        kontakt: [r.direktoer ? [r.direktoer, r.direktoer_stilling].filter(Boolean).join(", ") : r.rolle_navn, r.rolle, r.telefon].filter(Boolean).join(" · "), direktoer: r.direktoer, direktoer_stilling: r.direktoer_stilling,
         naeste_opfoelgning: iDag(), telefon: r.telefon || "", linkedin_side: r.linkedin_side || "", kontaktside: r.kontaktside || "",
         historik: `${iDag()}: trukket fra leadlisten (${r.prioritet}). ${[r.by + (r.km ? ", " + r.km + " km" : ""), r.ansatte ? r.ansatte + " ansatte" : "", r.branche, r.personaleforening ? "Personaleforening: " + r.personaleforening : "", r.tegn ? "Tegn: " + r.tegn : ""].filter(Boolean).join(" | ")}`};
       (D.salg ||= []).push(ny); SG.vis = "s"; SG.valgt = navn; SG.k = {naeste: ny.naeste};
@@ -5159,6 +5170,7 @@ function salgDetalje(s) {
       felt("Næste opfølgning", h("div", {class: "muted"}, s.naeste_opfoelgning ? dagNavnLang(s.naeste_opfoelgning) : "ingen dato")),
       felt("Senest kontakt", h("div", {class: "muted"}, s.senest_kontakt ? kortDatoÅr(s.senest_kontakt) : "–"))),
     s.kontakt || s.telefon ? h("div", {class: "info"}, h("div", {class: "etiket"}, "Kontaktperson"), h("div", {class: "pre"}, s.kontakt || ""),
+      s.direktoer && !(s.kontakt || "").includes(s.direktoer) ? h("div", {class: "pre lille"}, [s.direktoer, s.direktoer_stilling].filter(Boolean).join(", ")) : null,
       ringKnap(s)) : null,
     s.naeste ? h("div", {class: "info"}, h("div", {class: "etiket"}, "Næste skridt"), h("div", {class: "pre", style: "font-size:15px"}, s.naeste)) : null,
     s.linkedin_side || s.kontaktside ? h("div", {class: "rk", style: "gap:8px;flex-wrap:wrap;margin-top:6px"},
