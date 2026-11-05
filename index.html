@@ -4734,7 +4734,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   // (regler.betaler_foer, fx Fox and Hounds om torsdagen). B-indkomst går til Lønkonto+ og fordeles i privat-data, firmakunder bliver på firmakontoen. Kontanter står her ikke (ude af skat)
   const andel = FD?.regel.find(q => q.pulje === "Skat")?.andel || (sk.reserve_pct || 0) / 100, HB = P.husbuffer;   // samme 42,96 % (AM-bidrag + trækprocent), også før privat-data er hentet
   let skatRest = Math.max(0, sk.mangler_paa_kontoen || 0);
-  const skatDel = b => { const s = Math.min(Math.round(b * andel), skatRest); skatRest -= s; return s; };
+  const skatDelKr = k => { const s = Math.min(k, skatRest); skatRest -= s; return s; }, skatDel = b => skatDelKr(Math.round(b * andel));
   const betL = (f, tekst, k) => h("div", {class: "bj skat-gør bet-l " + f}, h("span", {class: "bj-t skat-tekst"}, tekst), k);
   const erB = navn => (sk.b_kunder || []).some(k => navn.toLowerCase().includes(k.toLowerCase().split(" ")[0]));
   const førJob = navn => (RD?.regler?.betaler_foer || []).some(n => navn.toLowerCase().includes(n.toLowerCase()));
@@ -4751,7 +4751,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   const kommetSent = x => (D.betalinger || []).some(r => r.indtaegt_id === x.id && (r.betalt_dato || r.godkendt || "") >= FD.fra && !r.venter);   // venter (fx "Jan overfører i næste uge"): pengene er ikke på kontoen, ingen overførsel
   if (FD) (D.indtaegter || []).filter(x => x.type === "B-indkomst" && (x.dato >= FD.fra || kommetSent(x)) && !(x.auto && betFor(x))).forEach(x => {
     if (FD.fordelt[x.id]?.brugt || jobNr(x.id)?.fordelt) return;   // jobstatus: pengene er fordelt eller brugt, intet at flytte (Oscar 5/11)
-    const f = FD.fordelt[x.id] || {}, skat = f.skat ? f.skat.kr : skatDel(x.beloeb), rest = x.beloeb - skat;
+    const jp = jobNr(x.id)?.plan, f = FD.fordelt[x.id] || {}, skat = f.skat ? f.skat.kr : jp ? skatDelKr(jp.skat) : skatDel(x.beloeb), rest = jp ? jp.til_loen + jp.skat - skat : x.beloeb - skat;   // jobbets plan: honoraret er hjælpernes penge og skal ikke til Buffer (revision 5/11)
     const plads = HB ? HB.maal - HB.saldo : (P.buffer?.maal || 0) - (P.buffer?.saldo || 0);
     const tilBuf = Math.max(0, Math.min(rest, plads + (f.buffer?.kr || 0))), tilOps = rest - tilBuf;
     const dele = [["skat", "Skat-puljen", skat], ["buffer", HB ? "Husleje d. 1 + Buffer" : "Buffer", tilBuf], ["opsparing", P.opsparing?.navn || "Opsparing", tilOps]].filter(d => d[2] > 0 && !(skV && d[0] === "skat"));   // skatten venter: den del bliver på Lønkonto+
