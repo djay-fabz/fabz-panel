@@ -637,7 +637,7 @@ const fil = (p, std = []) => sikker(p, async () => { const r = await laesFil(p);
 let GQL = null;
 const DATAFILER = ["kalender", "udstyr", "pakkelister", "opgaver", "jobpakkelister", "henvendelser", "dagsplaner", "ideer", "indtaegter", "typer", "salg", "festkort",
   "klubkort", "salgslog", "klubkort_tekster", "strategi", "jobrute", "jobtider", "salgjobs", "kortmaaling", "salgslaering", "setups", "maanedsoversigt", "priser",
-  "leads", "betalinger", "jobstatus", "fejl", "hov", "ugepakke", "mailoversigt", "vagter"].map(x => `data/${x}.json`).concat(["tools/klubkort/kort.json"]);
+  "leads", "betalinger", "honorarsedler", "jobstatus", "fejl", "hov", "ugepakke", "mailoversigt", "vagter"].map(x => `data/${x}.json`).concat(["tools/klubkort/kort.json"]);
 async function hentSamlet() {
   const t0 = performance.now();
   try {
@@ -669,7 +669,7 @@ async function hentDataFiler() {
     ...["data/henvendelser.json", "data/dagsplaner.json", "data/ideer.json", "data/indtaegter.json", "data/typer.json", "data/salg.json", "data/festkort.json", "data/klubkort.json", "data/salgslog.json"].map(p => fil(p)),
     sikker("data/klubkort_tekster.json", laesKkTekster, [])]);
   D = {kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, ideer, indtaegter, typer, salg, festkort, klubkort, salgslog, kkTekster};
-  const [strategi, jobrute, jobtider, salgjobs, kortmaaling, salgslaering, setups, mo, priser, leads, betalinger, jobstatus, fejl, hov, ugepakke, mailoversigt, vagter] = await Promise.all([
+  const [strategi, jobrute, jobtider, salgjobs, kortmaaling, salgslaering, setups, mo, priser, leads, betalinger, honorarsedler, jobstatus, fejl, hov, ugepakke, mailoversigt, vagter] = await Promise.all([
     fil("data/strategi.json", {}), fil("data/jobrute.json", {}), fil("data/jobtider.json"), fil("data/salgjobs.json"),   // hvilket firma i Salg et job kom fra (fabz.py salg-job)
     fil("data/kortmaaling.json"),   // scanninger og tilmeldinger pr. kort (tools/kortmaaling.mjs hver nat)
     fil("data/salgslaering.json"),   // forslag fra opkaldene (Tal på Salg)
@@ -677,13 +677,13 @@ async function hentDataFiler() {
     fil("data/maanedsoversigt.json", null),   // omsætning pr. måned med trafiklys, regnet af fabz.py maanedsoversigt --gem
     fil("data/priser.json", null),   // pakkerne i Tilbud (samme priser som fabz-tilbud/priser.md, tjekkes med tools/priser.py)
     fil("data/leads.json"),   // leadlisten (Træk en kontakt)
-    fil("data/betalinger.json"), fil("data/jobstatus.json"),   // betaling pr. job (fabz_betaling.py): måde, beløb, opgave, Dinero-kladde
+    fil("data/betalinger.json"), fil("data/honorarsedler.json"), fil("data/jobstatus.json"),   // betaling pr. job (fabz_betaling.py): måde, beløb, opgave, Dinero-kladde; honorarsedler (fabz_honorar.py)
     fil("data/fejl.json"),   // robotternes fejl (tools/meld_fejl.py -> fabz.py fejl-ny), vises som rød bjælke
     fil("data/hov.json"),   // Hov: Oscars planer og Claudes svar (fabz_hov, Oscar 2/11)
     fil("data/ugepakke.json"),   // ugens bogføring (fabz_bogholder.py): robottens forslag, Oscar godkender
     fil("data/mailoversigt.json", null),   // dagens mailoversigt (tools/mailoversigt.py via panel.yml ved Mødt ind)
     fil("data/vagter.json", null)]);   // vagter fra Planday/Deltaplan (tools/vagter.py i kalender.yml)
-  Object.assign(D, {strategi, jobrute, jobtider, salgjobs, kortmaaling, salgslaering, setups, mo, priser, leads, betalinger, jobstatus, fejl, hov, ugepakke, mailoversigt, vagter});
+  Object.assign(D, {strategi, jobrute, jobtider, salgjobs, kortmaaling, salgslaering, setups, mo, priser, leads, betalinger, honorarsedler, jobstatus, fejl, hov, ugepakke, mailoversigt, vagter});
 }
 function manglerBesked() {
   besked({id: "mangler", klasse: "adv", titel: "GitHub svarer ikke lige nu, prøver igen …", punkter: ["Kunne ikke hente: " + MANGLER.join(", ")],
@@ -1115,6 +1115,49 @@ function betaltKnap(r, fn) {
     fn(iso); }}, "✓ Betalt"));
 }
 const RDG = () => D.mo?.raad?.regler;
+// Honorarseddel på B-indkomst-jobs (Oscar 5/11, skitse panel-honorarseddel): Læg i Gmail, Oscar sender selv. CPR og konto kommer aldrig ind i panelet (fabz_honorar.py).
+const HON = {};
+function honorarVent() {   // honorarseddel.yml kører bagefter uden for panelet: hent filen, til sedlen ikke længere er bestilt
+  clearTimeout(honorarVent.t);
+  let gange = 0;
+  const tjek = async () => {
+    await genindlæs(["honorarsedler"]).catch(() => {});
+    if ((D.honorarsedler || []).some(x => x.status === "bestilt") && ++gange < 24) honorarVent.t = setTimeout(tjek, 10000);
+  };
+  honorarVent.t = setTimeout(tjek, 20000);
+}
+function honorarDel(j, st, r) {
+  const s = (D.honorarsedler || []).find(x => x.job_noegle === st.key);
+  const række = (pill, ...resten) => h("div", {class: "bet-rk", style: "margin-top:10px"}, h("b", {}, "Honorarseddel"), h("span", {class: "pill" + (pill[1] ? " " + pill[1] : "")}, pill[0]), h("div", {class: "spacer"}), ...resten);
+  if (s?.status === "sendt") return række(["Honorarseddel sendt", "grøn"], h("span", {class: "muted lille"}, `${s.nr} · ${kr(s.beloeb)} · ${kortDato(s.sendt_dato)}`));
+  if (s?.status === "udkast") return række(["Udkast i Gmail", "gul"], h("span", {class: "muted lille"}, `${s.nr} · ${kr(s.beloeb)}`),
+    h("button", {class: "btn lille", type: "button", onclick: () => kør("honorar-sendt", [`--nr=${s.nr}`], {tekst: `Honorarseddel ${s.nr} sendt`, efter: ["honorarsedler"], med: () => { s.status = "sendt"; s.sendt_dato = iDag(); }})}, "✓ Sendt"));
+  if (s?.status === "bestilt") return række(["Lægges i Gmail …", "blå"], h("span", {class: "muted lille"}, s.nr));
+  const f = HON[st.key];
+  if (!f) return h("div", {},
+    række(s?.status === "fejl" ? ["Fejl", "rød-pill"] : ["Ikke lavet", ""],
+      h("button", {class: "btn lille primaer", type: "button", onclick: () => { HON[st.key] = {modtager: s?.modtager || r.kunde?.navn || j.navn, mail: r.kunde?.mail || "", job: s?.job || "DJ til " + j.navn, dato: j.dato, beloeb: s?.beloeb ?? r.beloeb ?? ""}; tegn(); }}, s?.status === "fejl" ? "Prøv igen" : "Lav honorarseddel")),
+    s?.status === "fejl" ? h("div", {class: "muted lille", style: "margin-top:4px"}, s.fejl) : null);
+  const inp = (k, ekstra) => h("input", {class: "input", value: f[k], oninput: e => { f[k] = e.target.value; }, ...ekstra});
+  return h("div", {class: "hon-form", style: "margin-top:10px"},
+    h("b", {}, "Honorarseddel"),
+    felt("Modtager", h("textarea", {class: "input", rows: "2", oninput: e => { f.modtager = e.target.value; }}, f.modtager)),
+    felt("Mail", inp("mail", {type: "email"})),
+    felt("Job", inp("job")),
+    felt("Dato", inp("dato", {type: "date"})),
+    felt("Beløb", inp("beloeb", {type: "number", inputmode: "numeric", min: "1"})),
+    h("div", {class: "bet-rk", style: "margin-top:8px"},
+      h("button", {class: "btn lille", type: "button", onclick: () => { delete HON[st.key]; tegn(); }}, "Annullér"), h("div", {class: "spacer"}),
+      h("button", {class: "btn lille primaer", type: "button", onclick: async () => {
+        if (!f.modtager.trim() || !f.mail.trim() || !f.job.trim() || !f.dato || !(Number(f.beloeb) > 0)) return sendFejl("Honorarseddel", new Error("Udfyld modtager, mail, job, dato og beløb"));
+        const sv = await kørOgVent("honorar-bestil", [`--job=${j.navn}`, `--noegle=${st.key}`, `--dato=${f.dato}`, `--modtager=${f.modtager}`, `--mail=${f.mail}`, `--jobtekst=${f.job}`, `--beloeb=${f.beloeb}`, `--sted=${(j.sted || "").match(/\d{4}\s+([^,]+)/)?.[1] || ""}`]);
+        if (!sv || sv.status === "FEJL") return sendFejl("Honorarseddel " + j.navn, new Error(sv?.fejl || "intet svar"));
+        delete HON[st.key];
+        await genindlæs(["honorarsedler"]);
+        tegn();
+        honorarVent();
+      }}, "Læg i Gmail")));
+}
 function betalingAfsnit(j, st) {
   const r = betalingTilJob(j) || {...betalingGaet(j), job_noegle: st.key};
   const afholdt = j.afholdt || j.dato < iDag();
@@ -1193,6 +1236,7 @@ function betalingAfsnit(j, st) {
         inp, h("span", {class: "muted lille"}, dinero ? "kr. ekskl. moms" : "kr."),
         h("div", {class: "spacer"}), knap),
       betalesRk,
+      r.maade === "overfoersel" && r.via !== "danloen" ? honorarDel(j, st, r) : null,
       omkDel,
       o ? h("div", {class: "jo-r"}, h("span", {class: "jo-m"}, "○"),
             h("span", {class: "jo-t", style: "flex:1"}, h("b", {}, o.titel), h("span", {class: "muted"}, linje))) : null));
@@ -2320,7 +2364,7 @@ async function gemLager() {
 }
 
 // ---------- fælles: kør fabz.py-kommandoer fra panelet ----------
-const FILER = {jobstatus: "data/jobstatus.json", jobtider: "data/jobtider.json", kortmaaling: "data/kortmaaling.json", salgjobs: "data/salgjobs.json", salgslaering: "data/salgslaering.json", henvendelser: "data/henvendelser.json", opgaver: "data/opgaver.json", betalinger: "data/betalinger.json", ugepakke: "data/ugepakke.json", dagsplaner: "data/dagsplaner.json",
+const FILER = {jobstatus: "data/jobstatus.json", jobtider: "data/jobtider.json", kortmaaling: "data/kortmaaling.json", salgjobs: "data/salgjobs.json", salgslaering: "data/salgslaering.json", henvendelser: "data/henvendelser.json", opgaver: "data/opgaver.json", betalinger: "data/betalinger.json", honorarsedler: "data/honorarsedler.json", ugepakke: "data/ugepakke.json", dagsplaner: "data/dagsplaner.json",
                ideer: "data/ideer.json", indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json", salgslog: "data/salgslog.json", mo: "data/maanedsoversigt.json", strategi: "data/strategi.json", leads: "data/leads.json", mailoversigt: "data/mailoversigt.json", vagter: "data/vagter.json", fejl: "data/fejl.json", hov: "data/hov.json"};
 async function laesValgfri(p) { const r = await laesFil(p); return r ? r.json() : []; }
 async function genindlæs(navne) { await Promise.all(navne.map(async n => { D[n] = n === "kkTekster" ? await laesKkTekster() : await laesValgfri(FILER[n]); })); }
