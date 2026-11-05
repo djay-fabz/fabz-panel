@@ -1876,6 +1876,7 @@ async function hentGodkendtPdf() {   // den PDF, der blev lavet til jobbet (pdf/
       const sv = await anmod("pakkeliste", pakkelisteKrav(navn), `Panel: pakkeliste ${navn}`);
       if (!sv) { if (S === mig) sætSvar("fejl", "Intet svar efter 4 minutter.", ["Tjek kørslen under Actions i fabz-data. Anmodningen ligger stadig i inbox/."]); return; }
       if (sv.status === "FEJL") { if (S === mig) sætSvar("fejl", "Fejl, ingen PDF.", [sv.fejl]); return; }
+      if (!sv.pdf) { if (S === mig) sætSvar("adv", "Listen er gemt, men der er ingen PDF.", sv.advarsler); return; }
       fil = decodeURIComponent(sv.pdf.split("/").pop());
       r = await laesFil(sv.pdf);
       if (S === mig) sætSvar(sv.status === "ADVARSEL" ? "adv" : "ok", r ? "Pakkelisten er lavet" : "PDF'en kunne ikke hentes.", sv.advarsler.map(a => "Advarsel: " + a));
@@ -2257,6 +2258,11 @@ async function send(hvad) {   // "pdf": lav PDF (gemmer intet), "gem": gem som l
     else if (sv.status === "FEJL") sætSvar("fejl", "Fejl, ingen PDF.", [sv.fejl]);
     else {
       const punkter = [...sv.advarsler.map(a => "Advarsel: " + a), ...sv.info];
+      if (!sv.pdf) {   // listen er gemt, kun PDF'en mangler: Prøv igen laver den
+        sætSvar("adv", "Listen er gemt, men der er ingen PDF.", punkter);
+        if (mig.job) D.jobpl = await laesJobpl();
+        return;
+      }
       const mangler = !!mig.job && !(mig.godk && signatur(Object.values(mig.l)) === mig.snap);   // Oscar 28/10: lavet, men ikke godkendt, er gul, ikke grøn "klar"
       const titel = sv.status === "ADVARSEL" ? "Lavet, men tjek advarslerne" : mangler ? "PDF lavet. Pakkelisten mangler godkendelse" : "Pakkelisten er lavet";
       const klasse = sv.status === "ADVARSEL" || mangler ? "adv" : "ok";
