@@ -4614,7 +4614,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     const ub = r.maade === "dinero" ? (mo.ubetalt?.liste || []).find(u => u.nr === r.faktura_nr) : null;
     if (sk.snart_overfoert?.[r.faktura_nr]) return;   // skatten er sendt fra banneret, før fakturaen blev betalt
     if (r.maade === "dinero" && (!r.faktura_nr || ub)) {
-      if (ub && ub.forfald < iDg) betLinjer.push(betL("rd", [h("b", {}, `${r.navn} mangler ${krKort(ub.kr)} kr.`), ` (faktura ${ub.nr}, forfald ${kortDato(ub.forfald)})`], null));
+      if (ub && ub.forfald < iDg && !ub.indbetalt) betLinjer.push(betL("rd", [h("b", {}, `${r.navn} mangler ${krKort(ub.kr)} kr.`), ` (faktura ${ub.nr}, forfald ${kortDato(ub.forfald)})`], null));
       return;
     }
     const s = skatDel(b), vist = r.maade === "dinero" ? Math.round(b * 1.25) : b;
@@ -4763,18 +4763,18 @@ function parseCsv(tekst) {   // ; som skilletegn, felter i "" kan have linjeskif
   if (f || cur.length) { cur.push(f); rk.push(cur.splice(0)); }
   return rk.filter(r => r.length > 1);
 }
-function læsUdtog(tekst) {   // -> {saldo, dato, poster: [{dato, tekst, beloeb}]}. Kun betalinger fra de sidste 13 måneder sendes videre
+function læsUdtog(tekst) {   // -> {saldo, dato, poster: [{dato, tekst, beloeb}]}. Betalinger fra de sidste 13 måneder og indbetalinger fra de sidste 60 dage (ser, at en faktura er betalt, Oscar 5/11) sendes videre
   const rk = parseCsv(tekst), hd = (rk.shift() || []).map(x => x.trim().toLowerCase());
-  const i = n => hd.indexOf(n), iD = i("dato"), iT = i("tekst"), iB = i("beløb"), iS = i("saldo"), iM = i("modtagerkonto");
+  const i = n => hd.indexOf(n), iD = i("dato"), iT = i("tekst"), iB = i("beløb"), iS = i("saldo"), iM = i("modtagerkonto"), iA = i("afsender"), iK = i("besked");
   if (iD < 0 || iB < 0) throw new Error("Det ligner ikke et kontoudtog fra Danske Bank (mangler Dato og Beløb).");
   const tal_ = v => Number(String(v).includes(",") ? String(v).replace(/\./g, "").replace(",", ".") : v);
-  const rows = rk.map(r => ({dato: (r[iD] || "").replace(/^(\d\d)\.(\d\d)\.(\d{4})$/, "$3-$2-$1"), tekst: (r[iT] || "").trim(), beloeb: tal_(r[iB]), saldo: iS >= 0 ? tal_(r[iS]) : NaN, modtager: iM >= 0 ? (r[iM] || "").trim() : ""}))
+  const rows = rk.map(r => ({dato: (r[iD] || "").replace(/^(\d\d)\.(\d\d)\.(\d{4})$/, "$3-$2-$1"), tekst: (r[iT] || "").trim(), beloeb: tal_(r[iB]), saldo: iS >= 0 ? tal_(r[iS]) : NaN, modtager: iM >= 0 ? (r[iM] || "").trim() : "", afsender: iA >= 0 ? (r[iA] || "").trim() : "", besked: iK >= 0 ? (r[iK] || "").trim() : ""}))
     .filter(r => /^\d{4}-\d\d-\d\d$/.test(r.dato) && !isNaN(r.beloeb)).sort((a, b) => b.dato.localeCompare(a.dato));
   if (!rows.length) throw new Error("Fandt ingen posteringer i filen.");
   const s = rows.find(r => !isNaN(r.saldo));
   if (!s) throw new Error("Filen har ingen saldo.");
-  const fra = plusDage(rows[0].dato, -400);
-  return {saldo: s.saldo, dato: rows[0].dato, antal: rows.length, poster: rows.filter(r => r.beloeb < 0 && r.dato >= fra).map(({dato, tekst, beloeb, modtager}) => ({dato, tekst: tekst.slice(0, 80), beloeb, ...(modtager ? {modtager} : {})}))};
+  const fra = plusDage(rows[0].dato, -400), fraInd = plusDage(rows[0].dato, -60);
+  return {saldo: s.saldo, dato: rows[0].dato, antal: rows.length, poster: rows.filter(r => r.beloeb < 0 ? r.dato >= fra : r.beloeb > 0 && r.dato >= fraInd).map(({dato, tekst, beloeb, modtager, afsender, besked}) => ({dato, tekst: tekst.slice(0, 80), beloeb, ...(modtager ? {modtager} : {}), ...(beloeb > 0 && afsender ? {afsender: afsender.slice(0, 80)} : {}), ...(beloeb > 0 && besked ? {besked: besked.slice(0, 80)} : {})}))};
 }
 function visGuide(navn) {
   const sk = (D.mo || {}).skat || {}, ob = (D.mo || {}).overblik || {puljer: [], linjer: {}}, E = ob.linjer.erhverv || {};
