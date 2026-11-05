@@ -4219,7 +4219,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   // kun mens der er rater tilbage); løn (201) ligger i privat-data og sammenlignes her
   const bFelt = (sk.felter || []).find(f => f.noegle === "b_indkomst"), bForv = sk.b_forventet ?? ((sk.b_reg || 0) + (sk.b_kommende || 0));
   const FS = sk.forskud || {felter: [], netto: 0}, L = P.loen;
-  const lønSkal = L && L.forventet_aar != null ? Math.round(L.forventet_aar / 1000) * 1000 : null;
+  const lønSkal = L && L.forventet_aar != null ? Math.round(L.forventet_aar / 500) * 500 : null;   // nærmeste 500, som felt 210 og 221 (Oscar 5/11)
   const lønRet = L && L.forskud != null && lønSkal != null && Math.abs(L.forventet_aar - L.forskud) > (sk.graense || 5000);
   const fsRækker = [...(L && L.forskud != null ? [{felt: L.felt || 201, navn: "Lønindkomst mv.", nu: L.forskud, skal: lønRet ? lønSkal : L.forskud, ret: lønRet,
     hvorfor: `løn (eIndkomst ${krKort(L.eindkomst_i_aar ?? 0)} til ${L.dato ? kortDato(L.dato) : "?"})`}] : []), ...FS.felter];
