@@ -2021,6 +2021,8 @@ function kkArk(kortene, R, link) {   // kortene: [{tekst, svar, kamp}] i rækkef
     kortene.slice(start, start + 4).forEach((k, i) => {
       const ox = (i % 2) * W, oy = Math.floor(i / 2) * H, cx = ox + W / 2, L = kkLayout(k, M);
       svg.append(el("rect", {x: ox + M.M, y: oy + M.M, width: W - 2 * M.M, height: H - 2 * M.M, fill: farve(M.farver.creme)}));
+      const F = M.M + M.RAMME;
+      svg.append(el("rect", {x: ox + F, y: oy + F, width: W - 2 * F, height: H - 2 * F, fill: "none", stroke: farve(M.farver.bord), "stroke-width": 0.3}));
       if (L && typeof L === "object") {
         const y = oy + M.TEKST_TOP + L.str * 0.33;
         L.linjer.forEach((l, j) => svg.append(el("text", {x: cx, y: y + j * L.lh, "font-family": "kkSerif", "font-size": L.str / KK_MM,
