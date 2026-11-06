@@ -3246,8 +3246,8 @@ function tbBeregn(T) {   // samme regler som lav_tilbud.py. Giver {fejl} eller a
   const g = (String(T.gaester || "").match(/\d+/g) || []).map(Number);
   const mange = g.length && Math.max(...g) > 100;
   const brutto = linjer.reduce((a, l) => a + l.beloeb, 0), rabat = tbTal(T.rabat);   // rabat som prislinjerne: ekskl. moms på erhverv, inkl. moms på privat (Oscar 6/11)
-  if (!Number.isFinite(rabat) || rabat < 0) return {fejl: "Rabat skal være et beløb i kr."};
-  if (rabat > brutto) return {fejl: "Rabatten kan ikke være større end prisen."};
+  if (!Number.isFinite(rabat) || rabat < 0) return {fejl: "Prisnedslaget skal være et beløb i kr."};
+  if (rabat > brutto) return {fejl: "Prisnedslaget kan ikke være større end prisen."};
   const s = brutto - rabat;
   const moms = erhverv ? s * 0.25 : s * 0.2, total = erhverv ? s + moms : s, dep = erhverv ? 0 : total * 0.2;
   let afl;
@@ -3281,7 +3281,7 @@ function tbHtml(T, R) {   // HTML'en fra lav_tilbud.py, linje for linje
   const evRows = [["Anledning", T.anledning], ["Dato", tbDato(ev)], ["Sted", T.sted], ["Tider", T.tider], ["Gæster", T.gaester]]
     .filter(([, b]) => (b || "").trim()).map(([a, b]) => `<tr><td>${a}</td><td>${tbEsc(b.trim())}</td></tr>`).join("");
   let pris = linjer.map(l => `<tr><td>${tbEsc(l.tekst)}</td><td class="n">${tbKr(l.beloeb)}</td></tr>`).join("");
-  if (rabat) pris += `<tr><td>Rabat</td><td class="n">−${tbKr(rabat)}</td></tr>`;
+  if (rabat) pris += `<tr><td>Aftalt prisnedslag</td><td class="n">−${tbKr(rabat)}</td></tr>`;
   pris += erhverv ? `<tr class="sub"><td>I alt ekskl. moms</td><td class="n">${tbKr(s)}</td></tr><tr><td>Moms 25 %</td><td class="n">${tbKr(moms)}</td></tr><tr class="tot"><td>I alt inkl. moms</td><td class="n">${tbKr(total)}</td></tr>`
     : `<tr class="tot"><td>I alt inkl. moms</td><td class="n">${tbKr(total)}</td></tr><tr class="sm"><td>Heraf moms</td><td class="n">${tbKr(moms)}</td></tr>`;
   const intro = T.intro.trim() || (ob ? "Hermed bekræfter jeg aftalen. Herunder står alt, vi har aftalt, så I kan sende det direkte videre internt."
@@ -3453,7 +3453,7 @@ function visTilbud() {
     sum.replaceChildren(h("div", {},
       h("div", {class: "overskrift"}, `${R.ob ? "Ordrebekræftelse" : "Tilbud"} nr. ${R.nr}`),
       ...R.linjer.map(l => r(l.tekst, tbKr(l.beloeb))),
-      R.rabat ? r("Rabat", "−" + tbKr(R.rabat)) : null,
+      R.rabat ? r("Aftalt prisnedslag", "−" + tbKr(R.rabat)) : null,
       R.erhverv ? [r("I alt ekskl. moms", tbKr(R.s), "border-top:1px solid var(--linje);padding-top:6px;margin-top:4px"), r("Moms 25 %", tbKr(R.moms)), r(h("b", {}, "I alt inkl. moms"), h("b", {}, tbKr(R.total)))]
         : [r(h("b", {}, "I alt inkl. moms"), h("b", {}, tbKr(R.total)), "border-top:1px solid var(--linje);padding-top:6px;margin-top:4px"), r("Heraf moms", tbKr(R.moms)),
           r("Depositum 20 %", tbKr(R.dep)), r(`Rest senest ${tbDato(R.restDato)}`, tbKr(R.total - R.dep))],
@@ -3499,7 +3499,7 @@ function visTilbud() {
         felt("Kørsel uden for 50 km (km tur/retur)", t("km", {inputmode: "numeric", placeholder: "0"})),
         felt("Bro/færge (kr.)", t("bro", {inputmode: "numeric", placeholder: "0"})),
         felt("Tilbudsdato", datoInput(TB.dato, iso => sæt("dato", iso || iDag())))),
-      felt(TB.kundetype === "erhverv" ? "Rabat (kr. ekskl. moms)" : "Rabat (kr. inkl. moms)", t("rabat", {inputmode: "numeric", placeholder: "0", style: "max-width:200px"})),
+      felt(TB.kundetype === "erhverv" ? "Aftalt prisnedslag (kr. ekskl. moms)" : "Aftalt prisnedslag (kr. inkl. moms)", t("rabat", {inputmode: "numeric", placeholder: "0", style: "max-width:200px"})),
       h("div", {class: "overskrift", style: "margin-top:18px"}, "Særlige betingelser"),
       felt("Ét punkt pr. linje", tf("vilkaar_ekstra", 2)),
       h("div", {class: "overskrift", style: "margin-top:18px"}, "Tekst (valgfri)"),
