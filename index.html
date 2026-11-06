@@ -4351,16 +4351,17 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   // 2 dage før en faktura forfalder (Oscar 2/11): gul, så skatten er klar, når pengene kommer
   // ✓ Overført på hvert banner (Oscar 5/11: pengene var kommet, men der var ikke noget at trykke på); kontoudtoget ser pengene: "har betalt"
   // skat fra job, hvor pengene ER kommet, men beløbet ikke er overført (Oscar 5/11): rød, med job og beløb, ét tryk. Også når jobbet mangler andet, fx B-indkomst.dk (Ranum 19/6)
-  (skV ? [] : D.jobstatus?.jobs || []).filter(j => (j.skylder || []).length && j.status !== "aflyst").forEach(j => { const q = (D.betalinger || []).find(y => y.job_noegle === j.job_noegle), s = (j.skylder || []).reduce((t, x) => t + x.kr, 0);
+  let loftRest = sk.loft ?? Infinity;   // ét loft på alle beskeder: der bedes aldrig om mere, end der mangler (register, revision 5/11)
+  (skV ? [] : D.jobstatus?.jobs || []).filter(j => (j.skylder || []).length && j.status !== "aflyst").forEach(j => { const q = (D.betalinger || []).find(y => y.job_noegle === j.job_noegle), s = Math.min((j.skylder || []).reduce((t, x) => t + x.kr, 0), loftRest); loftRest -= s;
     const sendt = tx => kør("betaling-fordelt", [`--job=${q?.navn}`, `--dato=${q?.dato}`, `--skat=${s}`, "--ret", ...(j.fordelt?.brugt ? [`--brugt=${j.fordelt.brugt}`] : [])], {tekst: typeof tx === "string" ? tx : `Skat-puljen +${krKort(s)} kr.`, efter: ["betalinger", "jobstatus", "mo"], med: () => { j.status = "faerdig"; j.skylder = []; puljeMed("Skat", s); }});
     if (q && s) gør.push(trin("rd", [h("b", {}, `${j.navn} ${kortDato(j.dato)}: overfør ${krKort(s)} kr. til Skat fra firmakontoen eller Lønkonto+.`), nrT(P0kontoSaxo()) ? h("div", {class: "ov-n"}, nrT(P0kontoSaxo())) : null],
       [fraBufferKnap(s, `skat:${j.job_noegle}`, sendt), knap("✓ Overført", () => sendt())])); });
   // penge ind: egen skat + det, kontoen kan bære, til job i farezonen (Oscar 5/11). Råd = saldo − moms og regninger 30 dage − løn næste d. 1
   let zRest = sk.forud?.mangler || 0, råd = (ob.linjer?.erhverv?.kr || 0) - (ob.linjer?.erhverv?.behov || 0) - ((ØK.P || {}).basis?.netto || 0);
-  (skV ? [] : sk.snart || []).forEach(u => { const z = Math.max(0, Math.min(zRest, råd - u.skat)); zRest -= z; råd -= u.skat + z;
+  (skV ? [] : sk.snart || []).forEach(u0 => { const u = {...u0, skat: Math.min(u0.skat, loftRest)}; if (!u.skat) return; loftRest -= u.skat; const z = Math.max(0, Math.min(zRest, råd - u.skat, loftRest)); zRest -= z; loftRest -= z; råd -= u.skat + z;
     gør.push(trin("g", [h("b", {}, `Du har fået ${krKort(u.kr)} kr. fra ${u.kunde}.`), ` Overfør ${krKort(u.skat + z)} kr. til Skat${z ? `: ${krKort(u.skat)} kr. for jobbet og ${krKort(z)} kr. til job, der kommer sent` : ""}.`, nrT(P0kontoSaxo()) ? h("div", {class: "ov-n"}, nrT(P0kontoSaxo())) : null],
     u.nr != null ? (() => { const sendt = tx => kør("skat-snart-overfoert", [`--nr=${u.nr}`, `--kr=${u.skat}`, ...(z ? [`--forud=${z}`] : [])], {tekst: typeof tx === "string" ? tx : `Skat-puljen +${krKort(u.skat + z)} kr.`, efter: ["mo", "jobstatus"],
-      med: () => { puljeMed("Skat", u.skat + z); sk.snart = sk.snart.filter(y => y !== u); (sk.snart_overfoert = sk.snart_overfoert || {})[u.nr] = {kr: u.skat}; }}); return [fraBufferKnap(u.skat + z, `skat:faktura:${u.nr}`, sendt), knap("✓ Overført", () => sendt())]; })() : null)); });
+      med: () => { puljeMed("Skat", u.skat + z); sk.snart = sk.snart.filter(y => y !== u0); (sk.snart_overfoert = sk.snart_overfoert || {})[u.nr] = {kr: u.skat}; }}); return [fraBufferKnap(u.skat + z, `skat:faktura:${u.nr}`, sendt), knap("✓ Overført", () => sendt())]; })() : null)); });
   const P0 = ØK.P || {}, HB0 = P0.husbuffer;
   // "Sæt X ind på Husleje d. 1 + Buffer" er væk (Oscar 3/11): pengene kommer fra firmaet, og mangler der, står det i 3-måneders-oversigten
   // Overførsler i hånden (Oscar 2/11, skitse panel-overfoersler): én linje pr. overførsel med beløb, fra og til, reg.nr. og kontonr. på modtagerkontoen
@@ -4927,6 +4928,8 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     if (gammeltÅr) return ud;
     // restskatten (Oscar 5/11): ingen samlet rød linje for penge, der ikke er tjent endnu. Rolig påmindelse fra 1/12 om det, der er kommet ind
     if (FS.rater_tilbage === false && sk.aar == år0 && (sk.restskat_nu || 0) > 100 && iDag() >= `${år0}-12-01`) ud.push(["y", sk.restskat_besked?.tekst || ""]);
+    const fbd = sk.register?.aar?.[sk.aar]?.fra_bunden?.grundlag_dato, fbA = fbd ? Math.floor((dag(iDag()) - dag(fbd)) / 864e5) : 0;
+    if (fbA > 35) ud.push(["rd", `Restskatten bygger på løn og A-skat fra ${kortDato(fbd)}. Opdatér tallene`]);   // samme grænse som opdateret-mærket: en ny lønseddel ændrer skatten (revision 5/11)
     // skatten venter på en kunde (Oscar 5/11): beløb og frist står her, banneret kommer først, når kunden har betalt eller betalingsdagen er nået
     if (skV && skV.tilstand !== "afventer") { const Pv = skV.fra_pulje || 0, Bv = (skV.lonkonto || 0) + Pv, Av = skV.firma ?? skV.mangler;
       ud.push([null, `${krKort(Av + Bv)} kr. skal betales til Skat senest ${kortDato(skV.frist)}${Bv ? `: ${krKort(Av)} kr. fra firmakontoen og ${krKort(Bv)} kr. fra Lønkonto+` : ""}. Venter på ${skV.kunde}.` + (Pv ? ` Flyt først ${krKort(Pv)} kr. fra Skat-puljen i Saxo til Lønkonto+ senest ${kortDato(skV.saxo_frist)}.` : "")]); }
