@@ -4796,7 +4796,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     if (ind > need) fra = MDL[Number(x.ym.slice(5, 7)) - 1];
     return {ym: x.ym, navn: mdNavn6(x.ym), mangler: m - brugt, buf: brugt > 0, af};
   }) : [];
-  const hul = sælg.find(x => x.mangler > 0), basisVis = LV ? LV.F.kr + lønMd(hul?.ym || sælg[1]?.ym || "").brutto : 0;
+  const hul = sælg.find(x => x.mangler > 0), lønVis = LV ? lønMd(hul?.ym || sælg[1]?.ym || "") : null, basisVis = LV ? LV.F.kr + lønVis.brutto : 0;
   const del = LV?.L.deling || {dig: 0, buffer: 0};
   const rRække = (id, venstre, højre, ...indhold) => h("details", rdFold(id, {class: "rd-f sg-r"}), h("summary", {}, h("span", {}, ...venstre), h("b", {}, højre)), ...indhold);
   const ubS = mo.ubetalt || {antal: 0, kr: 0, liste: []}, ub1 = [...(ubS.liste || [])].sort((a, b) => a.forfald < b.forfald ? -1 : 1)[0];
@@ -4813,10 +4813,10 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
         h("div", {class: "s"}, st_ === "rod" ? `Mangler ${krKort(E_.mangler)}` : st_ === "gul" ? "Kommer" : x.mangler > 0 ? `Mangler ${krKort(x.mangler)}` : "✓ Dækket"),
         st_ === "ok" ? h("div", {class: "f gem"}, `Gem ${krKort(E_.gem)} kr. på kontoen`) : st_ === "gul" ? h("div", {class: "f gem"}, `Mangler ${krKort(E_.mangler_i_dag)} kr., kommer inden ${til_}`) : st_ === "rod" ? h("div", {class: "f gem"}, `Mangler ${krKort(E_.mangler)} kr. til ${til_}`) : null,
         x.buf && !x.mangler ? h("div", {class: "f"}, "af bufferen") : x.af ? h("div", {class: "f"}, `af ${x.af}`) : null); })),
-    rRække("leve", ["Basis pr. måned ", h("span", {class: "muted sg-m"}, `firmaets faste ${krKort(LV.F.kr)} + din løn med skat ${krKort(basisVis - LV.F.kr)}`)], `${krKort(basisVis)} kr.`,
+    rRække("leve", ["Basis pr. måned ", h("span", {class: "muted sg-m"}, `firmaets faste ${krKort(LV.F.kr)} + din løn med skat ${krKort(basisVis - LV.F.kr)}`), lønVis.satser_mangler && !sk.satser_mangler ? ` · ${lønVis.skat_aar}-satser mangler, regnet med ${lønVis.satser_aar}` : null], `${krKort(basisVis)} kr.`,
       h("div", {class: "rd-l"}, h("span", {}, "Firmaets faste udgifter ", h("span", {class: "muted"}, LV.F.linjer.slice(0, 4).map(x => `${x.navn} ${krKort(x.kr)}`).join(" · ") + (LV.F.linjer.length > 4 ? ` · ${LV.F.linjer.length - 4} andre ${krKort(LV.F.linjer.slice(4).reduce((t, x) => t + x.kr, 0))}` : "")), kilde("kontoudtog", LV.F.dato)), h("b", {}, krKort(LV.F.kr))),
       h("div", {class: "rd-l"}, h("span", {}, "Til dig privat ", priv(), h("span", {class: "muted"}, " " + LV.L.linjer.map(x => `${x.navn} ${krKort(x.kr)}`).join(" · ")), kilde("privat-data", LV.L.dato)), h("b", {}, krKort(LV.L.netto))),
-      h("div", {class: "rd-l"}, h("span", {}, "Skat af lønnen ", h("span", {class: "muted"}, `AM-bidrag 8 % ${krKort(LV.L.am)} · ${LV.L.traekprocent} % efter personfradrag ${krKort(Math.round(LV.L.personfradrag / 12))}/md. ${krKort(LV.L.skat)}`), kilde("forskud", LV.L.dato)), h("b", {}, krKort(LV.L.brutto - LV.L.netto))),
+      h("div", {class: "rd-l"}, h("span", {}, "Skat af lønnen ", h("span", {class: "muted"}, `AM-bidrag 8 % ${krKort(LV.L.am)} · skat regnet fra bunden ${krKort(LV.L.skat)}`), kilde("satser", LV.L.dato)), h("b", {}, krKort(LV.L.brutto - LV.L.netto))),
       LV.L.pause.length ? h("div", {class: "rd-l"}, h("span", {class: "muted"}, "Sat på pause: " + LV.L.pause.map(x => `${x.navn.split(" (")[0]} ${krKort(x.kr)}`).join(" · ")), h("b", {})) : null,
       h("div", {class: "rd-l"}, h("span", {}, "Over basis ", h("span", {class: "muted"}, del.buffer ? `efter skat, ${Math.round(del.dig * 100)} % til dig og ${Math.round(del.buffer * 100)} % til bufferen, til ${HBl ? "Husleje d. 1 + Buffer" : "den"} er på ${krKort(LV.L.buffer_maal)} (3 måneders d. 1)` : "efter skat, alt til dig")),
         h("b", {}, `${Math.round(del.dig * 100)} / ${Math.round(del.buffer * 100)}`)),
