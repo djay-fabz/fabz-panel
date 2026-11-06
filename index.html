@@ -414,7 +414,7 @@ details.sg-r{margin:0;border:0;border-top:1px solid var(--linje);border-radius:0
 .mg-r{display:flex;align-items:center;gap:14px;width:100%;padding:10px 0;border:0;border-top:1px solid var(--linje);background:none;font:inherit;color:inherit;text-align:left;cursor:pointer;flex-wrap:wrap}.mg-l>.mg-r:first-child{border-top:0}.mg-r:hover{background:var(--hover)}.mg-tom{padding:10px 0}
 .mg-d{width:36px;text-align:center;flex:none;display:flex;flex-direction:column;line-height:1.1}.mg-d b{font-size:17px}.mg-d span{font-size:10.5px;color:var(--svag);letter-spacing:.04em}.mg-t{flex:1 1 180px;min-width:0;display:flex;flex-direction:column}.mg-p{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 @media(max-width:700px){.mg-p{flex-basis:100%;justify-content:flex-start;padding-left:50px}}
-.sg-md.y{background:var(--adv-blid)}.sg-md.y .s{color:var(--adv)}.sg-md .gem{font-weight:600}.sg-linjer{margin-top:12px;background:var(--flade);border:1px solid var(--linje);border-radius:14px;overflow:hidden}details.sg-l{margin:0;border:0;border-radius:0}.sg-linjer>details.sg-l+details.sg-l{border-top:1px solid var(--linje)}details.sg-l>summary{font-weight:400}details.sg-l>summary::before{content:none}details.sg-l[open]>summary::before{content:none}details.sg-l>summary::after{content:"›";margin-left:auto;color:var(--svagere)}details.sg-l[open]>summary::after{content:"⌄"}
+.sg-md.y{background:var(--adv-blid)}.sg-md.y .s{color:var(--adv)}.sg-md.fri{background:var(--flade2);border:1px solid var(--linje)}.sg-md.fri .s{color:var(--tekst)}.sg-v.y{color:var(--adv)}.sg-md .gem{font-weight:600}.sg-linjer{margin-top:12px;background:var(--flade);border:1px solid var(--linje);border-radius:14px;overflow:hidden}details.sg-l{margin:0;border:0;border-radius:0}.sg-linjer>details.sg-l+details.sg-l{border-top:1px solid var(--linje)}details.sg-l>summary{font-weight:400}details.sg-l>summary::before{content:none}details.sg-l[open]>summary::before{content:none}details.sg-l>summary::after{content:"›";margin-left:auto;color:var(--svagere)}details.sg-l[open]>summary::after{content:"⌄"}
 .sg-ind{padding:4px 12px 12px}.sg-h{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 4px;font-weight:600}.sg-h .sg-prik{margin-top:1px}.sg-ht{flex:1;min-width:180px}
 .sg-under{margin-top:6px;border:1px solid var(--linje);border-radius:10px;overflow:hidden}.sg-under>details.sg-l{border:0;border-radius:0}.sg-under>details.sg-l+details.sg-l{border-top:1px solid var(--linje)}.sg-ek{color:var(--svagere)}.sg-prik{width:8px;height:8px;border-radius:50%;flex:none;background:var(--fejl)}.sg-prik.y{background:var(--adv)}
 .op-mk{font-size:12px;font-weight:600;padding:3px 9px;border-radius:99px;background:var(--ok-blid);color:var(--ok)}.op-mk.r{background:var(--fejl-blid);color:var(--fejl)}
@@ -1195,6 +1195,7 @@ function honorarDel(j, st, r) {
       }}, "Læg i Gmail")));
 }
 const SEDDEL = {}, FLYT_LÅST = new Set();
+const SAELG_GUL_DAGE = 60;   // Sælg for bliver gult, når en ikke-dækket måned er tættere på end dette (Oscar 6/11)
 // Upload af honorarseddel direkte fra browseren til Oscars Drive (Oscar 5/11). drive.file: panelet ser kun sine egne filer. Intet går gennem GitHub, kun linket gemmes. Client ID er ikke hemmeligt
 const DRIVE = {id: "685896965051-cqt5se806ut2c7s7mq9l4j88ntg5sd0b.apps.googleusercontent.com", tok: null, til: 0, klient: null, mappe: null, aktiv: null};
 function driveForbered() {
@@ -4737,13 +4738,17 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   const del = LV?.L.deling || {dig: 0, buffer: 0};
   const rRække = (id, venstre, højre, ...indhold) => h("details", rdFold(id, {class: "rd-f sg-r"}), h("summary", {}, h("span", {}, ...venstre), h("b", {}, højre)), ...indhold);
   const ubS = mo.ubetalt || {antal: 0, kr: 0, liste: []}, ub1 = [...(ubS.liste || [])].sort((a, b) => a.forfald < b.forfald ? -1 : 1)[0];
+  const dageTilMd = ym => Math.round((dag(ym + "-01") - dag(iDag())) / 864e5), EH_ = ob.linjer?.erhverv;
+  const hulTæt = hul && dageTilMd(hul.ym) < SAELG_GUL_DAGE, antalDækket = hul ? sælg.indexOf(hul) : sælg.length;
   const sælgKort = sælg.length ? h("div", {class: "kort2 sg"},
-    hul ? [h("div", {class: "sg-t"}, "Næste måned, der ikke er dækket"), h("div", {class: "sg-v"}, `Sælg for ${krKort(hul.mangler)} kr. mere`),
-      h("div", {class: "sg-u"}, `til ${hul.navn.toLowerCase()} `, h("span", {class: "muted"}, "· ekskl. moms"))]
-      : h("div", {class: "sg-v ok"}, `✓ Dækket ${sælg.length} måneder frem`),
-    h("div", {class: "sg-mdr"}, sælg.map((x, k) => { const E_ = k === 0 ? ob.linjer?.erhverv : null, st_ = E_?.status, til_ = E_?.til ? kortDato(E_.til) : "";   // Gem X (skitse panel-gem-x): denne måneds kort siger, hvad der skal blive stående, og om det er der
-      return h("div", {class: "sg-md" + (st_ === "rod" || (st_ !== "gul" && x.mangler > 0) ? " rd" : st_ === "gul" ? " y" : "")}, h("div", {class: "n"}, x.navn),
-        h("div", {class: "s"}, st_ === "rod" ? `Mangler ${krKort(E_.mangler)}` : st_ === "gul" ? "Kommer" : x.mangler > 0 ? `Sælg ${krKort(x.mangler)}` : "✓ Dækket"),
+    // rolig visning (Oscar 6/11, skitse panel-saelg-rolig): rød kun når pengene reelt ikke rækker, gul under SAELG_GUL_DAGE til en ikke-dækket måned, ellers neutral. Beløbene er de samme
+    EH_?.status === "rod" ? [h("div", {class: "sg-v"}, `Mangler ${krKort(EH_.mangler)} kr. til ${kortDato(EH_.til)}`), h("div", {class: "sg-u"}, "Moms og regninger kan ikke betales uden mere salg eller penge fra Buffer.")]
+      : !hul ? h("div", {class: "sg-v ok"}, `✓ Dækket ${sælg.length} måneder frem`)
+      : hulTæt ? [h("div", {class: "sg-v y"}, `Sælg for ${krKort(hul.mangler)} kr. inden ${hul.navn.toLowerCase()}`), h("div", {class: "sg-u"}, `Under ${SAELG_GUL_DAGE} dage til. Nu er det tid at ringe.`)]
+      : [h("div", {class: "sg-v ok"}, `${antalDækket} ${antalDækket === 1 ? "måned" : "måneder"} dækket`), h("div", {class: "sg-u"}, "Næste mål: ", h("b", {}, `${krKort(hul.mangler)} kr.`), ` til ${hul.navn.toLowerCase()} `, h("span", {class: "muted"}, "· ekskl. moms"))],
+    h("div", {class: "sg-mdr"}, sælg.map((x, k) => { const E_ = k === 0 ? EH_ : null, st_ = E_?.status, til_ = E_?.til ? kortDato(E_.til) : "", tæt = x.mangler > 0 && dageTilMd(x.ym) < SAELG_GUL_DAGE;   // Gem X (skitse panel-gem-x): denne måneds kort siger, hvad der skal blive stående, og om det er der
+      return h("div", {class: "sg-md" + (st_ === "rod" ? " rd" : st_ === "gul" || tæt ? " y" : x.mangler > 0 ? " fri" : "")}, h("div", {class: "n"}, x.navn),
+        h("div", {class: "s"}, st_ === "rod" ? `Mangler ${krKort(E_.mangler)}` : st_ === "gul" ? "Kommer" : x.mangler > 0 ? `Mangler ${krKort(x.mangler)}` : "✓ Dækket"),
         st_ === "ok" ? h("div", {class: "f gem"}, `Gem ${krKort(E_.gem)} kr. på kontoen`) : st_ === "gul" ? h("div", {class: "f gem"}, `Mangler ${krKort(E_.mangler_i_dag)} kr., kommer inden ${til_}`) : st_ === "rod" ? h("div", {class: "f gem"}, `Mangler ${krKort(E_.mangler)} kr. til ${til_}`) : null,
         x.buf && !x.mangler ? h("div", {class: "f"}, "af bufferen") : x.af ? h("div", {class: "f"}, `af ${x.af}`) : null); })),
     rRække("leve", ["Basis pr. måned ", h("span", {class: "muted sg-m"}, `firmaets faste ${krKort(LV.F.kr)} + din løn med skat ${krKort(basisVis - LV.F.kr)}`)], `${krKort(basisVis)} kr.`,
