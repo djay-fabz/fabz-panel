@@ -5049,6 +5049,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     // restskatten (Oscar 5/11): ingen samlet rød linje for penge, der ikke er tjent endnu. Rolig påmindelse fra 1/12 om det, der er kommet ind
     if (FS.rater_tilbage === false && sk.aar == år0 && (sk.restskat_nu || 0) > 100 && iDag() >= `${år0}-12-01`) ud.push(["y", sk.restskat_besked?.tekst || ""]);
     for (const a of (sk.register?.afstemning || []).filter(a => !a.stop)) ud.push([null, `Ikke afstemt: ${a.kilde} ${a.tekst}${a.kr != null ? `, ${krKort(a.kr)} kr.` : ""}`]);
+    if (sk.satser_mangler) ud.push(["y", `Skattesatser for ${sk.aar} mangler. Restskatten bygger på en fast procent`]);   // regner ikke videre i tavshed
     const fbd = sk.register?.aar?.[sk.aar]?.fra_bunden?.grundlag_dato, fbA = fbd ? Math.floor((dag(iDag()) - dag(fbd)) / 864e5) : 0;
     if (fbA > 35) ud.push(["rd", `Restskatten bygger på løn og A-skat fra ${kortDato(fbd)}. Opdatér tallene`]);   // samme grænse som opdateret-mærket: en ny lønseddel ændrer skatten (revision 5/11)
     // skatten venter på en kunde (Oscar 5/11): beløb og frist står her, banneret kommer først, når kunden har betalt eller betalingsdagen er nået
