@@ -2897,6 +2897,8 @@ function opgaveDetalje(o, indlejret) {   // indlejret: på jobbets side, hvor ti
       h("div", {class: "rk", style: "margin-top:0"}, inp(st, "konklusion", {placeholder: "Fx Singa til karaoke, aftalt med Christoffer"}),
         h("button", {class: "btn", type: "button", onclick: () => { const k = st.konklusion.trim(); if (k === (o.konklusion || "")) return;
           ret("konklusion", k, `#${o.id} konklusion`); }}, "Gem"))) : null,
+    o.mail_link ? h("div", {class: "rk", style: "gap:8px;margin-top:8px"}, h("a", {class: "btn lille", href: o.mail_link, target: "_blank", rel: "noopener"}, "Åbn mail"),
+      o.mail_udkast ? h("a", {class: "btn lille", href: o.mail_udkast, target: "_blank", rel: "noopener"}, "Åbn udkast") : null) : null,
     infoLinje("Formål", o.formaal), infoLinje("Første skridt", o.foerste_skridt), indlejret && (o.kontekst || "").length > 200   // på jobbet: lang kontekst foldet sammen, så omfanget kan ses med det samme
       ? h("details", {class: "info"}, h("summary", {class: "etiket", style: "cursor:pointer"}, "Kontekst (tryk for at vise)"), h("div", {class: "pre"}, o.kontekst))
       : infoLinje("Kontekst", o.kontekst), infoLinje("Venter på", o.venter_paa),
@@ -3006,6 +3008,7 @@ function planlægPanel() {
     OP.planArbejder = false; if (fane === "opgaver") tegn();
   };
   const enkelt = !!p?.enkelt;
+  const idagPlan = iDag(), mp = !p && OP.planDato === idagPlan ? mailTilPlan(idagPlan, (D.dagsplaner || []).find(x => x.dato === idagPlan)) : {klar: true};
   const halvdele = [["foer_frokost", enkelt ? "Arbejdstid" : "Før frokost"], ...(enkelt ? [] : [["efter_frokost", "Efter frokost"]]), ["hvis_tid", "Hvis der er tid"]];
   return h("div", {class: "kort2"},
     h("div", {class: "kh"}, h("h2", {}, "Planlæg dag"), h("button", {class: "x", type: "button", onclick: () => { OP.vis = null; tegn(); }}, "×")),
@@ -3016,10 +3019,12 @@ function planlægPanel() {
       felt("Frokostpause", h("select", {class: "input", onchange: e => { OP.planFrokost = e.target.value; }},
         h("option", {value: "kal", selected: OP.planFrokost === "kal"}, "Efter kalenderen"), h("option", {value: "ingen", selected: OP.planFrokost === "ingen"}, "Ingen pause"))),
       h("div", {style: "display:flex;gap:8px;grid-column:1/-1;flex-wrap:wrap"},
-        h("button", {class: "btn" + (p ? "" : " primaer"), type: "button", disabled: OP.planArbejder, onclick: () => lavForslag(false)},
+        h("button", {class: "btn" + (p ? "" : " primaer"), type: "button", disabled: OP.planArbejder || !mp.klar, onclick: () => lavForslag(false)},
           OP.planArbejder && OP.planMode !== "selv" ? "Laver forslag …" : "Foreslå en plan"),
-        h("button", {class: "btn", type: "button", disabled: OP.planArbejder, onclick: () => lavForslag(true)},
+        h("button", {class: "btn", type: "button", disabled: OP.planArbejder || !mp.klar, onclick: () => lavForslag(true)},
           OP.planArbejder && OP.planMode === "selv" ? "Åbner …" : "Lav selv"))),
+    mp.tekst ? h("div", {class: "dato-adv adv", style: "display:flex;align-items:center;gap:10px;flex-wrap:wrap"}, h("span", {}, mp.tekst),
+      mp.kør ? h("button", {class: "btn lille", type: "button", onclick: () => kør("mailoversigt", [], {tekst: "Mailoversigt", efter: [], med: () => { D.mailoversigt = {dato: idagPlan, status: "bestilt", tid: nuHHMM()}; }})}, "Kør den nu") : null) : null,
     !p ? h("div", {class: "muted lille", style: "margin-top:8px"}, "Foreslå en plan: panelet foreslår opgaver til tiden, og du kan rette bagefter. Lav selv: tom plan, du vælger opgaverne.") : null,
     p ? [
       h("div", {class: "muted lille", style: "margin-top:8px"}, enkelt ? `${dagNavnLang(p.dato)} · arbejdstid ${p.foer_tid}, ingen frokostpause` : `${dagNavnLang(p.dato)} · før frokost ${p.foer_tid} · efter frokost ${p.efter_tid}`),
@@ -3839,15 +3844,29 @@ function moPoll(idag, faerdig) {   // hent data/mailoversigt.json igen, til faer
     n++;
     const f = await laesFil("data/mailoversigt.json");
     const j = f ? await f.json() : null;
-    if ((j && j.dato === idag && faerdig(j)) || n >= 12) { clearInterval(MO_POLL); MO_POLL = 0; if (j && j.dato === idag) { D.mailoversigt = j; tegn(); } }
+    if ((j && j.dato === idag && faerdig(j)) || n >= 12) { clearInterval(MO_POLL); MO_POLL = 0; if (j && j.dato === idag) { D.mailoversigt = j; if (j.status === "sendt") await genindlæs(["opgaver"]); } tegn(); }   // opgaverne fra mailen kommer med uden genindlæsning (6/11)
   }, 45000);
 }
 const moGrund = m => m.fejl_kort || (/quota|kvote|403|429/i.test(m.fejl || "") ? "Gmail havde travlt" : (m.fejl || "ukendt fejl").replace(/^\w+Error:\s*/, "").slice(0, 50));
+let MO_VENT = 0;
+function mailTilPlan(idag, dp) {   // Planlæg dag venter på mailoversigten, så nye opgaver fra mailen kommer med (Oscar 6/11). Fejler den, eller går der over 10 minutter, må planen stadig kunne laves og sige det
+  const m = D.mailoversigt, iDagM = m && m.dato === idag;
+  if (iDagM && m.status === "sendt") return {klar: true};
+  if (iDagM && m.status === "fejl") return {klar: true, tekst: `Mailoversigten fejlede (${moGrund(m)}). Nye mails er ikke med i planen.`};
+  const start = (iDagM && m.status === "bestilt" && m.tid) || dp?.moedt_ind;
+  if (!start) return {klar: true, kør: true, tekst: "Mailoversigten er ikke kørt i dag. Nye mails er ikke med i planen."};
+  const hm = String(start).match(/(\d+)[.:](\d+)/), nu = nuHHMM().match(/(\d+)[.:](\d+)/);
+  const gået = hm && nu ? (+nu[1] * 60 + +nu[2]) - (+hm[1] * 60 + +hm[2]) : 99;
+  if (gået >= 10) return {klar: true, tekst: `Mailoversigten er ikke færdig efter ${gået} minutter. Nye mails er ikke med i planen.`};
+  moPoll(idag, j => j.status !== "bestilt");
+  if (!MO_VENT) MO_VENT = setTimeout(() => { MO_VENT = 0; tegn(); }, Math.max(1, 10 - gået) * 60000);
+  return {klar: false, tekst: `Venter på mailoversigten (startet kl. ${start}), så de nye opgaver kommer med i planen.`};
+}
 function mailStatus(idag, dp) {   // Mailoversigten (Oscar 28/10): KUN Mødt ind starter den. Status fra data/mailoversigt.json. Tre tilstande (Oscar 29/10): sendt, sendt men oprydning mangler (Ryd op nu), fejlede (Prøv igen)
   const m = D.mailoversigt, iDagM = m && m.dato === idag;
   if (iDagM && m.status === "sendt") {
     const mangler = (m.oprydning?.fejlede || []).length;
-    if (!mangler) return h("span", {class: "pill g", title: m.overskrift || ""}, `Mailoversigt sendt kl. ${m.tid} · ${m.kraever} kræver dig`);
+    if (!mangler) return h("span", {class: "pill g", title: m.overskrift || ""}, `Mailoversigt sendt kl. ${m.tid} · ` + (m.nye_opgaver != null ? `${m.nye_opgaver} ${m.nye_opgaver === 1 ? "ny opgave" : "nye opgaver"}` : `${m.kraever} kræver dig`));
     if (m.ryd_koerer) { moPoll(idag, j => (j.oprydning?.ryddet_igen || "") !== (m.oprydning?.ryddet_igen || "")); return h("span", {class: "pill y"}, `Mailoversigt sendt kl. ${m.tid} · rydder op …`); }
     return h("span", {class: "rk", style: "gap:6px"}, h("span", {class: "pill y", title: "Mailen er sendt. Oprydningen i indbakken (etiketter og arkivering) blev ikke færdig."},
         `Mailoversigt sendt kl. ${m.tid} · ${mangler} ${mangler === 1 ? "tråd" : "tråde"} ikke ryddet: ${m.oprydning?.grund || "ukendt fejl"}`),
