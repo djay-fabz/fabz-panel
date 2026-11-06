@@ -411,7 +411,7 @@ details.sg-r{margin:0;border:0;border-top:1px solid var(--linje);border-radius:0
 .mg-r{display:flex;align-items:center;gap:14px;width:100%;padding:10px 0;border:0;border-top:1px solid var(--linje);background:none;font:inherit;color:inherit;text-align:left;cursor:pointer;flex-wrap:wrap}.mg-l>.mg-r:first-child{border-top:0}.mg-r:hover{background:var(--hover)}.mg-tom{padding:10px 0}
 .mg-d{width:36px;text-align:center;flex:none;display:flex;flex-direction:column;line-height:1.1}.mg-d b{font-size:17px}.mg-d span{font-size:10.5px;color:var(--svag);letter-spacing:.04em}.mg-t{flex:1 1 180px;min-width:0;display:flex;flex-direction:column}.mg-p{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 @media(max-width:700px){.mg-p{flex-basis:100%;justify-content:flex-start;padding-left:50px}}
-.sg-linjer{margin-top:12px;background:var(--flade);border:1px solid var(--linje);border-radius:14px;overflow:hidden}details.sg-l{margin:0;border:0;border-radius:0}.sg-linjer>details.sg-l+details.sg-l{border-top:1px solid var(--linje)}details.sg-l>summary{font-weight:400}details.sg-l>summary::before{content:none}details.sg-l[open]>summary::before{content:none}details.sg-l>summary::after{content:"›";margin-left:auto;color:var(--svagere)}details.sg-l[open]>summary::after{content:"⌄"}
+.sg-md.y{background:var(--adv-blid)}.sg-md.y .s{color:var(--adv)}.sg-md .gem{font-weight:600}.sg-linjer{margin-top:12px;background:var(--flade);border:1px solid var(--linje);border-radius:14px;overflow:hidden}details.sg-l{margin:0;border:0;border-radius:0}.sg-linjer>details.sg-l+details.sg-l{border-top:1px solid var(--linje)}details.sg-l>summary{font-weight:400}details.sg-l>summary::before{content:none}details.sg-l[open]>summary::before{content:none}details.sg-l>summary::after{content:"›";margin-left:auto;color:var(--svagere)}details.sg-l[open]>summary::after{content:"⌄"}
 .sg-ind{padding:4px 12px 12px}.sg-h{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 4px;font-weight:600}.sg-h .sg-prik{margin-top:1px}.sg-ht{flex:1;min-width:180px}
 .sg-under{margin-top:6px;border:1px solid var(--linje);border-radius:10px;overflow:hidden}.sg-under>details.sg-l{border:0;border-radius:0}.sg-under>details.sg-l+details.sg-l{border-top:1px solid var(--linje)}.sg-ek{color:var(--svagere)}.sg-prik{width:8px;height:8px;border-radius:50%;flex:none;background:var(--fejl)}.sg-prik.y{background:var(--adv)}
 .op-mk{font-size:12px;font-weight:600;padding:3px 9px;border-radius:99px;background:var(--ok-blid);color:var(--ok)}.op-mk.r{background:var(--fejl-blid);color:var(--fejl)}
@@ -4369,10 +4369,13 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     if (T === "sidste") gør.push(trin("rd", nok ? [h("b", {}, `Betal ${fraHvor} til Skattekontoen senest ${F},`), ` også selv om ${skV.kunde} ikke har betalt.` + flyt_] : [h("b", {}, `${skV.kunde} mangler ${krKort(skV.kr)} kr.`), ` Firmakontoen kan ikke betale ${krKort(A)} kr. til Skat senest ${F} uden dem. Ring til dem nu.` + flyt_], betalt));
     if (T === "efter") gør.push(trin("rd", [h("b", {}, `Restskatten er ikke betalt: ${krKort(A + B)} kr.`), ` Fristen var ${F}.` + flyt_], betalt));
     if (T === "betalt") gør.push(trin("rd", [h("b", {}, `${skV.kunde} har betalt ${krKort(skV.kr)} kr.`), iDag() > skV.frist ? ` Fristen var ${F}. Betal ${fraHvor} til Skattekontoen nu.` + flyt_ : ` Betal ${fraHvor} til Skattekontoen senest ${F}.` + saxoT + flyt_], betalt));
-    const rd_ = mo.raad, lk = rd_?.loen_klub;
-    if (skV.tilstand === "venter" && rd_?.loen_dato && lk) { const kl_ = Math.round(lk.kr / 100) * 100;
-      gør.push(trin("g", [h("b", {}, `Løn d. ${kortDato(rd_.loen_dato)}: ca. ${krKort(rd_.loen_naeste + kl_)} kr.`), ` ${krKort(rd_.loen_naeste)} kr. fra firmakontoen${kl_ ? ` og ${krKort(kl_)} kr. fra klubjobs` : ""}.` + lk.forfaldne.map(q => ` + ${krKort(Math.round(q.kr / 100) * 100)} kr. fra ${q.navn}, når de betaler.`).join("")])); }
   }
+  // lønbjælken (skitse panel-gem-x): kun 2 bankdage før d. 1, og kun hvor pengene skal tages fra. Mangler der penge, vises det med det samme
+  { const rd_ = mo.raad, lk = rd_?.loen_klub, B = P.d1?.beloeb;
+    if (rd_?.loen_dato && lk && B) { const A = rd_.loen_d1 ?? rd_.loen_naeste ?? 0, Y = lk.kr, M = B - A - Y, D1 = kortDato(rd_.loen_dato), af100 = x => Math.ceil(x / 100) * 100;
+      const forf = (lk.forfaldne || []).map(q => q.navn).join(" og ");
+      if (M > 0) gør.push(trin("rd", [h("b", {}, `Der mangler ${krKort(af100(M))} kr. til regningerne d. ${D1}.`), ` Firmakontoen kan give ${krKort(A)} kr., og ${krKort(Y)} kr. ${lk.kommet >= Y ? "er kommet" : "kommer"} fra klubjobs.` + (forf ? ` ${forf} er forfalden og tæller ikke med.` : "")]));
+      else if (iDag() >= (P.d1.vis_fra || rd_.loen_vis_fra || rd_.loen_dato)) gør.push(trin("g", [h("b", {}, `Til d. ${D1}:`), ` Tag ${krKort(af100(Math.max(0, B - Y)))} kr. fra firmakontoen. ${krKort(Y)} kr. ${lk.kommet >= Y ? "er kommet" : "kommer"} på Lønkonto+ fra klubjobs. Så er regningerne på ${krKort(B)} kr. dækket.`])); } }
   // 2 dage før en faktura forfalder (Oscar 2/11): gul, så skatten er klar, når pengene kommer
   // ✓ Overført på hvert banner (Oscar 5/11: pengene var kommet, men der var ikke noget at trykke på); kontoudtoget ser pengene: "har betalt"
   // skat fra job, hvor pengene ER kommet, men beløbet ikke er overført (Oscar 5/11): rød, med job og beløb, ét tryk. Også når jobbet mangler andet, fx B-indkomst.dk (Ranum 19/6)
@@ -4672,8 +4675,11 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     hul ? [h("div", {class: "sg-t"}, "Næste måned, der ikke er dækket"), h("div", {class: "sg-v"}, `Sælg for ${krKort(hul.mangler)} kr. mere`),
       h("div", {class: "sg-u"}, `til ${hul.navn.toLowerCase()} `, h("span", {class: "muted"}, "· ekskl. moms"))]
       : h("div", {class: "sg-v ok"}, `✓ Dækket ${sælg.length} måneder frem`),
-    h("div", {class: "sg-mdr"}, sælg.map(x => h("div", {class: "sg-md" + (x.mangler > 0 ? " rd" : "")}, h("div", {class: "n"}, x.navn),
-      h("div", {class: "s"}, x.mangler > 0 ? `Sælg ${krKort(x.mangler)}` : "✓ Dækket"), x.buf && !x.mangler ? h("div", {class: "f"}, "af bufferen") : x.af ? h("div", {class: "f"}, `af ${x.af}`) : null))),
+    h("div", {class: "sg-mdr"}, sælg.map((x, k) => { const E_ = k === 0 ? ob.linjer?.erhverv : null, st_ = E_?.status, til_ = E_?.til ? kortDato(E_.til) : "";   // Gem X (skitse panel-gem-x): denne måneds kort siger, hvad der skal blive stående, og om det er der
+      return h("div", {class: "sg-md" + (st_ === "rod" || (st_ !== "gul" && x.mangler > 0) ? " rd" : st_ === "gul" ? " y" : "")}, h("div", {class: "n"}, x.navn),
+        h("div", {class: "s"}, st_ === "rod" ? `Mangler ${krKort(E_.mangler)}` : st_ === "gul" ? "Kommer" : x.mangler > 0 ? `Sælg ${krKort(x.mangler)}` : "✓ Dækket"),
+        st_ === "ok" ? h("div", {class: "f gem"}, `Gem ${krKort(E_.gem)} kr. på kontoen`) : st_ === "gul" ? h("div", {class: "f gem"}, `Mangler ${krKort(E_.mangler_i_dag)} kr., kommer inden ${til_}`) : st_ === "rod" ? h("div", {class: "f gem"}, `Mangler ${krKort(E_.mangler)} kr. til ${til_}`) : null,
+        x.buf && !x.mangler ? h("div", {class: "f"}, "af bufferen") : x.af ? h("div", {class: "f"}, `af ${x.af}`) : null); })),
     rRække("leve", ["Basis pr. måned ", h("span", {class: "muted sg-m"}, `firmaets faste ${krKort(LV.F.kr)} + din løn med skat ${krKort(basisVis - LV.F.kr)}`)], `${krKort(basisVis)} kr.`,
       h("div", {class: "rd-l"}, h("span", {}, "Firmaets faste udgifter ", h("span", {class: "muted"}, LV.F.linjer.slice(0, 4).map(x => `${x.navn} ${krKort(x.kr)}`).join(" · ") + (LV.F.linjer.length > 4 ? ` · ${LV.F.linjer.length - 4} andre ${krKort(LV.F.linjer.slice(4).reduce((t, x) => t + x.kr, 0))}` : "")), kilde("kontoudtog", LV.F.dato)), h("b", {}, krKort(LV.F.kr))),
       h("div", {class: "rd-l"}, h("span", {}, "Til dig privat ", priv(), h("span", {class: "muted"}, " " + LV.L.linjer.map(x => `${x.navn} ${krKort(x.kr)}`).join(" · ")), kilde("privat-data", LV.L.dato)), h("b", {}, krKort(LV.L.netto))),
@@ -4723,7 +4729,8 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     let rest = RD.saldo, brugt = 0;
     for (const x of poster) {
       x.mangler = Math.max(0, x.kr - Math.max(0, rest)); rest -= x.kr; brugt += x.kr;
-      const kommer = x.senest ? fakt.filter(y => y.forfald && y.forfald <= minus3(x.senest)).reduce((s, y) => s + y.kr, 0) : 0;
+      // gul, hvis det, der forventes, lander inden datoen; en forfalden betaling tæller ikke (Oscar 6/11). Uden firma_ind: de sendte fakturaer med 3 dages luft
+      const kommer = !x.senest ? 0 : mo.firma_ind ? mo.firma_ind.filter(y => y.dato <= x.senest && !y.forfalden).reduce((s, y) => s + y.kr, 0) : fakt.filter(y => y.forfald && y.forfald <= minus3(x.senest)).reduce((s, y) => s + y.kr, 0);
       x.naar = x.mangler && x.senest && RD.saldo + kommer >= brugt;
       x.send = x.mangler && !x.naar && x.f === "rd" && ufakt.length && RD.saldo + kommer + ufakt.reduce((s, b) => s + b.beloeb * 1.25, 0) >= brugt ? ufakt.map(b => b.navn.split(" (")[0]) : null;
       x.prik = !x.mangler ? null : x.naar ? "y" : x.f;
