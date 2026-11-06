@@ -139,6 +139,10 @@ input[type=date]{color-scheme:light dark}
 .sd-side{max-width:980px;padding-bottom:0}.sd-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}.sd-top h1{margin:0}.sd-bar{height:8px;border-radius:99px;background:var(--linje);margin:12px 0 14px;overflow:hidden}.sd-bar div{height:100%;background:var(--ok);border-radius:99px}
 .sd-liste{background:var(--flade);border:1px solid var(--linje);border-radius:14px;overflow:hidden}.sd-r{display:flex;align-items:center;gap:14px;padding:12px 16px}.sd-r+.sd-r{border-top:1px solid var(--linje)}.sd-mk{flex:none;width:20px;height:20px;border-radius:50%;border:2px solid var(--svagere)}.sd-r.ok .sd-mk{background:var(--ok);border-color:var(--ok)}.sd-t{flex:1;min-width:0;display:block;text-align:left;background:none;border:0;padding:0;color:inherit;font:inherit}.sd-t b{display:block;font-weight:600}.sd-t span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sd-r.ok b{text-decoration:line-through;font-weight:500;color:var(--svag)}.sd-r .btn{flex:none;margin:0}
 .sd-faerdig{background:var(--ok-blid);border-radius:14px;padding:26px;text-align:center}.sd-f-t{color:var(--ok);font-size:21px;font-weight:600;margin-bottom:12px}.sd-fold{background:var(--flade);border:1px solid var(--linje);border-radius:12px;margin-top:8px}.sd-fold>summary{padding:12px 16px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;font-weight:500}.sd-fold>summary::-webkit-details-marker{display:none}.sd-fold>summary::after{content:"›";color:var(--svagere)}.sd-fold[open]>summary::after{content:"⌄"}.sd-fold .kompakt{margin:0 12px 12px}.sd-fold .to,.sd-fold .side{padding-left:12px;padding-right:12px}.sd-fold .salg-status{margin-top:0}
+@font-face{font-family:SkiltSerif;src:url(skilte/serif.ttf)}@font-face{font-family:SkiltPop;src:url(skilte/pop.ttf)}
+.sv{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:16px;max-width:760px}.sv-k{background:var(--flade);border:2px solid var(--linje);border-radius:14px;padding:14px;text-align:center;cursor:pointer;color:inherit;font:inherit}.sv-k:hover{border-color:var(--svagere)}.sv-k.valgt{border-color:var(--accent)}.sv-k>b{display:block;margin-top:10px;font-size:15px}
+.sv-b{display:block;position:relative;container-type:inline-size;width:min(100%,290px);margin:0 auto;box-shadow:0 2px 12px #0002}.sv-b img{display:block;width:100%}.sv-navn{position:absolute;left:0;right:0;top:51.6cqw;font:400 6cqw/1.2 SkiltSerif,serif;color:#7f0724;text-align:center;white-space:nowrap}.sv-linje{position:absolute;left:0;right:0;top:63cqw;font:400 2.1cqw/1.2 SkiltPop,sans-serif;color:#211115;text-align:center;text-transform:uppercase;letter-spacing:.2em;white-space:nowrap}
+@media(max-width:600px){.sv{gap:10px}.sv-k{padding:8px}}
 .dato-chip{font-family:inherit;line-height:inherit;min-width:118px;height:auto}.dato-chip.aktiv::-webkit-calendar-picker-indicator{filter:invert(1)}
 .gruppe{margin-top:20px}
 .kort{background:var(--flade);border:1px solid var(--linje);border-radius:12px;overflow:hidden}
@@ -1059,7 +1063,7 @@ function visJobSide(j) {   // alt til ét job samlet: pakkeliste, kort, kørsel,
     jobOpgaver(j, st),
     spilletidBlok(j),
     afsnit("Pakkeliste", st.pak[0].toUpperCase() + st.pak.slice(1), st.klar, h("button", {class: "btn primaer lille", type: "button", onclick: () => åbnJob(j)}, "Åbn pakkeliste")),
-    afsnit("Skilte", st.kortTekst, st.kort, h("button", {class: "btn lille", type: "button", onclick: () => { KT.job = st.key; KT.slags = null; KT.fk = KT.kk = null; fane = "kort"; tegn(); window.scrollTo(0, 0); }}, "Åbn skilte")),
+    afsnit("Skilte", st.kortTekst, st.kort, h("button", {class: "btn lille", type: "button", onclick: () => { KT.job = st.key; KT.slags = null; KT.fk = KT.kk = null; KT.fraJob = true; fane = "kort"; tegn(); window.scrollTo(0, 0); }}, "Åbn skilte")),
     afsnit("Kørsel", st.kørsel ? "Plan gemt, kommer på side 2" : "Ikke lavet", st.kørsel, h("button", {class: "btn lille", type: "button", onclick: () => { vælgRuteJob(st.key); fane = "rute"; tegn(); window.scrollTo(0, 0); }}, st.kørsel ? "Åbn kørsel" : "Lav kørsel"))));
 }
 function vagtRække(v, nårTekst) {
@@ -3523,6 +3527,27 @@ function visTilbud() {
 
 // ---------- Kort: festkort og klubkort til et job, og klubkortenes tekster ----------
 const KT = {job: null, slags: null, red: {}, ny: {tekst: "", svar: ""}};
+// Skilte åbnet fra et job (Oscar 6/11, skitse panel-skilte-fra-job): kun det job og to store billeder fra de rigtige skabeloner (tools/skilt_preview.py). Festskiltets navn og dato lægges ovenpå
+function visSkilteFraJob(j, status, række, js) {
+  const d = dag(j.dato), rec = festkortTilJob(j), klubRec = klubkortTilJob(j);
+  const valgt = KT.slags || (rec ? "Festkort" : klubRec ? "Klubkort" : null);
+  if (KT.slags === "Festkort" && !rec) KT.fk ||= {navne: j.navn, anledning: gætAnledning(j), åben: true, svar: null};   // formularen er åben med det samme, når skiltet er valgt
+  const navne = (KT.fk?.navne ?? rec?.navne ?? j.navn).trim(), anl = (KT.fk?.anledning ?? rec?.anledning ?? gætAnledning(j)).trim();
+  const kort = (sl, navn, billede) => h("button", {type: "button", class: "sv-k" + (valgt === sl ? " valgt" : ""), onclick: () => { KT.slags = sl; tegn(); }}, billede, h("b", {}, navn));
+  const klub = h("span", {class: "sv-b"}, h("img", {src: "skilte/klub.png", alt: "Klubskilt"}));
+  const fest = h("span", {class: "sv-b"}, h("img", {src: "skilte/fest.png", alt: "Festskilt"}),
+    h("span", {class: "sv-navn", style: navne.length > 18 ? `font-size:${(6 * 18 / navne.length).toFixed(2)}cqw` : ""}, navne),
+    h("span", {class: "sv-linje"}, `${anl || "…"} · ${d.getDate()}. ${MDL[d.getMonth()]} ${d.getFullYear()}`));
+  const andre = js.filter(x => x !== j);
+  const fold = (t, antal, ind) => h("details", {class: "sd-fold", open: !!KT.andreÅben, ontoggle: e => { KT.andreÅben = e.target.open; }}, h("summary", {}, h("span", {}, t, h("span", {class: "muted"}, ` · ${antal}`))), h("div", {class: "jobliste", style: "margin:0 12px 12px"}, ind));
+  $("rod").replaceChildren(h("div", {class: "side"},
+    h("h1", {style: "margin:0"}, "Skilte"),
+    h("div", {class: "muted", style: "margin-top:6px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"}, `${j.navn} · ${DAGE[d.getDay()]} ${visDato(j.dato)}`, status(j, valgt || (erKlub(j) ? "Klubkort" : "Festkort"))),
+    h("div", {class: "sv"}, kort("Klubkort", "Klubskilt", klub), kort("Festkort", "Festskilt", fest)),
+    valgt ? h("div", {style: "margin-top:14px"}, valgt === "Klubkort" ? klubkortBlok(j, KT, tegn) : festkortBlok(j, KT, tegn)) : null,
+    andre.length ? fold("Andre jobs", andre.length, andre.flatMap(række)) : null,
+    h("button", {class: "btn ghost lille", type: "button", style: "margin-top:12px", onclick: () => { KT.fraJob = false; tegn(); window.scrollTo(0, 0); }}, "Tekster og måling")));
+}
 function visKort() {
   if (KT.side === "Måling") return visMaaling();
   const js = jobs();
@@ -3549,6 +3574,7 @@ function visKort() {
       h("div", {style: "margin-bottom:8px"}, seg(["Klubkort", "Festkort"], slags, v => { KT.slags = v; tegn(); })),
       slags === "Klubkort" ? klubkortBlok(x, KT, tegn) : festkortBlok(x, KT, tegn))] : [rk];
   };
+  if (KT.fraJob && j) return visSkilteFraJob(j, status, række, js);
   const tekster = D.kkTekster || [];
   const ændret = k => { const r = KT.red[k.nr]; return r && ((r.tekst ?? k.tekst) !== k.tekst || (r.svar ?? (k.svar || "")) !== (k.svar || "")); };
   const gemTekst = k => {
