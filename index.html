@@ -2653,7 +2653,8 @@ function visIDag() {
               lager.set(NÅET_KEY(idag), JSON.stringify(nået));
               e.target.closest(".cb").classList.toggle("gjort", e.target.checked);
             }}),
-            h("span", {class: "t" + (salgRød(p) ? " rød" : "")}, p.overskredet ? h("span", {class: "rød"}, "! ") : null, p.tekst),
+            h("span", {class: "t" + (salgRød(p) ? " rød" : "")}, p.overskredet ? h("span", {class: "rød"}, "! ") : null,
+              planOpg(p)?.job_opgave === "salg" ? h("a", {href: "#", onclick: e => { e.preventDefault(); SG.vis = null; SG.valgt = null; SG.alleÅben = false; fane = "salg"; tegn(); window.scrollTo(0, 0); }}, p.tekst) : p.tekst),
             p.min ? h("span", {class: "muted lille"}, p.min + " min") : null,
             fulgtOp ? (p.brugt != null ? h("span", {class: "muted lille"}, "brugt " + p.brugt + " min") : null)
               : h("input", {class: "input", type: "number", min: "0", max: "720", placeholder: "brugt, min", style: "width:92px;padding:4px 8px;margin-left:8px", value: brugt[p.nr] ?? "",
@@ -2828,7 +2829,9 @@ function opgaveFiltre(o) {
 }
 function visOpgaver() {
   const idag = iDag();
-  const liste = D.opgaver.filter(opgaveFiltre).sort((a, b) => OP.filter === "Færdige"
+  // under planlægning: salget er ét punkt, Ring til X (Salg). De enkelte salgsopgaver står stadig her, når der ikke planlægges (Oscar 6/11)
+  const erSalgRing = o => !!(o.salg_auto || o.salg_lead || o.job_opgave === "salg" || ((o.titel || "").startsWith("Ring til") && o.type === "Salg og opfølgning"));
+  const liste = D.opgaver.filter(opgaveFiltre).filter(o => !(OP.vis === "plan" && erSalgRing(o))).sort((a, b) => OP.filter === "Færdige"
     ? (b.faerdig_dato || "").localeCompare(a.faerdig_dato || "") : salgFørst(a, b) || (a.deadline || "9999").localeCompare(b.deadline || "9999") || a.id - b.id);
   const venstre = h("div", {class: "liste-kol"},
     h("div", {class: "kh"}, h("h1", {}, "Opgaver"), h("div", {class: "spacer"}),
@@ -3962,7 +3965,7 @@ function salgLuk() { salgGemKladde(); SG.vis = null; SG.valgt = null; SG.k = {};
 // Detaljen til højre (Salg og Forespørgsler) lukker ved klik udenfor og Esc (Oscar 29/10). Klikket huskes ved pointerdown og
 // lukker først efter pointerup, så knappen man trykkede på når at virke, og kun hvis den ikke selv åbnede noget andet.
 const DETALJER = () => [
-  {fane: "salg", åben: () => SG.vis === "s" ? SG.valgt : null, inde: ".ap-row, .kompakt-r, .cc-kort, .salg-del, .chips", luk: salgLuk},
+  {fane: "salg", åben: () => SG.vis === "s" ? SG.valgt : null, inde: ".ap-row, .kompakt-r, .cc-kort, .salg-del, .chips, .sd-r", luk: salgLuk},
   {fane: "foresp", åben: () => FQ.vis === "h" ? FQ.valgt : null, inde: ".række", luk: fqLuk}];
 let detaljeTryk = null;
 document.addEventListener("pointerdown", e => {
@@ -4037,8 +4040,8 @@ function visSalg() {
   // Oscar 28/10: salget øverst (hvem han kontakter), ugens salg under. Pengene står på Økonomi (skat, penge ude, fremtiden).
   // Status øverst (Oscar 28/10): hvad der skal ske i dag, ellers grønt
   const maal = salgMaal(), ugedag = ["Sø", "Ma", "Ti", "On", "To", "Fr", "Lø"][dag(idag).getDay()];
-  const kontaktetIDag = (D.salgslog || []).filter(x => x.dato === idag).length;
-  const kontaktRest = maal.rutinedage.includes(ugedag) ? Math.max(0, maal.kontakter_dag - kontaktetIDag) : 0;
+  const kontaktetIDag = (D.salgslog || []).filter(x => x.dato === idag && x.art !== "note").length;
+  const kontaktRest = Math.max(0, salgDagAntal(idag) - kontaktetIDag);
   const dele = [iDagL.length ? `følg op på ${iDagL.length} ${iDagL.length === 1 ? "kunde" : "kunder"}` : null, kontaktRest ? `kontakt ${kontaktRest} ${kontaktRest === 1 ? "firma" : "firmaer"}` : null].filter(Boolean);
   const status = h("div", {class: "side bred", style: "padding-bottom:0"}, h("div", {class: "skat-status salg-status " + (dele.length ? "y" : "g")},
     h("div", {class: "skat-titel"}, dele.length ? "I dag: " + dele.join(" og ") : "✓ Salget er klaret i dag")));
@@ -4081,7 +4084,14 @@ function næsteLeads() {   // samme regel som fabz.py salg-traek: i køen, ikke 
 const naesteLead = () => næsteLeads()[0] || null;
 // Dagsliste i Salg (Oscar 6/11, skitse panel-salg-idag: "så skal det føles som om jeg kan kigge og se når jeg skal 'bare' ringe til 5").
 // Ældste forfaldne med nummer først, så andre forfaldne, så Træk-køen. Listen låses for dagen i denne browser, så den ikke skifter, mens han ringer. Uden lås regnes samme liste ud.
-const SALG_DAG_ANTAL = 5, SALG_DAG_NØGLE = "fabz-salg-idag";
+const SALG_DAG_MAKS = 5, SALG_DAG_NØGLE = "fabz-salg-idag";
+// Dagens antal: det, der mangler af ugemålet før i dag, fordelt på hverdagene tilbage. Samme regel og samme kilde (salgsloggen) som salg_dag_antal i fabz_salg.py, så tallet er ens i planen og på alle enheder
+function salgDagAntal(dato = iDag()) {
+  const u = (dag(dato).getDay() + 6) % 7;
+  if (u >= 5) return 0;
+  const mandag = plusDage(dato, -u), mangler = salgMaal().kontakter_uge - (D.salgslog || []).filter(x => x.dato >= mandag && x.dato < dato && x.art !== "note").length;
+  return mangler > 0 ? Math.min(SALG_DAG_MAKS, Math.ceil(mangler / (5 - u))) : 0;
+}
 function salgForfaldne(idag = iDag()) {
   return (D.salg || []).filter(s => !["Booket", "Ikke nu"].includes(s.status) && !s.aldrig && !s._ny && (s.svar || (s.naeste_opfoelgning && s.naeste_opfoelgning <= idag)))
     .sort((a, b) => !(tlfNr(a.telefon) || tlfNr(a.kontakt)) - !(tlfNr(b.telefon) || tlfNr(b.kontakt)) || String(a.naeste_opfoelgning || "").localeCompare(String(b.naeste_opfoelgning || "")) || a.navn.localeCompare(b.navn, "da"));
@@ -4091,7 +4101,7 @@ function salgDagsliste() {
   let lås = null;
   try { lås = JSON.parse(lager.get(SALG_DAG_NØGLE) || "null"); } catch {}
   if (lås?.dato !== idag) lås = {dato: idag, navne: [], leads: {}, ekstra: 0};
-  const antal = SALG_DAG_ANTAL + lås.ekstra;
+  const antal = salgDagAntal(idag) + lås.ekstra;
   const find = n => (D.salg || []).find(s => s.navn === n);
   // alt klaret i dag tæller, også det der ikke stod på listen
   const klarede = [...klaret].filter(n => find(n));
@@ -5207,7 +5217,7 @@ function salgTop() {
 function ugeKort() {
   const idag = iDag(), maal = salgMaal(), log = D.salgslog || [];
   const mandag = plusDage(idag, -((dag(idag).getDay() + 6) % 7));
-  const uge = log.filter(x => x.dato >= mandag && x.dato < plusDage(mandag, 7));
+  const uge = log.filter(x => x.dato >= mandag && x.dato < plusDage(mandag, 7) && x.art !== "note");
   const samtale = x => ["Telefon", "Møde"].includes(x.kanal);
   const mdStart = idag.slice(0, 7) + "-01";
   const tilbudMd = (D.henvendelser || []).filter(x => (x.status_dato || "") >= mdStart && ["Tilbud sendt", "Booket"].includes(x.status)).length;
