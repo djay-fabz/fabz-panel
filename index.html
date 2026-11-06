@@ -5441,8 +5441,23 @@ function salgFolder(s) {
   const hist = [...log.map(x => h("div", {class: "fl-h"}, h("span", {class: "muted"}, kortDato(x.dato)), " ", x.art === "note" ? h("span", {class: "muted"}, x.tekst) : [x.kanal, x.person ? ` · ${x.person}` : "", x.resultat ? ` · ${x.resultat}` : "", h("div", {class: "muted"}, x.tekst)])),
     s.historik ? h("div", {class: "pre lille muted", style: "margin-top:8px"}, s.historik) : null].filter(Boolean);
   const åbne = SG.k.folder ||= {};   // en fold bliver åben, når siden tegnes igen
+  // Ret kontaktperson (Oscar 6/11): salg-kontakt --kontaktperson, så den gamle kontakt får en til-dato, og den gamle tekst står i historikken
+  const rk_ = SG.k.retKontakt;
+  const gemKontakt = () => {
+    const navn = rk_.navn.trim(), mail = rk_.mail.trim(), tlf = rk_.tlf.trim();
+    if (!navn) { alert("Skriv kontaktpersonens navn."); return; }
+    const ny = [navn, mail, tlf].filter(Boolean).join(" · "), t = `Kontaktperson rettet: ${s.kontakt || "ingen"} → ${ny}`;
+    kør("salg-kontakt", [`--kontaktperson=${ny}`, `--telefon=${tlf}`, "--art=note", "--", s.navn, t], {tekst: `${s.navn}: kontaktperson`, efter: ["salg", "salgslog", "opgaver"], med: () => {
+      s.kontakt = ny; if (tlf) s.telefon = tlf; else delete s.telefon; delete SG.k.retKontakt; }});
+  };
+  const retKnap = () => { const t = String(s.kontakt || ""), m = (/[\w.+-]+@[\w-]+\.[\w.-]+/.exec(t) || [""])[0], n = tlfNr(t);
+    SG.k.retKontakt = {navn: t.replace(m, "").replace(n, "").replace(/(\s*[,·]\s*)+$/, "").replace(/^(\s*[,·]\s*)+/, "").replace(/\s*[,·]\s*(?=[,·])/g, "").trim(), mail: m, tlf: tlfNr(s.telefon) || n}; åbne.Personer = true; tegn(); };
+  const retForm = rk_ ? h("div", {class: "s-ret"},
+    ["navn", "mail", "tlf"].map(f => h("input", {class: "input", style: "margin-top:6px", type: f === "mail" ? "email" : f === "tlf" ? "tel" : "text", value: rk_[f], placeholder: {navn: "Navn", mail: "Mail", tlf: "Telefon"}[f], oninput: e => { rk_[f] = e.target.value; }})),
+    h("div", {class: "rk", style: "margin-top:8px;gap:6px"}, h("button", {class: "btn lille primaer", type: "button", onclick: gemKontakt}, "Gem"), h("button", {class: "btn lille", type: "button", onclick: () => { delete SG.k.retKontakt; tegn(); }}, "Annullér")))
+    : h("button", {class: "btn lille", type: "button", style: "margin-top:8px", onclick: retKnap}, "Ret kontaktperson");
   const fold = (t, indhold) => indhold.length ? h("details", {class: "s-fold", "data-fold": t, open: !!åbne[t], ontoggle: e => { åbne[t] = e.target.open; }}, h("summary", {}, t), h("div", {class: "s-fold-ind"}, indhold)) : null;
-  return [fold("Personer", personer), fold("Historik", hist), fold("Firma", firma), fold("Links", lenker)];
+  return [fold("Personer", [...personer, retForm]), fold("Historik", hist), fold("Firma", firma), fold("Links", lenker)];
 }
 const MDR_K = ["Jan", "Feb", "Mar", "Apr", "Maj", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"];
 const SPM = [["anledning", "Hvilke fester holder de?", ["Julefrokost", "Sommerfest", "Jubilæum", "Personalefest", "Ingen"]], ["naeste_fest", "Hvornår er næste fest?", MDR_K],
@@ -5463,6 +5478,7 @@ function fase2Kort(s) {
     kør("salg-trin", [...(fortryd ? ["--fortryd"] : []), "--", s.navn, t[0]], {tekst: `${s.navn}: ${t[1]}`, efter, med: () => {
       const tr = s.trin ||= {}; TRIN_L.slice(i + 1).forEach(x => delete tr[x[0]]);
       if (fortryd) { delete tr[t[0]]; const før = TRIN_L.filter(x => tr[x[0]]).pop(); s.status = før ? før[2] : "Kontaktet"; } else { tr[t[0]] ||= iDag(); s.status = t[2]; }
+      if (!fortryd && t[0] === "booket") { delete s.naeste; delete s.naeste_opfoelgning; }
       s.fase = "rigtig";
     }}); };
   const tl = h("div", {class: "s-tl"}, TRIN_L.map(t => h("button", {type: "button", class: "s-st" + ((s.trin || {})[t[0]] || TRIN_L.findIndex(x => x[2] === s.status && x[0] !== "interesseret") >= TRIN_L.indexOf(t) ? " ok" : ""), disabled: lukket, onclick: () => flyt(t)}, t[1], (s.trin || {})[t[0]] ? h("span", {}, kortDato(s.trin[t[0]])) : null)));
@@ -5510,7 +5526,7 @@ function fase2Kort(s) {
     lukket ? h("div", {class: "s-næste"}, s.aldrig ? h("div", {class: "s-h"}, "Ring aldrig igen") : [h("div", {class: "s-h"}, "Lukket"), h("div", {class: "s-d"}, s.naeste_opfoelgning ? "Åbner igen " + dagNavnLang(s.naeste_opfoelgning) : "")],
       h("button", {class: "btn", type: "button", style: "margin-top:12px", onclick: () => kør("salg-aabn", ["--", s.navn], {tekst: `${s.navn}: åbnet igen`, efter, med: () => { s.status = "Kontaktet"; s.naeste_opfoelgning = iDag(); delete s.aldrig; delete s.lukket; }})}, "Åbn igen"))
     : h("div", {class: "s-næste"}, s.svar ? h("div", {class: "s-svar-m"}, `${s.svar.person} har svaret`) : s.kom_igen ? h("div", {class: "s-svar-m"}, s.kom_igen.grund) : null,
-      h("div", {class: "s-h"}, s.naeste || "Intet næste skridt"), h("div", {class: "s-d"}, s.naeste_opfoelgning ? dagNavnLang(s.naeste_opfoelgning) : ""),
+      h("div", {class: "s-h"}, s.naeste || (s.status === "Booket" ? "Booket" : "Intet næste skridt")), h("div", {class: "s-d"}, s.naeste_opfoelgning ? dagNavnLang(s.naeste_opfoelgning) : ""),
       h("button", {class: "btn", type: "button", style: "margin-top:12px", onclick: () => { k.logÅben = !k.logÅben; tegn(); }}, "Log kontakt"), k.logÅben ? logForm() : null),
     lukket ? null : spm(), svarLinje.length ? h("div", {class: "s-svarene"}, svarLinje) : null,
     salgFolder(s));
