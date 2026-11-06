@@ -3557,7 +3557,7 @@ function visKort() {
         h("button", {class: "btn primaer", type: "button", style: "margin-top:8px", onclick: opret}, "Opret kort")))));
 }
 
-// ---------- Måling af festkort og klubkort (Oscar 3/11): scanninger fra Framer og tilmeldinger fra Mailchimp (data/kortmaaling.json hver nat).
+// ---------- Måling af festkort og klubkort (Oscar 3/11): scanninger fra Framer og tilmeldinger fra Mailchimp (data/kortmaaling.json hver mandag).
 // Grøn = blandt de bedste, rød = blandt de dårligste, grå = for få scanninger endnu. Klubkort fører til Instagram, så her tælles scanninger.
 const MÅL_MIN = 5;   // under så mange scanninger (og kun hængt op én gang) er det for tidligt at sige noget
 function målFarver(rækker, tal) {
@@ -3596,7 +3596,7 @@ function målFest(M) {
 function visMaaling() {
   const M = D.kortmaaling && !Array.isArray(D.kortmaaling) ? D.kortmaaling : {};
   const slags = KT.målSlags || "Festkort", åben = KT.målÅben;
-  const timer = M.opdateret ? (Date.now() - new Date(M.opdateret)) / 36e5 : null, frisk = timer != null && timer < 36 && !(M.fejl || []).length;
+  const timer = M.opdateret ? (Date.now() - new Date(M.opdateret)) / 36e5 : null, frisk = timer != null && timer < 8 * 24 && !(M.fejl || []).length;
   const tal = (b, t) => h("div", {class: "sk-k b"}, h("b", {}, b), h("span", {}, t));
   const pil = id => h("span", {class: "muted"}, åben === id ? "▾" : "▸");
   const klik = id => () => { KT.målÅben = åben === id ? null : id; tegn(); };
