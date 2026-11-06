@@ -3265,6 +3265,7 @@ function tbBeregn(T) {   // samme regler som lav_tilbud.py. Giver {fejl} eller a
     `Depositum på 20 % (${tbKr(dep)}) faktureres ved bekræftelse. Datoen er jeres, når depositum er betalt. Depositum refunderes ikke.`,
     `Restbeløbet (${tbKr(total - dep)}) betales senest ${tbDato(tbMinus(ev, 14))}.`, afl,
     "Forlængelse på aftenen: 3.000 kr. pr. påbegyndt time."];
+  betaling.push(...String(T.vilkaar_ekstra || "").split("\n").map(x => x.replace(/^\s*[-•]\s*/, "").trim()).filter(Boolean));   // særlige betingelser kun for denne kunde (Oscar 6/11), som vilkaar_ekstra i lav_tilbud.py
   const navn = firma || T.navn || "";
   const nr = idag.replace(/-/g, "") + "-" + navn.replace(/[^A-Za-zÆØÅæøå0-9]/g, "").slice(0, 12);
   return {erhverv, ob, idag, ev, gyldig, linjer, s, moms, total, dep, betaling, nr, mange, restDato: tbMinus(ev, 14)};
@@ -3493,6 +3494,8 @@ function visTilbud() {
         felt("Kørsel uden for 50 km (km tur/retur)", t("km", {inputmode: "numeric", placeholder: "0"})),
         felt("Bro/færge (kr.)", t("bro", {inputmode: "numeric", placeholder: "0"})),
         felt("Tilbudsdato", datoInput(TB.dato, iso => sæt("dato", iso || iDag())))),
+      h("div", {class: "overskrift", style: "margin-top:18px"}, "Særlige betingelser"),
+      felt("Ét punkt pr. linje", tf("vilkaar_ekstra", 2)),
       h("div", {class: "overskrift", style: "margin-top:18px"}, "Tekst (valgfri)"),
       felt("Indledning (tom = standard)", tf("intro", 2, "Her er mit tilbud ud fra vores snak. Herunder står præcis, hvad I får, og hvad det koster.")),
       felt("Note før afslutningen", tf("noter", 2))),
