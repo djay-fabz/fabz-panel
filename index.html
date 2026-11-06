@@ -4084,7 +4084,7 @@ function næsteLeads() {   // samme regel som fabz.py salg-traek: i køen, ikke 
 const naesteLead = () => næsteLeads()[0] || null;
 // Dagsliste i Salg (Oscar 6/11, skitse panel-salg-idag: "så skal det føles som om jeg kan kigge og se når jeg skal 'bare' ringe til 5").
 // Ældste forfaldne med nummer først, så andre forfaldne, så Træk-køen. Listen låses for dagen i denne browser, så den ikke skifter, mens han ringer. Uden lås regnes samme liste ud.
-const SALG_DAG_MAKS = 5, SALG_DAG_NØGLE = "fabz-salg-idag";
+const SALG_DAG_MAKS = 5, SALG_DAG_OPF = 3, SALG_DAG_COLD = 2, SALG_DAG_NØGLE = "fabz-salg-idag";   // 3 opfølgninger + 2 cold calls (Oscar 6/11)
 // Dagens antal: det, der mangler af ugemålet før i dag, fordelt på hverdagene tilbage. Samme regel og samme kilde (salgsloggen) som salg_dag_antal i fabz_salg.py, så tallet er ens i planen og på alle enheder
 function salgDagAntal(dato = iDag()) {
   const u = (dag(dato).getDay() + 6) % 7;
@@ -4096,20 +4096,27 @@ function salgForfaldne(idag = iDag()) {
   return (D.salg || []).filter(s => !["Booket", "Ikke nu"].includes(s.status) && !s.aldrig && !s._ny && (s.svar || (s.naeste_opfoelgning && s.naeste_opfoelgning <= idag)))
     .sort((a, b) => !(tlfNr(a.telefon) || tlfNr(a.kontakt)) - !(tlfNr(b.telefon) || tlfNr(b.kontakt)) || String(a.naeste_opfoelgning || "").localeCompare(String(b.naeste_opfoelgning || "")) || a.navn.localeCompare(b.navn, "da"));
 }
+const salgColdIDag = (s, idag = iDag()) => !!s.lead_id && (D.leads || []).some(r => r.id === s.lead_id && r.trukket === idag);   // trukket i dag: en af dagens cold calls
+const salgHarHandling = s => !!s.svar || !/^\s*(afvent|vent)\b/i.test(s.naeste || "") && !!((s.naeste || "").trim() || tlfNr(s.telefon) || tlfNr(s.kontakt));   // "Afvent svar" må ikke fylde en af pladserne (Oscar 6/11)
 function salgDagsliste() {
   const idag = iDag(), klaret = new Set((D.salgslog || []).filter(x => x.dato === idag && x.art !== "note").map(x => x.navn));
   let lås = null;
   try { lås = JSON.parse(lager.get(SALG_DAG_NØGLE) || "null"); } catch {}
-  if (lås?.dato !== idag) lås = {dato: idag, navne: [], leads: {}, ekstra: 0};
-  const antal = salgDagAntal(idag) + lås.ekstra;
-  const find = n => (D.salg || []).find(s => s.navn === n);
+  if (lås?.dato !== idag || lås.v !== 2) lås = {v: 2, dato: idag, navne: [], leads: {}, cold: [], ekstra: 0};
+  const antal = salgDagAntal(idag) + lås.ekstra, find = n => (D.salg || []).find(s => s.navn === n);
   // alt klaret i dag tæller, også det der ikke stod på listen
   const klarede = [...klaret].filter(n => find(n));
-  for (const n of klarede) if (!lås.navne.includes(n)) lås.navne.push(n);
-  const åbne = () => lås.navne.filter(n => !klaret.has(n)).length;
-  const plads = () => antal - klarede.length - åbne();
-  for (const s of salgForfaldne(idag)) { if (plads() <= 0) break; if (!lås.navne.includes(s.navn)) lås.navne.push(s.navn); }
-  for (const r of næsteLeads()) { if (plads() <= 0) break; const n = leadNavn(r); if (!lås.navne.includes(n)) { lås.navne.push(n); lås.leads[n] = r.id; } }
+  for (const n of klarede) if (!lås.navne.includes(n)) { lås.navne.push(n); if (salgColdIDag(find(n), idag)) lås.cold.push(n); }
+  const plads = () => antal - lås.navne.length;
+  const opf = salgForfaldne(idag).filter(s => !salgColdIDag(s, idag) && salgHarHandling(s));
+  const cold = [...salgForfaldne(idag).filter(s => salgColdIDag(s, idag)).map(s => ({navn: s.navn})), ...næsteLeads().map(r => ({navn: leadNavn(r), id: r.id}))];
+  const tagOpf = () => { const s = opf.find(x => !lås.navne.includes(x.navn)); if (s) lås.navne.push(s.navn); return !!s; };
+  const tagCold = () => { const c = cold.find(x => !lås.navne.includes(x.navn)); if (c) { lås.navne.push(c.navn); lås.cold.push(c.navn); if (c.id != null) lås.leads[c.navn] = c.id; } return !!c; };
+  // 3 opfølgninger og 2 cold calls. Er der for få af den ene, fyldes der op med den anden
+  const coldMål = Math.min(SALG_DAG_COLD, Math.max(0, salgDagAntal(idag) - SALG_DAG_OPF));
+  while (plads() > 0 && lås.navne.length - lås.cold.length < antal - coldMål && tagOpf());
+  while (plads() > 0 && lås.cold.length < coldMål && tagCold());
+  while (plads() > 0 && (tagOpf() || tagCold()));
   lager.set(SALG_DAG_NØGLE, JSON.stringify(lås));
   const ting = lås.navne.map(n => { const s = find(n), r = s ? null : (D.leads || []).find(x => x.id === lås.leads[n] && !x.trukket); return s || r ? {navn: n, s, r, klaret: klaret.has(n)} : null; }).filter(Boolean);
   return {ting, antal, klarede: ting.filter(x => x.klaret).length, lås};
