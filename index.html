@@ -1064,7 +1064,7 @@ function visJobSide(j) {   // alt til ét job samlet: pakkeliste, kort, kørsel,
     spilletidBlok(j),
     afsnit("Pakkeliste", st.pak[0].toUpperCase() + st.pak.slice(1), st.klar, h("button", {class: "btn primaer lille", type: "button", onclick: () => åbnJob(j)}, "Åbn pakkeliste")),
     afsnit("Skilte", st.kortTekst, st.kort, h("button", {class: "btn lille", type: "button", onclick: () => { KT.job = st.key; KT.slags = null; KT.fk = KT.kk = null; KT.fraJob = true; fane = "kort"; tegn(); window.scrollTo(0, 0); }}, "Åbn skilte")),
-    afsnit("Kørsel", st.kørsel ? "Plan gemt, kommer på side 2" : "Ikke lavet", st.kørsel, h("button", {class: "btn lille", type: "button", onclick: () => { vælgRuteJob(st.key); fane = "rute"; tegn(); window.scrollTo(0, 0); }}, st.kørsel ? "Åbn kørsel" : "Lav kørsel"))));
+    afsnit("Kørsel", st.kørsel ? "Plan gemt" : "Ikke lavet", st.kørsel, h("button", {class: "btn lille", type: "button", onclick: () => { vælgRuteJob(st.key); fane = "rute"; tegn(); window.scrollTo(0, 0); }}, st.kørsel ? "Åbn kørsel" : "Lav kørsel"))));
 }
 function vagtRække(v, nårTekst) {
   const d = dag(v.dato), dage = Math.round((d - dag(iDag())) / 864e5);
@@ -1846,13 +1846,14 @@ function tegnListe() {
   const fod = h("div", {class: "lfod"},
     h("div", {class: "resume lille", style: advN ? "color:var(--adv)" : "color:var(--svag)"},
       `${linjer.length} linjer · ${stk} stk` + (advN ? ` · ${advN} advarsler` : "") + (S.transport ? "" : " · vælg transport")),
-    låst ? h("button", {class: "btn primaer stor", type: "button", disabled: optaget, onclick: hentGodkendtPdf}, optaget ? "Arbejder …" : "Hent PDF")
+    låst ? h("div", {class: "rk", style: "gap:8px;flex-wrap:wrap;margin:0"}, h("button", {class: "btn primaer stor", type: "button", disabled: optaget, onclick: hentGodkendtPdf}, optaget ? "Arbejder …" : "Hent PDF"), koerelistePrint())
       : linjer.length && !S.transport && !optaget
         ? h("button", {class: "btn stor", type: "button", style: "border-color:var(--adv);color:var(--adv)",   // tydeligt hvad der mangler (Oscar 28/10)
             onclick: () => { const el = $("trin-transport"); if (el) { el.scrollIntoView({behavior: "smooth", block: "center"}); el.classList.add("markeret"); setTimeout(() => el.classList.remove("markeret"), 1200); } }},
             "Vælg transport for at lave PDF ↑")
         : h("button", {class: "btn primaer stor", type: "button", disabled: !kan || !!overLager(linjer).length || startMangler(), title: overLager(linjer).length ? "Mere end lageret på listen, se den røde boks øverst" : "", onclick: () => send("pdf")},
           optaget ? "Arbejder …" : overLager(linjer).length ? "Ret antal over lageret først ↑" : startMangler() ? "Skriv starttid på jobbet først" : "Lav pakkeliste (PDF)"),
+    låst ? null : h("div", {style: "margin-top:8px"}, koerelistePrint()),
     låst ? h("div", {class: "lille muted", style: "margin-top:6px"}, "Listen er godkendt og låst. Tryk Genåbn liste øverst for at rette den.") : gemBlok,
     h("div", {id: "svar"}));
   k.replaceChildren(hoved, krop, fod);
@@ -1874,6 +1875,18 @@ function transportKonflikt() {   // pakkeliste og kørsel må ikke stride mod hi
 function sætTransport(v) {   // fra toppen af listen eller fra sidste trin i "Pak jobbet"; listens linjer røres ikke
   S.transport = v; S.rørt = true;
   tegnVælger(); tegnListe();
+}
+// Kørelisten på sit eget ark, med sin egen printknap (Oscar 7/11)
+function koerelistePrint() {
+  if (!S?.job) return null;
+  return h("button", {class: "btn", type: "button", style: "width:100%;padding:12px", onclick: async () => {
+    const mig = S, sv = await kørOgVent("koereliste-pdf", [jobNøgle(S.job)]);
+    if (!sv || sv.status === "FEJL") { if (S === mig) sætSvar("fejl", "Ingen køreliste.", [sv?.fejl || "Intet svar efter 4 minutter."]); return; }
+    const r = sv.pdf ? await laesFil(sv.pdf) : null;
+    if (!r) { if (S === mig) sætSvar("fejl", "Kørelisten kunne ikke hentes.", []); return; }
+    const a = h("a", {href: URL.createObjectURL(new Blob([await r.arrayBuffer()], {type: "application/pdf"})), download: decodeURIComponent(sv.pdf.split("/").pop())});
+    document.body.append(a); a.click(); a.remove();
+  }}, "Køreliste (PDF)");
 }
 async function hentGodkendtPdf() {   // den PDF, der blev lavet til jobbet (pdf/<navn> - dd.mm.åååå.pdf). PDF'er slettes efter 3 dage: mangler filen, laves den igen fra den godkendte liste
   if (optaget) return;
@@ -3880,7 +3893,7 @@ function mailStatus(idag, dp) {   // Mailoversigten (Oscar 28/10): KUN Mødt ind
   if (start) moPoll(idag, j => j.status !== "bestilt");
   return start ? h("span", {class: "pill y"}, `Mailoversigt startet kl. ${start}`) : null;   // før Mødt ind: intet (Mødt ind-knappen starter den)
 }
-function koerelisteKnap(vedTidsplan) {   // Køreliste (PDF): samme design som side 2 i pakkelisten (Oscar 26/10: browserens print duede ikke; knappen skal stå ved tidsplanen)
+function koerelisteKnap(vedTidsplan) {   // Køreliste (PDF), eget ark (Oscar 26/10: browserens print duede ikke; knappen skal stå ved tidsplanen)
   const r = RU, d = r.svar?.data;
   if (vedTidsplan ? !d : !(r.job && (D.jobrute || {})[r.job] && !d)) return null;   // ved tidsplanen: når ruten er beregnet. Øverst: kun en gemt plan, der ikke er beregnet igen
   const lav = async () => {
@@ -3952,7 +3965,7 @@ function visRute() {
         h("option", {value: ""}, "Intet job (kun beregning)"),
         jobs().map(j => h("option", {value: jobRuteNøgle(j), selected: r.job === jobRuteNøgle(j)}, `${visDato(j.dato)} ${j.navn}${(D.jobrute || {})[jobRuteNøgle(j)] ? " (plan gemt)" : ""}`))),
       koerelisteKnap(false),
-      h("div", {class: "muted lille", style: "margin-top:6px"}, r.job ? "Adresse og ankomsttid er hentet fra bookingen i kalenderen. Du kan rette dem. Når ruten er beregnet, gemmes den på jobbet og kommer på side 2 i pakkelisten i stedet for kalenderens tidsplan. Kalenderen ændres ikke." : "Vælg et job for at hente adresse og ankomsttid fra kalenderen og gemme planen på jobbet.")),
+      h("div", {class: "muted lille", style: "margin-top:6px"}, r.job ? "Adresse og ankomsttid er hentet fra bookingen i kalenderen. Du kan rette dem. Når ruten er beregnet, gemmes den på jobbet og kommer på kørelisten i stedet for kalenderens tidsplan. Kalenderen ændres ikke." : "Vælg et job for at hente adresse og ankomsttid fra kalenderen og gemme planen på jobbet.")),
     h("div", {class: "gruppe", style: "margin-top:16px"}, h("div", {class: "overskrift"}, "Køretøj"),
       h("div", {style: "display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"}, knap("trailer", "Trailer (højst 80 km/t)"), knap("bil", "Bil (normal hastighed)"))),
     h("div", {class: "gruppe", style: "margin-top:16px"}, h("div", {class: "overskrift"}, "Steder"),
