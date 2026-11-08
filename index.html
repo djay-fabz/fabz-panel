@@ -275,6 +275,20 @@ body.bar-synlig .beskeder{bottom:84px}
 .idag{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(300px,1fr);gap:20px;margin-top:20px;align-items:start}
 .stak{display:flex;flex-direction:column;gap:16px}
 .kort2{background:var(--flade);border:1px solid var(--linje);border-radius:14px;padding:18px 20px}
+/* SoMe (Oscar 8/11, skitse B) */
+.sm-uge{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin:14px 0 16px}.sm-dag{background:var(--flade);border:1px solid var(--linje);border-radius:10px;padding:8px 6px;text-align:center;font-size:13px}.sm-dag.i-dag{border-color:var(--accent)}
+.sm-prikker{display:flex;justify-content:center;gap:4px;min-height:8px;margin-top:5px}.sm-prik{width:8px;height:8px;border-radius:50%}
+.sm-gitter{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}.sm-hoejre{display:flex;flex-direction:column;gap:16px}
+.sm-k{display:inline-block;color:#fff;font-size:11.5px;font-weight:600;padding:2px 7px;border-radius:5px;white-space:nowrap}
+.sm-op{border:1px solid var(--linje);border-radius:12px;padding:12px 14px;margin-top:10px}.sm-r1{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.sm-tid{font-size:13px;color:var(--svag);margin-left:4px}
+.sm-t{white-space:pre-wrap;margin:8px 0 4px;line-height:1.45}.sm-tekst{width:100%;font:inherit;line-height:1.45}.sm-knapper{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.sm-op .fl{margin-top:10px}
+.sm-klip{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.sm-fil{display:inline-flex;align-items:center;gap:4px;background:var(--bg);border-radius:8px;padding:4px 8px;font-size:13px}.sm-fil a{color:var(--accent);text-decoration:none}
+.sm-linje{display:flex;align-items:center;gap:6px;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--linje);padding:9px 0;font:inherit;color:inherit;cursor:pointer}.sm-uddrag{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+.sm-selv{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;padding:10px 0;border-top:1px solid var(--linje)}.sm-selv:first-of-type{border-top:0}.sm-selv-t{flex:1;min-width:180px}.sm-selv .sm-knapper{margin-top:0}
+.sm-tal{display:flex;gap:28px}.sm-tal>div{display:flex;flex-direction:column;font-size:13px}.sm-tal b{font-size:22px}.sm-li{margin-top:12px;font-size:13.5px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.sm-ev{display:flex;gap:12px;align-items:center;padding:8px 0;color:inherit;text-decoration:none}.sm-play{width:48px;height:48px;border-radius:8px;background:linear-gradient(135deg,#6d28d9,#c13584);color:#fff;display:flex;align-items:center;justify-content:center;flex:none}
+.sm-ideer{margin:8px 0 0;padding-left:20px;line-height:1.6}
+@media (max-width:700px){.sm-gitter{grid-template-columns:minmax(0,1fr)}.sm-uge{gap:4px}.sm-dag{padding:6px 2px}.sm-linje{flex-wrap:wrap}.sm-uddrag{flex-basis:100%}}
 .kh{display:flex;align-items:center;gap:10px;margin-bottom:10px}
 .kh h1{margin:0;font-size:22px}.kh h2{margin:0;font-size:18px;flex:1}.kh h3{margin:0;font-size:13px;font-weight:600;flex:1}
 .mini{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid var(--linje);width:100%;text-align:left;background:none;border-left:0;border-right:0;border-bottom:0;font-size:13.5px}
@@ -680,7 +694,7 @@ const fil = (p, std = []) => sikker(p, async () => { const r = await laesFil(p);
 let GQL = null;
 const DATAFILER = ["kalender", "udstyr", "pakkelister", "opgaver", "jobpakkelister", "henvendelser", "dagsplaner", "indtaegter", "typer", "salg", "festkort",
   "klubkort", "salgslog", "klubkort_tekster", "strategi", "jobrute", "jobtider", "salgjobs", "kortmaaling", "evalueringer", "salgslaering", "setups", "maanedsoversigt", "priser",
-  "leads", "betalinger", "honorarsedler", "jobstatus", "fejl", "hov", "ugepakke", "mailoversigt", "vagter"].map(x => `data/${x}.json`).concat(["tools/klubkort/kort.json"]);
+  "leads", "betalinger", "honorarsedler", "jobstatus", "fejl", "hov", "ugepakke", "mailoversigt", "vagter", "some", "linkedin"].map(x => `data/${x}.json`).concat(["tools/klubkort/kort.json"]);
 async function hentSamlet() {
   const t0 = performance.now();
   try {
@@ -712,7 +726,7 @@ async function hentDataFiler() {
     ...["data/henvendelser.json", "data/dagsplaner.json", "data/indtaegter.json", "data/typer.json", "data/salg.json", "data/festkort.json", "data/klubkort.json", "data/salgslog.json"].map(p => fil(p)),
     sikker("data/klubkort_tekster.json", laesKkTekster, [])]);
   D = {kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, indtaegter, typer, salg, festkort, klubkort, salgslog, kkTekster};
-  const [strategi, jobrute, jobtider, salgjobs, kortmaaling, evalueringer, salgslaering, setups, mo, priser, leads, betalinger, honorarsedler, jobstatus, fejl, hov, ugepakke, mailoversigt, vagter] = await Promise.all([
+  const [strategi, jobrute, jobtider, salgjobs, kortmaaling, evalueringer, salgslaering, setups, mo, priser, leads, betalinger, honorarsedler, jobstatus, fejl, hov, ugepakke, mailoversigt, vagter, some, linkedin] = await Promise.all([
     fil("data/strategi.json", {}), fil("data/jobrute.json", {}), fil("data/jobtider.json"), fil("data/salgjobs.json"),   // hvilket firma i Salg et job kom fra (fabz.py salg-job)
     fil("data/kortmaaling.json"), fil("data/evalueringer.json"),   // scanninger og tilmeldinger pr. kort (tools/kortmaaling.mjs hver nat)
     fil("data/salgslaering.json"),   // forslag fra opkaldene (Tal på Salg)
@@ -725,8 +739,9 @@ async function hentDataFiler() {
     fil("data/hov.json"),   // Hov: Oscars planer og Claudes svar (fabz_hov, Oscar 2/11)
     fil("data/ugepakke.json"),   // ugens bogføring (fabz_bogholder.py): robottens forslag, Oscar godkender
     fil("data/mailoversigt.json", null),   // dagens mailoversigt (tools/mailoversigt.py via panel.yml ved Mødt ind)
-    fil("data/vagter.json", null)]);   // vagter fra Planday/Deltaplan (tools/vagter.py i kalender.yml)
-  Object.assign(D, {strategi, jobrute, jobtider, salgjobs, kortmaaling, evalueringer, salgslaering, setups, mo, priser, leads, betalinger, honorarsedler, jobstatus, fejl, hov, ugepakke, mailoversigt, vagter});
+    fil("data/vagter.json", null),   // vagter fra Planday/Deltaplan (tools/vagter.py i kalender.yml)
+    fil("data/some.json", {opslag: [], ideer: []}), fil("data/linkedin.json", {})]);   // SoMe-fanen (fabz_some.py) og LinkedIn-målet
+  Object.assign(D, {strategi, jobrute, jobtider, salgjobs, kortmaaling, evalueringer, salgslaering, setups, mo, priser, leads, betalinger, honorarsedler, jobstatus, fejl, hov, ugepakke, mailoversigt, vagter, some, linkedin});
 }
 function manglerBesked() {
   besked({id: "mangler", klasse: "adv", titel: "GitHub svarer ikke lige nu, prøver igen …", punkter: ["Kunne ikke hente: " + MANGLER.join(", ")],
@@ -921,8 +936,8 @@ function tegnTop() {
   }
   const aktiv = v => fane === v || (v === "pakkelister" && (fane === "kort" || fane === "rute"));
   const gå = v => { fane = v; MERE = false; if (v === "oekonomi") ØK.guide = null; if (v === "salg") SG.fremÅben = false; if (v === "pakkelister") { JH = null; S = null; } tegn(); window.scrollTo(0, 0); };
-  const hoved = [["idag", "I dag"], ["opgaver", "Opgaver"], ["pakkelister", "Jobs"], ["foresp", "Forespørgsler"], ["salg", "Salg"], ["oekonomi", "Økonomi og Skat", "Økonomi"]];   // Salg i hovedbjælken (Oscar 25/10). Økonomi og Skat ud af Mere (Oscar 28/10: intet gemt væk)
-  const mere = [["tilbud", "Tilbud"], ...(ugepakkeTom() && fane !== "bogforing" ? [] : [["bogforing", "Bogføring"]]), ["lager", "Lager"], ["pakker", "Pakker"]];   // Pakker: trin og regler til "Pak jobbet" (Oscar 27/10)   // Økonomi: penge ude, til dig, privat (Oscar 26/10: Salg skal kun være salg)
+  const hoved = [["idag", "I dag"], ["opgaver", "Opgaver"], ["pakkelister", "Jobs"], ["foresp", "Forespørgsler"], ["salg", "Salg"], ["oekonomi", "Økonomi og Skat", "Økonomi"], ...(window.innerWidth > 700 ? [["some", "SoMe"]] : [])];   // SoMe (Oscar 8/11): i bjælken på pc, under Mere på telefonen (bunden er fuld)   // Salg i hovedbjælken (Oscar 25/10). Økonomi og Skat ud af Mere (Oscar 28/10: intet gemt væk)
+  const mere = [...(window.innerWidth > 700 ? [] : [["some", "SoMe"]]), ["tilbud", "Tilbud"], ...(ugepakkeTom() && fane !== "bogforing" ? [] : [["bogforing", "Bogføring"]]), ["lager", "Lager"], ["pakker", "Pakker"]];   // Pakker: trin og regler til "Pak jobbet" (Oscar 27/10)   // Økonomi: penge ude, til dig, privat (Oscar 26/10: Salg skal kun være salg)
   top.replaceChildren(
     h("span", {class: "brand"}, "Fabz"),
     h("nav", {class: "tabs"},
@@ -940,7 +955,7 @@ document.addEventListener("click", () => { if (MERE) { MERE = false; tegnTop(); 
 function tegn() {
   document.body.classList.remove("bar-synlig");
   tegnTop();
-  const vis = {idag: visIDag, bogforing: visBogfoering, tilbud: visTilbud, opgaver: visOpgaver, foresp: visForesp, salg: visSalg, oekonomi: visSkat, pakker: visPakker, lager: visLager, kort: visKort, rute: visRute}[fane];
+  const vis = {idag: visIDag, bogforing: visBogfoering, tilbud: visTilbud, opgaver: visOpgaver, foresp: visForesp, salg: visSalg, oekonomi: visSkat, pakker: visPakker, some: visSome, lager: visLager, kort: visKort, rute: visRute}[fane];
   if (vis) vis();
   else if (S) visEditor();
   else visJobs();
@@ -2523,7 +2538,7 @@ async function gemLager() {
 
 // ---------- fælles: kør fabz.py-kommandoer fra panelet ----------
 const FILER = {evalueringer: "data/evalueringer.json", jobstatus: "data/jobstatus.json", jobtider: "data/jobtider.json", kortmaaling: "data/kortmaaling.json", salgjobs: "data/salgjobs.json", salgslaering: "data/salgslaering.json", henvendelser: "data/henvendelser.json", opgaver: "data/opgaver.json", betalinger: "data/betalinger.json", honorarsedler: "data/honorarsedler.json", ugepakke: "data/ugepakke.json", dagsplaner: "data/dagsplaner.json",
-               indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json", salgslog: "data/salgslog.json", mo: "data/maanedsoversigt.json", strategi: "data/strategi.json", leads: "data/leads.json", mailoversigt: "data/mailoversigt.json", vagter: "data/vagter.json", fejl: "data/fejl.json", hov: "data/hov.json"};
+               indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json", salgslog: "data/salgslog.json", mo: "data/maanedsoversigt.json", strategi: "data/strategi.json", leads: "data/leads.json", mailoversigt: "data/mailoversigt.json", vagter: "data/vagter.json", fejl: "data/fejl.json", hov: "data/hov.json", some: "data/some.json", linkedin: "data/linkedin.json"};
 async function laesValgfri(p) { const r = await laesFil(p); return r ? r.json() : []; }
 async function genindlæs(navne) { await Promise.all(navne.map(async n => { D[n] = n === "kkTekster" ? await laesKkTekster() : await laesValgfri(FILER[n]); })); }
 const plusDage = (iso, n) => { const d = dag(iso); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
@@ -2846,6 +2861,118 @@ function afslutDag(dato, nået, brugt) {
     }}, "Følg op på dagen"));
 }
 // Humør efter et job (Oscar 29/10): kortet står på I dag de første 3 dage efter jobbet, til det er udfyldt
+// ---------- SoMe (Oscar 8/11, skitse B "Til godkendelse", planer/some-panel-forslag.md) ----------
+// Data: data/some.json (fabz_some.py) og LinkedIn fra data/linkedin.json (ugemålet). Claude skriver udkast, Oscar godkender hvert opslag, og en fast Claude-opgave
+// lægger de godkendte i Metricool. Privat Facebook poster Oscar selv. Klip er Drive-links som i evalueringen.
+const SOME_KAN = {linkedin: ["LinkedIn", "#0a66c2"], instagram: ["Instagram", "#c13584"], facebook: ["Facebook", "#1877f2"], tiktok: ["TikTok", "#111"], privat: ["Privat", "#6b7280"]};
+const SOME_LI = {Udkast: "udkast", Godkendt: "godkendt", Planlagt: "planlagt", Udgivet: "udgivet", Droppet: "sprunget over"};   // samme som LI_STATUS i fabz_some.py
+const SM = {ret: null, åben: null, k: {}};   // ret: id under rettelse, åben: godkendt opslag foldet ud, k: kladder pr. id
+function someAlle() {
+  const s = (D.some?.opslag || []).map(o => ({...o, id: "S" + o.id}));
+  const l = (D.linkedin?.opslag || []).filter(o => SOME_LI[o.status]).map(o => ({id: "L" + o.id, kanaler: ["linkedin"], typer: {}, tid: o.tid || null, tekst: o.tekst || "",
+    foerste_kommentar: o.foerste_kommentar || "", media: o.media || [], status: SOME_LI[o.status], metricool: o.metricool, fejl: o.fejl, emne: o.emne, udgivet: o.dato}));
+  return [...s, ...l];
+}
+function someSæt(id, felter) {   // ændr siden med det samme, før robotten svarer
+  const n = Number(id.slice(1)), o = id[0] === "S" ? (D.some?.opslag || []).find(x => x.id === n) : (D.linkedin?.opslag || []).find(x => x.id === n);
+  if (!o) return;
+  const {status, ...r} = felter;
+  Object.assign(o, r);
+  if (status) o.status = id[0] === "S" ? status : Object.keys(SOME_LI).find(k => SOME_LI[k] === status);
+}
+const SOME_DAG = ["søn", "man", "tir", "ons", "tor", "fre", "lør"];
+const someTid = t => t ? `${SOME_DAG[dag(t).getDay()]} ${kortDato(t)} kl. ${t.slice(11, 13)}.${t.slice(14, 16)}` : "Intet tidspunkt";
+const someType = (o, c) => o.typer?.[c] && o.typer[c] !== "POST" ? " " + o.typer[c][0] + o.typer[c].slice(1).toLowerCase() : "";
+const somePiller = o => o.kanaler.map(c => h("span", {class: "sm-k", style: `background:${SOME_KAN[c][1]}`}, SOME_KAN[c][0] + someType(o, c)));
+const someKræverKlip = o => o.kanaler.some(c => c === "instagram" || c === "tiktok") || Object.values(o.typer || {}).some(t => t !== "POST");
+const someUge = iso => { const d = dag(iso), t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7)); const y = t.getUTCFullYear(); return `${y}-U${String(Math.ceil(((t - Date.UTC(y, 0, 1)) / 864e5 + 1) / 7)).padStart(2, "0")}`; };   // som uge() i fabz_linkedin.py
+const someEval = () => (D.evalueringer || []).filter(r => r.media?.length).sort((a, b) => b.dato.localeCompare(a.dato));
+function someKort(o) {
+  const k = SM.k[o.id] ||= {tekst: o.tekst || "", tid: o.tid || "", foerste_kommentar: o.foerste_kommentar || "", media: [...(o.media || [])]};
+  const ret = SM.ret === o.id, data = () => ({tekst: k.tekst, tid: k.tid || null, foerste_kommentar: k.foerste_kommentar, media: k.media});
+  const efter = ["some", "linkedin"], slut = () => { SM.ret = null; SM.åben = null; delete SM.k[o.id]; };
+  const mangler = !k.tid ? "Tidspunkt mangler" : someKræverKlip(o) && !k.media.length ? "Klip mangler" : null;
+  const godkend = () => {
+    if ((new Date(k.tid) - Date.now()) / 36e5 < 6 && !confirm("Opslaget skal ud om under 6 timer. Opgaven flytter opslag til Metricool kl. 7 og 13, så den når det måske ikke. Godkend alligevel?")) return;
+    kør("some-godkend", [o.id, "@json"], {json: data(), tekst: `Godkendt: ${someTid(k.tid)}`, efter, med: () => { someSæt(o.id, {...data(), status: "godkendt", fejl: null}); slut(); }});
+  };
+  const gem = () => kør("some-ret", [o.id, "@json"], {json: data(), tekst: "Opslaget er rettet", efter, med: () => { someSæt(o.id, {...data(), ...(o.status === "udkast" ? {} : {status: "udkast"})}); slut(); }});
+  const spring = () => kør("some-spring", [o.id], {tekst: "Sprunget over", efter, med: () => { someSæt(o.id, {status: "sprunget over"}); slut(); }});
+  const upload = async fs => { for (const f of fs) { try { DRIVE.aktiv = "sm" + o.id; tegn(); k.media = [...k.media, await driveUploadStor(f, `SoMe ${o.id} ${k.media.length + 1}`)]; } catch (e) { alert(`Upload fejlede: ${e.message}`); } } DRIVE.aktiv = null; tegn(); };
+  const status = o.status === "fejl" || o.fejl ? h("span", {class: "pill rd"}, "Fejl") : o.status === "planlagt" ? h("span", {class: "pill g"}, "I Metricool") : o.status === "godkendt" ? h("span", {class: "pill rd"}, "Venter på Metricool") : h("span", {class: "pill y"}, "Udkast");
+  const klip = h("div", {class: "sm-klip"}, k.media.map((l, i) => h("span", {class: "sm-fil"}, h("a", {href: l, target: "_blank", rel: "noopener"}, `▶ Klip ${i + 1}`),
+    ret ? h("button", {class: "x", type: "button", title: "Fjern klippet", onclick: () => { k.media = k.media.filter((_, j) => j !== i); tegn(); }}, "×") : null)));
+  if (ret) {
+    driveForbered();
+    return h("div", {class: "sm-op", "data-id": o.id},
+      h("div", {class: "sm-r1"}, somePiller(o), h("div", {class: "spacer"}), status),
+      felt("Tidspunkt", h("input", {class: "input", type: "datetime-local", value: k.tid, style: "max-width:230px", oninput: e => { k.tid = e.target.value; }})),
+      felt("Tekst", h("textarea", {class: "input sm-tekst", rows: 7, value: k.tekst, oninput: e => { k.tekst = e.target.value; }})),
+      o.kanaler.includes("linkedin") || k.foerste_kommentar ? felt("Første kommentar", h("input", {class: "input", value: k.foerste_kommentar, oninput: e => { k.foerste_kommentar = e.target.value; }})) : null,
+      klip,
+      h("div", {class: "sm-knapper"},
+        h("button", {class: "btn lille", type: "button", onclick: () => { if (!driveKlar()) return driveLogin(() => tegn()); h("input", {type: "file", multiple: true, accept: "image/*,video/*", onchange: e => upload([...e.target.files])}).click(); }},
+          DRIVE.aktiv === "sm" + o.id ? "Uploader …" : driveKlar() ? "Upload klip" : "Log ind på Drive"),
+        someEval().slice(0, 3).map(r => h("button", {class: "btn lille", type: "button", onclick: () => { k.media = [...new Set([...k.media, ...r.media])]; tegn(); }}, `Klip fra ${r.job} ${kortDato(r.dato)}`))),
+      h("div", {class: "sm-knapper"}, h("button", {class: "btn primaer", type: "button", onclick: gem}, "Gem"), h("button", {class: "btn ghost", type: "button", onclick: () => { slut(); tegn(); }}, "Fortryd")));
+  }
+  return h("div", {class: "sm-op", "data-id": o.id},
+    h("div", {class: "sm-r1"}, somePiller(o), h("span", {class: "sm-tid"}, someTid(o.tid)), h("div", {class: "spacer"}), status),
+    o.fejl ? h("div", {class: "svar fejl", style: "margin:6px 0"}, o.fejl) : null,
+    h("div", {class: "sm-t"}, o.tekst || o.emne || ""), o.foerste_kommentar ? h("div", {class: "sm-t lille"}, "Første kommentar: " + o.foerste_kommentar) : null,
+    k.media.length ? klip : null,
+    h("div", {class: "sm-knapper"},
+      o.status === "udkast" || o.status === "fejl" ? h("button", {class: "btn primaer", type: "button", disabled: !!mangler, title: mangler || "", onclick: godkend}, mangler || "Godkend") : null,
+      h("button", {class: "btn", type: "button", onclick: () => { SM.ret = o.id; tegn(); }}, "Ret"),
+      h("button", {class: "btn ghost", type: "button", onclick: spring}, "Spring over")));
+}
+function visSome() {
+  const alle = someAlle(), idag = iDag(), mdr = idag.slice(0, 7);
+  const tilGodk = alle.filter(o => (o.status === "udkast" || o.status === "fejl") && !o.kanaler.includes("privat")).sort((a, b) => (a.tid || "9").localeCompare(b.tid || "9"));
+  const godk = alle.filter(o => (o.status === "godkendt" || o.status === "planlagt")).sort((a, b) => (a.tid || "").localeCompare(b.tid || ""));
+  const privat = alle.filter(o => o.kanaler.includes("privat") && o.status === "udkast");
+  // ugen som stribe: i dag og 6 dage frem (søndag godkender Oscar den kommende uge)
+  const ugeDage = [...Array(7)].map((_, i) => plusDage(idag, i));
+  const stribe = h("div", {class: "sm-uge"}, ugeDage.map(d => {
+    const på = alle.filter(o => (o.tid || "").slice(0, 10) === d && o.status !== "sprunget over");
+    return h("div", {class: "sm-dag" + (d === idag ? " i-dag" : "")}, h("div", {}, window.innerWidth <= 700 ? "SMTOTFL"[dag(d).getDay()] : `${["Søn", "Man", "Tir", "Ons", "Tor", "Fre", "Lør"][dag(d).getDay()]} ${kortDato(d)}`),
+      h("div", {class: "sm-prikker"}, på.flatMap(o => o.kanaler).map(c => h("span", {class: "sm-prik", style: `background:${SOME_KAN[c][1]}`, title: SOME_KAN[c][0]}))));
+  }));
+  const venstre = h("div", {class: "kort2"}, h("div", {class: "kh"}, h("h2", {}, `Til godkendelse (${tilGodk.length})`)),
+    tilGodk.length ? tilGodk.map(someKort) : tom("Intet til godkendelse lige nu."),
+    godk.length ? h("div", {class: "ev-h", style: "margin-top:18px"}, `Godkendt (${godk.length})`) : null,
+    godk.map(o => SM.åben === o.id || SM.ret === o.id ? someKort(o) : h("button", {type: "button", class: "sm-linje", "data-id": o.id, onclick: () => { SM.åben = o.id; tegn(); }},
+      somePiller(o), h("span", {class: "sm-tid"}, someTid(o.tid)), h("span", {class: "sm-uddrag"}, o.tekst || o.emne || ""),
+      o.status === "planlagt" ? h("span", {class: "pill g"}, "I Metricool") : h("span", {class: "pill rd"}, "Venter på Metricool"))));
+  const klipJobs = jobs().filter(j => j.dato <= plusDage(idag, 14)).slice(0, 4);
+  const selv = h("div", {class: "kort2"}, h("div", {class: "kh"}, h("h2", {}, "Du gør selv")),
+    privat.map(o => h("div", {class: "sm-selv", "data-id": o.id}, h("span", {class: "sm-k", style: `background:${SOME_KAN.privat[1]}`}, "Privat"),
+      h("div", {class: "sm-selv-t"}, o.tid ? h("b", {}, someTid(o.tid).replace(/ kl\..*/, "") + ": ") : null, o.tekst),
+      h("div", {class: "sm-knapper"},
+        h("button", {class: "btn lille", type: "button", onclick: e => { navigator.clipboard?.writeText(o.tekst); e.target.textContent = "Kopieret"; }}, "Kopiér tekst"),
+        h("button", {class: "btn lille", type: "button", onclick: () => kør("some-postet", [o.id], {tekst: "Privat opslag postet", efter: ["some"], med: () => someSæt(o.id, {status: "udgivet", udgivet: idag})})}, "Postet")))),
+    klipJobs.map(j => h("div", {class: "sm-selv"}, h("span", {class: "sm-k", style: "background:#c13584"}, "Klip"),
+      h("div", {class: "sm-selv-t"}, h("b", {}, `${SOME_DAG[dag(j.dato).getDay()][0].toUpperCase() + SOME_DAG[dag(j.dato).getDay()].slice(1)} ${kortDato(j.dato)}, ${j.navn}: `), "film 3 korte klip"))),
+    !privat.length && !klipJobs.length ? tom("Intet lige nu.") : null);
+  const iMdr = o => o.status === "udgivet" && ((o.udgivet || o.tid || "").slice(0, 7) === mdr);
+  const tal = D.some?.tal?.maaned === mdr ? D.some.tal.visninger : null;
+  const li = D.linkedin || {}, uge = someUge(idag), maal = li.maal || {};
+  const liOpslag = (li.opslag || []).filter(o => o.status === "Udgivet" && o.dato && someUge(o.dato) === uge).length, liForb = ((li.forbindelser || []).find(x => x.uge === uge) || {}).antal || 0;
+  const måned = h("div", {class: "kort2"}, h("div", {class: "kh"}, h("h2", {}, "Denne måned")),
+    h("div", {class: "sm-tal"}, h("div", {}, h("b", {}, String(alle.filter(iMdr).length)), "udgivet"), h("div", {}, h("b", {}, String(tilGodk.length)), "venter"),
+      h("div", {}, h("b", {}, tal == null ? "–" : tal.toLocaleString("da-DK")), "visninger")),
+    h("div", {class: "sm-li"}, h("span", {class: "sm-k", style: `background:${SOME_KAN.linkedin[1]}`}, "LinkedIn"), " denne uge: ",
+      h("span", {class: "pill " + (liOpslag >= (maal.opslag_pr_uge || 1) ? "g" : "y")}, `${liOpslag} af ${maal.opslag_pr_uge || 1} opslag`), " ",
+      h("span", {class: "pill " + (liForb >= (maal.forbindelser_pr_uge || 20) ? "g" : "y")}, `${liForb} af ${maal.forbindelser_pr_uge || 20} forbindelser`)));
+  const ev = someEval().slice(0, 3), idéer = D.some?.ideer || [];
+  const klipIdéer = h("div", {class: "kort2"}, h("div", {class: "kh"}, h("h2", {}, "Klip og idéer")),
+    ev.map(r => h("a", {class: "sm-ev", href: r.media[0], target: "_blank", rel: "noopener"}, h("span", {class: "sm-play"}, "▶"),
+      h("div", {}, h("b", {}, `${r.job} ${kortDato(r.dato)}`), h("div", {}, `${r.media.length} klip`)))),
+    idéer.length ? h("ul", {class: "sm-ideer"}, idéer.map(t => h("li", {}, t))) : null,
+    !ev.length && !idéer.length ? tom("Ingen klip endnu.") : null);
+  $("rod").replaceChildren(h("div", {class: "side bred sm"}, h("h1", {}, "SoMe"), stribe, h("div", {class: "sm-gitter"}, venstre, h("div", {class: "sm-hoejre"}, selv, måned, klipIdéer))));
+}
+
 // Evaluering pr. job (Oscar 7/11, skitse panel-evaluering): står på I dag fra morgenen efter jobbet, til der er trykket Færdig. Intet lukker før. Data ligger i data/evalueringer.json (fabz_evaluering.py),
 // kladden gemmes i browseren med det samme og på GitHub lidt efter. Sange og svar skrives aldrig ind i panelets kode.
 const EV = {}, EV_DAGE_NYE = 30, EV_VIS_NYE = 3, EV_PUNKTER = ["ramte", "toemte", "manglede", "husk", "spurgte", "kort_gik", "kort_hvorfor"];
