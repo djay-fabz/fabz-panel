@@ -136,7 +136,7 @@ a.btn{display:inline-block;text-decoration:none}
 input[type=date]{color-scheme:light dark}
 .dato-felt{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%238a8f98' stroke-width='1.4'%3E%3Crect x='2' y='3' width='12' height='11' rx='2'/%3E%3Cpath d='M2 7h12M5.5 1.5v3M10.5 1.5v3'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;background-size:14px;padding-right:26px;cursor:pointer}
 .dato-skjult{position:fixed;opacity:0;pointer-events:none;padding:0;border:0;margin:0}
-.sd-side{max-width:980px;padding-bottom:0}.sd-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}.sd-top h1{margin:0}.sd-bar{height:8px;border-radius:99px;background:var(--linje);margin:12px 0 14px;overflow:hidden}.sd-bar div{height:100%;background:var(--ok);border-radius:99px}
+.sd-side{max-width:980px;padding-bottom:0}.idag-salg{display:flex;flex-direction:column;gap:8px}.idag-salg .sd-top h1{font-size:19px}.sd-link{display:flex;justify-content:space-between;align-items:center;width:100%;padding:12px 16px;font:inherit;font-weight:500;color:inherit;text-align:left;cursor:pointer;margin-top:0}.sd-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}.sd-top h1{margin:0}.sd-bar{height:8px;border-radius:99px;background:var(--linje);margin:12px 0 14px;overflow:hidden}.sd-bar div{height:100%;background:var(--ok);border-radius:99px}
 .sd-liste{background:var(--flade);border:1px solid var(--linje);border-radius:14px;overflow:hidden}.sd-r{display:flex;align-items:center;gap:14px;padding:12px 16px}.sd-r+.sd-r{border-top:1px solid var(--linje)}.sd-mk{flex:none;width:20px;height:20px;border-radius:50%;border:2px solid var(--svagere)}.sd-r.ok .sd-mk{background:var(--ok);border-color:var(--ok)}.sd-t{flex:1;min-width:0;display:block;text-align:left;background:none;border:0;padding:0;color:inherit;font:inherit}.sd-t b{display:block;font-weight:600}.sd-t span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sd-r.ok b{text-decoration:line-through;font-weight:500;color:var(--svag)}.sd-r .btn{flex:none;margin:0}
 .sd-faerdig{background:var(--ok-blid);border-radius:14px;padding:26px;text-align:center}.sd-f-t{color:var(--ok);font-size:21px;font-weight:600;margin-bottom:12px}.sd-fold{background:var(--flade);border:1px solid var(--linje);border-radius:12px;margin-top:8px}.sd-fold>summary{padding:12px 16px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;font-weight:500}.sd-fold>summary::-webkit-details-marker{display:none}.sd-fold>summary::after{content:"›";color:var(--svagere)}.sd-fold[open]>summary::after{content:"⌄"}.sd-fold .kompakt{margin:0 12px 12px}.sd-fold .to,.sd-fold .side{padding-left:12px;padding-right:12px}.sd-fold .salg-status{margin-top:0}
 @font-face{font-family:SkiltSerif;src:url(skilte/serif.ttf)}@font-face{font-family:SkiltPop;src:url(skilte/pop.ttf)}
@@ -2792,11 +2792,11 @@ function visIDag() {
         sideKort(`Forespørgsler der venter (${henv.length})`, henv.length ? henv.slice(0, 6).map(x => h("button", {class: "mini link", type: "button", disabled: x.id === "…",
           onclick: () => { fane = "foresp"; if (!(FQ.vis === "h" && FQ.valgt === x.id)) fqÅbn(x.id); else tegn(); }},
           h("span", {class: "pill " + pillKlasse(x.status)}, x.status), h("span", {}, x.kunde))) : h("div", {class: "muted lille"}, "Ingen")),
-        (() => {
-          const ugeN = (D.salgslog || []).filter(x => x.dato >= plusDage(iDag(), -((dag(iDag()).getDay() + 6) % 7))).length, ugeM = ((D.strategi || {}).salgsmaal || {}).kontakter_uge || 9;
-          return sideKort(`Salg: følg op i dag (${due.length}) · uge ${ugeN}/${ugeM} kontakter`, due.length ? due.map(s => h("button", {class: "mini link", type: "button",
-            onclick: () => { fane = "salg"; if (!(SG.vis === "s" && SG.valgt === s.navn)) salgÅbn(s.navn); else tegn(); }},
-            h("span", {class: "lille tid " + (s.naeste_opfoelgning < iDag() ? "rød" : "muted")}, kortDato(s.naeste_opfoelgning)), h("span", {}, s.navn))) : h("div", {class: "muted lille"}, "Ingen")); })(),
+        (() => {   // Salg som i Salg-fanen (Oscar 8/11): dagens kontakter eller "Færdig med salg i dag", og resten som et link til Salg
+          const iListe = new Set(salgDagsliste().lås.navne), rest = salgForfaldne(idag).filter(s => !iListe.has(s.navn));
+          return h("div", {class: "idag-salg"}, salgDagKort(true),
+            rest.length ? h("button", {class: "sd-fold sd-link", type: "button", onclick: () => { fane = "salg"; SG.restenÅben = true; SG.alleÅben = false; tegn(); window.scrollTo(0, 0); }},
+              h("span", {}, "Resten", h("span", {class: "muted"}, ` · ${rest.length} venter`)), h("span", {class: "muted"}, "›")) : null); })(),
         (() => {   // Penge ude: kun når noget haster
           const ov = åbneOverførsler();
           if ((!ub || !ub.forfaldne) && !dm.length && !ov.length) return null;
@@ -4509,11 +4509,12 @@ function salgDagsliste() {
   const ting = lås.navne.map(n => { const s = find(n), r = s ? null : (D.leads || []).find(x => x.id === lås.leads[n] && !x.trukket); return s || r ? {navn: n, s, r, klaret: klaret.has(n)} : null; }).filter(Boolean);
   return {ting, antal, klarede: ting.filter(x => x.klaret).length, lås};
 }
-function salgDagKort() {
+function salgDagKort(påIDag = false) {   // påIDag (Oscar 8/11: "jeg vil se det man ser i salg ved i dag"): et tryk åbner kontakten i Salg
   const idag = iDag(), {ting, antal, klarede, lås} = salgDagsliste(), rest = Math.max(0, antal - klarede);
-  const åbn = t => { if (!(SG.vis === "s" && SG.valgt === t.navn)) salgÅbn(t.navn); SG.k.logÅben = true; tegn(); document.querySelector(".detalje-kol")?.scrollIntoView({block: "nearest"}); };
+  const tilSalg = () => { if (påIDag) { fane = "salg"; SG.alleÅben = false; window.scrollTo(0, 0); } };
+  const åbn = t => { tilSalg(); if (!(SG.vis === "s" && SG.valgt === t.navn)) salgÅbn(t.navn); SG.k.logÅben = true; tegn(); document.querySelector(".detalje-kol")?.scrollIntoView({block: "nearest"}); };
   const knap = t => { if (t.klaret) return null;
-    const nr = t.r ? tlfNr(t.r.telefon) : tlfNr(t.s.telefon) || tlfNr(t.s.kontakt), gå = () => t.r ? trækLead(t.r) : åbn(t);
+    const nr = t.r ? tlfNr(t.r.telefon) : tlfNr(t.s.telefon) || tlfNr(t.s.kontakt), gå = () => t.r ? (tilSalg(), trækLead(t.r)) : åbn(t);
     return nr ? h("a", {class: "btn lille primaer", href: "tel:" + nr.replace(/\s+/g, ""), onclick: gå}, "Ring " + nr) : h("button", {class: "btn lille", type: "button", onclick: gå}, "Log kontakt"); };
   const sætning = t => t.r ? (t.r.rolle || "").replace(/\s*\(.*$/, "").trim() : t.s.svar ? `${t.s.svar.person} har svaret` : (t.s.naeste || t.s.status || "").split(/(?<=[.!?])\s/)[0];
   const hoved = rest ? [h("div", {class: "sd-top"}, h("h1", {}, `Ring til ${rest} mere`), h("span", {class: "muted"}, dagNavnLang(idag))),
@@ -4521,7 +4522,7 @@ function salgDagKort() {
     : h("div", {class: "sd-faerdig"}, h("div", {class: "sd-f-t"}, "✓ Færdig med salg i dag"),
       salgForfaldne(idag).some(s => !lås.navne.includes(s.navn)) || næsteLeads().length ? h("button", {class: "btn", type: "button", onclick: () => { lås.ekstra++; lager.set(SALG_DAG_NØGLE, JSON.stringify(lås)); tegn(); }}, "Tag én mere") : null);
   const række = t => h("div", {class: "sd-r" + (t.klaret ? " ok" : "")},
-    h("span", {class: "sd-mk"}), h(t.s ? "button" : "div", {class: "sd-t", ...(t.s ? {type: "button", onclick: () => salgÅbn(t.navn)} : {})}, h("b", {}, t.navn), t.klaret ? null : h("span", {class: "muted lille"}, sætning(t))), knap(t));
+    h("span", {class: "sd-mk"}), h(t.s ? "button" : "div", {class: "sd-t", ...(t.s ? {type: "button", onclick: () => { tilSalg(); salgÅbn(t.navn); }} : {})}, h("b", {}, t.navn), t.klaret ? null : h("span", {class: "muted lille"}, sætning(t))), knap(t));
   return [hoved, rest ? h("div", {class: "sd-liste"}, [...ting.filter(t => t.klaret), ...ting.filter(t => !t.klaret).slice(0, rest)].map(række)) : null];
 }
 // Ugens tragt under Cold call (Oscar 5/11, skitse 2): kun tal, til der er 50 opkald i alt. Derefter en konklusion: hvor flest falder fra, og bedste åbning.
