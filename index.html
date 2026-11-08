@@ -957,6 +957,30 @@ function tegnTop() {
 }
 let MERE = false;
 document.addEventListener("click", () => { if (MERE) { MERE = false; tegnTop(); } });
+// Adresse pr. side (Oscar 8/11: "når jeg opdaterer siden, åbner den på den side jeg kigger på"): fanen og den åbne detalje står efter #,
+// fx #opgaver, #opgave=32, #salg=Arla Foods, #job=2026-11-07|klubbernes vanddisko. Kun navne og id'er. replaceState, så tilbage-knappen ikke fyldes op
+const FANER = ["idag", "opgaver", "pakkelister", "foresp", "salg", "oekonomi", "some", "tilbud", "bogforing", "lager", "pakker", "kort", "rute"];
+function adresse() {
+  const v = fane === "pakkelister" && JH ? "job=" + encodeURIComponent(JH)
+    : fane === "opgaver" && OP.vis === "opgave" && OP.valgt != null ? "opgave=" + OP.valgt
+    : fane === "opgaver" && OP.vis === "plan" ? "planlaeg"
+    : fane === "salg" && SG.vis === "s" && SG.valgt ? "salg=" + encodeURIComponent(SG.valgt)
+    : fane === "foresp" && FQ.vis === "h" && FQ.valgt != null ? "foresp=" + FQ.valgt
+    : FANER.includes(fane) ? fane : null;
+  return v && "#" + v;
+}
+function skrivAdresse() { const a = adresse(); if (a && location.hash !== a) history.replaceState(null, "", location.pathname + location.search + a); }
+function læsAdresse() {   // efter data er hentet: en detalje, der ikke findes længere, åbner bare fanen
+  const m = /^#([a-z]+)(?:=(.+))?$/.exec(location.hash);
+  if (!m) return;
+  const k = m[1], v = m[2] ? decodeURIComponent(m[2]) : null, id = v != null && /^\d+$/.test(v) ? Number(v) : v;
+  if (k === "job" && v) { fane = "pakkelister"; JH = v; }
+  else if (k === "opgave" && v) { fane = "opgaver"; if ((D.opgaver || []).some(o => o.id === id)) { OP.vis = "opgave"; OP.valgt = id; } }
+  else if (k === "planlaeg") { fane = "opgaver"; OP.vis = "plan"; }
+  else if (k === "salg" && v) { fane = "salg"; if ((D.salg || []).some(x => x.navn === v)) { SG.vis = "s"; SG.valgt = v; } }
+  else if (k === "foresp" && v) { fane = "foresp"; if ((D.henvendelser || []).some(x => x.id === id)) { FQ.vis = "h"; FQ.valgt = id; } }
+  else if (FANER.includes(k)) fane = k;
+}
 function tegn() {
   document.body.classList.remove("bar-synlig");
   tegnTop();
@@ -969,6 +993,7 @@ function tegn() {
     if (side) side.prepend(h("div", {class: "subnav"},
       h("button", {type: "button", class: "btn ghost lille", onclick: () => { fane = "pakkelister"; tegn(); window.scrollTo(0, 0); }}, JH ? "← Tilbage til jobbet" : "← Jobs")));
   }
+  skrivAdresse();
 }
 
 // ---------- startside: jobs ----------
@@ -6117,8 +6142,7 @@ async function start() {
     }
   }
   S = null; L = null;
-  const hj = /^#job=(.+)$/.exec(location.hash);
-  if (hj) { fane = "pakkelister"; JH = decodeURIComponent(hj[1]); history.replaceState(null, "", location.pathname + location.search); }
+  læsAdresse();
   tegn();
 }
 window.addEventListener("beforeunload", e => {
