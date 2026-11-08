@@ -301,6 +301,7 @@ body.bar-synlig .beskeder{bottom:84px}
 .cb input{margin-top:3px;width:16px;height:16px;accent-color:var(--accent);flex:none}
 .cb .t{flex:1}
 .cb.gjort .t{color:var(--svagere);text-decoration:line-through}
+.luk-boks{margin-top:14px;padding:14px 16px}.luk-boks .kh{margin-bottom:4px}.luk-r{display:flex;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--linje)}.luk-r:first-of-type{border-top:0}.luk-t{flex:1;min-width:0}
 .smaa-blok{border:1px solid var(--linje);border-radius:10px;margin:6px 0;background:var(--flade2)}.smaa-blok>.cb{border-top:0;padding:8px 10px;align-items:center}.smaa-blok>.cb input{margin-top:0}
 .smaa-ind{border-top:1px solid var(--linje);padding:2px 10px 6px 36px}.smaa-ind .cb{font-size:14px;padding:6px 0}.smaa-ind .cb:first-child{border-top:0}
 .smaa-fold{background:none;border:0;color:var(--svag);font-size:15px;cursor:pointer;padding:0 4px}
@@ -1128,7 +1129,7 @@ function jobOpgaver(j, st) {
     h("span", {class: "jo-m" + (færdig ? " ok" : "")}, færdig ? "✓" : "○"),
     h("span", {class: "jo-t", style: "flex:1"}, h("b", {}, o.titel),
       færdig ? h("span", {class: o.konklusion ? "" : "muted"}, o.konklusion || "Ingen konklusion skrevet")
-        : h("span", {class: "muted"}, [o.deadline ? h("span", {class: prioKlasse(o) || dlKlasse(o)}, "Frist " + visDato(o.deadline)) : null,
+        : h("span", {class: "muted"}, [o.deadline ? h("span", {}, "Frist " + visDato(o.deadline)) : null,
             (o.faerdig_naar || []).length ? `${o.faerdig_naar.filter(k => k.ok).length}/${o.faerdig_naar.length} krav` : null].filter(Boolean).flatMap((x, i) => i ? [" · ", x] : [x]))),
     h("span", {class: "muted"}, JOÅ === o.id ? "▴" : "▾")),
     JOÅ === o.id ? h("div", {class: "jo-detalje"}, opgaveDetalje(o, true)) : null];
@@ -2666,7 +2667,6 @@ const småMin = (dp, n, sk) => (dp.plan_punkter || []).filter(p => p.smaating?.l
   .reduce((t, p) => t + Math.min(Number(p.min) || 30, p.smaating.filter(x => sk.includes(x.id)).reduce((s, x) => s + (Number(x.min) || 0), 0)), 0);   // som dag-opfoelg
 // "Kan ikke løses før" (Oscar 29/10): opgaven står nedtonet med "Fra <dato>" og kommer ikke i planforslaget før datoen
 const senere = (o, ref = iDag()) => !!o.ikke_foer && o.ikke_foer > ref;
-const fraMærke = o => o.ikke_foer && o.ikke_foer > iDag() ? h("span", {class: "fra-mærke"}, "Fra " + kortDato(o.ikke_foer)) : null;
 const fraFejl = o => o.ikke_foer && o.deadline && o.ikke_foer > o.deadline;
 // Planens punkt for den faste salgsopgave: streget ud, når opgaven er lukket (6 kontakter logget), rødt efter kl. 12, mens den er åben
 const planOpg = p => p.id != null ? D.opgaver.find(x => x.id === p.id) : null;
@@ -2677,10 +2677,6 @@ function visIDag() {
   const dp = (D.dagsplaner || []).find(x => x.dato === idag);
   const kal = (D.kalender?.begivenheder || []).filter(e => e.start.slice(0, 10) <= idag && e.slut.slice(0, 10) >= idag)
     .sort((a, b) => (a.heldag ? 0 : 1) - (b.heldag ? 0 : 1) || a.start.localeCompare(b.start));
-  const grænse = plusDage(idag, 7);
-  const åbne = D.opgaver.filter(o => !["Færdig", "Venter"].includes(o.status));
-  const sorteret = åbne.filter(o => o.deadline && o.deadline <= grænse).sort((a, b) => salgFørst(a, b) || a.deadline.localeCompare(b.deadline));
-  const forsinket = sorteret.filter(o => o.deadline < idag), dl = sorteret.filter(o => o.deadline >= idag);
   const dagensJobs = jobs().filter(j => j.dato === idag);
   const henv = (D.henvendelser || []).filter(x => ["Ny", "Tilbud sendt"].includes(x.status));
   const næste = jobs().slice(0, 4);
@@ -2710,7 +2706,7 @@ function visIDag() {
           if (e.target.checked) småK = [...new Set([...småK, x.id])]; else { småK = småK.filter(i => i !== x.id); nået = nået.filter(v => v !== p.nr); }
           if (alle.every(y => småK.includes(y.id))) nået = [...new Set([...nået, p.nr])];
           gem(); }}),
-        h("span", {class: "t"}, x.overskredet ? h("span", {class: "rød"}, "! ") : null, x.tekst), x.min ? h("span", {class: "muted lille"}, x.min + " min") : null))) : null);
+        h("span", {class: "t"}, x.tekst), x.min ? h("span", {class: "muted lille"}, x.min + " min") : null))) : null);
   };
   const planKort = h("div", {class: "kort2"},
     h("div", {class: "kh"}, h("h2", {}, "Dagens plan"),
@@ -2734,7 +2730,7 @@ function visIDag() {
               lager.set(NÅET_KEY(idag), JSON.stringify(nået));
               e.target.closest(".cb").classList.toggle("gjort", e.target.checked);
             }}),
-            h("span", {class: "t" + (salgRød(p) ? " rød" : "")}, p.overskredet ? h("span", {class: "rød"}, "! ") : null,
+            h("span", {class: "t" + (salgRød(p) ? " rød" : "")},
               planOpg(p)?.job_opgave === "salg" ? h("a", {href: "#", onclick: e => { e.preventDefault(); SG.vis = null; SG.valgt = null; SG.alleÅben = false; fane = "salg"; tegn(); window.scrollTo(0, 0); }}, p.tekst) : p.tekst),
             p.min ? h("span", {class: "muted lille"}, p.min + " min") : null,
             fulgtOp ? (p.brugt != null ? h("span", {class: "muted lille"}, "brugt " + p.brugt + " min") : null)
@@ -2764,16 +2760,10 @@ function visIDag() {
   const due = (D.salg || []).filter(s => s.naeste_opfoelgning && s.naeste_opfoelgning <= idag);
   const ub = D.mo?.ubetalt, dm = (D.mo?.depositum || []).filter(j => j.status === "mangler");
   const resten = [
-        forsinket.length ? h("div", {class: "kort2"}, h("div", {class: "kh"}, h("h3", {class: "rød"}, `Forsinket (${forsinket.length})`)),
-          forsinket.slice(0, 8).map(o => h("button", {class: "mini link", type: "button", disabled: o.id === "…",
-            onclick: () => { fane = "opgaver"; OP.vis = "opgave"; OP.valgt = o.id; tegn(); }},
-            h("span", {class: "lille tid rød"}, kortDato(o.deadline)), h("span", {class: senere(o) ? "nedtonet" : ""}, o.titel, fraMærke(o))))) : null,
+        // Forsinket og Deadlines de næste 7 dage er fjernet (Oscar 8/11, skitse panel-uden-forsinket): han arbejder ud fra Dagens plan, og planforslaget tager selv de overskredne først
         sideKort("Kalender i dag", kal.length ? kal.map(e => h("div", {class: "mini"},
           h("span", {class: "muted lille tid"}, e.heldag ? "Hele dagen" : e.start.slice(11, 16).replace(":", ".")),
           h("span", {}, e.titel, e.sted ? h("span", {class: "muted lille"}, " · " + e.sted) : null))) : h("div", {class: "muted lille"}, "Intet i kalenderen")),
-        sideKort(`Deadlines de næste 7 dage (${dl.length})`, dl.length ? dl.slice(0, 8).map(o => h("button", {class: "mini link", type: "button", disabled: o.id === "…",
-          onclick: () => { fane = "opgaver"; OP.vis = "opgave"; OP.valgt = o.id; tegn(); }},
-          h("span", {class: "lille tid " + (prioKlasse(o, idag) ? "rød" : dlKlasse(o, idag) || "muted")}, kortDato(o.deadline)), h("span", {class: senere(o) ? "nedtonet" : prioKlasse(o, idag)}, o.titel, fraMærke(o)))) : h("div", {class: "muted lille"}, "Ingen")),
         sideKort(`Forespørgsler der venter (${henv.length})`, henv.length ? henv.slice(0, 6).map(x => h("button", {class: "mini link", type: "button", disabled: x.id === "…",
           onclick: () => { fane = "foresp"; if (!(FQ.vis === "h" && FQ.valgt === x.id)) fqÅbn(x.id); else tegn(); }},
           h("span", {class: "pill " + pillKlasse(x.status)}, x.status), h("span", {}, x.kunde))) : h("div", {class: "muted lille"}, "Ingen")),
@@ -2803,7 +2793,7 @@ function visIDag() {
         }) : h("div", {class: "muted lille"}, "Ingen"))];
   const overskrift = h("h1", {}, `${DAGE[d.getDay()][0].toUpperCase() + DAGE[d.getDay()].slice(1)} ${d.getDate()}. ${MDL[d.getMonth()]}`);
   if (dp?.plan_punkter?.length) {   // dagen er planlagt: kun planen (Oscar 28/10: "fokus skal holdes"); resten bag ét lukket link
-    const tal = [[forsinket.length, "Forsinket"], [dl.length, "Deadlines"], [henv.length, "Forespørgsler"], [due.length, "Salg"],
+    const tal = [[henv.length, "Forespørgsler"], [due.length, "Salg"],
       [ub && (ub.forfaldne || dm.length) ? (ub.forfaldne || 0) + dm.length : 0, "Penge ude"]].filter(([n]) => n).map(([n, t]) => `${t} ${n}`);
     $("rod").replaceChildren(h("div", {class: "side"}, overskrift, fejlBjælker(),
       h("div", {class: "fokus"}, planKort, evalueringKort(idag), ...jobKort, vagterKort(idag),   // vagtkort vises kun ved kollision eller nye vagter
@@ -2814,7 +2804,7 @@ function visIDag() {
   }
   const evKort = evalueringKort(idag);
   $("rod").replaceChildren(h("div", {class: "side bred"}, overskrift, fejlBjælker(), evKort ? h("div", {style: "margin-bottom:16px"}, evKort) : null,
-    h("div", {class: "idag"}, planKort, h("div", {class: "stak"}, ...jobKort, resten[0], resten[1], vagterKort(idag), ...resten.slice(2)))));
+    h("div", {class: "idag"}, planKort, h("div", {class: "stak"}, ...jobKort, resten[0], vagterKort(idag), ...resten.slice(1)))));
 }
 function brydIgennem(henv, ub, dm) {   // planlagt dag: nye forespørgsler og penge ude står over "Vis resten" (skitse panel-opfoelgning, Oscar ja 29/10)
   const nye = henv.filter(x => x.status === "Ny" && x.id !== "…" && forespAlder(x) >= 1).sort((a, b) => forespAlder(b) - forespAlder(a));
@@ -3159,6 +3149,7 @@ function visOpgaver() {
       h("button", {class: "btn primaer", type: "button", onclick: () => { OP.vis = "ny"; OP.ny = {prioritet: "Mellem", kategori: "Internet opgave"}; tegn(); }}, "+ Ny opgave")),
     h("div", {class: "chips"}, ["Åbne", "I dag", "Venter", "Færdige"].map(f =>
       h("button", {type: "button", class: "chip" + (OP.filter === f ? " aktiv" : ""), onclick: () => { OP.filter = f; tegn(); }}, f))),
+    OP.filter !== "Færdige" ? lukBoks() : null,
     h("div", {class: "kort", style: "margin-top:14px"}, liste.length ? liste.map(o => {
       const krav = o.faerdig_naar || [], ok = krav.filter(k => k.ok).length;
       const planlægger = OP.vis === "plan" && !!OP.plan && o.status !== "Færdig" && o.id !== "…";
@@ -3168,9 +3159,9 @@ function visOpgaver() {
         onclick: () => { if (planlægger) { if (!iPlanen) { planTilføj(o); tegn(); } return; } OP.vis = "opgave"; OP.valgt = o.id; tegn(); if (window.innerWidth <= 900) window.scrollTo(0, 0); }},   // telefon: detaljen ligger øverst
         h("div", {class: "n"}, h("div", {class: "titel"}, o.titel, o.id === "…" ? h("span", {class: "muted lille"}, "  gemmes …") : null),
           h("div", {class: "meta"},
-            o.deadline ? h("span", {class: prioKlasse(o, idag) || dlKlasse(o, idag)}, "dl " + kortDato(o.deadline)) : null,
+            o.deadline ? h("span", {}, "dl " + kortDato(o.deadline)) : null,   // fristen i gråt (Oscar 8/11, skitse panel-uden-forsinket)
             o.ikke_foer && o.ikke_foer > idag ? h("span", {class: fraFejl(o) ? "rød" : ""}, "Fra " + kortDato(o.ikke_foer) + (fraFejl(o) ? " (efter fristen!)" : "")) : null,
-            o.prioritet ? h("span", {class: prioKlasse(o, idag)}, o.prioritet) : null,
+            o.prioritet ? h("span", {}, o.prioritet) : null,
             o.estimat != null ? h("span", {}, o.estimat + " min") : null,
             o.estimat != null && o.estimat <= SMAATING_MAKS && o.status !== "Færdig" && !erSalgRing(o) ? h("span", {class: "pill"}, "småting") : null,
             krav.length ? h("span", {}, `${ok}/${krav.length} krav`) : null,
@@ -3186,6 +3177,20 @@ function visOpgaver() {
     OP.vis === "ny" ? nyOpgaveForm() : OP.vis === "plan" ? planlægPanel() : OP.vis === "opgave" ? opgaveDetalje(D.opgaver.find(o => o.id === OP.valgt))
       : tom("Vælg en opgave, lav en ny, eller planlæg dagen."));
   $("rod").replaceChildren(h("div", {class: "to"}, venstre, højre));
+}
+// "Skal de lukkes?" (Oscar 8/11, skitse panel-uden-forsinket): morgenrobotten (fabz.py oprydning) markerer forældede opgaver med luk_spoerg.
+// Luk gør dem Færdige med noten "lukket: ikke længere aktuel" (intet slettes), Behold giver 7 dage mere. Opgaver om penge kommer aldrig her
+function lukBoks() {
+  const l = D.opgaver.filter(o => o.luk_spoerg && o.status !== "Færdig");
+  if (!l.length) return null;
+  const luk = xs => kør("opgave-luk", xs.map(o => String(o.id)), {tekst: xs.length === 1 ? `Lukket: ${xs[0].titel}` : `${xs.length} opgaver lukket`, efter: ["opgaver", "salg"],
+    med: () => xs.forEach(o => { o.status = "Færdig"; o.faerdig_dato = iDag(); o.konklusion = "lukket: ikke længere aktuel"; delete o.luk_spoerg; })});
+  return h("div", {class: "kort2 luk-boks"}, h("div", {class: "kh"}, h("h3", {}, `Skal de lukkes? (${l.length})`),
+      l.length > 1 ? h("button", {class: "btn lille", type: "button", onclick: () => luk(l)}, `Luk alle ${l.length}`) : null),
+    l.map(o => h("div", {class: "luk-r", "data-id": o.id}, h("div", {class: "luk-t"}, o.titel, h("div", {class: "muted lille"}, o.luk_spoerg)),
+      h("button", {class: "btn lille", type: "button", onclick: () => luk([o])}, "Luk"),
+      h("button", {class: "btn lille", type: "button", onclick: () => kør("opgave-behold", [String(o.id)], {tekst: `Beholdt: ${o.titel}`, efter: ["opgaver", "salg"],
+        med: () => { delete o.luk_spoerg; o.deadline = plusDage(iDag(), 7); o.beholdt = iDag(); }})}, "Behold"))));
 }
 let JOÅ = null;   // opgaven der er foldet ud på jobbets side
 function opgaveDetalje(o, indlejret) {   // indlejret: på jobbets side, hvor titlen allerede står i rækken
@@ -3270,12 +3275,6 @@ function nyOpgaveForm() {
     }}, "Opret opgave"));
 }
 const PRIO = ["Høj", "Mellem", "Lav"];
-// Farver på frist og prioritet (Oscar 28/10): overskredet = rød frist, i dag = gul frist. Høj prioritet med frist i dag eller overskredet:
-// både frist og prioritet røde (to røde). Kun den kombination; ellers har prioriteten sin normale farve. Ingen blink.
-const dlKlasse = (o, dato = iDag()) => !o.deadline || o.status === "Færdig" ? "" : o.deadline < dato ? "rød" : o.deadline === dato || (o.gul_fra && dato >= o.gul_fra) ? "gul-t" : "";   // gul_fra: gul før fristen (formøde, Oscar 29/10)
-// Den faste salgsopgave (job_opgave "salg", Oscar 30/10) bliver først rød efter kl. 12 den dag; før er fristen gul som andre med frist i dag
-const salgFørKl12 = (o, dato) => o.job_opgave === "salg" && o.deadline === dato && dato === iDag() && new Date().getHours() < 12;
-const prioKlasse = (o, dato = iDag()) => o.prioritet === "Høj" && o.deadline && o.deadline <= dato && o.status !== "Færdig" && !salgFørKl12(o, dato) ? "rød fed" : "";
 const salgFørst = (a, b) => (a.job_opgave === "salg" ? 0 : 1) - (b.job_opgave === "salg" ? 0 : 1);   // salgsopgaven øverst på I dag og i Opgaver
 const KATEGORI_O = ["Internet opgave", "Ingen internet", "Deep work / ingen AI", "Møde online", "Møde fysisk"];
 function planTilføj(o, hv) {   // lægger en opgave ind i den åbne plan (klik eller træk fra opgavelisten)
@@ -3361,7 +3360,6 @@ function planlægPanel() {
             halvdele.map(([v, t]) => h("option", {value: v, selected: v === hv}, t))),
           h("button", {class: "x", type: "button", title: "Fjern", onclick: () => { p[hv].splice(i, 1); tegn(); }}, "×"),
           x.smaating?.length ? h("div", {class: "smaa-meta"}, h("span", {}, `${x.smaating.length} af ${x.smaating_i_alt ?? x.smaating.length} småting`),
-            x.smaating.some(y => y.overskredet) ? h("span", {class: "pill gul"}, `${x.smaating.filter(y => y.overskredet).length} over frist`) : null,
             h("span", {class: "smaa-navne"}, x.smaating.map(y => y.tekst).join(" · "))) : null)),
         h("button", {class: "btn ghost lille", type: "button", onclick: () => { p[hv].push({tekst: "", min: 15}); tegn(); }}, "+ Punkt")); }),
       felt("Noter til planen (valgfrit)", tekstfelt(p, "noter", {rows: 2})),
