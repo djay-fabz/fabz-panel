@@ -136,7 +136,7 @@ a.btn{display:inline-block;text-decoration:none}
 input[type=date]{color-scheme:light dark}
 .dato-felt{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%238a8f98' stroke-width='1.4'%3E%3Crect x='2' y='3' width='12' height='11' rx='2'/%3E%3Cpath d='M2 7h12M5.5 1.5v3M10.5 1.5v3'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;background-size:14px;padding-right:26px;cursor:pointer}
 .dato-skjult{position:fixed;opacity:0;pointer-events:none;padding:0;border:0;margin:0}
-.sd-side{max-width:980px;padding-bottom:0}.idag-salg{display:flex;flex-direction:column;gap:8px}.idag-salg .sd-top h1{font-size:19px}.sd-link{display:flex;justify-content:space-between;align-items:center;width:100%;padding:12px 16px;font:inherit;font-weight:500;color:inherit;text-align:left;cursor:pointer;margin-top:0}.sd-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}.sd-top h1{margin:0}.sd-bar{height:8px;border-radius:99px;background:var(--linje);margin:12px 0 14px;overflow:hidden}.sd-bar div{height:100%;background:var(--ok);border-radius:99px}
+.sd-side{max-width:980px;padding-bottom:0}.idag-salg{display:flex;flex-direction:column;gap:8px}.sd-valg{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}@media (max-width:700px){.sd-r:has(.sd-valg){flex-wrap:wrap}.sd-valg{flex-basis:100%;justify-content:flex-start;padding-left:30px}}.idag-salg .sd-top h1{font-size:19px}.sd-link{display:flex;justify-content:space-between;align-items:center;width:100%;padding:12px 16px;font:inherit;font-weight:500;color:inherit;text-align:left;cursor:pointer;margin-top:0}.sd-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}.sd-top h1{margin:0}.sd-bar{height:8px;border-radius:99px;background:var(--linje);margin:12px 0 14px;overflow:hidden}.sd-bar div{height:100%;background:var(--ok);border-radius:99px}
 .sd-liste{background:var(--flade);border:1px solid var(--linje);border-radius:14px;overflow:hidden}.sd-r{display:flex;align-items:center;gap:14px;padding:12px 16px}.sd-r+.sd-r{border-top:1px solid var(--linje)}.sd-mk{flex:none;width:20px;height:20px;border-radius:50%;border:2px solid var(--svagere)}.sd-r.ok .sd-mk{background:var(--ok);border-color:var(--ok)}.sd-t{flex:1;min-width:0;display:block;text-align:left;background:none;border:0;padding:0;color:inherit;font:inherit}.sd-t b{display:block;font-weight:600}.sd-t span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sd-r.ok b{text-decoration:line-through;font-weight:500;color:var(--svag)}.sd-r .btn{flex:none;margin:0}
 .sd-faerdig{background:var(--ok-blid);border-radius:14px;padding:26px;text-align:center}.sd-f-t{color:var(--ok);font-size:21px;font-weight:600;margin-bottom:12px}.sd-fold{background:var(--flade);border:1px solid var(--linje);border-radius:12px;margin-top:8px}.sd-fold>summary{padding:12px 16px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;font-weight:500}.sd-fold>summary::-webkit-details-marker{display:none}.sd-fold>summary::after{content:"›";color:var(--svagere)}.sd-fold[open]>summary::after{content:"⌄"}.sd-fold .kompakt{margin:0 12px 12px}.sd-fold .to,.sd-fold .side{padding-left:12px;padding-right:12px}.sd-fold .salg-status{margin-top:0}
 @font-face{font-family:SkiltSerif;src:url(skilte/serif.ttf)}@font-face{font-family:SkiltPop;src:url(skilte/pop.ttf)}
@@ -2789,9 +2789,7 @@ function visIDag() {
         sideKort("Kalender i dag", kal.length ? kal.map(e => h("div", {class: "mini"},
           h("span", {class: "muted lille tid"}, e.heldag ? "Hele dagen" : e.start.slice(11, 16).replace(":", ".")),
           h("span", {}, e.titel, e.sted ? h("span", {class: "muted lille"}, " · " + e.sted) : null))) : h("div", {class: "muted lille"}, "Intet i kalenderen")),
-        sideKort(`Forespørgsler der venter (${henv.length})`, henv.length ? henv.slice(0, 6).map(x => h("button", {class: "mini link", type: "button", disabled: x.id === "…",
-          onclick: () => { fane = "foresp"; if (!(FQ.vis === "h" && FQ.valgt === x.id)) fqÅbn(x.id); else tegn(); }},
-          h("span", {class: "pill " + pillKlasse(x.status)}, x.status), h("span", {}, x.kunde))) : h("div", {class: "muted lille"}, "Ingen")),
+        foreIDag(),   // Forespørgsler som i fanen (Oscar 8/11, skitse panel-foresp-dagskort)
         (() => {   // Salg som i Salg-fanen (Oscar 8/11): dagens kontakter eller "Færdig med salg i dag", og resten som et link til Salg
           const iListe = new Set(salgDagsliste().lås.navne), rest = salgForfaldne(idag).filter(s => !iListe.has(s.navn));
           return h("div", {class: "idag-salg"}, salgDagKort(true),
@@ -2822,6 +2820,7 @@ function visIDag() {
       [ub && (ub.forfaldne || dm.length) ? (ub.forfaldne || 0) + dm.length : 0, "Penge ude"]].filter(([n]) => n).map(([n, t]) => `${t} ${n}`);
     $("rod").replaceChildren(h("div", {class: "side"}, overskrift, fejlBjælker(),
       h("div", {class: "fokus"}, planKort, evalueringKort(idag), ...jobKort, vagterKort(idag),   // vagtkort vises kun ved kollision eller nye vagter
+        foreDag().ting.some(t => !t.klaret) ? foreIDag() : null,   // planlagt dag: forespørgsler, der skal svares eller følges op, står stadig fremme
         brydIgennem(henv, ub, dm),
         h("details", {class: "resten"}, h("summary", {class: "muted lille"}, "Vis resten" + (tal.length ? ` (${tal.join(" · ")})` : "")),
           h("div", {class: "stak", style: "margin-top:10px"}, resten)))));
@@ -2832,15 +2831,8 @@ function visIDag() {
     h("div", {class: "idag"}, planKort, h("div", {class: "stak"}, ...jobKort, resten[0], vagterKort(idag), ...resten.slice(1)))));
 }
 function brydIgennem(henv, ub, dm) {   // planlagt dag: nye forespørgsler og penge ude står over "Vis resten" (skitse panel-opfoelgning, Oscar ja 29/10)
-  const nye = henv.filter(x => x.status === "Ny" && x.id !== "…" && forespAlder(x) >= 1).sort((a, b) => forespAlder(b) - forespAlder(a));
+  // forespørgslerne har deres eget dagskort (Oscar 8/11, skitse panel-foresp-dagskort): her står kun penge ude
   const forf = ub?.forfaldne || 0, linjer = [];
-  const udl = henv.filter(tilbudUdløbet).sort((a, b) => forespAlder(b) - forespAlder(a));
-  if (nye.length) linjer.push(h("button", {class: "bryd adv", type: "button", onclick: () => { fane = "foresp"; FQ.vis = null; tegn(); }},
-    `${nye.length} ${nye.length === 1 ? "ny forespørgsel venter" : "nye forespørgsler venter"}`,
-    h("span", {class: "navne"}, ": " + nye.slice(0, 3).map(x => `${x.kunde} (${forespAlder(x)} ${forespAlder(x) === 1 ? "dag" : "dage"})`).join(", "))));
-  if (udl.length) linjer.push(h("button", {class: "bryd fejl", type: "button", onclick: () => { fane = "foresp"; FQ.vis = null; tegn(); }},
-    h("span", {class: "navne"}, "Tilbud udløbet, følg op: " + udl.slice(0, 3).map(x => `${x.kunde} (${forespAlder(x)} dage)`).join(", ")),
-    h("span", {class: "kun-tlf"}, `${udl.length} ${udl.length === 1 ? "tilbud" : "tilbud"} udløbet, følg op`)));
   if (forf || dm.length) linjer.push(h("button", {class: "bryd fejl", type: "button", onclick: () => { fane = "oekonomi"; tegn(); }},
     "Penge ude: " + [forf ? `${krKort(ub.forfaldne_kr)} kr. over forfald` : "", dm.length ? `${dm.length} uden depositum` : ""].filter(Boolean).join(" · ")));
   return linjer.length ? h("div", {}, linjer) : null;
@@ -3419,7 +3411,6 @@ function fqLuk() { fqGemKladde(); FQ.vis = null; FQ.valgt = null; FQ.ret = {}; t
 const pillKlasse = s => ({"Ny": "blå", "Tilbud sendt": "gul", "Booket": "grøn"})[s] || "";
 // alder på en åben forespørgsel (skitse panel-opfoelgning, Oscar ja 29/10): dage siden status blev sat, gul fra 5, rød fra 14
 const forespAlder = x => { const fra = x.status_dato || x.modtaget; return fra ? Math.max(0, Math.round((dag(iDag()) - dag(fra)) / 864e5)) : 0; };
-const alderKlasse = d => d >= 14 ? "rød-pill" : d >= 5 ? "gul" : "";
 function optagetDato(dato) {
   if (!dato) return [];
   return (D.kalender?.begivenheder || []).filter(e => e.kalender === "bookinger" && e.start.slice(0, 10) <= dato && e.slut.slice(0, 10) >= dato)
@@ -3444,6 +3435,45 @@ function ledigMærke(dato) {
   if (dato > plusDage(iDag(), 730)) return h("span", {class: "pill"}, "Over 2 år frem");
   return o.length ? h("span", {class: "pill rød-pill", title: o.join(", ")}, "Optaget: " + o.join(", ")) : h("span", {class: "pill grøn"}, "Ledig");
 }
+// Dagskort i Forespørgsler og på I dag (Oscar 8/11, skitse panel-foresp-dagskort): det, der skal gøres i dag, som i Salg. Nye: send tilbud.
+// Tilbud sendt: følg op 7 dage efter og igen 7 dage efter hver opfølgning, efter 2 opfølgninger spørges der om Booket, Sagt nej eller Intet svar
+const FORE_OPF_DAGE = 7, FORE_OPF_MAKS = 2;   // samme som OPF_DAGE og OPF_MAKS i fabz_henvendelser.py
+const foreNæste = x => x.status !== "Tilbud sendt" ? null : x.naeste_opfoelgning || (x.status_dato || x.modtaget ? plusDage(x.status_dato || x.modtaget, FORE_OPF_DAGE) : null);
+function foreDag() {
+  const idag = iDag(), alle = (D.henvendelser || []).filter(x => x.id !== "…");
+  const klaret = x => x.fulgt_op === idag || (x.status_dato === idag && x.status !== "Ny");
+  const ting = alle.filter(x => x.status === "Ny" || (x.status === "Tilbud sendt" && (foreNæste(x) || "9") <= idag) || klaret(x))
+    .map(x => ({x, klaret: klaret(x), ny: x.status === "Ny"}))
+    .sort((a, b) => b.klaret - a.klaret || b.ny - a.ny || String(a.ny ? a.x.modtaget : foreNæste(a.x)).localeCompare(String(b.ny ? b.x.modtaget : foreNæste(b.x))));
+  const rest = alle.filter(x => x.status === "Tilbud sendt" && !klaret(x) && (foreNæste(x) || "9") > idag).sort((a, b) => String(foreNæste(a)).localeCompare(String(foreNæste(b))));
+  return {ting, rest};
+}
+function foreDagKort(påIDag = false) {
+  const {ting} = foreDag(), åbne = ting.filter(t => !t.klaret), svar = åbne.filter(t => t.ny).length, opf = åbne.length - svar;
+  const åbn = x => { if (påIDag) { fane = "foresp"; FQ.alleÅben = false; window.scrollTo(0, 0); } if (!(FQ.vis === "h" && FQ.valgt === x.id)) fqÅbn(x.id); else tegn(); };
+  const sæt = (x, st) => kør("henvendelse-status", [String(x.id), st], {tekst: `${x.kunde}: ${st}`, efter: ["henvendelser"],
+    med: () => { x.status = st; x.status_dato = iDag(); delete x.naeste_opfoelgning; delete x.opfoelgninger; }});
+  const knap = t => t.klaret ? null : t.ny ? h("button", {class: "btn lille primaer", type: "button", onclick: () => tbStart(tbFraForesp(t.x))}, "Lav tilbud")
+    : (t.x.opfoelgninger || 0) >= FORE_OPF_MAKS ? h("div", {class: "sd-valg"}, ["Booket", "Sagt nej", "Intet svar"].map(st => h("button", {class: "btn lille", type: "button", onclick: () => sæt(t.x, st)}, st)))
+    : h("button", {class: "btn lille", type: "button", onclick: () => kør("henvendelse-fulgt-op", [String(t.x.id)], {tekst: `Fulgt op: ${t.x.kunde}`, efter: ["henvendelser"],
+        med: () => { t.x.fulgt_op = iDag(); t.x.opfoelgninger = (t.x.opfoelgninger || 0) + 1; t.x.naeste_opfoelgning = plusDage(iDag(), FORE_OPF_DAGE); }})}, "Fulgt op");
+  const sætning = t => t.ny ? [t.x.type, t.x.eventdato ? kortDatoÅr(t.x.eventdato) : null, "send tilbud"].filter(Boolean).join(" · ")
+    : `Tilbud sendt ${kortDato(t.x.status_dato || t.x.modtaget)} · ${(t.x.opfoelgninger || 0) >= FORE_OPF_MAKS ? "har de svaret?" : "spørg om de har besluttet sig"}`;
+  const titel = [svar ? `svar ${svar}` : null, opf ? `følg op på ${opf}` : null].filter(Boolean).join(" og ");
+  const hoved = åbne.length ? [h("div", {class: "sd-top"}, h("h1", {}, titel[0].toUpperCase() + titel.slice(1)), h("span", {class: "muted"}, dagNavnLang(iDag()))),
+      h("div", {class: "sd-bar"}, h("div", {style: `width:${Math.round(100 * (ting.length - åbne.length) / ting.length)}%`}))]
+    : h("div", {class: "sd-faerdig"}, h("div", {class: "sd-f-t"}, "✓ Styr på forespørgslerne"));
+  const række = t => h("div", {class: "sd-r" + (t.klaret ? " ok" : ""), "data-id": t.x.id}, h("span", {class: "sd-mk"}),
+    h("button", {class: "sd-t", type: "button", onclick: () => åbn(t.x)}, h("b", {}, t.x.kunde || "?"), t.klaret ? null : h("span", {class: "muted lille"}, sætning(t))), knap(t));
+  return [hoved, åbne.length ? h("div", {class: "sd-liste"}, ting.map(række)) : null];
+}
+const foreResten = x => h("div", {class: "mini"}, h("span", {style: "flex:1"}, x.kunde), h("span", {class: "muted lille"}, `tilbud sendt ${kortDato(x.status_dato || x.modtaget)} · følg op ${kortDato(foreNæste(x))}`));
+function foreIDag() {
+  const {rest} = foreDag();
+  return h("div", {class: "idag-salg idag-foresp"}, foreDagKort(true),
+    rest.length ? h("button", {class: "sd-fold sd-link", type: "button", onclick: () => { fane = "foresp"; FQ.restenÅben = true; FQ.alleÅben = false; tegn(); window.scrollTo(0, 0); }},
+      h("span", {}, "Resten", h("span", {class: "muted"}, ` · ${rest.length} venter på svar`)), h("span", {class: "muted"}, "›")) : null);
+}
 function visForesp() {
   const rows = (D.henvendelser || []).slice().sort((a, b) => (b.modtaget || "").localeCompare(a.modtaget || "") || b.id - a.id);
   const åbne = rows.filter(x => ["Ny", "Tilbud sendt"].includes(x.status)).sort((a, b) => forespAlder(b) - forespAlder(a)), andre = rows.filter(x => !["Ny", "Tilbud sendt"].includes(x.status));
@@ -3452,7 +3482,7 @@ function visForesp() {
       h("div", {class: "meta"}, h("span", {}, x.type), x.eventdato ? h("span", {}, "event " + kortDatoÅr(x.eventdato)) : null,
         x.pris != null ? h("span", {}, kr(x.pris)) : null, h("span", {}, "fra " + x.kilde))),
     ["Ny", "Tilbud sendt"].includes(x.status) && x.id !== "…"
-      ? h("span", {class: "pill " + alderKlasse(forespAlder(x))}, `${x.status === "Ny" ? "Ny" : "Tilbud"} · ${forespAlder(x)} ${forespAlder(x) === 1 ? "dag" : "dage"}`)
+      ? h("span", {class: "pill " + pillKlasse(x.status)}, x.status)   // uden alder i dage (Oscar 8/11)
       : h("span", {class: "pill " + pillKlasse(x.status)}, x.status));
   const venstre = h("div", {class: "liste-kol"},
     h("div", {class: "kh"}, h("h1", {}, "Forespørgsler"), h("div", {class: "spacer"}),
@@ -3464,7 +3494,15 @@ function visForesp() {
     FQ.alle && andre.length ? h("div", {class: "kort"}, andre.map(række)) : null);
   const højre = h("div", {class: "detalje-kol"},
     FQ.vis === "ny" ? nyForespForm() : FQ.vis === "h" ? forespDetalje((D.henvendelser || []).find(x => x.id === FQ.valgt)) : tom("Vælg en forespørgsel, eller registrér en ny."));
-  $("rod").replaceChildren(h("div", {class: "to"}, venstre, højre));
+  // dagskortet øverst, resten og alle forespørgsler i folde, som i Salg (Oscar 8/11)
+  const fold = (t, åben, sæt, ...ind) => h("details", {class: "sd-fold", open: åben, ontoggle: e => { if (e.target.open !== åben) { sæt(e.target.open); tegn(); } }}, h("summary", {}, t), åben ? ind : null);
+  const {rest} = foreDag();
+  const restenFold = rest.length ? fold(h("span", {}, "Resten", h("span", {class: "muted"}, ` · ${rest.length} venter på svar`)), !!FQ.restenÅben, v => { FQ.restenÅben = v; },
+    h("div", {class: "kompakt"}, rest.map(foreResten))) : null;
+  const alleFold = fold("Alle forespørgsler", !!FQ.alleÅben, v => { FQ.alleÅben = v; }, h("div", {class: "to", style: "padding-bottom:0"}, venstre, højre));
+  const dagDel = [foreDagKort(), restenFold];
+  if (!FQ.alleÅben && (FQ.vis === "ny" || FQ.vis === "h")) $("rod").replaceChildren(h("div", {class: "to"}, h("div", {class: "liste-kol"}, dagDel, alleFold), højre));
+  else $("rod").replaceChildren(h("div", {class: "side sd-side"}, dagDel), h("div", {class: "side " + (FQ.alleÅben ? "bred" : "sd-side"), style: "padding-top:0"}, alleFold));
 }
 const kortDatoÅr = iso => `${Number(iso.slice(8, 10))}/${Number(iso.slice(5, 7))} ${iso.slice(0, 4)}`;
 function nyForespForm() {
