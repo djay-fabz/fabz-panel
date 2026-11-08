@@ -2848,7 +2848,7 @@ function afslutDag(dato, nået, brugt) {
 // Humør efter et job (Oscar 29/10): kortet står på I dag de første 3 dage efter jobbet, til det er udfyldt
 // Evaluering pr. job (Oscar 7/11, skitse panel-evaluering): står på I dag fra morgenen efter jobbet, til der er trykket Færdig. Intet lukker før. Data ligger i data/evalueringer.json (fabz_evaluering.py),
 // kladden gemmes i browseren med det samme og på GitHub lidt efter. Sange og svar skrives aldrig ind i panelets kode.
-const EV = {}, EV_DAGE_NYE = 30, EV_VIS_NYE = 3, EV_PUNKTER = ["ramte", "toemte", "manglede", "husk", "spurgte"];
+const EV = {}, EV_DAGE_NYE = 30, EV_VIS_NYE = 3, EV_PUNKTER = ["ramte", "toemte", "manglede", "husk", "spurgte", "kort_gik", "kort_hvorfor"];
 const evLagerNøgle = k => "fabz-eval:" + k;
 function evÅbne(idag) {   // afholdte job uden Færdig, ældste først: robottens rækker + det, kalenderen stadig kender
   const rows = D.evalueringer || [], fra = "2026-11-06", ud = rows.filter(r => r.status !== "faerdig" && r.dato < idag && r.dato >= fra).map(r => ({...r}));
@@ -2862,6 +2862,7 @@ function evTilstand(r) {
   const brugLok = lok && (!r.rettet || (lok.rettet || "") >= r.rettet);
   const k = brugLok ? lok : r, st = EV[r.job_noegle] = {job_noegle: r.job_noegle, job: r.job, dato: r.dato, sted: r.sted || "", jobtype: r.jobtype || "", igen: k.igen || null, score: k.score ?? null, sange: k.sange || null, nye: k.nye || null, media: k.media || []};
   for (const f of EV_PUNKTER) st[f] = [...(k[f] || [])];
+  st.kort = "kort" in k ? k.kort : (D.festkort || []).some(x => x.job_noegle === r.job_noegle) ? "Festkort" : (D.klubkort || []).some(x => x.job_noegle === r.job_noegle) ? "Klubkort" : null;   // forvalgt fra kortene, til Oscar selv vælger
   return st;
 }
 function evLæsHistory(tekst, jobDato) {   // rekordbox History: tab-separeret, kolonnerne findes ud fra overskriften
@@ -2937,6 +2938,9 @@ function evalueringKort(idag) {
       h("button", {class: "x", type: "button", title: "Ikke et nyt nummer", onclick: () => { st.nye = st.nye.filter(y => y !== x); gemt(); tegn(); }}, "×"))),
     (st.nye || []).length > nyeVis.length ? h("button", {class: "ev-link", type: "button", onclick: () => { st._nyeAlle = true; tegn(); }}, `+ ${st.nye.length - nyeVis.length} flere nye`) : null,
     h("input", {class: "input", style: "margin-top:8px", placeholder: "Tilføj nummer", onkeydown: e => { if (e.key === "Enter" && e.target.value.trim()) { (st.nye ||= []).unshift({titel: e.target.value.trim(), artist: ""}); gemt(); tegn(); } }})) : null;
+  const kortBoks = h("div", {class: "ev-klub ev-kort"}, h("div", {class: "ev-h"}, "Kort til aftenen"),   // Oscar 8/11: kan senere holdes op mod scanningerne
+    valg(["Festkort", "Klubkort", "Ingen"], st.kort, v => { st.kort = v; gemt(); tegn(); }),
+    st.kort === "Ingen" ? pkt("Hvorfor ingen kort?", "kort_hvorfor") : st.kort ? pkt("Hvordan gik det med kortene?", "kort_gik") : null);
   const upload = async fs => { for (const f of fs) { try { DRIVE.aktiv = "ev"; tegn(); const l = await driveUploadStor(f, `${st.job} ${st.dato} ${st.media.length + 1}`); st.media = [...st.media, l]; gemt(); } catch (e) { alert(`Upload fejlede: ${e.message}. Læg filen i Drive selv.`); } } DRIVE.aktiv = null; tegn(); };
   driveForbered();
   const media = spm("Billeder og video fra aftenen", [h("div", {class: "ev-drop", role: "button", tabindex: 0,
@@ -2958,7 +2962,7 @@ function evalueringKort(idag) {
     h("div", {class: "ev-gitter"}, pkt("Hvad ramte bedst?", "ramte"), pkt("Hvad tømte dansegulvet?", "toemte"), pkt("Hvilke numre manglede du?", "manglede"), pkt("Husk til næste gang", "husk"), pkt("Hvem spurgte, om de kunne booke dig?", "spurgte"),
       spm("Vil du tage jobbet igen?", valg(["Ja", "Til højere pris", "Nej"], st.igen, v => { st.igen = v; gemt(); tegn(); }))),
     spm("Din fornemmelse af jobbet", humoerKnapper(st.score, v => { st.score = st.score === v ? null : v; gemt(); tegn(); })),
-    klubBoks, media,
+    klubBoks, kortBoks, media,
     h("div", {class: "rk", style: "margin-top:14px;gap:12px;align-items:center"}, h("button", {class: "btn primaer", type: "button", onclick: færdig}, "Færdig"), vis = h("span", {class: "lille", style: "color:var(--ok)"}, st.rettet ? "Gemt" : "")));
 }
 // "Sidst på <job>" øverst på jobbet næste gang samme sted (Oscar 7/11)
