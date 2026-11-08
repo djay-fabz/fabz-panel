@@ -301,6 +301,10 @@ body.bar-synlig .beskeder{bottom:84px}
 .cb input{margin-top:3px;width:16px;height:16px;accent-color:var(--accent);flex:none}
 .cb .t{flex:1}
 .cb.gjort .t{color:var(--svagere);text-decoration:line-through}
+.smaa-blok{border:1px solid var(--linje);border-radius:10px;margin:6px 0;background:var(--flade2)}.smaa-blok>.cb{border-top:0;padding:8px 10px;align-items:center}.smaa-blok>.cb input{margin-top:0}
+.smaa-ind{border-top:1px solid var(--linje);padding:2px 10px 6px 36px}.smaa-ind .cb{font-size:14px;padding:6px 0}.smaa-ind .cb:first-child{border-top:0}
+.smaa-fold{background:none;border:0;color:var(--svag);font-size:15px;cursor:pointer;padding:0 4px}
+.planpunkt .smaa-meta{grid-column:1/-1}.smaa-meta{flex-basis:100%;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12.5px;color:var(--svag);padding:2px 2px 0}.smaa-navne{flex-basis:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .afslut{margin-top:16px;padding:12px;border-radius:10px;background:var(--flade2)}
 .to{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:24px;max-width:1228px;margin:0 auto;padding:28px 24px}
 .detalje-kol{position:sticky;top:calc(var(--top) + 16px);align-self:start;max-height:calc(100vh - var(--top) - 32px);overflow:auto}
@@ -2655,6 +2659,11 @@ function tidInput(værdi, ved, attr = {}) {   // 24-timers tid, skrevet som 17.2
 // ---------- I dag ----------
 const NÅET_KEY = dato => "fabz-naaet-" + dato;
 const BRUGT_KEY = dato => "fabz-brugt-" + dato;
+// "30 min: småting" (Oscar 8/11, skitse panel-smaating-ableton): blokken krydses af samlet, eller hver småting for sig inde i blokken. Krydsene gemmes lokalt til Afslut dagen
+const SMÅ_KEY = dato => "fabz-smaa-" + dato, SMÅÅ = new Set();   // SMÅÅ: foldede blokke (dato|nr)
+const SMAATING_MAKS = 10;   // samme grænse som SMAATING_MAKS i fabz_dagsplan.py
+const småMin = (dp, n, sk) => (dp.plan_punkter || []).filter(p => p.smaating?.length && !n.includes(p.nr) && p.halvdel !== "hvis_tid")
+  .reduce((t, p) => t + Math.min(Number(p.min) || 30, p.smaating.filter(x => sk.includes(x.id)).reduce((s, x) => s + (Number(x.min) || 0), 0)), 0);   // som dag-opfoelg
 // "Kan ikke løses før" (Oscar 29/10): opgaven står nedtonet med "Fra <dato>" og kommer ikke i planforslaget før datoen
 const senere = (o, ref = iDag()) => !!o.ikke_foer && o.ikke_foer > ref;
 const fraMærke = o => o.ikke_foer && o.ikke_foer > iDag() ? h("span", {class: "fra-mærke"}, "Fra " + kortDato(o.ikke_foer)) : null;
@@ -2683,6 +2692,26 @@ function visIDag() {
   if (fulgtOp) nået = dp.naaede_punkter || [];
   let brugt = {};
   try { brugt = JSON.parse(lager.get(BRUGT_KEY(idag)) || "{}"); } catch {}
+  let småK = [];
+  try { småK = JSON.parse(lager.get(SMÅ_KEY(idag)) || "[]"); } catch {}
+  const småBlok = p => {
+    const alle = p.smaating, gjort = x => fulgtOp ? D.opgaver.find(o => o.id === x.id)?.status === "Færdig" : nået.includes(p.nr) || småK.includes(x.id);
+    const n = alle.filter(gjort).length, helt = fulgtOp ? n === alle.length : nået.includes(p.nr), nøgle = idag + "|" + p.nr, åben = SMÅÅ.has(nøgle);
+    const gem = () => { lager.set(NÅET_KEY(idag), JSON.stringify(nået)); lager.set(SMÅ_KEY(idag), JSON.stringify(småK)); tegn(); };
+    return h("div", {class: "smaa-blok"},
+      h("div", {class: "cb" + (helt ? " gjort" : "")},
+        h("input", {type: "checkbox", checked: helt, disabled: fulgtOp, "aria-label": p.tekst, onchange: e => { const ids = alle.map(x => x.id);
+          if (e.target.checked) { nået = [...new Set([...nået, p.nr])]; småK = [...new Set([...småK, ...ids])]; } else { nået = nået.filter(x => x !== p.nr); småK = småK.filter(i => !ids.includes(i)); } gem(); }}),
+        h("span", {class: "t"}, h("b", {}, p.tekst), h("span", {class: "muted lille"}, ` · ${n} af ${alle.length}`)),
+        p.min ? h("span", {class: "muted lille"}, p.min + " min") : null,
+        h("button", {class: "smaa-fold", type: "button", title: åben ? "Fold sammen" : "Fold ud", onclick: () => { åben ? SMÅÅ.delete(nøgle) : SMÅÅ.add(nøgle); tegn(); }}, åben ? "▾" : "▸")),
+      åben ? h("div", {class: "smaa-ind"}, alle.map(x => h("label", {class: "cb" + (gjort(x) ? " gjort" : "")},
+        h("input", {type: "checkbox", checked: gjort(x), disabled: fulgtOp, onchange: e => {
+          if (e.target.checked) småK = [...new Set([...småK, x.id])]; else { småK = småK.filter(i => i !== x.id); nået = nået.filter(v => v !== p.nr); }
+          if (alle.every(y => småK.includes(y.id))) nået = [...new Set([...nået, p.nr])];
+          gem(); }}),
+        h("span", {class: "t"}, x.overskredet ? h("span", {class: "rød"}, "! ") : null, x.tekst), x.min ? h("span", {class: "muted lille"}, x.min + " min") : null))) : null);
+  };
   const planKort = h("div", {class: "kort2"},
     h("div", {class: "kh"}, h("h2", {}, "Dagens plan"),
       dp?.plan_punkter?.length ? h("button", {class: "btn lille", type: "button", title: "Åbner dagens printliste (PDF) fra pdf-mappen", onclick: async () => {   // Oscar 27/10: "hvordan printede jeg dagen?"
@@ -2698,7 +2727,7 @@ function visIDag() {
     dp?.plan_punkter?.length ? [
       ...[["foer_frokost", dp.plan_punkter.some(p => p.halvdel === "efter_frokost") ? "Før frokost" : "Arbejdstid"], ["efter_frokost", "Efter frokost"], ["hvis_tid", "Hvis der er tid"]].map(([hv, navn]) => {
         const ps = dp.plan_punkter.filter(p => p.halvdel === hv);
-        return ps.length ? h("div", {class: "lg"}, h("div", {class: "overskrift"}, navn), ps.map(p =>
+        return ps.length ? h("div", {class: "lg"}, h("div", {class: "overskrift"}, navn), ps.map(p => p.smaating?.length ? småBlok(p) :
           h("label", {class: "cb" + (nået.includes(p.nr) || salgKlaret(p) ? " gjort" : "")},
             h("input", {type: "checkbox", checked: nået.includes(p.nr), disabled: fulgtOp, onchange: e => {
               nået = e.target.checked ? [...new Set([...nået, p.nr])] : nået.filter(n => n !== p.nr);
@@ -2714,7 +2743,7 @@ function visIDag() {
                   onclick: e => e.stopPropagation()})))) : null;
       }),
       fulgtOp ? [h("div", {class: "godk ok", style: "margin-top:14px"}, dp.naaet_min != null && dp.planlagt_min != null ? `Fulgt op: nået ${dp.naaet_min} af ${dp.planlagt_min} min` : "Fulgt op: gemmes …"), estimatForslag(dp)]
-        : afslutDag(idag, () => nået, () => brugt)
+        : afslutDag(idag, () => nået, () => brugt, () => småK)
     ] : h("div", {class: "tom", style: "padding:24px 0"}, "Ingen plan for i dag.", h("br"),
           h("button", {class: "btn primaer", type: "button", style: "margin-top:12px", onclick: () => { fane = "opgaver"; OP.vis = "plan"; OP.planDato = idag; tegn(); }}, "Planlæg dagen")));
 
@@ -2825,10 +2854,10 @@ function andetMin(tekst) {   // samme regel som fabz.py andet_minutter: "bankbre
   }).filter(([, m]) => m);
 }
 const AD = {};   // kladde pr. dato: uplanlagt, score, note
-function afslutDag(dato, nået, brugt) {
+function afslutDag(dato, nået, brugt, småK = () => []) {
   const st = AD[dato] ||= {uplanlagt: "", score: null, note: ""};
   const dp = (D.dagsplaner || []).find(x => x.dato === dato) || {};
-  const nåetMin = () => (dp.plan_punkter || []).filter(p => nået().includes(p.nr) && p.halvdel !== "hvis_tid").reduce((s, p) => s + (Number(p.min) || 0), 0);
+  const nåetMin = () => (dp.plan_punkter || []).filter(p => nået().includes(p.nr) && p.halvdel !== "hvis_tid").reduce((s, p) => s + (Number(p.min) || 0), 0) + småMin(dp, nået(), småK());
   const tolk = h("div", {class: "tolk"});
   const visTolk = () => {
     const a = andetMin(st.uplanlagt), sum = a.reduce((s, [, m]) => s + m, 0);
@@ -2851,11 +2880,14 @@ function afslutDag(dato, nået, brugt) {
       const n = nået();
       if (!confirm(`Følg op på dagen med ${n.length} punkter nået?`)) return;
       const b = Object.entries(brugt()).map(([nr, m]) => `${nr}=${m}`);
+      const iPlan = new Set((dp.plan_punkter || []).flatMap(p => (p.smaating || []).map(x => x.id))), sk = småK().filter(i => iPlan.has(i));
       if (st.score) privatSend({kommando: "humoer", slags: "dag", dato, score: st.score, note: st.note.trim()}, `Humør ${HUMOER[st.score - 1]}`);
-      kør("dag-opfoelg", [dato, ...(dato === iDag() ? [`--kl=${nuHHMM()}`] : []), ...(st.uplanlagt.trim() ? [`--uplanlagt=${st.uplanlagt.trim()}`] : []), "--naaet", ...n.map(String), ...(b.length ? ["--brugt", ...b] : [])],
-        {tekst: "Opfølgning på dagen", efter: ["dagsplaner", "opgaver"], med: () => { const x = D.dagsplaner.find(x => x.dato === dato); if (x) { x.status = "Fulgt op"; x.naaede_punkter = n;
+      kør("dag-opfoelg", [dato, ...(dato === iDag() ? [`--kl=${nuHHMM()}`] : []), ...(st.uplanlagt.trim() ? [`--uplanlagt=${st.uplanlagt.trim()}`] : []), "--naaet", ...n.map(String), ...(b.length ? ["--brugt", ...b] : []), ...(sk.length ? ["--smaating", ...sk.map(String)] : [])],
+        {tekst: "Opfølgning på dagen", efter: ["dagsplaner", "opgaver"], med: () => { const x = D.dagsplaner.find(x => x.dato === dato); const færdige = new Set([...sk, ...(x?.plan_punkter || []).filter(p => n.includes(p.nr)).flatMap(p => (p.smaating || []).map(y => y.id))]);
+          D.opgaver.forEach(o => { if (færdige.has(o.id)) o.status = "Færdig"; });
+          if (x) { x.status = "Fulgt op"; x.naaede_punkter = n;
           // samme regel som fabz.py dag-opfoelg: minutterne for de nåede punkter, "hvis der er tid" tæller ikke (rettes, når de rigtige data kommer)
-          x.naaet_min = (x.plan_punkter || []).filter(p => n.includes(p.nr) && p.halvdel !== "hvis_tid").reduce((s, p) => s + (Number(p.min) || 0), 0);
+          x.naaet_min = (x.plan_punkter || []).filter(p => n.includes(p.nr) && p.halvdel !== "hvis_tid").reduce((s, p) => s + (Number(p.min) || 0), 0) + småMin(x, n, sk);
           if (st.uplanlagt.trim()) { x.uplanlagt = st.uplanlagt.trim(); x.andet_min = andetMin(x.uplanlagt).reduce((s, [, m]) => s + m, 0); } }
           delete AD[dato]; }});
     }}, "Følg op på dagen"));
@@ -3130,7 +3162,7 @@ function visOpgaver() {
     h("div", {class: "kort", style: "margin-top:14px"}, liste.length ? liste.map(o => {
       const krav = o.faerdig_naar || [], ok = krav.filter(k => k.ok).length;
       const planlægger = OP.vis === "plan" && !!OP.plan && o.status !== "Færdig" && o.id !== "…";
-      const iPlanen = planlægger && ["foer_frokost", "efter_frokost", "hvis_tid"].some(k => OP.plan[k].some(x => x.id === o.id));
+      const iPlanen = planlægger && ["foer_frokost", "efter_frokost", "hvis_tid"].some(k => OP.plan[k].some(x => x.id === o.id || x.smaating?.some(y => y.id === o.id)));
       const række = h("button", {type: "button", class: "r række" + (OP.vis === "opgave" && OP.valgt === o.id ? " valgt" : "") + (planlægger ? " plantræk" : "") + (iPlanen ? " iplan" : "") + (senere(o, planlægger ? OP.planDato : iDag()) ? " nedtonet" : ""), disabled: o.id === "…",
         ...(planlægger && !iPlanen ? {draggable: "true", ondragstart: e => { e.dataTransfer.setData("text/plain", String(o.id)); e.dataTransfer.effectAllowed = "copy"; }} : {}),
         onclick: () => { if (planlægger) { if (!iPlanen) { planTilføj(o); tegn(); } return; } OP.vis = "opgave"; OP.valgt = o.id; tegn(); if (window.innerWidth <= 900) window.scrollTo(0, 0); }},   // telefon: detaljen ligger øverst
@@ -3140,6 +3172,7 @@ function visOpgaver() {
             o.ikke_foer && o.ikke_foer > idag ? h("span", {class: fraFejl(o) ? "rød" : ""}, "Fra " + kortDato(o.ikke_foer) + (fraFejl(o) ? " (efter fristen!)" : "")) : null,
             o.prioritet ? h("span", {class: prioKlasse(o, idag)}, o.prioritet) : null,
             o.estimat != null ? h("span", {}, o.estimat + " min") : null,
+            o.estimat != null && o.estimat <= SMAATING_MAKS && o.status !== "Færdig" && !erSalgRing(o) ? h("span", {class: "pill"}, "småting") : null,
             krav.length ? h("span", {}, `${ok}/${krav.length} krav`) : null,
             o.status === "I gang" || o.status === "Venter" ? h("span", {class: "pill " + (o.status === "I gang" ? "blå" : "")}, o.status) : null,
             iPlanen ? h("span", {class: "pill grøn"}, "i planen") : null)));
@@ -3248,7 +3281,7 @@ const KATEGORI_O = ["Internet opgave", "Ingen internet", "Deep work / ingen AI",
 function planTilføj(o, hv) {   // lægger en opgave ind i den åbne plan (klik eller træk fra opgavelisten)
   if (senere(o, OP.planDato)) { alert(`Kan først løses fra ${kortDato(o.ikke_foer)}.`); return false; }
   const p = OP.plan;
-  if (!p || o.status === "Færdig" || ["foer_frokost", "efter_frokost", "hvis_tid"].some(k => p[k].some(x => x.id === o.id))) return false;
+  if (!p || o.status === "Færdig" || ["foer_frokost", "efter_frokost", "hvis_tid"].some(k => p[k].some(x => x.id === o.id || x.smaating?.some(y => y.id === o.id)))) return false;
   const sum = k => p[k].reduce((t, x) => t + (Number(x.min) || 0), 0), m = Number(o.estimat) || 0;
   if (!hv) hv = p.enkelt ? (sum("foer_frokost") + m <= p.ledig_foer ? "foer_frokost" : "hvis_tid")
     : sum("foer_frokost") + m <= p.ledig_foer ? "foer_frokost" : sum("efter_frokost") + m <= p.ledig_efter ? "efter_frokost" : "hvis_tid";
@@ -3326,7 +3359,10 @@ function planlægPanel() {
           h("input", {class: "input min", type: "number", min: "0", value: x.min ?? "", placeholder: "min", oninput: e => { x.min = e.target.value === "" ? null : Number(e.target.value); }}),
           h("select", {class: "input flyt", title: "Flyt", onchange: e => { const til = e.target.value; if (til === hv) return; p[hv].splice(i, 1); p[til].push(x); tegn(); }},
             halvdele.map(([v, t]) => h("option", {value: v, selected: v === hv}, t))),
-          h("button", {class: "x", type: "button", title: "Fjern", onclick: () => { p[hv].splice(i, 1); tegn(); }}, "×"))),
+          h("button", {class: "x", type: "button", title: "Fjern", onclick: () => { p[hv].splice(i, 1); tegn(); }}, "×"),
+          x.smaating?.length ? h("div", {class: "smaa-meta"}, h("span", {}, `${x.smaating.length} af ${x.smaating_i_alt ?? x.smaating.length} småting`),
+            x.smaating.some(y => y.overskredet) ? h("span", {class: "pill gul"}, `${x.smaating.filter(y => y.overskredet).length} over frist`) : null,
+            h("span", {class: "smaa-navne"}, x.smaating.map(y => y.tekst).join(" · "))) : null)),
         h("button", {class: "btn ghost lille", type: "button", onclick: () => { p[hv].push({tekst: "", min: 15}); tegn(); }}, "+ Punkt")); }),
       felt("Noter til planen (valgfrit)", tekstfelt(p, "noter", {rows: 2})),
       h("button", {class: "btn primaer stor", type: "button", style: "margin-top:12px", disabled: OP.planArbejder, onclick: godkend}, OP.planArbejder ? "Arbejder …" : "Godkend og print")
@@ -3335,7 +3371,7 @@ function planlægPanel() {
       OP.planSvar.punkter?.length ? h("ul", {}, OP.planSvar.punkter.map(x => h("li", {}, x))) : null,
       OP.planPdf?.link ? pdfKnapper(OP.planPdf.link, OP.planPdf.navn) : null) : null);
 }
-const rensPunkt = x => ({tekst: x.tekst, ...(x.min != null && x.min !== "" ? {min: Number(x.min)} : {}), ...(x.id != null ? {id: x.id} : {}), ...(x.overskredet ? {overskredet: true} : {})});
+const rensPunkt = x => ({tekst: x.tekst, ...(x.min != null && x.min !== "" ? {min: Number(x.min)} : {}), ...(x.id != null ? {id: x.id} : {}), ...(x.overskredet ? {overskredet: true} : {}), ...(x.smaating?.length ? {smaating: x.smaating} : {})});
 const dagNavnLang = iso => { const d = dag(iso); return `${DAGE[d.getDay()]} ${d.getDate()}. ${MDL[d.getMonth()]}`; };
 
 // ---------- Forespørgsler ----------
