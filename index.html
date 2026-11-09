@@ -3078,7 +3078,7 @@ function visMashups() {
   function gemNy() { const t = nyT.trim(); if (!t) return;
     kør("mashup-nummer-ny", [t, "--type", nyType], {tekst: "Mashups: nyt nummer", efter, med: () => { m.numre.push({id: muNyId(m.numre, "N"), titel: t, type: nyType, status: "I gang", oprettet: iDag(), kommentarer: []}); MU.ny = false; }}); }
   // idéer: ét felt, listen lukket til den åbnes
-  const idéFelt = h("div", {class: "mu-idefelt"}, h("input", {class: "input", placeholder: tlf ? "Skriv en idé" : "Skriv en idé, fx Natteravn over Delilah",
+  const idéFelt = h("div", {class: "mu-idefelt"}, h("input", {class: "input", placeholder: tlf ? "Skriv en idé" : "Skriv en idé, fx sang A over sang B",
     onkeydown: e => { const t = e.target.value.trim(); if (e.key === "Enter" && t) kør("mashup-ide-ny", [t], {tekst: "Idé gemt", efter, med: () => { m.ideer.push({id: muNyId(m.ideer, "I"), tekst: t, oprettet: iDag()}); }}); }}));
   const idéer = m.ideer.filter(x => !x.startet);
   const idéListe = MU.idéer ? h("div", {style: "margin-top:4px"}, idéer.map(x => { const åben = MU.åbenIdé === x.id, mt = muMatch(x);
