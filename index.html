@@ -2779,7 +2779,7 @@ function visIDag() {
             }}),
             h("span", {class: "t" + (salgRød(p) ? " rød" : "")},
               planOpg(p)?.job_opgave === "salg" ? h("a", {href: "#", onclick: e => { e.preventDefault(); SG.vis = null; SG.valgt = null; SG.alleÅben = false; fane = "salg"; tegn(); window.scrollTo(0, 0); }}, p.tekst)
-                : erMashupPunkt(p) ? [p.tekst, h("a", {href: "#mashups", class: "mu-link", onclick: e => { e.preventDefault(); MU.valgt = null; fane = "mashups"; tegn(); window.scrollTo(0, 0); }}, "Mashups ›")] : p.tekst),
+                : erMashupPunkt(p) ? [p.tekst, ...muLinksAlene(D.mashups?.naeste).flatMap(a => { a.className = "mu-link"; return [a]; }), h("a", {href: "#mashups", class: "mu-link", onclick: e => { e.preventDefault(); MU.valgt = null; fane = "mashups"; tegn(); window.scrollTo(0, 0); }}, "Mashups ›")] : p.tekst),
             p.min ? h("span", {class: "muted lille"}, p.min + " min") : null,
             fulgtOp ? (p.brugt != null ? h("span", {class: "muted lille"}, "brugt " + p.brugt + " min") : null)
               : h("input", {class: "input", type: "number", min: "0", max: "720", placeholder: "brugt, min", style: "width:92px;padding:4px 8px;margin-left:8px", value: brugt[p.nr] ?? "",
@@ -2993,6 +2993,20 @@ function someKort(o) {
 // Data i den private data/mashups.json: ingen sangtitler eller kommentarer i dette repo.
 const MU = {valgt: null, ret: false, næste: null, idéer: false, åbenIdé: null, ny: false};
 const MU_MAAL = 2;
+const MD_LINK = /\[([^\]\n]+)\]\(([^)\s]+)\)/g;
+function mdLinks(t) {   // [tekst](https://...) bliver et klikbart link (Oscar 9/11: "Se video"); kun https, bygget som DOM, ingen innerHTML
+  const ud = []; let i = 0;
+  for (const m of String(t || "").matchAll(MD_LINK)) {
+    let ok = false; try { ok = new URL(m[2]).protocol === "https:"; } catch {}
+    if (!ok) continue;
+    if (m.index > i) ud.push(t.slice(i, m.index));
+    ud.push(h("a", {href: m[2], target: "_blank", rel: "noopener noreferrer", onclick: e => e.stopPropagation()}, m[1]));
+    i = m.index + m[0].length;
+  }
+  if (i < String(t || "").length) ud.push(String(t).slice(i));
+  return ud;
+}
+const muLinksAlene = t => mdLinks(t).filter(x => typeof x !== "string");
 const erMashupPunkt = p => !!p.mashup || /^Ableton\b/i.test(p.tekst || "");
 function muUge() {   // Ableton-blokke krydset af på Dagens plan denne uge (mandag til i dag)
   const idag = iDag(), man = plusDage(idag, -((dag(idag).getDay() + 6) % 7));
@@ -3049,12 +3063,12 @@ function visMashups() {
     : fd && MU.næste === null ? h("div", {class: "mu-fokus fd"},
         h("div", {class: "mu-o"}, "✓ Ugens mashup-tid er brugt"),
         h("div", {class: "mu-opg"}, `${uge} af ${MU_MAAL} blokke. Du er færdig for i denne uge.`),
-        m.naeste ? h("div", {class: "mu-fd-n"}, "Næste gang: " + m.naeste + " · ", h("button", {class: "mu-lnk", type: "button", style: "padding:0;font-size:12.5px", onclick: () => { MU.næste = ""; tegn(); }}, "Gjort alligevel")) : null)
+        m.naeste ? h("div", {class: "mu-fd-n"}, "Næste gang: ", ...mdLinks(m.naeste), " · ", h("button", {class: "mu-lnk", type: "button", style: "padding:0;font-size:12.5px", onclick: () => { MU.næste = ""; tegn(); }}, "Gjort alligevel")) : null)
     : h("div", {class: "mu-fokus"},
         h("div", {class: "mu-uge"}, [...Array(MU_MAAL)].map((_, i) => h("span", {class: "mu-prik" + (i < uge ? " ok" : "")})), h("span", {class: "muted lille"}, `${Math.min(uge, MU_MAAL)} af ${MU_MAAL} blokke denne uge`),
           h("span", {class: "lille", style: "margin-left:auto;color:var(--svagere)"}, `Fase ${fase} af ${faser.length}`)),
         h("div", {class: "mu-o"}, f.overskrift || ""),
-        m.naeste ? h("div", {class: "mu-opg"}, m.naeste) : null,
+        m.naeste ? h("div", {class: "mu-opg"}, mdLinks(m.naeste)) : null,
         MU.næste !== null || !m.naeste ? næsteFelt()
           : h("div", {class: "mu-knap"}, h("button", {class: "btn primaer", type: "button", onclick: () => { MU.næste = ""; tegn(); }}, "Gjort, næste skridt"),
               h("button", {class: "mu-lnk", type: "button", onclick: () => { MU.ret = true; tegn(); }}, "Ret")),
