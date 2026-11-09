@@ -908,7 +908,7 @@ function jobs(fortid = false) {   // fortid: også passerede jobs (link fra påm
   return (D.kalender?.begivenheder || []).filter(e => e.kalender === "bookinger").map(e => {
     const m = /^\s*(?:DJ|Bryllup|Privat|Erhverv)\s*:\s*(.+)/i.exec(e.titel || "");   // samme regel som BOOKING_TITEL i fabz_kerne.py
     return m ? {navn: m[1].trim(), dato: e.start.slice(0, 10), sted: e.sted || "", besk: e.beskrivelse || ""} : null;
-  }).filter(j => j && j.dato >= idag).sort((a, b) => a.dato.localeCompare(b.dato) || a.navn.localeCompare(b.navn));
+  }).filter(j => j && j.dato >= idag).sort((a, b) => a.dato.localeCompare(b.dato) || spilleOrden(a) - spilleOrden(b) || a.navn.localeCompare(b.navn));
 }
 // Vagter fra Planday/Deltaplan som jobs (Oscar 28/10: "Planday jobsne skal også hentes ind i jobs i panelet"). Data fra data/vagter.json
 // (tools/vagter.py), så de flyttes og forsvinder af sig selv, når vagten ændres eller aflyses. Nøglen "dato|vagt <sted>" kan bruges til opgaver.
@@ -1026,11 +1026,20 @@ let JH = null, JF = "alle";   // JH: åbnet jobs nøgle (jobbets side), JF: filt
 // Spilletid (Oscar 29/10): gemt på jobbet går forud for TIDER i bookingen. Start skal være udfyldt før PDF; uden slut står der "til luk".
 function spilletid(j) {
   const g = Array.isArray(D.jobtider) ? null : (D.jobtider || {})[jobNøgle(j)];   // laesValgfri giver [] uden fil
-  const kal = (jobTider(j).find(l => /^spilletid\s*:/i.test(l)) || "").replace(/^spilletid\s*:\s*/i, "");
+  // også en løs linje uden for TIDER (9/11: Fox 27/11 havde "Spilletid: 01.00 til luk" lige under Jobtype og viste "Spilletid mangler")
+  const løs = () => (j.besk || "").replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "").split("\n").map(x => x.trim()).find(l => /^spilletid\s*:/i.test(l));
+  const kal = (jobTider(j).find(l => /^spilletid\s*:/i.test(l)) || løs() || "").replace(/^spilletid\s*:\s*/i, "");
   const m = kal.match(/(\d{1,2}[.:]\d{2})\s*(?:-|–|til)\s*(\d{1,2}[.:]\d{2})?/), kunSlut = kal.match(/^til\s*(\d{1,2}[.:]\d{2})/i);
   const kalStart = m && !kunSlut ? m[1].replace(":", ".") : null, kalSlut = kunSlut ? kunSlut[1].replace(":", ".") : m && m[2] ? m[2].replace(":", ".") : null;
   return g ? {start: g.start, slut: g.slut, ekstra: !!g.ekstra_time, gemt: true, kal, kalStart, kalSlut}
     : {start: kalStart, slut: kalSlut, ekstra: false, gemt: false, kal, kalStart, kalSlut};
+}
+// Rækkefølgen på samme dag (Oscar 9/11: Pincho 20.30 stod under Fox 01.00): efter spilletidens start, 00.00 til 05.59 er efter midnat, uden spilletid sidst
+function spilleOrden(j) {
+  const m = /^(\d{1,2})[.:](\d{2})$/.exec(spilletid(j).start || "");
+  if (!m) return 1e6;
+  const t = Number(m[1]);
+  return (t < 6 ? t + 24 : t) * 60 + Number(m[2]);
 }
 const JT = {};   // kladder til spilletid pr. job
 function spilletidBlok(j) {
