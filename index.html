@@ -140,6 +140,7 @@ input[type=date]{color-scheme:light dark}
 .sd-side{max-width:980px;padding-bottom:0}.idag-salg{display:flex;flex-direction:column;gap:8px}.sd-valg{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}@media (max-width:700px){.sd-r:has(.sd-valg){flex-wrap:wrap}.sd-valg{flex-basis:100%;justify-content:flex-start;padding-left:30px}}.idag-salg .sd-top h1{font-size:19px}.sd-link{display:flex;justify-content:space-between;align-items:center;width:100%;padding:12px 16px;font:inherit;font-weight:500;color:inherit;text-align:left;cursor:pointer;margin-top:0}.sd-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}.sd-top h1{margin:0}.sd-bar{height:8px;border-radius:99px;background:var(--linje);margin:12px 0 14px;overflow:hidden}.sd-bar div{height:100%;background:var(--ok);border-radius:99px}
 .sd-liste{background:var(--flade);border:1px solid var(--linje);border-radius:14px;overflow:hidden}.sd-r{display:flex;align-items:center;gap:14px;padding:12px 16px}.sd-r+.sd-r{border-top:1px solid var(--linje)}.sd-mk{flex:none;width:20px;height:20px;border-radius:50%;border:2px solid var(--svagere)}.sd-r.ok .sd-mk{background:var(--faerdig);border-color:var(--faerdig)}.sd-t{flex:1;min-width:0;display:block;text-align:left;background:none;border:0;padding:0;color:inherit;font:inherit}.sd-t b{display:block;font-weight:600}.sd-t span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sd-r.ok b{text-decoration:line-through;font-weight:500;color:var(--svag)}.sd-r .btn{flex:none;margin:0}
 .sp-start{background:var(--flade);border:1px solid var(--linje);border-radius:14px;padding:18px 20px;display:flex;justify-content:space-between;align-items:center;gap:14px}.sp-start h1{margin:0 0 2px;font-size:21px}.sp-start .btn{margin:0;padding:11px 22px;font-size:15px;border-radius:10px}.sp-uge{display:flex;gap:8px;margin:10px 0}.sp-uge div{flex:1;background:var(--flade);border:1px solid var(--linje);border-radius:8px;padding:8px 4px;text-align:center;font-size:13px;color:var(--svag)}.sp-uge .ok{background:var(--faerdig-blid);border-color:transparent;color:var(--faerdig);font-weight:var(--faerdig-vaegt)}.sp-uge .nu{border-color:var(--accent);color:var(--accent);font-weight:600}.sp-uge .graa{opacity:.45}.sp-tid{font-size:34px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}.idag-salg .sp-start h1{font-size:19px}@media (max-width:700px){.sp-start{flex-direction:column;align-items:stretch}.sp-start .btn{width:100%}.sp-lang{display:none}}
+.pl-salg{display:flex;gap:8px;align-items:center;grid-column:1/-1;font-size:13px}.pl-salg .input{flex:1}.pl-lnk{background:none;border:0;padding:0;color:var(--accent);font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}.planpunkt.fravalgt>.input:first-child{text-decoration:line-through;opacity:.55}.planpunkt.fravalgt .min{opacity:.55}.skub{background:var(--adv-blid);border:1px solid var(--adv);border-radius:10px;padding:12px 14px;margin-top:10px}.skub b{display:block;margin-bottom:8px}.skub-valg{display:flex;gap:6px;flex-wrap:wrap}.skub-valg .valgt{border-color:var(--accent);color:var(--accent)}.skub .r1{display:flex;gap:8px;margin-top:8px}.skub .r1 .input{flex:1}.sk-kort{display:none}@media (max-width:700px){.skub-valg .btn{flex:1}.sk-lang{display:none}.sk-kort{display:inline}}
 .sd-faerdig{background:var(--faerdig-blid);border-radius:14px;padding:26px;text-align:center}.sd-f-t{color:var(--faerdig);font-size:21px;font-weight:var(--faerdig-vaegt);margin-bottom:12px}.sd-fold{background:var(--flade);border:1px solid var(--linje);border-radius:12px;margin-top:8px}.sd-fold>summary{padding:12px 16px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;font-weight:500}.sd-fold>summary::-webkit-details-marker{display:none}.sd-fold>summary::after{content:"›";color:var(--svagere)}.sd-fold[open]>summary::after{content:"⌄"}.sd-fold .kompakt{margin:0 12px 12px}.sd-fold .to,.sd-fold .side{padding-left:12px;padding-right:12px}.sd-fold .salg-status{margin-top:0}
 .mu{max-width:760px}.mu-fokus{background:var(--flade);border:1px solid var(--linje);border-radius:16px;padding:22px 24px;margin-bottom:22px}
 .mu-uge{display:flex;align-items:center;gap:8px;margin-bottom:16px}.mu-prik{width:10px;height:10px;border-radius:50%;background:var(--linje)}.mu-prik.ok{background:var(--accent)}
@@ -3495,7 +3496,7 @@ function planlægPanel() {
     if (vælg.length) { alert("Udfyld de gule punkter først: skriv hvad der skal besluttes."); return; }
     OP.planArbejder = true; OP.planSvar = {klasse: "", titel: "Laver planen og PDF'en … typisk 15-30 sekunder"}; tegn();
     try {
-      const j = {...p, foer_frokost: p.foer_frokost.map(rensPunkt), efter_frokost: p.efter_frokost.map(rensPunkt), hvis_tid: p.hvis_tid.map(rensPunkt)};
+      const j = {...p, ...(p.salg_fravalg ? {salg_fravalg: p.salg_fravalg} : {}), foer_frokost: p.foer_frokost.map(rensPunkt), efter_frokost: p.efter_frokost.map(rensPunkt), hvis_tid: p.hvis_tid.map(rensPunkt)};
       const sv = await kørOgVent("plan", ["@json"], j);
       if (!sv) OP.planSvar = {klasse: "fejl", titel: "Intet svar efter 4 minutter."};
       else if (sv.status === "FEJL") OP.planSvar = {klasse: "fejl", titel: "Planen er ikke gemt", punkter: [sv.fejl]};
@@ -3529,7 +3530,8 @@ function planlægPanel() {
     p ? [
       h("div", {class: "muted lille", style: "margin-top:8px"}, enkelt ? `${dagNavnLang(p.dato)} · arbejdstid ${p.foer_tid}, ingen frokostpause` : `${dagNavnLang(p.dato)} · før frokost ${p.foer_tid} · efter frokost ${p.efter_tid}`),
       h("div", {class: "muted lille", style: "margin-top:4px"}, "Tilføj opgaver fra listen til venstre: tryk, vælg Før frokost, Efter frokost eller Hvis der er tid under opgaven, eller træk den over i en blok."),
-      ...halvdele.map(([hv, navn]) => { const sum = p[hv].reduce((s, x) => s + (Number(x.min) || 0), 0), led = hv === "foer_frokost" ? p.ledig_foer : hv === "efter_frokost" ? p.ledig_efter : null;
+      skubBoks(p),
+      ...halvdele.map(([hv, navn]) => { const sum = p[hv].reduce((s, x) => s + (p.salg_fravalg && erSalgPunkt(x) ? 0 : Number(x.min) || 0), 0), led = hv === "foer_frokost" ? p.ledig_foer : hv === "efter_frokost" ? p.ledig_efter : null;
         return h("div", {class: "lg slip",
           ondragover: e => { e.preventDefault(); e.currentTarget.classList.add("over"); },
           ondragleave: e => { e.currentTarget.classList.remove("over"); },
@@ -3537,7 +3539,7 @@ function planlægPanel() {
             const o = D.opgaver.find(x => String(x.id) === e.dataTransfer.getData("text/plain")); if (o && planTilføj(o, hv)) tegn(); }},
           h("div", {class: "overskrift"}, navn + (hv !== "hvis_tid" ? ` · ${sum} af ${led ?? "?"} min` : ""),
           led != null && sum > led ? h("span", {class: "rød", style: "margin-left:8px;text-transform:none"}, `${sum - led} min for meget`) : null),
-        p[hv].map((x, i) => h("div", {class: "planpunkt" + (/VÆLG/.test(x.tekst) ? " mangler" : "")},
+        p[hv].map((x, i) => h("div", {class: "planpunkt" + (/VÆLG/.test(x.tekst) ? " mangler" : "") + (p.salg_fravalg && erSalgPunkt(x) ? " fravalgt" : "")},
           h("input", {class: "input", value: x.tekst, oninput: e => { x.tekst = e.target.value; e.target.parentElement.classList.toggle("mangler", /VÆLG/.test(x.tekst)); }}),
           h("input", {class: "input min", type: "number", min: "0", value: x.min ?? "", placeholder: "min", oninput: e => { x.min = e.target.value === "" ? null : Number(e.target.value); }}),
           h("select", {class: "input flyt", title: "Flyt", onchange: e => { const til = e.target.value; if (til === hv) return; p[hv].splice(i, 1); p[til].push(x); tegn(); }},
@@ -3545,7 +3547,7 @@ function planlægPanel() {
           h("button", {class: "x", type: "button", title: "Fjern", onclick: () => { p[hv].splice(i, 1); tegn(); }}, "×"),
           x.smaating?.length ? h("div", {class: "smaa-meta"}, h("span", {}, `${x.smaating.length} af ${x.smaating_i_alt ?? x.smaating.length} småting`),
             h("span", {class: "smaa-navne"}, x.smaating.map(y => y.tekst).join(" · "))) : null,
-          x.navne?.length ? h("div", {class: "smaa-meta"}, h("span", {}, "Hvem først"), h("span", {class: "smaa-navne"}, x.navne.join(" · "))) : null)),   // salgssprintet (Oscar 9/11)
+          erSalgPunkt(x) ? salgFravalg(p, x) : null)),   // salgssprintet (Oscar 9/11): hvem først, og Ikke i dag med en grund
         h("button", {class: "btn ghost lille", type: "button", onclick: () => { p[hv].push({tekst: "", min: 15}); tegn(); }}, "+ Punkt")); }),
       felt("Noter til planen (valgfrit)", tekstfelt(p, "noter", {rows: 2})),
       h("button", {class: "btn primaer stor", type: "button", style: "margin-top:12px", disabled: OP.planArbejder, onclick: godkend}, OP.planArbejder ? "Arbejder …" : "Godkend og print")
@@ -3553,6 +3555,54 @@ function planlægPanel() {
     OP.planSvar ? h("div", {class: "svar " + OP.planSvar.klasse}, h("b", {}, OP.planSvar.titel),
       OP.planSvar.punkter?.length ? h("ul", {}, OP.planSvar.punkter.map(x => h("li", {}, x))) : null,
       OP.planPdf?.link ? pdfKnapper(OP.planPdf.link, OP.planPdf.navn) : null) : null);
+}
+// ---------- Fravalg af dagens sprint og skubbede opgaver (Oscar 9/11, skitse panel-salg-fravalg) ----------
+const erSalgPunkt = x => /^(Salg 30 min \(sprint \d+ af \d+\)|Ring til \d+ \(Salg\))$/.test((x.tekst || "").trim()) || (x.id != null && D.opgaver.some(o => o.id === x.id && o.job_opgave === "salg"));
+function salgFravalg(p, x) {   // "Ikke i dag": en kort grund, punktet streges over, og fabz.py plan lukker dagens salgsopgave med grunden (fredagsstatus)
+  if (p.salg_fravalg) return h("div", {class: "pl-salg"}, h("span", {class: "muted", style: "flex:1"}, "Ikke i dag: " + p.salg_fravalg),
+    h("button", {class: "pl-lnk", type: "button", onclick: () => { delete p.salg_fravalg; tegn(); }}, "Fortryd"));
+  if (OP.salgGrund != null) {
+    const gem = () => { const g = (OP.salgGrund || "").trim(); if (!g) return; p.salg_fravalg = g; OP.salgGrund = null; tegn(); };
+    return h("div", {class: "pl-salg"}, h("input", {class: "input", value: OP.salgGrund, placeholder: "Hvorfor ikke i dag? fx job hele dagen", "aria-label": "Grund",
+        oninput: e => { OP.salgGrund = e.target.value; }, onkeydown: e => { if (e.key === "Enter") gem(); }}),
+      h("button", {class: "btn primaer lille", type: "button", onclick: gem}, "Gem"));
+  }
+  return h("div", {class: "pl-salg"}, h("span", {class: "muted", style: "flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"}, x.navne?.length ? "Hvem først · " + x.navne.join(" · ") : ""),
+    h("button", {class: "pl-lnk", type: "button", onclick: () => { OP.salgGrund = ""; tegn(); }}, "Ikke i dag"));
+}
+const SKUB_GRÆNSE = 3;   // samme tal som SKUB_GRAENSE i fabz_dagsplan.py
+function skubbet() {   // planlagt 3 gange eller flere uden at blive lavet, og ikke besvaret siden sidst
+  return D.opgaver.filter(o => !["Færdig", "Venter"].includes(o.status) && o.job_opgave !== "salg" && !o.salg_auto && !o.salg_lead
+      && (o.planlagt_historik || []).length >= SKUB_GRÆNSE && !(o.skub_svar || []).some(s => s.antal >= o.planlagt_historik.length))
+    .sort((a, b) => b.planlagt_historik.length - a.planlagt_historik.length || a.id - b.id);
+}
+function skubBoks(p) {
+  const o = skubbet()[0];
+  if (!o) return null;
+  const st = OP.skub?.id === o.id ? OP.skub : (OP.skub = {id: o.id, valg: null, grund: "", titel: ""});
+  const gem = () => {
+    const g = st.grund.trim(), t = st.titel.trim();
+    if (!g || (st.valg === "mindre" && !t)) return;
+    const n = (o.planlagt_historik || []).length;
+    kør("opgave-skub", [`--id=${o.id}`, `--valg=${st.valg}`, `--grund=${g}`, ...(st.valg === "mindre" ? [`--titel=${t}`] : [])], {tekst: `#${o.id}: ${{idag: "tag den i dag", mindre: "gør den mindre", drop: "droppet"}[st.valg]}`, efter: ["opgaver"], med: () => {
+      (o.skub_svar ||= []).push({dato: iDag(), valg: st.valg, grund: g, antal: n, ...(st.valg === "mindre" ? {gl_titel: o.titel} : {})});
+      const punkter = ["foer_frokost", "efter_frokost", "hvis_tid"].flatMap(k => p[k]);
+      if (st.valg === "mindre") { o.titel = t; punkter.filter(x => x.id === o.id).forEach(x => { x.tekst = t; }); }
+      if (st.valg === "drop") { o.status = "Færdig"; o.droppet = true; for (const k of ["foer_frokost", "efter_frokost", "hvis_tid"]) p[k] = p[k].filter(x => x.id !== o.id); }
+      if (st.valg === "idag") {   // forrest før frokost, lige efter salget
+        for (const k of ["foer_frokost", "efter_frokost", "hvis_tid"]) p[k] = p[k].filter(x => x.id !== o.id);
+        const ff = "foer_frokost", i = p[ff].length && erSalgPunkt(p[ff][0]) ? 1 : 0;
+        p[ff].splice(i, 0, {tekst: o.titel, min: o.estimat ?? null, id: o.id, ...(o.deadline && o.deadline < p.dato ? {overskredet: true} : {})});
+      }
+      OP.skub = null;
+    }});
+  };
+  const knap = (v, lang, kort) => h("button", {class: "btn" + (st.valg === v ? " valgt" : ""), type: "button", onclick: () => { st.valg = v; tegn(); }}, h("span", {class: "sk-lang"}, lang), h("span", {class: "sk-kort"}, kort));
+  const felt = (k, ph) => h("input", {class: "input", value: st[k], placeholder: ph, oninput: e => { st[k] = e.target.value; }, onkeydown: e => { if (e.key === "Enter") gem(); }});
+  return h("div", {class: "skub"}, h("b", {}, `"${o.titel}" er planlagt ${o.planlagt_historik.length} gange uden at blive lavet`),
+    h("div", {class: "skub-valg"}, knap("idag", "Tag den i dag", "Tag den i dag"), knap("mindre", "Gør den mindre", "Mindre"), knap("drop", "Drop den", "Drop")),
+    st.valg === "mindre" ? h("div", {class: "r1"}, felt("titel", "Det mindste første skridt")) : null,
+    st.valg ? h("div", {class: "r1"}, felt("grund", st.valg === "mindre" ? "Hvorfor skubber den sig?" : "Hvorfor?"), h("button", {class: "btn primaer", type: "button", onclick: gem}, "Gem")) : null);
 }
 const rensPunkt = x => ({tekst: x.tekst, ...(x.min != null && x.min !== "" ? {min: Number(x.min)} : {}), ...(x.id != null ? {id: x.id} : {}), ...(x.overskredet ? {overskredet: true} : {}), ...(x.smaating?.length ? {smaating: x.smaating} : {})});
 const dagNavnLang = iso => { const d = dag(iso); return `${DAGE[d.getDay()]} ${d.getDate()}. ${MDL[d.getMonth()]}`; };
