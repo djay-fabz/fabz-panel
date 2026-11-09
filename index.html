@@ -139,6 +139,7 @@ input[type=date]{color-scheme:light dark}
 .dato-skjult{position:fixed;opacity:0;pointer-events:none;padding:0;border:0;margin:0}
 .sd-side{max-width:980px;padding-bottom:0}.idag-salg{display:flex;flex-direction:column;gap:8px}.sd-valg{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}@media (max-width:700px){.sd-r:has(.sd-valg){flex-wrap:wrap}.sd-valg{flex-basis:100%;justify-content:flex-start;padding-left:30px}}.idag-salg .sd-top h1{font-size:19px}.sd-link{display:flex;justify-content:space-between;align-items:center;width:100%;padding:12px 16px;font:inherit;font-weight:500;color:inherit;text-align:left;cursor:pointer;margin-top:0}.sd-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}.sd-top h1{margin:0}.sd-bar{height:8px;border-radius:99px;background:var(--linje);margin:12px 0 14px;overflow:hidden}.sd-bar div{height:100%;background:var(--ok);border-radius:99px}
 .sd-liste{background:var(--flade);border:1px solid var(--linje);border-radius:14px;overflow:hidden}.sd-r{display:flex;align-items:center;gap:14px;padding:12px 16px}.sd-r+.sd-r{border-top:1px solid var(--linje)}.sd-mk{flex:none;width:20px;height:20px;border-radius:50%;border:2px solid var(--svagere)}.sd-r.ok .sd-mk{background:var(--faerdig);border-color:var(--faerdig)}.sd-t{flex:1;min-width:0;display:block;text-align:left;background:none;border:0;padding:0;color:inherit;font:inherit}.sd-t b{display:block;font-weight:600}.sd-t span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sd-r.ok b{text-decoration:line-through;font-weight:500;color:var(--svag)}.sd-r .btn{flex:none;margin:0}
+.sp-start{background:var(--flade);border:1px solid var(--linje);border-radius:14px;padding:18px 20px;display:flex;justify-content:space-between;align-items:center;gap:14px}.sp-start h1{margin:0 0 2px;font-size:21px}.sp-start .btn{margin:0;padding:11px 22px;font-size:15px;border-radius:10px}.sp-uge{display:flex;gap:8px;margin:10px 0}.sp-uge div{flex:1;background:var(--flade);border:1px solid var(--linje);border-radius:8px;padding:8px 4px;text-align:center;font-size:13px;color:var(--svag)}.sp-uge .ok{background:var(--faerdig-blid);border-color:transparent;color:var(--faerdig);font-weight:var(--faerdig-vaegt)}.sp-uge .nu{border-color:var(--accent);color:var(--accent);font-weight:600}.sp-uge .graa{opacity:.45}.sp-tid{font-size:34px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}.idag-salg .sp-start h1{font-size:19px}@media (max-width:700px){.sp-start{flex-direction:column;align-items:stretch}.sp-start .btn{width:100%}.sp-lang{display:none}}
 .sd-faerdig{background:var(--faerdig-blid);border-radius:14px;padding:26px;text-align:center}.sd-f-t{color:var(--faerdig);font-size:21px;font-weight:var(--faerdig-vaegt);margin-bottom:12px}.sd-fold{background:var(--flade);border:1px solid var(--linje);border-radius:12px;margin-top:8px}.sd-fold>summary{padding:12px 16px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;font-weight:500}.sd-fold>summary::-webkit-details-marker{display:none}.sd-fold>summary::after{content:"›";color:var(--svagere)}.sd-fold[open]>summary::after{content:"⌄"}.sd-fold .kompakt{margin:0 12px 12px}.sd-fold .to,.sd-fold .side{padding-left:12px;padding-right:12px}.sd-fold .salg-status{margin-top:0}
 .mu{max-width:760px}.mu-fokus{background:var(--flade);border:1px solid var(--linje);border-radius:16px;padding:22px 24px;margin-bottom:22px}
 .mu-uge{display:flex;align-items:center;gap:8px;margin-bottom:16px}.mu-prik{width:10px;height:10px;border-radius:50%;background:var(--linje)}.mu-prik.ok{background:var(--accent)}
@@ -721,7 +722,7 @@ const fil = (p, std = []) => sikker(p, async () => { const r = await laesFil(p);
 let GQL = null;
 const DATAFILER = ["kalender", "udstyr", "pakkelister", "opgaver", "jobpakkelister", "henvendelser", "dagsplaner", "indtaegter", "typer", "salg", "festkort",
   "klubkort", "salgslog", "klubkort_tekster", "strategi", "jobrute", "jobtider", "salgjobs", "kortmaaling", "evalueringer", "salgslaering", "setups", "maanedsoversigt", "priser",
-  "leads", "betalinger", "honorarsedler", "jobstatus", "fejl", "hov", "ugepakke", "mailoversigt", "vagter", "some", "linkedin", "mashups"].map(x => `data/${x}.json`).concat(["tools/klubkort/kort.json"]);
+  "leads", "betalinger", "honorarsedler", "jobstatus", "fejl", "hov", "ugepakke", "mailoversigt", "vagter", "some", "linkedin", "mashups", "salgssprints"].map(x => `data/${x}.json`).concat(["tools/klubkort/kort.json"]);
 async function hentSamlet() {
   const t0 = performance.now();
   try {
@@ -753,7 +754,7 @@ async function hentDataFiler() {
     ...["data/henvendelser.json", "data/dagsplaner.json", "data/indtaegter.json", "data/typer.json", "data/salg.json", "data/festkort.json", "data/klubkort.json", "data/salgslog.json"].map(p => fil(p)),
     sikker("data/klubkort_tekster.json", laesKkTekster, [])]);
   D = {kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, indtaegter, typer, salg, festkort, klubkort, salgslog, kkTekster};
-  const [strategi, jobrute, jobtider, salgjobs, kortmaaling, evalueringer, salgslaering, setups, mo, priser, leads, betalinger, honorarsedler, jobstatus, fejl, hov, ugepakke, mailoversigt, vagter, some, linkedin, mashups] = await Promise.all([
+  const [strategi, jobrute, jobtider, salgjobs, kortmaaling, evalueringer, salgslaering, setups, mo, priser, leads, betalinger, honorarsedler, jobstatus, fejl, hov, ugepakke, mailoversigt, vagter, some, linkedin, mashups, salgssprints] = await Promise.all([
     fil("data/strategi.json", {}), fil("data/jobrute.json", {}), fil("data/jobtider.json"), fil("data/salgjobs.json"),   // hvilket firma i Salg et job kom fra (fabz.py salg-job)
     fil("data/kortmaaling.json"), fil("data/evalueringer.json"),   // scanninger og tilmeldinger pr. kort (tools/kortmaaling.mjs hver nat)
     fil("data/salgslaering.json"),   // forslag fra opkaldene (Tal på Salg)
@@ -767,8 +768,8 @@ async function hentDataFiler() {
     fil("data/ugepakke.json"),   // ugens bogføring (fabz_bogholder.py): robottens forslag, Oscar godkender
     fil("data/mailoversigt.json", null),   // dagens mailoversigt (tools/mailoversigt.py via panel.yml ved Mødt ind)
     fil("data/vagter.json", null),   // vagter fra Planday/Deltaplan (tools/vagter.py i kalender.yml)
-    fil("data/some.json", {opslag: [], ideer: []}), fil("data/linkedin.json", {}), fil("data/mashups.json", null)]);   // + Mashups (fabz_mashups.py, Oscar 9/11)   // SoMe-fanen (fabz_some.py) og LinkedIn-målet
-  Object.assign(D, {strategi, jobrute, jobtider, salgjobs, kortmaaling, evalueringer, salgslaering, setups, mo, priser, leads, betalinger, honorarsedler, jobstatus, fejl, hov, ugepakke, mailoversigt, vagter, some, linkedin, mashups});
+    fil("data/some.json", {opslag: [], ideer: []}), fil("data/linkedin.json", {}), fil("data/mashups.json", null), fil("data/salgssprints.json", [])]);   // + salgssprints (30 min salg, Oscar 9/11)   // + Mashups (fabz_mashups.py, Oscar 9/11)   // SoMe-fanen (fabz_some.py) og LinkedIn-målet
+  Object.assign(D, {strategi, jobrute, jobtider, salgjobs, kortmaaling, evalueringer, salgslaering, setups, mo, priser, leads, betalinger, honorarsedler, jobstatus, fejl, hov, ugepakke, mailoversigt, vagter, some, linkedin, mashups, salgssprints});
 }
 function manglerBesked() {
   besked({id: "mangler", klasse: "adv", titel: "GitHub svarer ikke lige nu, prøver igen …", punkter: ["Kunne ikke hente: " + MANGLER.join(", ")],
@@ -2590,7 +2591,7 @@ async function gemLager() {
 
 // ---------- fælles: kør fabz.py-kommandoer fra panelet ----------
 const FILER = {evalueringer: "data/evalueringer.json", jobstatus: "data/jobstatus.json", jobtider: "data/jobtider.json", kortmaaling: "data/kortmaaling.json", salgjobs: "data/salgjobs.json", salgslaering: "data/salgslaering.json", henvendelser: "data/henvendelser.json", opgaver: "data/opgaver.json", betalinger: "data/betalinger.json", honorarsedler: "data/honorarsedler.json", ugepakke: "data/ugepakke.json", dagsplaner: "data/dagsplaner.json",
-               indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json", salgslog: "data/salgslog.json", mo: "data/maanedsoversigt.json", strategi: "data/strategi.json", leads: "data/leads.json", mailoversigt: "data/mailoversigt.json", vagter: "data/vagter.json", fejl: "data/fejl.json", hov: "data/hov.json", some: "data/some.json", mashups: "data/mashups.json", linkedin: "data/linkedin.json"};
+               indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json", salgslog: "data/salgslog.json", mo: "data/maanedsoversigt.json", strategi: "data/strategi.json", leads: "data/leads.json", mailoversigt: "data/mailoversigt.json", vagter: "data/vagter.json", fejl: "data/fejl.json", hov: "data/hov.json", some: "data/some.json", mashups: "data/mashups.json", salgssprints: "data/salgssprints.json", linkedin: "data/linkedin.json"};
 async function laesValgfri(p) { const r = await laesFil(p); return r ? r.json() : []; }
 async function genindlæs(navne) { await Promise.all(navne.map(async n => { D[n] = n === "kkTekster" ? await laesKkTekster() : await laesValgfri(FILER[n]); })); }
 const plusDage = (iso, n) => { const d = dag(iso); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
@@ -3322,7 +3323,7 @@ function opgaveFiltre(o) {
 }
 function visOpgaver() {
   const idag = iDag();
-  // under planlægning: salget er ét punkt, Ring til X (Salg). De enkelte salgsopgaver står stadig her, når der ikke planlægges (Oscar 6/11)
+  // under planlægning: salget er ét punkt, Salg 30 min (sprint N af 4). De enkelte salgsopgaver står stadig her, når der ikke planlægges (Oscar 6/11)
   const erSalgRing = o => !!(o.salg_auto || o.salg_lead || o.job_opgave === "salg" || ((o.titel || "").startsWith("Ring til") && o.type === "Salg og opfølgning"));
   const liste = D.opgaver.filter(opgaveFiltre).filter(o => !(OP.vis === "plan" && erSalgRing(o))).sort((a, b) => OP.filter === "Færdige"
     ? (b.faerdig_dato || "").localeCompare(a.faerdig_dato || "") : salgFørst(a, b) || (a.deadline || "9999").localeCompare(b.deadline || "9999") || a.id - b.id);
@@ -3543,7 +3544,8 @@ function planlægPanel() {
             halvdele.map(([v, t]) => h("option", {value: v, selected: v === hv}, t))),
           h("button", {class: "x", type: "button", title: "Fjern", onclick: () => { p[hv].splice(i, 1); tegn(); }}, "×"),
           x.smaating?.length ? h("div", {class: "smaa-meta"}, h("span", {}, `${x.smaating.length} af ${x.smaating_i_alt ?? x.smaating.length} småting`),
-            h("span", {class: "smaa-navne"}, x.smaating.map(y => y.tekst).join(" · "))) : null)),
+            h("span", {class: "smaa-navne"}, x.smaating.map(y => y.tekst).join(" · "))) : null,
+          x.navne?.length ? h("div", {class: "smaa-meta"}, h("span", {}, "Hvem først"), h("span", {class: "smaa-navne"}, x.navne.join(" · "))) : null)),   // salgssprintet (Oscar 9/11)
         h("button", {class: "btn ghost lille", type: "button", onclick: () => { p[hv].push({tekst: "", min: 15}); tegn(); }}, "+ Punkt")); }),
       felt("Noter til planen (valgfrit)", tekstfelt(p, "noter", {rows: 2})),
       h("button", {class: "btn primaer stor", type: "button", style: "margin-top:12px", disabled: OP.planArbejder, onclick: godkend}, OP.planArbejder ? "Arbejder …" : "Godkend og print")
@@ -4632,9 +4634,8 @@ function visSalg() {
   // Oscar 28/10: salget øverst (hvem han kontakter), ugens salg under. Pengene står på Økonomi (skat, penge ude, fremtiden).
   // Status øverst (Oscar 28/10): hvad der skal ske i dag, ellers grønt
   const maal = salgMaal(), ugedag = ["Sø", "Ma", "Ti", "On", "To", "Fr", "Lø"][dag(idag).getDay()];
-  const kontaktetIDag = (D.salgslog || []).filter(x => x.dato === idag && x.art !== "note").length;
-  const kontaktRest = Math.max(0, salgDagAntal(idag) - kontaktetIDag);
-  const dele = [iDagL.length ? `følg op på ${iDagL.length} ${iDagL.length === 1 ? "kunde" : "kunder"}` : null, kontaktRest ? `kontakt ${kontaktRest} ${kontaktRest === 1 ? "firma" : "firmaer"}` : null].filter(Boolean);
+  const sprintRest = !!sprintIDag(idag) && !dagsSprintKlaret(idag);
+  const dele = [iDagL.length ? `følg op på ${iDagL.length} ${iDagL.length === 1 ? "kunde" : "kunder"}` : null, sprintRest ? "tag 30 min salg" : null].filter(Boolean);
   const status = h("div", {class: "side bred", style: "padding-bottom:0"}, h("div", {class: "skat-status salg-status " + (dele.length ? "y" : "g faerdig")},
     h("div", {class: "skat-titel"}, dele.length ? "I dag: " + dele.join(" og ") : "✓ Salget er klaret i dag")));
   // Dagsliste først (Oscar 6/11): det hele fra før ligger i Alle kunder og tal
@@ -4677,13 +4678,52 @@ const naesteLead = () => næsteLeads()[0] || null;
 // Dagsliste i Salg (Oscar 6/11, skitse panel-salg-idag: "så skal det føles som om jeg kan kigge og se når jeg skal 'bare' ringe til 5").
 // Ældste forfaldne med nummer først, så andre forfaldne, så Træk-køen. Listen låses for dagen i denne browser, så den ikke skifter, mens han ringer. Uden lås regnes samme liste ud.
 const SALG_DAG_MAKS = 5, SALG_DAG_OPF = 3, SALG_DAG_COLD = 2, SALG_DAG_NØGLE = "fabz-salg-idag";   // 3 opfølgninger + 2 cold calls (Oscar 6/11)
-// Dagens antal: det, der mangler af ugemålet før i dag, fordelt på hverdagene tilbage. Samme regel og samme kilde (salgsloggen) som salg_dag_antal i fabz_salg.py, så tallet er ens i planen og på alle enheder
-function salgDagAntal(dato = iDag()) {
-  const u = (dag(dato).getDay() + 6) % 7;
-  if (u >= 5) return 0;
-  const mandag = plusDage(dato, -u), mangler = salgMaal().kontakter_uge - (D.salgslog || []).filter(x => x.dato >= mandag && x.dato < dato && x.art !== "note").length;
-  return mangler > 0 ? Math.min(SALG_DAG_MAKS, Math.ceil(mangler / (5 - u))) : 0;
+// ---------- 30 min salg (Oscar 9/11, skitse panel-salg-30min B): en tid i stedet for "Ring til X", 4 sprints om ugen. Listen er "hvem først", ikke et mål ----------
+// data/salgssprints.json (fabz_salg.py salg-sprint-start): [{dato, start (ms), min}]. Uret regnes fra start, så det tåler lukket fane og låst telefon, og telefon og PC viser det samme.
+const SPRINT_MIN = 30, EKSTRA_MIN = 10, SPRINT_NØGLE = "fabz-salg-sprint";
+const sprintSlut = s => s.start + s.min * 60000;
+function salgSprints() {   // + det, der lige er startet i denne browser, indtil det er gemt og hentet igen
+  const l = [...(D.salgssprints || [])];
+  let lok = null;
+  try { lok = JSON.parse(lager.get(SPRINT_NØGLE) || "null"); } catch {}
+  if (lok && lok.start && sprintSlut(lok) > Date.now() - 864e5 && !l.some(s => s.start === lok.start)) l.push(lok);
+  return l;
 }
+const sprintKlaret = (s, nu = Date.now()) => s.min >= SPRINT_MIN && sprintSlut(s) <= nu;
+const sprintKører = (nu = Date.now()) => salgSprints().find(s => s.start <= nu && nu < sprintSlut(s)) || null;
+const ugeMandag = dato => plusDage(dato, -((dag(dato).getDay() + 6) % 7));
+function ugeSprints(dato = iDag(), kunFør = false, nu = Date.now()) {
+  const mandag = ugeMandag(dato), slut = kunFør ? dato : plusDage(mandag, 7);
+  return salgSprints().filter(s => s.dato >= mandag && s.dato < slut && sprintKlaret(s, nu)).length;
+}
+const sprintMål = () => Number(salgMaal().sprints_uge) || 4;
+function sprintIDag(dato = iDag()) {   // samme regel som sprint_i_dag i fabz_salg.py (tjekkes af test_salgdag): hverdag, og ugemålet ikke nået før i dag
+  if ((dag(dato).getDay() + 6) % 7 >= 5) return 0;
+  const n = ugeSprints(dato, true);
+  return n < sprintMål() ? n + 1 : 0;
+}
+const dagsSprintKlaret = (dato = iDag()) => salgSprints().some(s => s.dato === dato && sprintKlaret(s));
+const ringetOp = (dato = iDag()) => (D.salgslog || []).filter(x => x.dato === dato && x.art !== "note").length;
+function startSprint(min) {
+  const sp = {dato: iDag(), start: Date.now(), min};
+  lager.set(SPRINT_NØGLE, JSON.stringify(sp));
+  kør("salg-sprint-start", [`--dato=${sp.dato}`, `--start=${sp.start}`, `--min=${min}`], {tekst: min === SPRINT_MIN ? "30 min salg startet" : "10 min mere startet", efter: ["salgssprints"]});
+}
+const mmss = ms => { const t = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`; };
+let sprintSidst = null;
+function sprintUr() {   // hvert sekund: uret og baren, en ny tegning når tiden er gået, og dagens salgsopgave lukkes (også hvis fanen var lukket imens)
+  const nu = Date.now(), sp = sprintKører(nu), el = document.querySelector(".sp-tid");
+  if (sp && el) { el.textContent = mmss(sprintSlut(sp) - nu); const b = document.querySelector(".sp-bar div"); if (b) b.style.width = Math.min(100, 100 * (nu - sp.start) / (sp.min * 6e4)) + "%"; }
+  const nøgle = sp ? sp.start : null;
+  if (sprintSidst !== nøgle) { const før = sprintSidst; sprintSidst = nøgle; if (før !== null && (fane === "salg" || fane === "idag")) tegn(); }
+  const idag = iDag(), o = (D.opgaver || []).find(x => x.job_opgave === "salg" && x.deadline === idag && x.status !== "Færdig");
+  if (o && !sprintUr.lukker && dagsSprintKlaret(idag)) {
+    sprintUr.lukker = true;
+    kør("salg-sprint-klaret", [`--dato=${idag}`], {tekst: "30 min salg klaret", efter: ["opgaver"], med: () => { o.status = "Færdig"; o.faerdig_dato = idag; }});
+  }
+}
+setInterval(sprintUr, 1000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) sprintUr(); });
 function salgForfaldne(idag = iDag()) {
   return (D.salg || []).filter(s => !["Booket", "Ikke nu"].includes(s.status) && !s.aldrig && !s._ny && (s.svar || (s.naeste_opfoelgning && s.naeste_opfoelgning <= idag)))
     .sort((a, b) => !(tlfNr(a.telefon) || tlfNr(a.kontakt)) - !(tlfNr(b.telefon) || tlfNr(b.kontakt)) || String(a.naeste_opfoelgning || "").localeCompare(String(b.naeste_opfoelgning || "")) || a.navn.localeCompare(b.navn, "da"));
@@ -4695,9 +4735,10 @@ function salgDagsliste() {
   let lås = null;
   try { lås = JSON.parse(lager.get(SALG_DAG_NØGLE) || "null"); } catch {}
   if (lås?.dato !== idag || lås.v !== 2) lås = {v: 2, dato: idag, navne: [], leads: {}, cold: [], ekstra: 0};
-  const antal = salgDagAntal(idag) + lås.ekstra, find = n => (D.salg || []).find(s => s.navn === n);
+  const find = n => (D.salg || []).find(s => s.navn === n);
   // alt klaret i dag tæller, også det der ikke stod på listen
   const klarede = [...klaret].filter(n => find(n));
+  const antal = Math.max(SALG_DAG_MAKS, klarede.length + 2);   // hvem først (Oscar 9/11): 5, og altid 2 at ringe til, når de første er klaret
   for (const n of klarede) if (!lås.navne.includes(n)) { lås.navne.push(n); if (salgColdIDag(find(n), idag)) lås.cold.push(n); }
   const plads = () => antal - lås.navne.length;
   const opf = salgForfaldne(idag).filter(s => !salgColdIDag(s, idag) && salgHarHandling(s));
@@ -4705,7 +4746,7 @@ function salgDagsliste() {
   const tagOpf = () => { const s = opf.find(x => !lås.navne.includes(x.navn)); if (s) lås.navne.push(s.navn); return !!s; };
   const tagCold = () => { const c = cold.find(x => !lås.navne.includes(x.navn)); if (c) { lås.navne.push(c.navn); lås.cold.push(c.navn); if (c.id != null) lås.leads[c.navn] = c.id; } return !!c; };
   // 3 opfølgninger og 2 cold calls. Er der for få af den ene, fyldes der op med den anden
-  const coldMål = Math.min(SALG_DAG_COLD, Math.max(0, salgDagAntal(idag) - SALG_DAG_OPF));
+  const coldMål = SALG_DAG_COLD;
   while (plads() > 0 && lås.navne.length - lås.cold.length < antal - coldMål && tagOpf());
   while (plads() > 0 && lås.cold.length < coldMål && tagCold());
   while (plads() > 0 && (tagOpf() || tagCold()));
@@ -4714,20 +4755,34 @@ function salgDagsliste() {
   return {ting, antal, klarede: ting.filter(x => x.klaret).length, lås};
 }
 function salgDagKort(påIDag = false) {   // påIDag (Oscar 8/11: "jeg vil se det man ser i salg ved i dag"): et tryk åbner kontakten i Salg
-  const idag = iDag(), {ting, antal, klarede, lås} = salgDagsliste(), rest = Math.max(0, antal - klarede);
+  const idag = iDag(), {ting} = salgDagsliste(), kører = sprintKører(), mål = sprintMål(), uge = ugeSprints(idag);
   const tilSalg = () => { if (påIDag) { fane = "salg"; SG.alleÅben = false; window.scrollTo(0, 0); } };
   const åbn = t => { tilSalg(); if (!(SG.vis === "s" && SG.valgt === t.navn)) salgÅbn(t.navn); SG.k.logÅben = true; tegn(); document.querySelector(".detalje-kol")?.scrollIntoView({block: "nearest"}); };
   const knap = t => { if (t.klaret) return null;
     const nr = t.r ? tlfNr(t.r.telefon) : tlfNr(t.s.telefon) || tlfNr(t.s.kontakt), gå = () => t.r ? (tilSalg(), trækLead(t.r)) : åbn(t);
     return nr ? h("a", {class: "btn lille primaer", href: "tel:" + nr.replace(/\s+/g, ""), onclick: gå}, "Ring " + nr) : h("button", {class: "btn lille", type: "button", onclick: gå}, "Log kontakt"); };
   const sætning = t => t.r ? (t.r.rolle || "").replace(/\s*\(.*$/, "").trim() : t.s.svar ? `${t.s.svar.person} har svaret` : (t.s.naeste || t.s.status || "").split(/(?<=[.!?])\s/)[0];
-  const hoved = rest ? [h("div", {class: "sd-top"}, h("h1", {}, `Ring til ${rest} mere`), h("span", {class: "muted"}, dagNavnLang(idag))),
-      h("div", {class: "sd-bar"}, h("div", {style: `width:${antal ? Math.round(100 * klarede / antal) : 0}%`}))]
-    : h("div", {class: "sd-faerdig"}, h("div", {class: "sd-f-t"}, "✓ Færdig med salg i dag"),
-      salgForfaldne(idag).some(s => !lås.navne.includes(s.navn)) || næsteLeads().length ? h("button", {class: "btn", type: "button", onclick: () => { lås.ekstra++; lager.set(SALG_DAG_NØGLE, JSON.stringify(lås)); tegn(); }}, "Tag én mere") : null);
   const række = t => h("div", {class: "sd-r" + (t.klaret ? " ok" : "")},
     h("span", {class: "sd-mk"}), h(t.s ? "button" : "div", {class: "sd-t", ...(t.s ? {type: "button", onclick: () => { tilSalg(); salgÅbn(t.navn); }} : {})}, h("b", {}, t.navn), t.klaret ? null : h("span", {class: "muted lille"}, sætning(t))), knap(t));
-  return [hoved, rest ? h("div", {class: "sd-liste"}, [...ting.filter(t => t.klaret), ...ting.filter(t => !t.klaret).slice(0, rest)].map(række)) : null];
+  const liste = () => h("div", {class: "sd-liste"}, [...ting.filter(t => t.klaret), ...ting.filter(t => !t.klaret)].map(række));
+  const færdig = (t, knapTekst, min) => h("div", {class: "sd-faerdig"}, h("div", {class: "sd-f-t"}, t), h("button", {class: "btn", type: "button", onclick: () => startSprint(min)}, knapTekst));
+  if (kører) {   // mens han ringer: uret tæller ned, listen står
+    const nu = Date.now();
+    return [h("div", {class: "sd-top"}, h("div", {class: "sp-tid"}, mmss(sprintSlut(kører) - nu)), h("span", {class: "muted"}, `${ringetOp(idag)} ringet op`)),
+      h("div", {class: "sd-bar sp-bar"}, h("div", {style: `width:${Math.min(100, 100 * (nu - kører.start) / (kører.min * 6e4))}%`})), liste()];
+  }
+  if (uge >= mål) return [færdig(`✓ Ugens salg er klaret · ${uge} af ${mål} sprints`, "Ét sprint mere", SPRINT_MIN)];
+  if (dagsSprintKlaret(idag)) return [færdig(`✓ 30 min salg klaret · ${ringetOp(idag)} ringet op`, "10 min mere", EKSTRA_MIN)];
+  // ugedagene: klaret ✓, i dag, og de dage der ikke skal bruges i denne uge er dæmpede
+  const mandag = ugeMandag(idag), hverdag = (dag(idag).getDay() + 6) % 7 < 5;
+  let mangler = mål - uge - (hverdag ? 1 : 0);
+  const dage = h("div", {class: "sp-uge"}, ["Ma", "Ti", "On", "To", "Fr"].map((n, i) => {
+    const d = plusDage(mandag, i), ok = salgSprints().some(s => s.dato === d && sprintKlaret(s));
+    const kl = ok ? "ok" : d === idag ? "nu" : d > idag ? (mangler-- > 0 ? "" : "graa") : "";
+    return h("div", {class: kl}, n + (ok ? " ✓" : ""));
+  }));
+  return [h("div", {class: "sp-start"}, h("div", {}, h("h1", {}, `Sprint ${uge + 1} af ${mål}`, h("span", {class: "sp-lang"}, " denne uge")), h("span", {class: "muted"}, `${SPRINT_MIN} min salg · ${dagNavnLang(idag).toLowerCase()}`)),
+      h("button", {class: "btn primaer", type: "button", onclick: () => startSprint(SPRINT_MIN)}, "Start 30 min")), dage, ting.length ? liste() : null];
 }
 // Ugens tragt under Cold call (Oscar 5/11, skitse 2): kun tal, til der er 50 opkald i alt. Derefter en konklusion: hvor flest falder fra, og bedste åbning.
 function ccUgeTal(mandag, idag) {
@@ -5809,7 +5864,7 @@ const MO_FARVE = {groen: "g", gul: "y", roed: "rd", graa: "gr"};   // rd/gr, for
 const MO_TEKST = {groen: "grøn", gul: "gul", roed: "rød", graa: "tom"};
 const krKort = v => Math.round(Number(v) || 0).toLocaleString("da-DK");
 function salgMaal() {
-  return {kontakter_uge: 18, samtaler_uge: 4, tilbud_md: 4, kontakter_dag: 6, opkald_dag: 2, beskeder_dag: 4, rutinedage: ["Ti", "On", "To"], ...((D.strategi || {}).salgsmaal || {})};   // Oscar 30/10: 6 pr. dag ti-to (før 3)
+  return {sprints_uge: 4, kontakter_uge: 18, samtaler_uge: 4, tilbud_md: 4, kontakter_dag: 6, opkald_dag: 2, beskeder_dag: 4, rutinedage: ["Ti", "On", "To"], ...((D.strategi || {}).salgsmaal || {})};   // Oscar 30/10: 6 pr. dag ti-to (før 3)
 }
 const moMaaneder = () => (D.mo && Array.isArray(D.mo.maaneder)) ? D.mo.maaneder : [];
 function salgTop() {
@@ -5828,18 +5883,18 @@ function ugeKort() {
   const DK = ["Ma", "Ti", "On", "To", "Fr"];
   const dage = DK.map((navn, i) => {
     const dato = plusDage(mandag, i), n = uge.filter(x => x.dato === dato).length, rutine = maal.rutinedage.includes(navn);
-    const c = n >= maal.kontakter_dag ? "g" : rutine && dato < idag && n < maal.kontakter_dag ? "rd" : "";
-    return h("div", {class: "sk-dag " + c + (dato === idag ? " nu" : "") + (rutine ? " rutine" : ""), title: rutine ? `Rutinedag: ${maal.kontakter_dag} kontakter` : ""},
+    const c = salgSprints().some(s => s.dato === dato && sprintKlaret(s)) ? "g" : "";   // grøn = 30 min salg klaret den dag (Oscar 9/11), ikke et antal
+    return h("div", {class: "sk-dag " + c + (dato === idag ? " nu" : "") + (rutine ? " rutine" : "")},
       h("b", {}, n || (dato <= idag ? 0 : rutine ? "·" : "–")), navn);   // Oscar 29/10: dage, der er gået (og i dag), viser 0, kun kommende dage "–"/"·"
   });
   return h("div", {class: "kort2 sk"},
     h("div", {class: "r1 sk-hoved"}, h("div", {class: "overskrift", style: "margin:0"}, `Salg i denne uge · uge ${ugeNr}`),
-      h("span", {class: "muted lille"}, "Mål pr. uge: " + maal.kontakter_uge + " kontakter, " + maal.samtaler_uge + " samtaler")),
+      h("span", {class: "muted lille"}, "Mål pr. uge: " + sprintMål() + " sprints á 30 min, " + maal.samtaler_uge + " samtaler")),
     h("div", {class: "sk-k4 sk-k3"},   // tydelige tekster (Oscar 26/10): hvad tallet er, og hvad målet er
-      h("div", {class: "sk-k " + kl(uge.length, maal.kontakter_uge)}, h("b", {}, `${uge.length} af ${maal.kontakter_uge}`), h("span", {}, "firmaer kontaktet i denne uge (opkald, besked, mail)")),
+      h("div", {class: "sk-k " + kl(ugeSprints(idag), sprintMål())}, h("b", {}, `${ugeSprints(idag)} af ${sprintMål()}`), h("span", {}, `sprints á 30 min i denne uge · ${uge.length} kontakter`)),   // ugemålet er sprints (Oscar 9/11), kontakterne tælles stadig
       h("div", {class: "sk-k " + kl(uge.filter(samtale).length, maal.samtaler_uge)}, h("b", {}, `${uge.filter(samtale).length} af ${maal.samtaler_uge}`), h("span", {}, "rigtige samtaler i denne uge (telefon eller møde)")),
       h("div", {class: "sk-k " + (opf.length ? "b" : "")}, h("b", {}, opf.length), h("span", {}, opf.length ? `${opf.length === 1 ? "kunde" : "kunder"} du skal følge op på i dag` : "ingen opfølgninger i dag · " + tilbudMd + " tilbud sendt i md."))),
-    h("div", {class: "overskrift", style: "margin-top:14px"}, `${maal.kontakter_dag} kontakter om dagen, ${maal.rutinedage.join(", ")}`),
+    h("div", {class: "overskrift", style: "margin-top:14px"}, "Kontakter pr. dag"),
     h("div", {class: "sk-dage"}, dage),
     h("div", {class: "r1", style: "margin-top:12px"},
       h("button", {class: "btn primaer", type: "button", onclick: () => { SG.log = SG.log ? null : {navn: opf[0]?.navn || "", kanal: "Telefon", tekst: "", opf: ""}; tegn(); }}, SG.log ? "Luk" : "+ Log en kontakt"),
