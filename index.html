@@ -3082,8 +3082,7 @@ function visMashups() {
         h("div", {class: "mu-o"}, f.overskrift || ""),
         m.naeste ? h("div", {class: "mu-opg"}, mdLinks(m.naeste)) : null,
         MU.næste !== null || !m.naeste ? næsteFelt()
-          : h("div", {class: "mu-knap"}, h("button", {class: "btn primaer", type: "button", onclick: () => { MU.næste = ""; tegn(); }}, "Gjort, næste skridt"),
-              h("button", {class: "mu-lnk", type: "button", onclick: () => { MU.ret = true; tegn(); }}, "Ret")),
+          : h("div", {class: "mu-knap"}, h("button", {class: "btn primaer", type: "button", onclick: () => { MU.næste = ""; tegn(); }}, "Gjort, næste skridt")),   // ingen Ret-knap (Oscar 9/11): Claude retter næste skridt med fabz.py mashup-ret
         mile);
   // numre
   const status = n => muDom(n.titel) ? "Prøvet på job" : n.status || "I gang";
