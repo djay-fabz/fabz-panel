@@ -12,6 +12,7 @@
   --linje:#e7e9ee;--hover:#f1f3f6;--accent:#2563eb;--accent-blid:#eef4ff;--accent-tekst:#fff;
   --adv:#b45309;--adv-blid:#fff5e6;--fejl:#b91c1c;--fejl-blid:#fdeeee;--ok:#15803d;--ok-blid:#eaf7ef;
   --skygge:0 1px 2px rgba(16,24,40,.06);--top:56px;
+  --faerdig:var(--ok);--faerdig-blid:var(--ok-blid);--faerdig-kant:var(--ok);--faerdig-vaegt:600;   /* færdig-tilstande (Salg, Forespørgsler, Mashups): farven skiftes kun her (Oscar 9/11) */
   --logo:url(data:image/png;base64,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);
 }
 @media (prefers-color-scheme:dark){:root{
@@ -137,8 +138,29 @@ input[type=date]{color-scheme:light dark}
 .dato-felt{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%238a8f98' stroke-width='1.4'%3E%3Crect x='2' y='3' width='12' height='11' rx='2'/%3E%3Cpath d='M2 7h12M5.5 1.5v3M10.5 1.5v3'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;background-size:14px;padding-right:26px;cursor:pointer}
 .dato-skjult{position:fixed;opacity:0;pointer-events:none;padding:0;border:0;margin:0}
 .sd-side{max-width:980px;padding-bottom:0}.idag-salg{display:flex;flex-direction:column;gap:8px}.sd-valg{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}@media (max-width:700px){.sd-r:has(.sd-valg){flex-wrap:wrap}.sd-valg{flex-basis:100%;justify-content:flex-start;padding-left:30px}}.idag-salg .sd-top h1{font-size:19px}.sd-link{display:flex;justify-content:space-between;align-items:center;width:100%;padding:12px 16px;font:inherit;font-weight:500;color:inherit;text-align:left;cursor:pointer;margin-top:0}.sd-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}.sd-top h1{margin:0}.sd-bar{height:8px;border-radius:99px;background:var(--linje);margin:12px 0 14px;overflow:hidden}.sd-bar div{height:100%;background:var(--ok);border-radius:99px}
-.sd-liste{background:var(--flade);border:1px solid var(--linje);border-radius:14px;overflow:hidden}.sd-r{display:flex;align-items:center;gap:14px;padding:12px 16px}.sd-r+.sd-r{border-top:1px solid var(--linje)}.sd-mk{flex:none;width:20px;height:20px;border-radius:50%;border:2px solid var(--svagere)}.sd-r.ok .sd-mk{background:var(--ok);border-color:var(--ok)}.sd-t{flex:1;min-width:0;display:block;text-align:left;background:none;border:0;padding:0;color:inherit;font:inherit}.sd-t b{display:block;font-weight:600}.sd-t span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sd-r.ok b{text-decoration:line-through;font-weight:500;color:var(--svag)}.sd-r .btn{flex:none;margin:0}
-.sd-faerdig{background:var(--ok-blid);border-radius:14px;padding:26px;text-align:center}.sd-f-t{color:var(--ok);font-size:21px;font-weight:600;margin-bottom:12px}.sd-fold{background:var(--flade);border:1px solid var(--linje);border-radius:12px;margin-top:8px}.sd-fold>summary{padding:12px 16px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;font-weight:500}.sd-fold>summary::-webkit-details-marker{display:none}.sd-fold>summary::after{content:"›";color:var(--svagere)}.sd-fold[open]>summary::after{content:"⌄"}.sd-fold .kompakt{margin:0 12px 12px}.sd-fold .to,.sd-fold .side{padding-left:12px;padding-right:12px}.sd-fold .salg-status{margin-top:0}
+.sd-liste{background:var(--flade);border:1px solid var(--linje);border-radius:14px;overflow:hidden}.sd-r{display:flex;align-items:center;gap:14px;padding:12px 16px}.sd-r+.sd-r{border-top:1px solid var(--linje)}.sd-mk{flex:none;width:20px;height:20px;border-radius:50%;border:2px solid var(--svagere)}.sd-r.ok .sd-mk{background:var(--faerdig);border-color:var(--faerdig)}.sd-t{flex:1;min-width:0;display:block;text-align:left;background:none;border:0;padding:0;color:inherit;font:inherit}.sd-t b{display:block;font-weight:600}.sd-t span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sd-r.ok b{text-decoration:line-through;font-weight:500;color:var(--svag)}.sd-r .btn{flex:none;margin:0}
+.sd-faerdig{background:var(--faerdig-blid);border-radius:14px;padding:26px;text-align:center}.sd-f-t{color:var(--faerdig);font-size:21px;font-weight:var(--faerdig-vaegt);margin-bottom:12px}.sd-fold{background:var(--flade);border:1px solid var(--linje);border-radius:12px;margin-top:8px}.sd-fold>summary{padding:12px 16px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;font-weight:500}.sd-fold>summary::-webkit-details-marker{display:none}.sd-fold>summary::after{content:"›";color:var(--svagere)}.sd-fold[open]>summary::after{content:"⌄"}.sd-fold .kompakt{margin:0 12px 12px}.sd-fold .to,.sd-fold .side{padding-left:12px;padding-right:12px}.sd-fold .salg-status{margin-top:0}
+.mu{max-width:760px}.mu-fokus{background:var(--flade);border:1px solid var(--linje);border-radius:16px;padding:22px 24px;margin-bottom:22px}
+.mu-uge{display:flex;align-items:center;gap:8px;margin-bottom:16px}.mu-prik{width:10px;height:10px;border-radius:50%;background:var(--linje)}.mu-prik.ok{background:var(--accent)}
+.mu-o{font-size:26px;font-weight:700;line-height:1.2;margin:0 0 6px;letter-spacing:-.01em}.mu-opg{font-size:15px;color:var(--svag);margin:0 0 18px}
+.mu-knap{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.mu-knap .primaer{padding:10px 20px;font-size:15px;border-radius:10px}
+.mu-lnk{border:0;background:none;color:var(--svag);padding:6px 4px;font-size:13px}.mu-lnk:hover{color:var(--tekst)}
+.mu-mile{display:flex;gap:16px;flex-wrap:wrap;margin-top:18px;padding-top:12px;border-top:1px solid var(--linje);font-size:12px;color:var(--svagere)}
+.mu-fokus.fd{background:var(--faerdig-blid);border-color:var(--faerdig-kant);text-align:center;padding:30px 24px}.mu-fokus.fd .mu-o{color:var(--faerdig);font-weight:var(--faerdig-vaegt)}.mu-fokus.fd .mu-opg{margin-bottom:4px}
+.mu-fd-n{font-size:12.5px;color:var(--svag);margin-top:14px}
+.mu-h{font-size:14px;color:var(--svag);font-weight:600;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+.mu-kol3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:20px}.mu-kol h4{margin:0 0 6px;font-size:12.5px;color:var(--svag);font-weight:600}
+.mu-nk{display:block;width:100%;text-align:left;background:var(--flade);border:1px solid var(--linje);border-radius:10px;padding:10px 12px;margin-bottom:6px}.mu-nk:hover{background:var(--hover)}
+.mu-nk b{font-weight:500;display:block}.mu-kom{font-size:12.5px;color:var(--svagere);margin-top:3px;display:block}
+.mu-idefelt{display:flex;align-items:center;gap:8px}.mu-idefelt .input{flex:1}
+.mu-ide{display:flex;gap:10px;align-items:baseline;width:100%;text-align:left;border:0;border-top:1px solid var(--linje);background:none;padding:8px 4px;font-size:13.5px}.mu-ide:first-child{border-top:0}.mu-ide span:first-child{flex:1}
+.mu-ide-ret{display:flex;gap:6px;flex-wrap:wrap;padding:4px 4px 10px}.mu-ide-ret .input{width:130px}
+.mu-k{border-left:3px solid var(--linje);padding:4px 10px;margin:6px 0;font-size:13.5px}
+.mu-link{margin-left:8px;font-size:12.5px;font-weight:500;white-space:nowrap}
+.mu-liste{background:var(--flade);border:1px solid var(--linje);border-radius:12px;overflow:hidden;margin-bottom:20px}
+.mu-liste .mu-nk{display:flex;align-items:baseline;gap:10px;border:0;border-top:1px solid var(--linje);border-radius:0;margin:0}.mu-liste .mu-nk:first-child{border-top:0}.mu-liste .mu-nk>span:first-child{flex:1;min-width:0}
+.mu-st{font-size:12.5px;color:var(--svag);white-space:nowrap}
+@media (max-width:700px){.mu-fokus{padding:18px}.mu-o{font-size:22px}.mu-knap .primaer{flex:1}}.skat-status.g.faerdig{background:var(--faerdig-blid);border-color:var(--faerdig-kant)}.skat-status.g.faerdig .skat-titel{color:var(--faerdig);font-weight:var(--faerdig-vaegt)}
 @font-face{font-family:SkiltSerif;src:url(skilte/serif.ttf)}@font-face{font-family:SkiltPop;src:url(skilte/pop.ttf)}
 .sv{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:16px;max-width:760px}.sv-k{background:var(--flade);border:2px solid var(--linje);border-radius:14px;padding:14px;text-align:center;cursor:pointer;color:inherit;font:inherit}.sv-k:hover{border-color:var(--svagere)}.sv-k.valgt{border-color:var(--accent)}.sv-k>b{display:block;margin-top:10px;font-size:15px}
 .sv-b{display:block;position:relative;container-type:inline-size;width:min(100%,290px);margin:0 auto;box-shadow:0 2px 12px #0002}.sv-b img{display:block;width:100%}.sv-navn{position:absolute;left:0;right:0;top:51.6cqw;font:400 6cqw/1.2 SkiltSerif,serif;color:#7f0724;text-align:center;white-space:nowrap}.sv-linje{position:absolute;left:0;right:0;top:63cqw;font:400 2.1cqw/1.2 SkiltPop,sans-serif;color:#211115;text-align:center;text-transform:uppercase;letter-spacing:.2em;white-space:nowrap}
@@ -699,7 +721,7 @@ const fil = (p, std = []) => sikker(p, async () => { const r = await laesFil(p);
 let GQL = null;
 const DATAFILER = ["kalender", "udstyr", "pakkelister", "opgaver", "jobpakkelister", "henvendelser", "dagsplaner", "indtaegter", "typer", "salg", "festkort",
   "klubkort", "salgslog", "klubkort_tekster", "strategi", "jobrute", "jobtider", "salgjobs", "kortmaaling", "evalueringer", "salgslaering", "setups", "maanedsoversigt", "priser",
-  "leads", "betalinger", "honorarsedler", "jobstatus", "fejl", "hov", "ugepakke", "mailoversigt", "vagter", "some", "linkedin"].map(x => `data/${x}.json`).concat(["tools/klubkort/kort.json"]);
+  "leads", "betalinger", "honorarsedler", "jobstatus", "fejl", "hov", "ugepakke", "mailoversigt", "vagter", "some", "linkedin", "mashups"].map(x => `data/${x}.json`).concat(["tools/klubkort/kort.json"]);
 async function hentSamlet() {
   const t0 = performance.now();
   try {
@@ -731,7 +753,7 @@ async function hentDataFiler() {
     ...["data/henvendelser.json", "data/dagsplaner.json", "data/indtaegter.json", "data/typer.json", "data/salg.json", "data/festkort.json", "data/klubkort.json", "data/salgslog.json"].map(p => fil(p)),
     sikker("data/klubkort_tekster.json", laesKkTekster, [])]);
   D = {kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, indtaegter, typer, salg, festkort, klubkort, salgslog, kkTekster};
-  const [strategi, jobrute, jobtider, salgjobs, kortmaaling, evalueringer, salgslaering, setups, mo, priser, leads, betalinger, honorarsedler, jobstatus, fejl, hov, ugepakke, mailoversigt, vagter, some, linkedin] = await Promise.all([
+  const [strategi, jobrute, jobtider, salgjobs, kortmaaling, evalueringer, salgslaering, setups, mo, priser, leads, betalinger, honorarsedler, jobstatus, fejl, hov, ugepakke, mailoversigt, vagter, some, linkedin, mashups] = await Promise.all([
     fil("data/strategi.json", {}), fil("data/jobrute.json", {}), fil("data/jobtider.json"), fil("data/salgjobs.json"),   // hvilket firma i Salg et job kom fra (fabz.py salg-job)
     fil("data/kortmaaling.json"), fil("data/evalueringer.json"),   // scanninger og tilmeldinger pr. kort (tools/kortmaaling.mjs hver nat)
     fil("data/salgslaering.json"),   // forslag fra opkaldene (Tal på Salg)
@@ -745,8 +767,8 @@ async function hentDataFiler() {
     fil("data/ugepakke.json"),   // ugens bogføring (fabz_bogholder.py): robottens forslag, Oscar godkender
     fil("data/mailoversigt.json", null),   // dagens mailoversigt (tools/mailoversigt.py via panel.yml ved Mødt ind)
     fil("data/vagter.json", null),   // vagter fra Planday/Deltaplan (tools/vagter.py i kalender.yml)
-    fil("data/some.json", {opslag: [], ideer: []}), fil("data/linkedin.json", {})]);   // SoMe-fanen (fabz_some.py) og LinkedIn-målet
-  Object.assign(D, {strategi, jobrute, jobtider, salgjobs, kortmaaling, evalueringer, salgslaering, setups, mo, priser, leads, betalinger, honorarsedler, jobstatus, fejl, hov, ugepakke, mailoversigt, vagter, some, linkedin});
+    fil("data/some.json", {opslag: [], ideer: []}), fil("data/linkedin.json", {}), fil("data/mashups.json", null)]);   // + Mashups (fabz_mashups.py, Oscar 9/11)   // SoMe-fanen (fabz_some.py) og LinkedIn-målet
+  Object.assign(D, {strategi, jobrute, jobtider, salgjobs, kortmaaling, evalueringer, salgslaering, setups, mo, priser, leads, betalinger, honorarsedler, jobstatus, fejl, hov, ugepakke, mailoversigt, vagter, some, linkedin, mashups});
 }
 function manglerBesked() {
   besked({id: "mangler", klasse: "adv", titel: "GitHub svarer ikke lige nu, prøver igen …", punkter: ["Kunne ikke hente: " + MANGLER.join(", ")],
@@ -941,8 +963,8 @@ function tegnTop() {
   }
   const aktiv = v => fane === v || (v === "pakkelister" && (fane === "kort" || fane === "rute"));
   const gå = v => { fane = v; MERE = false; if (v === "oekonomi") ØK.guide = null; if (v === "salg") SG.fremÅben = false; if (v === "pakkelister") { JH = null; S = null; } tegn(); window.scrollTo(0, 0); };
-  const hoved = [["idag", "I dag"], ["opgaver", "Opgaver"], ["pakkelister", "Jobs"], ["foresp", "Forespørgsler"], ["salg", "Salg"], ["oekonomi", "Økonomi og Skat", "Økonomi"], ...(window.innerWidth > 700 ? [["some", "SoMe"]] : [])];   // SoMe (Oscar 8/11): i bjælken på pc, under Mere på telefonen (bunden er fuld)   // Salg i hovedbjælken (Oscar 25/10). Økonomi og Skat ud af Mere (Oscar 28/10: intet gemt væk)
-  const mere = [...(window.innerWidth > 700 ? [] : [["some", "SoMe"]]), ["tilbud", "Tilbud"], ...(ugepakkeTom() && fane !== "bogforing" ? [] : [["bogforing", "Bogføring"]]), ["lager", "Lager"], ["pakker", "Pakker"]];   // Pakker: trin og regler til "Pak jobbet" (Oscar 27/10)   // Økonomi: penge ude, til dig, privat (Oscar 26/10: Salg skal kun være salg)
+  const hoved = [["idag", "I dag"], ["opgaver", "Opgaver"], ["pakkelister", "Jobs"], ["foresp", "Forespørgsler"], ["salg", "Salg"], ["oekonomi", "Økonomi og Skat", "Økonomi"], ...(window.innerWidth > 700 ? [["some", "SoMe"], ["mashups", "Mashups"]] : [])];   // Mashups (Oscar 9/11): ved siden af SoMe på pc, under Mere på telefonen   // SoMe (Oscar 8/11): i bjælken på pc, under Mere på telefonen (bunden er fuld)   // Salg i hovedbjælken (Oscar 25/10). Økonomi og Skat ud af Mere (Oscar 28/10: intet gemt væk)
+  const mere = [...(window.innerWidth > 700 ? [] : [["some", "SoMe"], ["mashups", "Mashups"]]), ["tilbud", "Tilbud"], ...(ugepakkeTom() && fane !== "bogforing" ? [] : [["bogforing", "Bogføring"]]), ["lager", "Lager"], ["pakker", "Pakker"]];   // Pakker: trin og regler til "Pak jobbet" (Oscar 27/10)   // Økonomi: penge ude, til dig, privat (Oscar 26/10: Salg skal kun være salg)
   top.replaceChildren(
     h("span", {class: "brand"}, "Fabz"),
     h("nav", {class: "tabs"},
@@ -959,7 +981,7 @@ let MERE = false;
 document.addEventListener("click", () => { if (MERE) { MERE = false; tegnTop(); } });
 // Adresse pr. side (Oscar 8/11: "når jeg opdaterer siden, åbner den på den side jeg kigger på"): fanen og den åbne detalje står efter #,
 // fx #opgaver, #opgave=32, #salg=Arla Foods, #job=2026-11-07|klubbernes vanddisko. Kun navne og id'er. replaceState, så tilbage-knappen ikke fyldes op
-const FANER = ["idag", "opgaver", "pakkelister", "foresp", "salg", "oekonomi", "some", "tilbud", "bogforing", "lager", "pakker", "kort", "rute"];
+const FANER = ["idag", "opgaver", "pakkelister", "foresp", "salg", "oekonomi", "some", "mashups", "tilbud", "bogforing", "lager", "pakker", "kort", "rute"];
 function adresse() {
   const v = fane === "pakkelister" && JH ? "job=" + encodeURIComponent(JH)
     : fane === "opgaver" && OP.vis === "opgave" && OP.valgt != null ? "opgave=" + OP.valgt
@@ -984,7 +1006,7 @@ function læsAdresse() {   // efter data er hentet: en detalje, der ikke findes 
 function tegn() {
   document.body.classList.remove("bar-synlig");
   tegnTop();
-  const vis = {idag: visIDag, bogforing: visBogfoering, tilbud: visTilbud, opgaver: visOpgaver, foresp: visForesp, salg: visSalg, oekonomi: visSkat, pakker: visPakker, some: visSome, lager: visLager, kort: visKort, rute: visRute}[fane];
+  const vis = {idag: visIDag, bogforing: visBogfoering, tilbud: visTilbud, opgaver: visOpgaver, foresp: visForesp, salg: visSalg, oekonomi: visSkat, pakker: visPakker, some: visSome, mashups: visMashups, lager: visLager, kort: visKort, rute: visRute}[fane];
   if (vis) vis();
   else if (S) visEditor();
   else visJobs();
@@ -2568,7 +2590,7 @@ async function gemLager() {
 
 // ---------- fælles: kør fabz.py-kommandoer fra panelet ----------
 const FILER = {evalueringer: "data/evalueringer.json", jobstatus: "data/jobstatus.json", jobtider: "data/jobtider.json", kortmaaling: "data/kortmaaling.json", salgjobs: "data/salgjobs.json", salgslaering: "data/salgslaering.json", henvendelser: "data/henvendelser.json", opgaver: "data/opgaver.json", betalinger: "data/betalinger.json", honorarsedler: "data/honorarsedler.json", ugepakke: "data/ugepakke.json", dagsplaner: "data/dagsplaner.json",
-               indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json", salgslog: "data/salgslog.json", mo: "data/maanedsoversigt.json", strategi: "data/strategi.json", leads: "data/leads.json", mailoversigt: "data/mailoversigt.json", vagter: "data/vagter.json", fejl: "data/fejl.json", hov: "data/hov.json", some: "data/some.json", linkedin: "data/linkedin.json"};
+               indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json", salgslog: "data/salgslog.json", mo: "data/maanedsoversigt.json", strategi: "data/strategi.json", leads: "data/leads.json", mailoversigt: "data/mailoversigt.json", vagter: "data/vagter.json", fejl: "data/fejl.json", hov: "data/hov.json", some: "data/some.json", mashups: "data/mashups.json", linkedin: "data/linkedin.json"};
 async function laesValgfri(p) { const r = await laesFil(p); return r ? r.json() : []; }
 async function genindlæs(navne) { await Promise.all(navne.map(async n => { D[n] = n === "kkTekster" ? await laesKkTekster() : await laesValgfri(FILER[n]); })); }
 const plusDage = (iso, n) => { const d = dag(iso); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
@@ -2756,7 +2778,8 @@ function visIDag() {
               e.target.closest(".cb").classList.toggle("gjort", e.target.checked);
             }}),
             h("span", {class: "t" + (salgRød(p) ? " rød" : "")},
-              planOpg(p)?.job_opgave === "salg" ? h("a", {href: "#", onclick: e => { e.preventDefault(); SG.vis = null; SG.valgt = null; SG.alleÅben = false; fane = "salg"; tegn(); window.scrollTo(0, 0); }}, p.tekst) : p.tekst),
+              planOpg(p)?.job_opgave === "salg" ? h("a", {href: "#", onclick: e => { e.preventDefault(); SG.vis = null; SG.valgt = null; SG.alleÅben = false; fane = "salg"; tegn(); window.scrollTo(0, 0); }}, p.tekst)
+                : erMashupPunkt(p) ? [p.tekst, h("a", {href: "#mashups", class: "mu-link", onclick: e => { e.preventDefault(); MU.valgt = null; fane = "mashups"; tegn(); window.scrollTo(0, 0); }}, "Mashups ›")] : p.tekst),
             p.min ? h("span", {class: "muted lille"}, p.min + " min") : null,
             fulgtOp ? (p.brugt != null ? h("span", {class: "muted lille"}, "brugt " + p.brugt + " min") : null)
               : h("input", {class: "input", type: "number", min: "0", max: "720", placeholder: "brugt, min", style: "width:92px;padding:4px 8px;margin-left:8px", value: brugt[p.nr] ?? "",
@@ -2964,6 +2987,135 @@ function someKort(o) {
       o.status === "udkast" || o.status === "fejl" ? h("button", {class: "btn primaer", type: "button", disabled: !!mangler, title: mangler || "", onclick: godkend}, mangler || "Godkend") : null,
       h("button", {class: "btn", type: "button", onclick: () => { SM.ret = o.id; tegn(); }}, "Ret"),
       h("button", {class: "btn ghost", type: "button", onclick: spring}, "Spring over")));
+}
+// Mashups (Oscar 9/11, skitse B2 panel-mashups): ét fokuskort med fasens overskrift, næste skridt og én knap, ugens mål på 2 Ableton-blokke
+// (færdig for ugen uden at spærre noget), mine numre med evalueringens bedømmelse og Premises kommentarer, og idéer som ét diskret felt.
+// Data i den private data/mashups.json: ingen sangtitler eller kommentarer i dette repo.
+const MU = {valgt: null, ret: false, næste: null, idéer: false, åbenIdé: null, ny: false};
+const MU_MAAL = 2;
+const erMashupPunkt = p => !!p.mashup || /^Ableton\b/i.test(p.tekst || "");
+function muUge() {   // Ableton-blokke krydset af på Dagens plan denne uge (mandag til i dag)
+  const idag = iDag(), man = plusDage(idag, -((dag(idag).getDay() + 6) % 7));
+  let n = 0;
+  for (const p of D.dagsplaner || []) {
+    if (!p.dato || p.dato < man || p.dato > idag) continue;
+    let nåede = p.naaede_punkter || [];
+    if (p.dato === idag && p.status !== "Fulgt op") { try { nåede = JSON.parse(lager.get(NÅET_KEY(idag)) || "[]"); } catch {} }
+    n += (p.plan_punkter || []).filter(x => erMashupPunkt(x) && nåede.includes(x.nr)).length;
+  }
+  return n;
+}
+function muDom(titel) {   // seneste bedømmelse fra evalueringens Nye numre
+  const t = (titel || "").trim().toLowerCase();
+  let b = null;
+  for (const r of [...(D.evalueringer || [])].sort((a, c) => (a.dato || "").localeCompare(c.dato || "")))
+    for (const x of r.nye || []) if (x.dom && (x.titel || "").trim().toLowerCase() === t) b = {dom: x.dom, job: r.job, dato: r.dato};
+  return b;
+}
+const camelot = v => { const m = /^(\d{1,2})([AB])$/i.exec(String(v || "").trim()); return m && +m[1] >= 1 && +m[1] <= 12 ? {n: +m[1], l: m[2].toUpperCase()} : null; };
+function muMatch(x) {   // toneart på Camelot-hjulet og tempo: "passer" eller hvor meget der skal flyttes
+  const [a, b] = (x.toneart || []).map(camelot), [ta, tb] = (x.bpm || []).map(Number), dele = [];
+  if (a && b) {
+    const s = [0, 1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 6].find(s => { const n = ((b.n - 1 + 7 * s) % 12 + 12) % 12 + 1, d = Math.min((n - a.n + 12) % 12, (a.n - n + 12) % 12); return n === a.n || (d === 1 && b.l === a.l); });
+    dele.push(s === 0 ? "passer" : `${Math.abs(s)} halvtone${Math.abs(s) === 1 ? "" : "r"}`);
+  }
+  if (ta && tb && Math.abs(ta - tb) / Math.max(ta, tb) > 0.04) dele.push(`${Math.round(Math.abs(ta - tb))} BPM fra hinanden`);
+  return dele.join(" · ");
+}
+const muNyId = (l, b) => b + (Math.max(0, ...l.map(x => String(x.id || "").startsWith(b) ? Number(String(x.id).slice(1)) || 0 : 0)) + 1);
+function visMashups() {
+  const m = D.mashups && !Array.isArray(D.mashups) ? D.mashups : null;
+  if (!m) { $("rod").replaceChildren(h("div", {class: "side mu"}, h("h1", {}, "Mashups"), tom("Mashups er ikke sat op endnu."))); return; }
+  m.numre ||= []; m.ideer ||= []; m.log ||= [];
+  if (MU.valgt) { const n = m.numre.find(x => x.id === MU.valgt); if (n) return muNummer(m, n); MU.valgt = null; }
+  const faser = m.faser || [], fase = m.fase || 1, f = faser[fase - 1] || {}, uge = muUge(), fd = uge >= MU_MAAL;
+  const efter = ["mashups"];
+  const gjort = (næste) => kør("mashup-gjort", næste ? ["--naeste", næste] : [], {tekst: "Mashups: næste skridt", efter,
+    med: () => { if (m.naeste) m.log.push({dato: iDag(), fase, tekst: m.naeste}); m.naeste = næste || ""; MU.næste = null; }});
+  const næsteFelt = () => { const i = h("input", {class: "input", placeholder: "Næste skridt", value: MU.næste || "", style: "flex:1;min-width:200px", oninput: e => { MU.næste = e.target.value; },
+      onkeydown: e => { if (e.key === "Enter" && e.target.value.trim()) gjort(e.target.value.trim()); }});
+    setTimeout(() => i.focus(), 0);
+    return h("div", {class: "mu-knap"}, i, h("button", {class: "btn primaer", type: "button", onclick: () => MU.næste?.trim() && gjort(MU.næste.trim())}, "Gem"),
+      h("button", {class: "mu-lnk", type: "button", onclick: () => { MU.næste = null; tegn(); }}, "Fortryd")); };
+  const retFelt = () => { let t = m.naeste || "", fs = fase;
+    return h("div", {class: "mu-knap"}, h("input", {class: "input", value: t, style: "flex:1;min-width:200px", oninput: e => { t = e.target.value; }}),
+      h("select", {class: "input", style: "width:auto", onchange: e => { fs = Number(e.target.value); }}, faser.map((x, i) => h("option", {value: i + 1, selected: i + 1 === fase}, `Fase ${i + 1}: ${x.navn}`))),
+      h("button", {class: "btn primaer", type: "button", onclick: () => kør("mashup-ret", ["--naeste", t, "--fase", String(fs)], {tekst: "Mashups rettet", efter, med: () => { m.naeste = t; m.fase = fs; MU.ret = false; }})}, "Gem"),
+      h("button", {class: "mu-lnk", type: "button", onclick: () => { MU.ret = false; tegn(); }}, "Fortryd")); };
+  const edits = m.numre.filter(n => n.type === "edit" && n.sendt_premise).length, bedømt = m.numre.filter(n => n.type === "mashup" && muDom(n.titel)).length;
+  const mp = (ok, t, x) => h("span", {}, (ok ? "● " : "○ ") + t + (!ok && x ? ` (${x})` : ""));
+  const mile = h("div", {class: "mu-mile"}, mp(fase >= 3, "Ableton genopfrisket"), mp(edits >= 2, "2 edits sendt til Premise", edits), mp(bedømt >= 3, "3 mashups bedømt", bedømt));
+  const fokus = MU.ret ? h("div", {class: "mu-fokus"}, h("div", {class: "mu-o"}, f.overskrift || ""), retFelt())
+    : fd && MU.næste === null ? h("div", {class: "mu-fokus fd"},
+        h("div", {class: "mu-o"}, "✓ Ugens mashup-tid er brugt"),
+        h("div", {class: "mu-opg"}, `${uge} af ${MU_MAAL} blokke. Du er færdig for i denne uge.`),
+        m.naeste ? h("div", {class: "mu-fd-n"}, "Næste gang: " + m.naeste + " · ", h("button", {class: "mu-lnk", type: "button", style: "padding:0;font-size:12.5px", onclick: () => { MU.næste = ""; tegn(); }}, "Gjort alligevel")) : null)
+    : h("div", {class: "mu-fokus"},
+        h("div", {class: "mu-uge"}, [...Array(MU_MAAL)].map((_, i) => h("span", {class: "mu-prik" + (i < uge ? " ok" : "")})), h("span", {class: "muted lille"}, `${Math.min(uge, MU_MAAL)} af ${MU_MAAL} blokke denne uge`),
+          h("span", {class: "lille", style: "margin-left:auto;color:var(--svagere)"}, `Fase ${fase} af ${faser.length}`)),
+        h("div", {class: "mu-o"}, f.overskrift || ""),
+        m.naeste ? h("div", {class: "mu-opg"}, m.naeste) : null,
+        MU.næste !== null || !m.naeste ? næsteFelt()
+          : h("div", {class: "mu-knap"}, h("button", {class: "btn primaer", type: "button", onclick: () => { MU.næste = ""; tegn(); }}, "Gjort, næste skridt"),
+              h("button", {class: "mu-lnk", type: "button", onclick: () => { MU.ret = true; tegn(); }}, "Ret")),
+        mile);
+  // numre
+  const status = n => muDom(n.titel) ? "Prøvet på job" : n.status || "I gang";
+  const kom = n => { const d = muDom(n.titel), k = (n.kommentarer || []).at(-1);
+    return [d?.dom, k ? `Premise: "${k.tekst.length > 60 ? k.tekst.slice(0, 58) + "…" : k.tekst}"` : status(n) === "Færdig" && !n.sendt_premise ? "ikke sendt til Premise" : null].filter(Boolean).join(" · "); };
+  const nk = (n, medSt) => h("button", {class: "mu-nk", type: "button", onclick: () => { MU.valgt = n.id; tegn(); window.scrollTo(0, 0); }},
+    h("span", {}, h("b", {}, n.titel), kom(n) && !medSt ? h("span", {class: "mu-kom"}, kom(n)) : medSt && (n.kommentarer || []).length ? h("span", {class: "mu-kom"}, kom(n).replace(/^[^·]*· /, "")) : null),
+    medSt ? h("span", {class: "mu-st"}, muDom(n.titel)?.dom || status(n)) : null);
+  const tlf = window.innerWidth <= 700, åbne = m.numre;
+  const numre = !m.numre.length ? null : tlf
+    ? h("div", {class: "mu-liste"}, ["Prøvet på job", "Færdig", "I gang"].flatMap(st => åbne.filter(n => status(n) === st).map(n => nk(n, true))))
+    : h("div", {class: "mu-kol3"}, ["I gang", "Færdig", "Prøvet på job"].map(st => h("div", {class: "mu-kol"}, h("h4", {}, st), åbne.filter(n => status(n) === st).map(n => nk(n)))));
+  let nyT = "", nyType = "edit";
+  const nyNr = MU.ny ? h("div", {class: "mu-knap", style: "margin-bottom:14px"},
+    h("input", {class: "input", placeholder: "Titel", style: "flex:1;min-width:200px", oninput: e => { nyT = e.target.value; }, onkeydown: e => { if (e.key === "Enter") gemNy(); }}),
+    h("select", {class: "input", style: "width:auto", onchange: e => { nyType = e.target.value; }}, h("option", {value: "edit"}, "DJ-edit"), h("option", {value: "mashup"}, "Mashup")),
+    h("button", {class: "btn", type: "button", onclick: () => gemNy()}, "Gem"), h("button", {class: "mu-lnk", type: "button", onclick: () => { MU.ny = false; tegn(); }}, "Fortryd")) : null;
+  function gemNy() { const t = nyT.trim(); if (!t) return;
+    kør("mashup-nummer-ny", [t, "--type", nyType], {tekst: "Mashups: nyt nummer", efter, med: () => { m.numre.push({id: muNyId(m.numre, "N"), titel: t, type: nyType, status: "I gang", oprettet: iDag(), kommentarer: []}); MU.ny = false; }}); }
+  // idéer: ét felt, listen lukket til den åbnes
+  const idéFelt = h("div", {class: "mu-idefelt"}, h("input", {class: "input", placeholder: tlf ? "Skriv en idé" : "Skriv en idé, fx Natteravn over Delilah",
+    onkeydown: e => { const t = e.target.value.trim(); if (e.key === "Enter" && t) kør("mashup-ide-ny", [t], {tekst: "Idé gemt", efter, med: () => { m.ideer.push({id: muNyId(m.ideer, "I"), tekst: t, oprettet: iDag()}); }}); }}));
+  const idéer = m.ideer.filter(x => !x.startet);
+  const idéListe = MU.idéer ? h("div", {style: "margin-top:4px"}, idéer.map(x => { const åben = MU.åbenIdé === x.id, mt = muMatch(x);
+    let ta = (x.toneart || []).filter(Boolean).join(" "), tb = (x.bpm || []).filter(Boolean).join(" ");
+    return [h("button", {class: "mu-ide", type: "button", onclick: () => { MU.åbenIdé = åben ? null : x.id; tegn(); }}, h("span", {}, x.tekst),
+        h("span", {class: "lille", style: "color:var(--svagere)"}, [(x.toneart || []).filter(Boolean).length === 2 ? x.toneart.join("·") : "", (x.bpm || []).filter(Boolean).length === 2 ? x.bpm.join("·") : "", mt].filter(Boolean).join(" · "))),
+      åben ? h("div", {class: "mu-ide-ret"},
+        h("input", {class: "input", placeholder: "Toneart, fx 8A 9A", value: ta, oninput: e => { ta = e.target.value; }}),
+        h("input", {class: "input", placeholder: "BPM, fx 122 124", value: tb, oninput: e => { tb = e.target.value; }}),
+        h("button", {class: "btn lille", type: "button", onclick: () => kør("mashup-ide-ret", [x.id, "--toneart", ta, "--bpm", tb], {tekst: "Idé gemt", efter,
+          med: () => { const to = v => (v.replace(/[,/]/g, " ").split(/\s+/).filter(Boolean).concat(["", ""])).slice(0, 2); x.toneart = to(ta).map(v => v.toUpperCase()); x.bpm = to(tb); }})}, "Gem"),
+        h("button", {class: "btn lille", type: "button", onclick: () => kør("mashup-ide-start", [x.id], {tekst: "Idéen er et nummer nu", efter,
+          med: () => { const id = muNyId(m.numre, "N"); m.numre.push({id, titel: x.tekst, type: "mashup", status: "I gang", oprettet: iDag(), kommentarer: []}); x.startet = id; MU.åbenIdé = null; }})}, "Start")) : null]; }))
+    : null;
+  $("rod").replaceChildren(h("div", {class: "side mu"}, fokus,
+    h("div", {class: "mu-h"}, "Mine numre", h("button", {class: "mu-lnk", type: "button", onclick: () => { MU.ny = true; tegn(); }}, "+ Nummer")),
+    nyNr, numre, idéFelt,
+    idéer.length ? h("div", {style: "margin-top:4px"}, h("button", {class: "mu-lnk", type: "button", onclick: () => { MU.idéer = !MU.idéer; tegn(); }}, MU.idéer ? "Skjul idéerne ‹" : "Vis idéerne ›")) : null,
+    idéListe));
+}
+function muNummer(m, n) {   // et nummer med alle Premises kommentarer
+  const efter = ["mashups"], d = muDom(n.titel);
+  let k = "";
+  const ret = (args, med, tekst = "Mashups: nummer rettet") => kør("mashup-nummer-ret", [n.id, ...args], {tekst, efter, med});
+  $("rod").replaceChildren(h("div", {class: "side mu"},
+    h("button", {class: "tilbage", type: "button", onclick: () => { MU.valgt = null; tegn(); }}, "‹ Mashups"),
+    h("h1", {}, n.titel),
+    h("div", {class: "muted", style: "margin-bottom:14px"}, [n.type === "mashup" ? "Mashup" : "DJ-edit", n.bpm ? n.bpm + " BPM" : null, n.toneart, d ? `${d.dom} · ${d.job} ${kortDato(d.dato)}` : null].filter(Boolean).join(" · ")),
+    h("div", {class: "seg", style: "margin-bottom:14px"}, ["I gang", "Færdig", "Prøvet på job"].map(st => h("button", {type: "button", class: (n.status || "I gang") === st ? "aktiv" : "",
+      onclick: () => ret(["--status", st], () => { n.status = st; })}, st))),
+    n.sendt_premise ? h("div", {class: "muted lille", style: "margin-bottom:10px"}, "Sendt til Premise " + kortDato(n.sendt_premise))
+      : h("button", {class: "btn", type: "button", style: "margin-bottom:14px", onclick: () => ret(["--sendt"], () => { n.sendt_premise = iDag(); }, "Sendt til Premise")}, "Sendt til Premise"),
+    h("h3", {style: "margin:10px 0 6px"}, "Premise"),
+    [...(n.kommentarer || [])].reverse().map(x => h("div", {class: "mu-k"}, h("div", {class: "muted lille"}, kortDato(x.dato)), x.tekst)),
+    h("textarea", {class: "input", rows: 3, placeholder: "Premises kommentar", style: "width:100%;margin-top:8px", oninput: e => { k = e.target.value; }}),
+    h("button", {class: "btn primaer", type: "button", style: "margin-top:8px", onclick: () => { const t = k.trim(); if (t) kør("mashup-kommentar", [n.id, t], {tekst: "Kommentar gemt", efter,
+      med: () => { (n.kommentarer ||= []).push({dato: iDag(), tekst: t}); n.sendt_premise ||= iDag(); }}); }}, "Gem kommentar")));
 }
 function visSome() {
   const alle = someAlle(), idag = iDag(), mdr = idag.slice(0, 7);
@@ -4448,7 +4600,7 @@ function visSalg() {
   const opf = [...grp("Tilbud", gTilbud), ...grp("I dag", gIDag), ...grp("Denne uge", gUge), ...grp("Senere", gSenere, true), ...grp("Uden dato", gUden), ...grp("Booket", gBooket)];
   if (!opf.length) opf.push(h("div", {class: "muted", style: "margin-top:12px"}, "Ingen."));
   const cold = [
-    h("div", {class: "skat-status " + (leadsIDag.length >= 2 ? "g" : "y"), style: "margin-top:12px"}, h("div", {class: "skat-titel"}, leadsIDag.length >= 2 ? "✓ Cold call i dag: 2 af 2" : `Cold call i dag: ${leadsIDag.length} af 2`)),
+    h("div", {class: "skat-status " + (leadsIDag.length >= 2 ? "g faerdig" : "y"), style: "margin-top:12px"}, h("div", {class: "skat-titel"}, leadsIDag.length >= 2 ? "✓ Cold call i dag: 2 af 2" : `Cold call i dag: ${leadsIDag.length} af 2`)),
     h("div", {class: "cc-dele"}, h("span", {class: leadsIDag.length >= 1 ? "ok" : ""}, "Formiddag" + (leadsIDag.length >= 1 ? " ✓" : "")), h("span", {class: leadsIDag.length >= 2 ? "ok" : ""}, "Eftermiddag" + (leadsIDag.length >= 2 ? " ✓" : ""))),
     h("div", {class: "cc-træk"}, traekKnap()),
     rows.filter(erCold).sort((a, b) => (b.oprettet || "").localeCompare(a.oprettet || "")).map(s => h("button", {type: "button", class: "kort2 cc-kort" + (SG.vis === "s" && SG.valgt === s.navn ? " valgt" : ""), onclick: () => salgÅbn(s.navn)},
@@ -4469,7 +4621,7 @@ function visSalg() {
   const kontaktetIDag = (D.salgslog || []).filter(x => x.dato === idag && x.art !== "note").length;
   const kontaktRest = Math.max(0, salgDagAntal(idag) - kontaktetIDag);
   const dele = [iDagL.length ? `følg op på ${iDagL.length} ${iDagL.length === 1 ? "kunde" : "kunder"}` : null, kontaktRest ? `kontakt ${kontaktRest} ${kontaktRest === 1 ? "firma" : "firmaer"}` : null].filter(Boolean);
-  const status = h("div", {class: "side bred", style: "padding-bottom:0"}, h("div", {class: "skat-status salg-status " + (dele.length ? "y" : "g")},
+  const status = h("div", {class: "side bred", style: "padding-bottom:0"}, h("div", {class: "skat-status salg-status " + (dele.length ? "y" : "g faerdig")},
     h("div", {class: "skat-titel"}, dele.length ? "I dag: " + dele.join(" og ") : "✓ Salget er klaret i dag")));
   // Dagsliste først (Oscar 6/11): det hele fra før ligger i Alle kunder og tal
   const iListe = new Set(salgDagsliste().lås.navne), resten = salgForfaldne(idag).filter(s => !iListe.has(s.navn));
