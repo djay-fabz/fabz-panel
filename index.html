@@ -268,6 +268,9 @@ input[type=date]{color-scheme:light dark}
 
 /* lager-fanen */
 .lagerside{max-width:1228px;margin:0 auto;padding:28px 24px 130px}
+.fd-par{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.fd-forslag{background:var(--adv-blid);border-radius:10px;padding:12px 14px;margin-top:12px}.fd-forslag b{color:var(--adv)}.fd-knapper{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.fd-liste{border:1px solid var(--linje);border-radius:10px;margin-top:12px}.fd-liste label{display:flex;gap:10px;padding:9px 12px;align-items:center;cursor:pointer}.fd-liste label+label{border-top:1px solid var(--linje)}.fd-kunde{flex:1;min-width:0}.fd-info{font-size:13px;white-space:nowrap}
+@media (max-width:700px){.fd-liste label{flex-wrap:wrap}.fd-info{flex-basis:100%;padding-left:28px}.fd-knapper .btn{flex:1}}
 .underfaner{display:flex;gap:6px;margin:0 0 14px}.underfaner button{border:1px solid var(--linje);background:var(--flade);border-radius:99px;padding:5px 14px;font:inherit;font-size:13.5px;color:var(--svag);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
 .underfaner button.aktiv{background:var(--accent-blid);color:var(--accent);border-color:transparent;font-weight:600}.uf-tal{background:var(--accent);color:var(--accent-tekst);border-radius:99px;font-size:11px;padding:0 6px;font-weight:600}
 .lagertop{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
@@ -745,7 +748,7 @@ const fil = (p, std = []) => sikker(p, async () => { const r = await laesFil(p);
 let GQL = null;
 const DATAFILER = ["kalender", "udstyr", "pakkelister", "opgaver", "jobpakkelister", "henvendelser", "dagsplaner", "indtaegter", "typer", "salg", "festkort",
   "klubkort", "salgslog", "klubkort_tekster", "strategi", "jobrute", "jobtider", "salgjobs", "kortmaaling", "evalueringer", "salgslaering", "setups", "maanedsoversigt", "priser",
-  "leads", "betalinger", "honorarsedler", "jobstatus", "fejl", "hov", "ugepakke", "mailoversigt", "vagter", "some", "linkedin", "mashups", "salgssprints", "varme", "varme_styring"].map(x => `data/${x}.json`).concat(["tools/klubkort/kort.json"]);
+  "leads", "betalinger", "honorarsedler", "jobstatus", "fejl", "hov", "ugepakke", "mailoversigt", "vagter", "some", "linkedin", "mashups", "salgssprints", "varme", "varme_styring", "dinero"].map(x => `data/${x}.json`).concat(["tools/klubkort/kort.json"]);
 async function hentSamlet() {
   const t0 = performance.now();
   try {
@@ -777,7 +780,7 @@ async function hentDataFiler() {
     ...["data/henvendelser.json", "data/dagsplaner.json", "data/indtaegter.json", "data/typer.json", "data/salg.json", "data/festkort.json", "data/klubkort.json", "data/salgslog.json"].map(p => fil(p)),
     sikker("data/klubkort_tekster.json", laesKkTekster, [])]);
   D = {kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, indtaegter, typer, salg, festkort, klubkort, salgslog, kkTekster};
-  const [strategi, jobrute, jobtider, salgjobs, kortmaaling, evalueringer, salgslaering, setups, mo, priser, leads, betalinger, honorarsedler, jobstatus, fejl, hov, ugepakke, mailoversigt, vagter, some, linkedin, mashups, salgssprints, varme, varmeStyring] = await Promise.all([
+  const [strategi, jobrute, jobtider, salgjobs, kortmaaling, evalueringer, salgslaering, setups, mo, priser, leads, betalinger, honorarsedler, jobstatus, fejl, hov, ugepakke, mailoversigt, vagter, some, linkedin, mashups, salgssprints, varme, varmeStyring, dinero] = await Promise.all([
     fil("data/strategi.json", {}), fil("data/jobrute.json", {}), fil("data/jobtider.json"), fil("data/salgjobs.json"),   // hvilket firma i Salg et job kom fra (fabz.py salg-job)
     fil("data/kortmaaling.json"), fil("data/evalueringer.json"),   // scanninger og tilmeldinger pr. kort (tools/kortmaaling.mjs hver nat)
     fil("data/salgslaering.json"),   // forslag fra opkaldene (Tal på Salg)
@@ -792,8 +795,9 @@ async function hentDataFiler() {
     fil("data/mailoversigt.json", null),   // dagens mailoversigt (tools/mailoversigt.py via panel.yml ved Mødt ind)
     fil("data/vagter.json", null),   // vagter fra Planday/Deltaplan (tools/vagter.py i kalender.yml)
     fil("data/some.json", {opslag: [], ideer: []}), fil("data/linkedin.json", {}), fil("data/mashups.json", null), fil("data/salgssprints.json", []),
-    fil("data/varme.json", null), fil("data/varme_styring.json", {})]);   // varmepumpen på lageret (tools/varme.py i varme.yml, Oscar 10/11)   // + salgssprints (30 min salg, Oscar 9/11)   // + Mashups (fabz_mashups.py, Oscar 9/11)   // SoMe-fanen (fabz_some.py) og LinkedIn-målet
-  Object.assign(D, {strategi, jobrute, jobtider, salgjobs, kortmaaling, evalueringer, salgslaering, setups, mo, priser, leads, betalinger, honorarsedler, jobstatus, fejl, hov, ugepakke, mailoversigt, vagter, some, linkedin, mashups, salgssprints, varme, varmeStyring});
+    fil("data/varme.json", null), fil("data/varme_styring.json", {}),
+    fil("data/dinero.json", null)]);   // de bogførte fakturaer (tools/dinero_sync.py hver morgen): "Sendt fra Dinero" ved jobbet (Oscar 10/11)   // varmepumpen på lageret (tools/varme.py i varme.yml, Oscar 10/11)   // + salgssprints (30 min salg, Oscar 9/11)   // + Mashups (fabz_mashups.py, Oscar 9/11)   // SoMe-fanen (fabz_some.py) og LinkedIn-målet
+  Object.assign(D, {strategi, jobrute, jobtider, salgjobs, kortmaaling, evalueringer, salgslaering, setups, mo, priser, leads, betalinger, honorarsedler, jobstatus, fejl, hov, ugepakke, mailoversigt, vagter, some, linkedin, mashups, salgssprints, varme, varmeStyring, dinero});
 }
 function manglerBesked() {
   besked({id: "mangler", klasse: "adv", titel: "GitHub svarer ikke lige nu, prøver igen …", punkter: ["Kunne ikke hente: " + MANGLER.join(", ")],
@@ -1381,16 +1385,34 @@ function betalingAfsnit(j, st) {
   // firmakunder betaler med faktura (Oscar 3/11): Overførsel kun for klubjobs (B-indkomst), eller hvis den allerede er valgt
   const klubJob = moMaaneder().flatMap(m => m.jobs || []).some(x => x.dato === j.dato && (x.navn || "").toLowerCase() === j.navn.toLowerCase() && x.b_indkomst);
   const maader = BET_MAADER;
-  const pill = r.status === "aflyst" ? ["", "Aflyst"] : laast ? ["grøn", r.bank_dato ? `Set i banken ${kortDato(r.bank_dato)}` : `Godkendt ${kortDato(r.godkendt || iDag())}`]
+  const pill = r.status === "aflyst" ? ["", "Aflyst"] : laast ? ["grøn", r.bank_dato ? `Set i banken ${kortDato(r.bank_dato)}` : dinero && r.faktura_nr ? `Faktura ${r.faktura_nr} sendt` : `Godkendt ${kortDato(r.godkendt || iDag())}`]
     : !afholdt ? ["blå", dinero ? "Dinero · faktura dagen efter" : r.maade === "kontant" ? "Kontant på dagen" : "Overførsel"]
     : dinero ? ["gul", "Faktura ikke sendt"] : r.maade === "kontant" ? ["gul", "Venter på dit ja"] : betaltSpørgsmål(r);
+  // Sendt fra Dinero (Oscar 10/11, skitse panel-faktura-sendt-fra-dinero): bogførte fakturaer efter jobdatoen, som ikke hører til et andet job
+  const kand = !dinero || !afholdt || laast || r.send === "ok" ? [] : dineroKandidater(j.dato, b), nej = r.forslag_nej || [];
+  const fdForslag = (() => { const x = kand.filter(f => b != null && Math.abs(f.kr - b) < 1 && !nej.includes(f.nr)); return x.length === 1 ? x[0] : null; })();
+  const vælg = f => kør("betaling-dinero-sendt", [`--job=${j.navn}`, `--dato=${j.dato}`, `--nr=${f.nr}`], {tekst: `Faktura ${f.nr} sendt fra Dinero: ${j.navn}`, efter: [...efter, "mo"],
+    med: () => { const x = betalingTilJob(j); if (x) { x.faktura_nr = f.nr; x.send = "ok"; x.status = "faerdig"; x.godkendt = iDag(); } if (o) { o.status = "Færdig"; o.faerdig_dato = iDag(); } FD.åben = null; }});
+  const fdKnap = kand.length ? h("button", {class: "btn", type: "button", onclick: () => { FD.åben = FD.åben === st.key ? null : st.key; FD.valgt = kand[0].nr; tegn(); }}, "Sendt fra Dinero") : null;
+  const fdTekst = f => `${f.kunde}, ${kr(f.kr * 1.25)} inkl. moms`;
+  const fdBoks = fdForslag ? h("div", {class: "fd-forslag"},
+      h("div", {}, "I Dinero ligger ", h("b", {}, `faktura ${fdForslag.nr} til ${fdTekst(fdForslag)}`), `, bogført ${kortDato(fdForslag.dato)}. Er det den til jobbet?`),
+      h("div", {class: "fd-knapper"}, h("button", {class: "btn primaer", type: "button", onclick: () => vælg(fdForslag)}, "Ja, det er den"),
+        h("button", {class: "btn", type: "button", onclick: () => kør("betaling-forslag-nej", [`--job=${j.navn}`, `--dato=${j.dato}`, `--nr=${fdForslag.nr}`], {tekst: `Ikke faktura ${fdForslag.nr}`, efter,
+          med: () => { const x = betalingTilJob(j); if (x) (x.forslag_nej ||= []).push(fdForslag.nr); }})}, "Nej")))
+    : FD.åben === st.key && kand.length ? h("div", {},
+      h("div", {class: "fd-liste"}, kand.map(f => h("label", {}, h("input", {type: "radio", name: "fd-" + st.key, checked: FD.valgt === f.nr, onchange: () => { FD.valgt = f.nr; }}),
+        h("b", {}, String(f.nr)), h("span", {class: "fd-kunde"}, f.kunde), h("span", {class: "muted fd-info"}, `${kr(f.kr)} ekskl. moms · ${kortDato(f.dato)}`)))),
+      h("div", {class: "fd-knapper"}, h("button", {class: "btn primaer", type: "button", onclick: () => { const f = kand.find(x => x.nr === FD.valgt); if (f) vælg(f); }}, "Det er den"),
+        h("button", {class: "btn", type: "button", onclick: () => { FD.åben = null; tegn(); }}, "Fortryd"))) : null;
   const knap = !afholdt || laast ? null
     : dinero ? (r.send === "ok" ? h("span", {class: "pill grøn"}, `Faktura ${r.faktura_nr || ""} sendt`)
-      : r.dinero?.guid ? h("button", {class: "btn godkend", type: "button", disabled: r.send === "bestilt", onclick: () => {   // Oscar 30/10: send fra jobbet, jobdatoen står i kommentaren
+      : fdForslag ? null   // mens robotten spørger, kan fakturaen ikke sendes igen
+      : r.dinero?.guid ? h("div", {class: "fd-par"}, fdKnap, h("button", {class: "btn godkend", type: "button", disabled: r.send === "bestilt", onclick: () => {   // Oscar 30/10: send fra jobbet, jobdatoen står i kommentaren
           if (!confirm(`Send fakturaen til ${(r.kunde || {}).navn || j.navn}${(r.kunde || {}).mail ? " (" + r.kunde.mail + ")" : ""}? ${b ? kr(b * 1.25) + " inkl. moms, " : ""}netto ${r.frist_dage || 8} dage. Dinero bogfører og mailer den.`)) return;
           kør("betaling-send", [`--job=${j.navn}`, `--dato=${j.dato}`], {tekst: `Send faktura: ${j.navn}`, efter, med: () => { r.send = "bestilt"; }}); }},
-          r.send === "bestilt" ? "Sendes …" : r.bogfoert_nr ? `Send faktura ${r.bogfoert_nr} igen (bogført, ikke mailet)` : r.send === "fejl" ? "Prøv at sende igen" : "Send faktura")
-      : h("button", {class: "btn godkend", type: "button", onclick: () => { if (confirm("Har du sendt fakturaen fra Dinero?")) godkend(); }}, "✓ Fakturaen er sendt"))
+          r.send === "bestilt" ? "Sendes …" : r.bogfoert_nr ? `Send faktura ${r.bogfoert_nr} igen (bogført, ikke mailet)` : r.send === "fejl" ? "Prøv at sende igen" : "Send faktura"))
+      : h("div", {class: "fd-par"}, fdKnap, h("button", {class: "btn godkend", type: "button", onclick: () => { if (confirm("Har du sendt fakturaen fra Dinero?")) godkend(); }}, "✓ Fakturaen er sendt")))
     : r.maade === "kontant" ? h("button", {class: "btn godkend", type: "button", disabled: !b, onclick: () => { if (confirm(`Har du fået ${kr(b)} kontant?`)) godkend(); }}, `✓ Betalt kontant${b ? " " + kr(b) : ""}`)
     : betaltKnap(r, iso => godkend(iso));
   const linje = !o ? null : dinero ? (r.dinero?.link ? `Kladden ligger i Dinero${b ? " · " + kr(b * 1.25) + " inkl. moms" : ""} · netto ${r.frist_dage || 8} dage. Lukkes selv, når fakturaen er bogført.` : "Kladden blev ikke lavet. Lav fakturaen i Dinero og tryk Fakturaen er sendt.")
@@ -1456,6 +1478,7 @@ function betalingAfsnit(j, st) {
         laast ? h("span", {class: "pill"}, betMaadeTekst(r.maade)) : seg(maader, r.maade, v => saet(v, r.beloeb)),
         inp, h("span", {class: "muted lille"}, dinero ? "kr. ekskl. moms" : "kr."),
         h("div", {class: "spacer"}), knap),
+      fdBoks,
       betalesRk,
       r.maade === "overfoersel" && r.via !== "danloen" ? honorarDel(j, st, r) : null,
       omkDel,
@@ -2781,12 +2804,20 @@ async function gemLager() {
 
 // ---------- fælles: kør fabz.py-kommandoer fra panelet ----------
 const FILER = {evalueringer: "data/evalueringer.json", jobstatus: "data/jobstatus.json", jobtider: "data/jobtider.json", kortmaaling: "data/kortmaaling.json", salgjobs: "data/salgjobs.json", salgslaering: "data/salgslaering.json", henvendelser: "data/henvendelser.json", opgaver: "data/opgaver.json", betalinger: "data/betalinger.json", honorarsedler: "data/honorarsedler.json", ugepakke: "data/ugepakke.json", dagsplaner: "data/dagsplaner.json",
-               indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json", salgslog: "data/salgslog.json", mo: "data/maanedsoversigt.json", strategi: "data/strategi.json", leads: "data/leads.json", mailoversigt: "data/mailoversigt.json", vagter: "data/vagter.json", fejl: "data/fejl.json", hov: "data/hov.json", some: "data/some.json", mashups: "data/mashups.json", salgssprints: "data/salgssprints.json", varme: "data/varme.json", varmeStyring: "data/varme_styring.json", linkedin: "data/linkedin.json"};
+               indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json", salgslog: "data/salgslog.json", mo: "data/maanedsoversigt.json", strategi: "data/strategi.json", leads: "data/leads.json", mailoversigt: "data/mailoversigt.json", vagter: "data/vagter.json", fejl: "data/fejl.json", hov: "data/hov.json", some: "data/some.json", mashups: "data/mashups.json", salgssprints: "data/salgssprints.json", varme: "data/varme.json", varmeStyring: "data/varme_styring.json", dinero: "data/dinero.json", linkedin: "data/linkedin.json"};
 async function laesValgfri(p) { const r = await laesFil(p); return r ? r.json() : []; }
 async function genindlæs(navne) { await Promise.all(navne.map(async n => { D[n] = n === "kkTekster" ? await laesKkTekster() : await laesValgfri(FILER[n]); })); }
 const plusDage = (iso, n) => { const d = dag(iso); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
 const nuHHMM = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, "0")}.${String(d.getMinutes()).padStart(2, "0")}`; };
 const kr = v => `${Math.round(Number(v) || 0).toLocaleString("da-DK")} kr.`;
+const FD = {åben: null, valgt: null};
+function dineroKandidater(fra, beloeb) {   // bogførte fakturaer efter jobdatoen, som ikke hører til et andet job. Samme beløb først, så nyeste
+  const d = D.dinero || {}, brugt = new Set((D.betalinger || []).map(x => x.faktura_nr).filter(Boolean));
+  const alle = [...(d.betalte || []).filter(f => f.length >= 4).map(f => ({dato: f[0], kr: Number(f[1]), kunde: f[2], nr: Number(f[3])})),
+    ...(d.ubetalte || []).map(u => ({dato: u.dato, kr: Number(u.ekskl ?? Math.round(u.kr / 1.25)), kunde: u.kunde, nr: Number(u.nr)}))];
+  const lig = f => beloeb != null && Math.abs(f.kr - beloeb) < 1 ? 0 : 1;
+  return alle.filter(f => f.dato >= fra && !brugt.has(f.nr)).sort((a, b) => lig(a) - lig(b) || b.dato.localeCompare(a.dato)).slice(0, 8);
+}
 // Kør i baggrunden: med() ændrer siden med det samme, efter = datafiler der hentes igen bagefter (også ved fejl, så siden passer).
 // Venter flere kommandoer på den samme datafil, hentes den først igen, når den sidste er færdig. Ellers ruller et svar de andres valg tilbage på siden (Oscar 10/11).
 const iGang = {};
