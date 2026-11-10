@@ -2580,7 +2580,8 @@ function varmeLinje() {
   const top = h("div", {class: "va-top"}, h("span", {class: "va-prik " + prik}),
     arb ? [h("b", {}, "Arbejdsdag 18°"), h("span", {}, `til ${arb.til}`), h("span", {class: "muted va-tal"}, `${grad(s.temp)} · ${s.fugt ?? "–"} %`)]
       : [h("b", {}, "Varme"), h("span", {class: "va-tal"}, `${grad(s.temp)} · ${s.fugt ?? "–"} % · ${p.taendt ? "tændt" : "slukket"} · ${minTekst(idag.min)} i dag`),
-        h("span", {class: "pill va-pill " + (næste ? "blå" : "grøn")}, næste ? `Arbejdsdag ${dagNavn(næste)} ${næste.fra}-${næste.til}` : "Automatik 8-12°")],
+        v.tilstand === "manuelt" && v.manuel ? h("span", {class: "pill va-pill gul"}, `Manuelt siden ${v.manuel.fra.slice(11).replace(":", ".")}`)   // tændt med stemmen, i appen eller på fjernbetjeningen (Oscar 10/11)
+          : h("span", {class: "pill va-pill " + (næste ? "blå" : "grøn")}, næste ? `Arbejdsdag ${dagNavn(næste)} ${næste.fra}-${næste.til}` : "Automatik 8-12°")],
     h("div", {class: "spacer"}),
     arb ? h("button", {class: "btn lille", type: "button", onclick: stop}, "Stop nu") : null,
     h("button", {class: "btn lille", type: "button", onclick: () => { VA.arb = VA.arb ? null : {dag: "idag", dato: "", fra: "07.30", til: "16.00"}; visLager(); }}, "Arbejdsdag"),
