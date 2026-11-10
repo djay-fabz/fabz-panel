@@ -902,7 +902,7 @@ async function iBaggrunden(præfiks, krav, commit, {tekst, ok, fejl}) {
 }
 // Robotternes fejl (Oscar 30/10): rød bjælke med kode og log. ✕ skjuler, Send til Claude lægger den på listen, Claude i skyen retter fra
 function fejlBjælker() {
-  return (D.fejl || []).filter(r => r.status === "ny" || r.status === "sendt").map(r => h("div", {class: "bj rd fejl-bj", "data-kode": r.kode},
+  return (D.fejl || []).filter(r => (r.status === "ny" || r.status === "sendt") && !r.stille).map(r => h("div", {class: "bj rd fejl-bj", "data-kode": r.kode},
     h("span", {class: "bj-t", style: "flex:1;min-width:220px"}, h("b", {}, `${r.kilde} fejlede ${kortDato(r.tid.slice(0, 10))} kl. ${r.tid.slice(11, 16).replace(":", ".")}`),
       r.antal > 1 ? ` (${r.antal} gange)` : "", " · kode ", h("b", {}, r.kode), `: ${r.tekst}`, r.url ? [" ", h("a", {href: r.url, target: "_blank", rel: "noopener"}, "Se loggen")] : null),
     r.status === "sendt" ? h("span", {class: "pill"}, `Sendt til Claude ${kortDato((r.sendt_tid || r.tid).slice(0, 10))}`)
@@ -3242,13 +3242,10 @@ function visMashups() {
   if (MU.valgt) { const n = m.numre.find(x => x.id === MU.valgt); if (n) return muNummer(m, n); MU.valgt = null; }
   const faser = m.faser || [], fase = m.fase || 1, f = faser[fase - 1] || {}, uge = muUge(), fd = uge >= MU_MAAL;
   const efter = ["mashups"];
-  const gjort = (næste) => kør("mashup-gjort", næste ? ["--naeste", næste] : [], {tekst: "Mashups: næste skridt", efter,
-    med: () => { if (m.naeste) m.log.push({dato: iDag(), fase, tekst: m.naeste}); m.naeste = næste || ""; MU.næste = null; }});
-  const næsteFelt = () => { const i = h("input", {class: "input", placeholder: "Næste skridt", value: MU.næste || "", style: "flex:1;min-width:200px", oninput: e => { MU.næste = e.target.value; },
-      onkeydown: e => { if (e.key === "Enter" && e.target.value.trim()) gjort(e.target.value.trim()); }});
-    setTimeout(() => i.focus(), 0);
-    return h("div", {class: "mu-knap"}, i, h("button", {class: "btn primaer", type: "button", onclick: () => MU.næste?.trim() && gjort(MU.næste.trim())}, "Gem"),
-      h("button", {class: "mu-lnk", type: "button", onclick: () => { MU.næste = null; tegn(); }}, "Fortryd")); };
+  // Gjort tager næste skridt fra fasens liste (Oscar 10/11: "hvorfor skal jeg skrive næste skridt?"). Er listen tom, skriver Claude de næste
+  const gjort = () => kør("mashup-gjort", [], {tekst: "Mashups: næste skridt", efter,
+    med: () => { if (m.naeste) m.log.push({dato: iDag(), fase, tekst: m.naeste}); const l = m.skridt || {}, f2 = Object.keys(l).map(Number).sort((a, b) => a - b).find(k => k >= fase && l[k]?.length);
+      m.naeste = f2 ? l[f2].shift() : ""; if (f2 && f2 !== fase) m.fase = f2; MU.næste = null; }});
   const retFelt = () => { let t = m.naeste || "", fs = fase;
     return h("div", {class: "mu-knap"}, h("input", {class: "input", value: t, style: "flex:1;min-width:200px", oninput: e => { t = e.target.value; }}),
       h("select", {class: "input", style: "width:auto", onchange: e => { fs = Number(e.target.value); }}, faser.map((x, i) => h("option", {value: i + 1, selected: i + 1 === fase}, `Fase ${i + 1}: ${x.navn}`))),
@@ -3258,17 +3255,16 @@ function visMashups() {
   const mp = (ok, t, x) => h("span", {}, (ok ? "● " : "○ ") + t + (!ok && x ? ` (${x})` : ""));
   const mile = h("div", {class: "mu-mile"}, mp(fase >= 3, "Ableton genopfrisket"), mp(edits >= 2, "2 edits sendt til Premise", edits), mp(bedømt >= 3, "3 mashups bedømt", bedømt));
   const fokus = MU.ret ? h("div", {class: "mu-fokus"}, h("div", {class: "mu-o"}, f.overskrift || ""), retFelt())
-    : fd && MU.næste === null ? h("div", {class: "mu-fokus fd"},
+    : fd ? h("div", {class: "mu-fokus fd"},
         h("div", {class: "mu-o"}, "✓ Ugens mashup-tid er brugt"),
         h("div", {class: "mu-opg"}, `${uge} af ${MU_MAAL} blokke. Du er færdig for i denne uge.`),
-        m.naeste ? h("div", {class: "mu-fd-n"}, "Næste gang: ", ...mdLinks(m.naeste), " · ", h("button", {class: "mu-lnk", type: "button", style: "padding:0;font-size:12.5px", onclick: () => { MU.næste = ""; tegn(); }}, "Gjort alligevel")) : null)
+        m.naeste ? h("div", {class: "mu-fd-n"}, "Næste gang: ", ...mdLinks(m.naeste), " · ", h("button", {class: "mu-lnk", type: "button", style: "padding:0;font-size:12.5px", onclick: gjort}, "Gjort alligevel")) : null)
     : h("div", {class: "mu-fokus"},
         h("div", {class: "mu-uge"}, [...Array(MU_MAAL)].map((_, i) => h("span", {class: "mu-prik" + (i < uge ? " ok" : "")})), h("span", {class: "muted lille"}, `${Math.min(uge, MU_MAAL)} af ${MU_MAAL} blokke denne uge`),
           h("span", {class: "lille", style: "margin-left:auto;color:var(--svagere)"}, `Fase ${fase} af ${faser.length}`)),
         h("div", {class: "mu-o"}, f.overskrift || ""),
-        m.naeste ? h("div", {class: "mu-opg"}, mdLinks(m.naeste)) : null,
-        MU.næste !== null || !m.naeste ? næsteFelt()
-          : h("div", {class: "mu-knap"}, h("button", {class: "btn primaer", type: "button", onclick: () => { MU.næste = ""; tegn(); }}, "Gjort, næste skridt")),   // ingen Ret-knap (Oscar 9/11): Claude retter næste skridt med fabz.py mashup-ret
+        m.naeste ? h("div", {class: "mu-opg"}, mdLinks(m.naeste)) : h("div", {class: "mu-opg muted"}, "Næste skridt kommer"),
+        m.naeste ? h("div", {class: "mu-knap"}, h("button", {class: "btn primaer", type: "button", onclick: gjort}, "Gjort, næste skridt")) : null,   // ingen Ret-knap og intet tekstfelt (Oscar 9/11 og 10/11): Claude skriver skridtene
         mile);
   // numre
   const status = n => muDom(n.titel) ? "Prøvet på job" : n.status || "I gang";
