@@ -273,9 +273,13 @@ input[type=date]{color-scheme:light dark}
 .va-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.va-prik{width:9px;height:9px;border-radius:50%;background:var(--ok);flex:none}.va-prik.rd{background:var(--fejl)}.va-prik.bl{background:var(--accent)}
 .va-adv{background:var(--fejl-blid);color:var(--fejl);border-radius:8px;padding:7px 11px;margin-top:8px;font-weight:500}
 .va-arb{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap;background:var(--accent-blid);border-radius:8px;padding:8px 11px}.va-arb .va-tid{width:110px}
-.va-mere{margin-top:8px}.va-graf{width:100%;height:120px;display:block}.va-band{fill:var(--ok-blid)}.va-temp{fill:none;stroke:var(--accent);stroke-width:2;vector-effect:non-scaling-stroke}
-.va-fugt{fill:none;stroke:#9ca3af;stroke-width:1.5;stroke-dasharray:4 3;vector-effect:non-scaling-stroke}.va-kort{fill:#f59e0b}.va-lbl{font-size:11px;fill:var(--svagere)}
-.va-forkl{display:flex;gap:16px;font-size:12px;margin-top:4px}.va-l{display:inline-block;width:14px;height:3px;margin-right:5px;vertical-align:middle;background:var(--accent)}.va-l.f{background:#9ca3af}.va-l.k{background:#f59e0b;height:6px;border-radius:2px}
+.va-mere{margin-top:8px}.va-boks{border:1px solid var(--linje);border-radius:10px;padding:10px 12px 6px;margin-top:10px;background:var(--flade)}
+.va-boks-top{display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap}.va-nu{color:var(--svag);font-size:13px}.va-prikfarve{width:10px;height:10px;border-radius:3px;flex:none}
+.va-temp-prik{background:var(--accent)}.va-fugt-prik{background:#0d9488}
+.va-graf{width:100%;height:auto;display:block}.va-band{fill:var(--ok-blid)}.va-gitter{stroke:var(--linje);stroke-width:1}
+.va-graense{stroke:var(--adv);stroke-width:1.2;stroke-dasharray:5 4}.va-temp{fill:none;stroke:var(--accent);stroke-width:2.2;stroke-linejoin:round}
+.va-fugt{fill:none;stroke:#0d9488;stroke-width:2.2;stroke-linejoin:round}.va-fugt-fyld{fill:#0d9488;opacity:.1}
+.va-spor{fill:var(--flade2)}.va-kort{fill:#f59e0b}.va-lbl{font-size:11px;fill:var(--svagere)}
 .va-tab{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}.va-tab td,.va-tab th{padding:6px 8px;border-top:1px solid var(--linje);text-align:left}.va-tab th{font-size:11.5px;color:var(--svagere);text-transform:uppercase;letter-spacing:.06em;border-top:0}
 @media (max-width:700px){.va-top{gap:8px}}
 .lagertop h1{font-size:22px;margin:0}
@@ -2543,23 +2547,50 @@ function varmeLinje() {
     VA.arb ? h("div", {class: "va-arb"}, "Fra", tid("fra", "Fra"), "til", tid("til", "Til"), h("button", {class: "btn primaer lille", type: "button", onclick: gem}, "Start")) : null,
     VA.åben ? varmeDetaljer(v) : null);
 }
-function varmeDetaljer(v) {
-  const W = 800, H = 120, x0 = 30, slut = new Date(v.opdateret).getTime(), start = slut - 864e5;
-  const x = iso => x0 + (new Date(iso).getTime() - start) / 864e5 * (W - x0), yT = t => 100 - (t - 4) * 7.5, yF = f => 100 - (f - 30) * 2.2;
-  const ns = "http://www.w3.org/2000/svg", el = (n, a) => { const e = document.createElementNS(ns, n); for (const k in a) e.setAttribute(k, a[k]); return e; };
-  const svg = el("svg", {viewBox: `0 0 ${W} ${H}`, class: "va-graf", preserveAspectRatio: "none"});
-  svg.append(el("rect", {x: x0, y: yT(12), width: W - x0, height: yT(8) - yT(12), class: "va-band"}));
-  const m = (v.maalinger || []).filter(r => r[1] != null && new Date(r[0]).getTime() >= start);
-  if (m.length) svg.append(el("polyline", {points: m.map(r => `${x(r[0]).toFixed(1)},${yT(r[1]).toFixed(1)}`).join(" "), class: "va-temp"}));
-  const mf = m.filter(r => r[2] != null);
-  if (mf.length) svg.append(el("polyline", {points: mf.map(r => `${x(r[0]).toFixed(1)},${yF(r[2]).toFixed(1)}`).join(" "), class: "va-fugt"}));
-  for (const [fra, til] of v.taendt || []) { const a = Math.max(x0, x(fra)), b = til ? x(til) : W; svg.append(el("rect", {x: a, y: 112, width: Math.max(2, b - a), height: 6, rx: 2, class: "va-kort"})); }
-  const lbl = (tx, xx, yy) => { const t = el("text", {x: xx, y: yy, class: "va-lbl"}); t.textContent = tx; svg.append(t); };
-  lbl("12°", 0, yT(12) + 4); lbl("8°", 0, yT(8) + 4);
+function varmeDetaljer(v) {   // Oscar 10/11: temperatur og fugt som to tydeligt adskilte grafer med hver sin akse, pumpen som bånd under temperaturen, skala efter data
+  const W = Math.round(Math.min(1150, Math.max(280, innerWidth - (innerWidth > 700 ? 160 : 90)))), x0 = 46, x1 = W - 10;   // bredden følger skærmen, så teksten har sin rigtige størrelse
+  const slut = new Date(v.opdateret).getTime(), start = slut - 864e5;
+  const x = iso => x0 + Math.min(1, Math.max(0, (new Date(iso).getTime() - start) / 864e5)) * (x1 - x0);
+  const m = (v.maalinger || []).filter(r => new Date(r[0]).getTime() >= start);
+  const ns = "http://www.w3.org/2000/svg", el = (n, a, tekst) => { const e = document.createElementNS(ns, n); for (const k in a) e.setAttribute(k, a[k]); if (tekst != null) e.textContent = tekst; return e; };
+  const tidsakse = (svg, y) => {
+    const t0 = new Date(start), trin = W < 500 ? 12 : 6; t0.setMinutes(0, 0, 0); t0.setHours(Math.ceil((t0.getHours() + 1) / trin) * trin);
+    for (let t = t0.getTime(); x0 + (t - start) / 864e5 * (x1 - x0) < x1 - 44; t += trin * 36e5)
+      svg.append(el("text", {x: x0 + (t - start) / 864e5 * (x1 - x0), y, "text-anchor": "middle", class: "va-lbl"}, `${String(new Date(t).getHours()).padStart(2, "0")}.00`));
+    svg.append(el("text", {x: x1, y, "text-anchor": "end", class: "va-lbl"}, "nu"));
+  };
+  // én graf: {titel, nu, lo, hi, trin, enhed, kol (indeks i målinger), kl, band: [a, b], grænse, pumpe}
+  const graf = g => {
+    const ph = 110, pumpe = g.pumpe ? 22 : 0, H = ph + 14 + pumpe + 18, y = val => 8 + (g.hi - val) / (g.hi - g.lo) * ph;
+    const svg = el("svg", {viewBox: `0 0 ${W} ${H}`, class: "va-graf", role: "img", "aria-label": g.titel + " det sidste døgn"});
+    if (g.band) svg.append(el("rect", {x: x0, y: y(Math.min(g.band[1], g.hi)), width: x1 - x0, height: y(Math.max(g.band[0], g.lo)) - y(Math.min(g.band[1], g.hi)), class: "va-band"}));
+    for (let t = Math.ceil(g.lo / g.trin) * g.trin; t <= g.hi; t += g.trin) {
+      svg.append(el("line", {x1: x0, x2: x1, y1: y(t), y2: y(t), class: "va-gitter"}));
+      svg.append(el("text", {x: x0 - 8, y: y(t) + 4, "text-anchor": "end", class: "va-lbl"}, `${t}${g.enhed}`));
+    }
+    if (g.grænse != null) svg.append(el("line", {x1: x0, x2: x1, y1: y(g.grænse), y2: y(g.grænse), class: "va-graense"}));
+    const pts = m.filter(r => r[g.kol] != null).map(r => [x(r[0]), y(r[g.kol])]);
+    if (pts.length > 1) {
+      if (g.fyld) svg.append(el("polygon", {points: [[pts[0][0], 8 + ph], ...pts, [pts.at(-1)[0], 8 + ph]].map(p => p.map(n => n.toFixed(1)).join(",")).join(" "), class: g.kl + "-fyld"}));
+      svg.append(el("polyline", {points: pts.map(p => p.map(n => n.toFixed(1)).join(",")).join(" "), class: g.kl}));
+    }
+    if (pumpe) {
+      const py = ph + 22;
+      svg.append(el("text", {x: x0 - 8, y: py + 8, "text-anchor": "end", class: "va-lbl"}, "Pumpe"));
+      svg.append(el("rect", {x: x0, y: py, width: x1 - x0, height: 10, rx: 3, class: "va-spor"}));
+      for (const [fra, til] of v.taendt || []) { const a = x(fra), b = til ? x(til) : x1; svg.append(el("rect", {x: a, y: py, width: Math.max(3, b - a), height: 10, rx: 3, class: "va-kort"})); }
+    }
+    tidsakse(svg, H - 3);
+    return h("div", {class: "va-boks " + g.kl + "-boks"}, h("div", {class: "va-boks-top"}, h("span", {class: "va-prikfarve " + g.kl + "-prik"}), h("b", {}, g.titel), h("span", {class: "va-nu"}, g.nu)), svg);
+  };
+  const tv = m.map(r => r[1]).filter(t => t != null), fv = m.map(r => r[2]).filter(f => f != null), s = v.sensor || {};
+  const tLo = Math.floor(Math.min(8, ...tv) - 1), tHi = Math.ceil(Math.max(12, ...tv) + 1);
+  const fLo = Math.min(40, Math.floor((Math.min(...fv, 60) - 5) / 10) * 10), fHi = Math.max(70, Math.ceil((Math.max(...fv, 60) + 5) / 10) * 10);
   const dage = (v.dage || []).filter(d => d.min != null || d.lavest != null);
   return h("div", {class: "va-mere"},
-    h("div", {class: "overskrift"}, "Sidste døgn"), svg,
-    h("div", {class: "va-forkl muted"}, h("span", {}, h("i", {class: "va-l t"}), "temperatur"), h("span", {}, h("i", {class: "va-l f"}), "fugt"), h("span", {}, h("i", {class: "va-l k"}), "pumpen kører")),
+    h("div", {class: "overskrift"}, "Sidste døgn"),
+    graf({titel: "Temperatur", nu: `nu ${grad(s.temp)}`, lo: tLo, hi: tHi, trin: tHi - tLo > 12 ? 4 : 2, enhed: "°", kol: 1, kl: "va-temp", band: [8, 12], pumpe: true}),
+    graf({titel: "Luftfugtighed", nu: `nu ${s.fugt ?? "–"} %`, lo: fLo, hi: fHi, trin: 10, enhed: " %", kol: 2, kl: "va-fugt", grænse: 60, fyld: true}),
     dage.length ? h("table", {class: "va-tab"}, h("tr", {}, h("th", {}, "Dag"), h("th", {}, "Kørt"), h("th", {}, "Lavest"), h("th", {}, "Højest fugt")),
       dage.map(d => h("tr", {}, h("td", {}, `${DAGE[dag(d.dato).getDay()].slice(0, 2)} ${kortDato(d.dato)}`), h("td", {}, minTekst(d.min)), h("td", {}, grad(d.lavest)), h("td", {}, d.hoejest_fugt == null ? "–" : `${d.hoejest_fugt} %`)))) : null);
 }
