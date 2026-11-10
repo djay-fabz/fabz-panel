@@ -2634,14 +2634,20 @@ const plusDage = (iso, n) => { const d = dag(iso); d.setDate(d.getDate() + n); r
 const nuHHMM = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, "0")}.${String(d.getMinutes()).padStart(2, "0")}`; };
 const kr = v => `${Math.round(Number(v) || 0).toLocaleString("da-DK")} kr.`;
 // Kør i baggrunden: med() ændrer siden med det samme, efter = datafiler der hentes igen bagefter (også ved fejl, så siden passer).
+// Venter flere kommandoer på den samme datafil, hentes den først igen, når den sidste er færdig. Ellers ruller et svar de andres valg tilbage på siden (Oscar 10/11).
+const iGang = {};
 async function kør(kommando, args, {tekst, json, med, efter = []}) {
   const krav = {type: "kommando", kommando, args, ...(json !== undefined ? {json} : {})};
   if (med) med();
   tegn();
-  const tilbage = async () => { await genindlæs(efter).catch(() => {}); opfrisk(); };
+  efter.forEach(n => { iGang[n] = (iGang[n] || 0) + 1; });
+  let åben = true;
+  const fri = () => { if (!åben) return []; åben = false; efter.forEach(n => { iGang[n]--; }); return efter.filter(n => !iGang[n]); };
+  const hent = async () => { const n = fri(); if (n.length) await genindlæs(n); opfrisk(); };
+  const tilbage = async () => { await hent().catch(() => {}); };
   try {
     await iBaggrunden("k", krav, `Panel: ${kommando}`, {tekst,
-      ok: async () => { await genindlæs(efter); opfrisk(); },
+      ok: hent,
       fejl: async sv => {
         await tilbage();
         if (!/--tving/.test(sv.fejl || "")) return false;
