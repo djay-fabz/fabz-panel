@@ -512,6 +512,8 @@ details.sg-r{margin:0;border:0;border-top:1px solid var(--linje);border-radius:0
 .rd-f{margin-top:8px;background:var(--flade);border:1px solid var(--linje);border-radius:14px;overflow:hidden}.rd-f>summary{display:flex;gap:10px;align-items:center;padding:11px 16px;font-weight:600;cursor:pointer;list-style:none}
 .rd-f>summary::-webkit-details-marker{display:none}.rd-f>summary::before{content:"▸";color:var(--svag)}.rd-f[open]>summary::before{content:"▾"}.rd-f>summary .v{margin-left:auto;font-weight:700}
 .rd-l{display:flex;justify-content:space-between;gap:10px;padding:7px 16px 7px 30px;border-top:1px solid var(--linje);font-size:14px}
+.ff-fold>summary{cursor:pointer;color:var(--acc);font-size:13px;margin-top:4px;list-style:none}.ff-fold>summary::before{content:"› "}.ff-ind{margin-top:6px;padding-left:12px;border-left:2px solid var(--linje)}.ff-ind div{padding:2px 0}
+.pl-l{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--linje);font-size:14px}.pl-l:first-child{border-top:0}
 .rd-tb{width:100%;border-collapse:collapse;font-size:13.5px}.rd-tb th,.rd-tb td{text-align:right;padding:6px 12px;border-top:1px solid var(--linje);white-space:nowrap}.rd-tb th{color:var(--svag);font-weight:600}
 .rd-tb th:first-child,.rd-tb td:first-child{text-align:left;padding-left:16px}.rd-tb .neg,.rd-l b.neg{color:var(--fejl);font-weight:700}.rd-bar{display:inline-block;height:8px;border-radius:99px;background:var(--accent);vertical-align:middle}
 .rd-behov{margin-top:12px;border-top:1px solid var(--linje);padding-top:10px}.rd-behov .v2{font-size:28px;font-weight:800;letter-spacing:-.02em}
@@ -1534,10 +1536,14 @@ function kvBoks(pk) {
         {tekst: `${g.titel}: ${g.klaret ? "åben igen" : "klaret"}`, efter, med: () => { if (g.klaret) delete g.klaret; else g.klaret = iDag(); }})}, g.klaret ? "Fortryd" : "✓ Klaret")))) : null,
     klaret.length ? h("div", {class: "bf-ok kv-klaret"}, `✓ Klaret af robotten: ${klaret.length} ${klaret.length === 1 ? "kvittering" : "kvitteringer"} sat på` + (nr.length ? ` · bilag ${kvOg(nr.map(String))}` : "")) : null);
 }
+function bankUdenBogf() {   // flyttet fra Skat (Oscar 10/11): bankposter uden bogføring er en kvittering, der mangler, ikke skat
+  const a = (D.mo?.skat?.register?.afstemning || []).filter(x => x.kilde === "Bank" && /uden bogføring/.test(x.tekst));
+  return a.length ? h("div", {class: "kort2", style: "margin-bottom:12px"}, a.map(x => h("div", {}, h("b", {}, `Banken: ${x.tekst}${x.kr != null ? `, ${krKort(x.kr)} kr.` : ""}`), x.stop ? " Det stopper skatten, til det er bogført." : ""))) : null;
+}
 function visBogfoering() {
   const pk = ugepakkeTom() ? null : D.ugepakke;
   if (!pk) return $("rod").replaceChildren(h("div", {class: "side"}, h("h1", {}, "Ugens bogføring"), tom("Robotten laver ugens pakke tirsdag morgen. Der er ingen endnu.")));
-  if (!pk.punkter?.length) return $("rod").replaceChildren(h("div", {class: "side"}, kvBoks(pk),
+  if (!pk.punkter?.length) return $("rod").replaceChildren(h("div", {class: "side"}, bankUdenBogf(), kvBoks(pk),
     h("div", {class: "kort2"}, h("div", {class: "kh"}, h("h1", {}, `Ugens bogføring · uge ${Number(pk.uge.split("W")[1])}`)), h("div", {class: "muted"}, "Ingen nye bilag denne uge."))));
   if (BF.uge !== pk.uge) { BF.uge = pk.uge; BF.valgte = new Set(pk.punkter.filter(p => p.valgt).map(p => p.id)); BF.sikre = new Set(pk.punkter.filter(p => p.sikker).map(p => p.id)); BF.åben = null; }
   for (const p of pk.punkter) if (p.sikker && !BF.sikre.has(p.id)) { BF.sikre.add(p.id); if (p.valgt) BF.valgte.add(p.id); }   // besvaret ny leverandør tæller straks med i Godkend
@@ -1602,7 +1608,7 @@ function visBogfoering() {
     if (!confirm(`Godkend ${v.length - ikke.length} ting${ikke.length ? ` (og skjul ${ikke.length} filer, der ikke er bilag)` : ""}? Robotten fylder kladderne ud i Dinero. Intet bliver bogført, før du trykker Bogfør.`)) return;
     kør("ugepakke-godkend", [`--uge=${pk.uge}`, `--valgte=${v.join(",")}`], {tekst: "Ugens bogføring godkendt", efter, med: () => { pk.status = "godkendt"; }}); };
   const minutter = Math.max(2, Math.round(åbne.reduce((a, p) => a + ((p.gruppe || "dinero") === "ja" ? 0.5 : p.gruppe === "selv" ? 3 : 1.5), 0)));   // et skøn: flueben ½ min., tjek 1½, bogfør selv 3
-  $("rod").replaceChildren(h("div", {class: "side"}, kvBoks(pk),
+  $("rod").replaceChildren(h("div", {class: "side"}, bankUdenBogf(), kvBoks(pk),
     h("div", {class: "kort2"},
       h("div", {class: "kh"}, h("h1", {}, `Ugens bogføring · uge ${uge}`), h("span", {class: "pill " + status[0]}, status[1]), h("div", {class: "spacer"}),
         !klar ? h("button", {class: "btn lille", type: "button", onclick: async () => { await genindlæs(efter); tegn(); }}, "Hent igen") : null),
@@ -5479,6 +5485,13 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   const gør = [];   // bjælkerne øverst (Oscar 28/10): hvad der er galt, med én handling hver, rødt først
   const trin = (f, tekst, ekstra) => h("div", {class: "bj skat-gør " + f}, h("span", {class: "bj-t skat-tekst"}, tekst), ekstra || null);
   const knap = (tx, fn, primær) => h("button", {class: "btn lille" + (primær ? " primaer" : ""), type: "button", onclick: fn}, tx);
+  const skatBetal = v => { const P_ = v.fra_pulje || 0, B = (v.lonkonto || 0) + P_, A = v.firma ?? v.mangler;   // én handling (Oscar 10/11, skitse panel-for-ferien-og-oprydning); alarmen på telefonen kommer før fristerne
+    return [h("span", {}, h("b", {}, `Betal ${krKort(A + B)} kr. i skat for ${sk.aar} senest ${kortDato(v.frist)}`),
+      h("details", {class: "ff-fold"}, h("summary", {}, "Sådan"), h("div", {class: "ff-ind"},
+        P_ ? h("div", {}, `1. Flyt ${krKort(P_)} kr. fra Skat-puljen i Saxo til Lønkonto+ senest ${DAGE[dag(v.saxo_frist).getDay()]} ${kortDato(v.saxo_frist)}`) : null,
+        h("div", {}, `${P_ ? "2. " : ""}Betal ${krKort(A)} kr. fra firmakontoen${B ? ` og ${krKort(B)} kr. fra Lønkonto+` : ""} til din skattekonto`),
+        v.tilstand === "venter" && v.forventet ? h("div", {}, `Når ${v.kunde} har betalt (forventet ${kortDato(v.forventet)}). Du får en besked på telefonen.`) : null))),
+      v.tilstand === "afventer" ? null : knap("✓ Betalt", () => kør("skat-venter", ["--betalt", `--kr=${A + B}`, `--lonkonto=${B}`, `--saxo=${P_}`], {tekst: `Skat betalt: ${krKort(A + B)} kr.`, efter: ["mo"], med: () => { v.tilstand = "afventer"; }}))]; };   // [tekst, knap]
   const input = (nøgle, ph, knapTx, gemFn) => h("span", {class: "skat-input"},
     h("input", {type: "number", inputmode: "numeric", placeholder: ph, value: SKT[nøgle], oninput: e => { SKT[nøgle] = e.target.value; }}),
     h("button", {class: "btn lille", type: "button", onclick: () => { if (SKT[nøgle] !== "") gemFn(String(Math.round(Number(SKT[nøgle])))); }}, knapTx));
@@ -6113,14 +6126,13 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     if (gammeltÅr) return ud;
     // restskatten (Oscar 5/11): ingen samlet rød linje for penge, der ikke er tjent endnu. Rolig påmindelse fra 1/12 om det, der er kommet ind
     if (FS.rater_tilbage === false && sk.aar == år0 && (sk.restskat_nu || 0) > 100 && iDag() >= `${år0}-12-01`) ud.push(["y", sk.restskat_besked?.tekst || ""]);
-    for (const a of (sk.register?.afstemning || []).filter(a => !a.stop)) ud.push([null, `Ikke afstemt: ${a.kilde} ${a.tekst}${a.kr != null ? `, ${krKort(a.kr)} kr.` : ""}`]);
+    for (const a of (sk.register?.afstemning || []).filter(a => !a.stop && !/uden bogføring/.test(a.tekst))) ud.push([null, `Ikke afstemt: ${a.kilde} ${a.tekst}${a.kr != null ? `, ${krKort(a.kr)} kr.` : ""}`]);   // bankposter uden bogføring står i Ugens bogføring (Oscar 10/11)
     if (sk.satser_mangler) ud.push(["y", `Skattesatser for ${sk.aar} mangler. Restskatten bygger på en fast procent`]);   // regner ikke videre i tavshed
     const fbd = sk.register?.aar?.[sk.aar]?.fra_bunden?.grundlag_dato, fbA = fbd ? Math.floor((dag(iDag()) - dag(fbd)) / 864e5) : 0;
     if (fbA > 35) ud.push(["rd", `Restskatten bygger på løn og A-skat fra ${kortDato(fbd)}. Opdatér tallene`]);   // samme grænse som opdateret-mærket: en ny lønseddel ændrer skatten (revision 5/11)
     // skatten venter på en kunde (Oscar 5/11): beløb og frist står her, banneret kommer først, når kunden har betalt eller betalingsdagen er nået
-    if (skV && skV.tilstand !== "afventer") { const Pv = skV.fra_pulje || 0, Bv = (skV.lonkonto || 0) + Pv, Av = skV.firma ?? skV.mangler;
-      ud.push([null, `${krKort(Av + Bv)} kr. skal betales til Skat senest ${kortDato(skV.frist)}${Bv ? `: ${krKort(Av)} kr. fra firmakontoen og ${krKort(Bv)} kr. fra Lønkonto+` : ""}. Venter på ${skV.kunde}.` + (Pv ? ` Flyt først ${krKort(Pv)} kr. fra Skat-puljen i Saxo til Lønkonto+ senest ${kortDato(skV.saxo_frist)}.` : "")]); }
-    (D.jobstatus?.jobs || []).filter(j => j.status === "skylder").forEach(j => j.skylder.forEach(x => ud.push([skV ? null : "rd", `${j.navn} ${kortDato(j.dato)}: ${krKort(x.kr)} kr. i skat ${skV ? "venter" : "er ikke overført"}`])));
+    if (skV && skV.tilstand !== "afventer") ud.push(["y", ...skatBetal(skV)]);   // én handling (Oscar 10/11: "det tekst læser jeg slet ikke"); detaljerne er foldet ind
+    if (!skV) (D.jobstatus?.jobs || []).filter(j => j.status === "skylder").forEach(j => j.skylder.forEach(x => ud.push([skV ? null : "rd", `${j.navn} ${kortDato(j.dato)}: ${krKort(x.kr)} kr. i skat ${skV ? "venter" : "er ikke overført"}`])));
     if (r && rd <= 10) ud.push([rd < 4 ? "rd" : "y", `Betal B-skat-rate ${krKort(r.beloeb)} kr. senest ${kortDato(r.frist)}`]);
     for (const f of fsRet) ud.push([FS.rater_tilbage && n > 2000 ? "rd" : "y", `Ret felt ${f.felt} til ${krKort(f.skal)} kr. (nu ${krKort(f.nu)})`]);
     if (!fsRet.length && n < -5000) ud.push(["y", `Sæt forskuddet ned: du betaler ca. ${krKort(-n)} kr. for meget`]);
@@ -6347,25 +6359,23 @@ function pengeListe() {   // Fakturaer og depositum (foldes ud på Økonomi og S
   const aabenFaktura = j => ub.liste.some(u => navnOrd(u.kunde).some(o => navnOrd(j.navn).includes(o)));
   const DEP = {mangler: ["rd", "depositum mangler"], sendt: ["y", "faktura sendt"], betalt: ["g", "depositum betalt"], ingen: ["", "intet depositum"]};
   const mangler = dep.filter(j => j.status === "mangler"), sendt = dep.filter(j => j.status === "sendt");
-  const linjer = ub.liste.map(u => h("div", {class: "l"},
-    h("span", {}, `${u.kunde} · nr. ${u.nr} · ${kortDato(u.dato)}`,
-      u.dage_over ? h("span", {class: "pill rd", style: "margin-left:6px"}, `${u.dage_over} dage over`) : h("span", {class: "muted lille", style: "margin-left:6px"}, u.forfald ? `forfalder ${kortDato(u.forfald)}` : "")),
-      h("span", {class: "ub-spacer", style: "flex:1"}),
-    h("b", {style: "margin-left:8px"}, krKort(u.kr))));
-  const depLinjer = dep.filter(j => j.status !== "ingen").map(j => {
+  // kun det, der skyldes, i samme skrift som rækkerne over (Oscar 10/11: "kunder skylder larmer sygt meget", skitse panel-for-ferien-og-oprydning)
+  const linjer = ub.liste.map(u => h("div", {class: "pl-l"},
+    h("span", {}, `${u.kunde.replace(/\s+(aps|a\/s)$/i, "")} · nr. ${u.nr} `, u.dage_over ? h("span", {class: "pill rd"}, `${u.dage_over} dage over`) : h("span", {class: "muted"}, u.forfald ? `· forfalder ${kortDato(u.forfald)}` : "")),
+    h("b", {}, `${krKort(u.kr)} kr.`)));
+  const depBetalt = dep.filter(j => j.status === "betalt").length;
+  const depLinjer = dep.filter(j => j.status === "mangler" || j.status === "sendt").map(j => {
     const [c, t] = DEP[j.status];
     const f = j.faktura;   // fakturaen fundet i Dinero af fabz.py (fakturanr. i ØKONOMI eller kundens efternavn), Oscar 28/10
     const note = f ? (f.betalt ? `faktura ${f.nr} er betalt i Dinero` : `faktura ${f.nr} står som ubetalt i Dinero`)
       : j.status === "sendt" ? (aabenFaktura(j) ? "står som ubetalt i Dinero" : "fandt ingen faktura i Dinero: skriv fakturanummeret under Depositum i kalenderen, fx 'faktura 128'") : "";
-    return h("div", {class: "l", style: "flex-wrap:wrap;row-gap:2px"}, h("span", {}, `${j.navn} · ${kortDato(j.dato)}`),
-      h("span", {style: "display:flex;gap:6px;align-items:center;flex-wrap:wrap;min-width:0"}, h("span", {class: "pill " + c}, t), note ? h("span", {class: "muted lille"}, note) : null));
+    return h("div", {class: "pl-l", style: "flex-wrap:wrap;row-gap:2px"}, h("span", {}, `${j.navn} · ${kortDato(j.dato)} `, h("span", {class: "pill " + c}, t)), note ? h("span", {class: "muted"}, note) : null);
   });
   return h("div", {},
-    linjer.length ? h("div", {class: "liste"}, linjer) : h("div", {class: "muted"}, ub.mangler ? "Betalingsstatus kommer med næste Dinero-hentning (hver morgen kl. 7)." : "Alle fakturaer er betalt."),
+    linjer.length ? linjer : h("div", {class: "muted"}, ub.mangler ? "Betalingsstatus kommer med næste Dinero-hentning (hver morgen kl. 7)." : "Alle fakturaer er betalt."),
     ub.forfaldne ? h("div", {class: "lille", style: "margin-top:6px;color:var(--adv)"}, "Send rykker fra Dinero (Salg → Fakturaer → Send påmindelse).") : null,
-    depLinjer.length ? h("div", {class: "overskrift", style: "margin-top:14px"}, "Depositum på kommende private jobs") : null,
-    depLinjer.length ? h("div", {class: "liste"}, depLinjer) : null,
-    h("div", {class: "lille muted", style: "margin-top:10px"}, "Ubetalt = bogført i Dinero uden betaling. Depositum læses fra ØKONOMI i kalenderen (Depositum: betalt / faktura sendt / ingen)."));
+    depLinjer,
+    depBetalt ? h("div", {class: "pl-l"}, h("span", {}, `${depBetalt} ${depBetalt === 1 ? "depositum" : "depositummer"} betalt ✓`)) : null);
 }
 function vejKort(kunFrem) {   // kunFrem (Salg): denne måned + de næste 6/12, uden karrieremål og fortid (Oscar 26/10). Ellers (Økonomi) som før.
   const ms = moMaaneder(), mo = D.mo || {};
