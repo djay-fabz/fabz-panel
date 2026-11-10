@@ -268,6 +268,10 @@ input[type=date]{color-scheme:light dark}
 
 /* lager-fanen */
 .lagerside{max-width:1228px;margin:0 auto;padding:28px 24px 130px}
+.mu-tid{font-size:34px;font-weight:700;letter-spacing:.5px;margin-top:10px;font-variant-numeric:tabular-nums}.mu-bar{height:7px;background:var(--linje);border-radius:99px;overflow:hidden;margin:6px 0 14px}.mu-bar div{height:100%;background:var(--ok);border-radius:99px}
+.mu-faerdig{background:var(--ok-blid);color:var(--faerdig);border-radius:12px;padding:12px 14px;margin:12px 0 10px}.mu-faerdig b{display:block;font-size:16px;margin-bottom:2px}
+.mu-chip{display:inline-block;font-size:12.5px;background:var(--accent-blid);color:var(--accent);border-radius:99px;padding:2px 10px;margin:8px 0 12px;font-weight:500}
+@media (max-width:700px){.mu-knap .btn{flex:1 1 40%}.mu-start-lang{display:none}}
 .fd-par{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.fd-forslag{background:var(--adv-blid);border-radius:10px;padding:12px 14px;margin-top:12px}.fd-forslag b{color:var(--adv)}.fd-knapper{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 .fd-liste{border:1px solid var(--linje);border-radius:10px;margin-top:12px}.fd-liste label{display:flex;gap:10px;padding:9px 12px;align-items:center;cursor:pointer}.fd-liste label+label{border-top:1px solid var(--linje)}.fd-kunde{flex:1;min-width:0}.fd-info{font-size:13px;white-space:nowrap}
 @media (max-width:700px){.fd-liste label{flex-wrap:wrap}.fd-info{flex-basis:100%;padding-left:28px}.fd-knapper .btn{flex:1}}
@@ -3237,17 +3241,38 @@ function mdLinks(t) {   // [tekst](https://...) bliver et klikbart link (Oscar 9
 }
 const muLinksAlene = t => mdLinks(t).filter(x => typeof x !== "string");
 const erMashupPunkt = p => !!p.mashup || /^Ableton\b/i.test(p.tekst || "");
-function muUge() {   // Ableton-blokke krydset af på Dagens plan denne uge (mandag til i dag)
-  const idag = iDag(), man = plusDage(idag, -((dag(idag).getDay() + 6) % 7));
-  let n = 0;
+function muUge() {   // dage denne uge med en gennemført blok (timeren) eller Ableton-punktet krydset af på Dagens plan. Højst én om dagen (Oscar 10/11)
+  const idag = iDag(), man = plusDage(idag, -((dag(idag).getDay() + 6) % 7)), dage = new Set();
   for (const p of D.dagsplaner || []) {
     if (!p.dato || p.dato < man || p.dato > idag) continue;
     let nåede = p.naaede_punkter || [];
     if (p.dato === idag && p.status !== "Fulgt op") { try { nåede = JSON.parse(lager.get(NÅET_KEY(idag)) || "[]"); } catch {} }
-    n += (p.plan_punkter || []).filter(x => erMashupPunkt(x) && nåede.includes(x.nr)).length;
+    if ((p.plan_punkter || []).some(x => erMashupPunkt(x) && nåede.includes(x.nr))) dage.add(p.dato);
   }
-  return n;
+  for (const b of D.mashups?.blokke || []) if (b.faerdig && b.dato >= man && b.dato <= idag) dage.add(b.dato);
+  return dage.size;
 }
+// Timeren (Oscar 10/11, skitse panel-mashups-timer): 60 min, uret følger data, så det kører videre på telefon og pc. Når tiden er gået: lyd, og du er færdig
+const muBlokKører = (nu = Date.now()) => (D.mashups?.blokke || []).find(b => b.dato === iDag() && !b.faerdig && !b.stoppet && b.start + b.min * 6e4 > nu);
+const muBlokIDag = () => (D.mashups?.blokke || []).some(b => b.dato === iDag() && b.faerdig);
+const MU_BLOKDAGE = [2, 4];   // tirsdag og torsdag efter frokost (fast opgave "Ableton 60 min", Oscar 8/11)
+function muLyd() { try { const c = new (window.AudioContext || window.webkitAudioContext)(); [0, 0.35, 0.7].forEach(t => { const o = c.createOscillator(), g = c.createGain();
+  o.frequency.value = 880; g.gain.setValueAtTime(0.25, c.currentTime + t); g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + t + 0.3); o.connect(g).connect(c.destination); o.start(c.currentTime + t); o.stop(c.currentTime + t + 0.3); }); } catch {} }
+function muUr() {   // hvert sekund: uret og baren; når tiden er gået, tæller blokken (én gang), dagens Ableton-punkt krydses af, og der kommer en lyd
+  const m = D?.mashups, nu = Date.now();
+  if (!m || Array.isArray(m)) return;
+  const b = muBlokKører(nu), el = document.querySelector(".mu-tid");
+  if (b && el) { el.textContent = mmss(b.start + b.min * 6e4 - nu); const bar = document.querySelector(".mu-bar div"); if (bar) bar.style.width = Math.min(100, 100 * (nu - b.start) / (b.min * 6e4)) + "%"; }
+  const slut = (m.blokke || []).find(x => !x.faerdig && !x.stoppet && x.start + x.min * 6e4 <= nu);
+  if (slut && !muUr.lukker) {
+    muUr.lukker = true;
+    const p = (D.dagsplaner || []).find(x => x.dato === slut.dato), punkt = p && (p.plan_punkter || []).find(erMashupPunkt);
+    if (punkt && slut.dato === iDag()) { try { const n = JSON.parse(lager.get(NÅET_KEY(slut.dato)) || "[]"); if (!n.includes(punkt.nr)) lager.set(NÅET_KEY(slut.dato), JSON.stringify([...n, punkt.nr])); } catch {} }
+    if (nu - (slut.start + slut.min * 6e4) < 6e4) muLyd();   // kun lyd, når siden var åben, da tiden gik
+    kør("mashup-blok-faerdig", [], {tekst: "Ableton-blokken er færdig", efter: ["mashups"], med: () => { slut.faerdig = true; muUr.lukker = false; }});
+  }
+}
+setInterval(muUr, 1000);
 function muDom(titel) {   // seneste bedømmelse fra evalueringens Nye numre
   const t = (titel || "").trim().toLowerCase();
   let b = null;
@@ -3272,6 +3297,9 @@ function visMashups() {
   m.numre ||= []; m.ideer ||= []; m.log ||= [];
   if (MU.valgt) { const n = m.numre.find(x => x.id === MU.valgt); if (n) return muNummer(m, n); MU.valgt = null; }
   const faser = m.faser || [], fase = m.fase || 1, f = faser[fase - 1] || {}, uge = muUge(), fd = uge >= MU_MAAL;
+  const kører = muBlokKører(), færdigIDag = muBlokIDag();
+  const skridtNr = (m.log || []).filter(x => x.fase === fase).length + 1, skridtI = skridtNr + ((m.skridt || {})[fase] || []).length;
+  const næsteDag = (() => { for (let i = 1; i <= 7; i++) { const d = dag(plusDage(iDag(), i)); if (MU_BLOKDAGE.includes(d.getDay())) return DAGE[d.getDay()]; } return ""; })();
   const efter = ["mashups"];
   // Gjort tager næste skridt fra fasens liste (Oscar 10/11: "hvorfor skal jeg skrive næste skridt?"). Er listen tom, skriver Claude de næste
   const gjort = () => kør("mashup-gjort", [], {tekst: "Mashups: næste skridt", efter,
@@ -3286,16 +3314,24 @@ function visMashups() {
   const mp = (ok, t, x) => h("span", {}, (ok ? "● " : "○ ") + t + (!ok && x ? ` (${x})` : ""));
   const mile = h("div", {class: "mu-mile"}, mp(fase >= 3, "Ableton genopfrisket"), mp(edits >= 2, "2 edits sendt til Premise", edits), mp(bedømt >= 3, "3 mashups bedømt", bedømt));
   const fokus = MU.ret ? h("div", {class: "mu-fokus"}, h("div", {class: "mu-o"}, f.overskrift || ""), retFelt())
-    : fd ? h("div", {class: "mu-fokus fd"},
-        h("div", {class: "mu-o"}, "✓ Ugens mashup-tid er brugt"),
+    : fd && !kører ? h("div", {class: "mu-fokus fd"},
+        h("div", {class: "mu-o"}, "★ Ugens mål er nået"),
         h("div", {class: "mu-opg"}, `${uge} af ${MU_MAAL} blokke. Du er færdig for i denne uge.`),
         m.naeste ? h("div", {class: "mu-fd-n"}, "Næste gang: ", ...mdLinks(m.naeste), " · ", h("button", {class: "mu-lnk", type: "button", style: "padding:0;font-size:12.5px", onclick: gjort}, "Gjort alligevel")) : null)
     : h("div", {class: "mu-fokus"},
         h("div", {class: "mu-uge"}, [...Array(MU_MAAL)].map((_, i) => h("span", {class: "mu-prik" + (i < uge ? " ok" : "")})), h("span", {class: "muted lille"}, `${Math.min(uge, MU_MAAL)} af ${MU_MAAL} blokke denne uge`),
           h("span", {class: "lille", style: "margin-left:auto;color:var(--svagere)"}, `Fase ${fase} af ${faser.length}`)),
+        kører ? [h("div", {class: "mu-tid"}, mmss(kører.start + kører.min * 6e4 - Date.now())), h("div", {class: "mu-bar"}, h("div", {style: `width:${Math.min(100, 100 * (Date.now() - kører.start) / (kører.min * 6e4))}%`}))]
+          : færdigIDag ? h("div", {class: "mu-faerdig"}, h("b", {}, "✓ Blokken er færdig. Stop her."), `${Math.min(uge, MU_MAAL)} af ${MU_MAAL} blokke denne uge.${næsteDag ? ` Næste blok er ${næsteDag} efter frokost.` : ""}`) : null,
         h("div", {class: "mu-o"}, f.overskrift || ""),
         m.naeste ? h("div", {class: "mu-opg"}, mdLinks(m.naeste)) : h("div", {class: "mu-opg muted"}, "Næste skridt kommer"),
-        m.naeste ? h("div", {class: "mu-knap"}, h("button", {class: "btn primaer", type: "button", onclick: gjort}, "Gjort, næste skridt")) : null,   // ingen Ret-knap og intet tekstfelt (Oscar 9/11 og 10/11): Claude skriver skridtene
+        m.naeste && !kører && !færdigIDag ? h("span", {class: "mu-chip"}, `Skridt ${skridtNr} af ${skridtI}`) : null,
+        h("div", {class: "mu-knap"},
+          !kører && !færdigIDag ? h("button", {class: "btn primaer", type: "button", onclick: () => { const st = Date.now();
+            kør("mashup-blok-start", [`--start=${st}`], {tekst: "Ableton-blok startet", efter, med: () => { (m.blokke ||= []).push({dato: iDag(), start: st, min: 60}); }}); }}, "Start blok", h("span", {class: "mu-start-lang"}, " · 60 min")) : null,
+          m.naeste ? h("button", {class: "btn", type: "button", onclick: gjort}, "Gjort", h("span", {class: "mu-start-lang"}, ", næste skridt")) : null,
+          kører ? h("button", {class: "btn", type: "button", onclick: () => { if (!confirm("Stop blokken? Den tæller ikke.")) return; const tid = Date.now();
+            kør("mashup-blok-stop", [`--tid=${tid}`], {tekst: "Ableton-blok stoppet", efter, med: () => { kører.stoppet = tid; }}); }}, "Stop") : null),   // ingen Ret-knap og intet tekstfelt (Oscar 9/11 og 10/11): Claude skriver skridtene
         mile);
   // numre
   const status = n => muDom(n.titel) ? "Prøvet på job" : n.status || "I gang";
