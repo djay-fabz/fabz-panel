@@ -268,6 +268,8 @@ input[type=date]{color-scheme:light dark}
 
 /* lager-fanen */
 .lagerside{max-width:1228px;margin:0 auto;padding:28px 24px 130px}
+.underfaner{display:flex;gap:6px;margin:0 0 14px}.underfaner button{border:1px solid var(--linje);background:var(--flade);border-radius:99px;padding:5px 14px;font:inherit;font-size:13.5px;color:var(--svag);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.underfaner button.aktiv{background:var(--accent-blid);color:var(--accent);border-color:transparent;font-weight:600}.uf-tal{background:var(--accent);color:var(--accent-tekst);border-radius:99px;font-size:11px;padding:0 6px;font-weight:600}
 .lagertop{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .va{background:var(--flade);border:1px solid var(--linje);border-radius:12px;padding:9px 14px;margin:12px 0 4px}
 .va-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.va-prik{width:9px;height:9px;border-radius:50%;background:var(--ok);flex:none}.va-prik.rd{background:var(--fejl)}.va-prik.bl{background:var(--accent)}
@@ -984,10 +986,11 @@ function tegnTop() {
       h("span", {class: "muted lille"}, S.job ? "PDF husker listen på jobbet. Godkend gør den færdig (grøn)" : "Ændringer gemmes, når du trykker Opdater"));
     return;
   }
-  const aktiv = v => fane === v || (v === "pakkelister" && (fane === "kort" || fane === "rute"));
+  const aktiv = v => fane === v || (v === "pakkelister" && (fane === "kort" || fane === "rute")) || (v === "salg" && fane === "foresp");
   const gå = v => { fane = v; MERE = false; if (v === "oekonomi") ØK.guide = null; if (v === "salg") SG.fremÅben = false; if (v === "pakkelister") { JH = null; S = null; } tegn(); window.scrollTo(0, 0); };
-  const hoved = [["idag", "I dag"], ["opgaver", "Opgaver"], ["pakkelister", "Jobs"], ["foresp", "Forespørgsler"], ["salg", "Salg"], ["oekonomi", "Økonomi og Skat", "Økonomi"], ...(window.innerWidth > 700 ? [["some", "SoMe"], ["mashups", "Mashups"]] : [])];   // Mashups (Oscar 9/11): ved siden af SoMe på pc, under Mere på telefonen   // SoMe (Oscar 8/11): i bjælken på pc, under Mere på telefonen (bunden er fuld)   // Salg i hovedbjælken (Oscar 25/10). Økonomi og Skat ud af Mere (Oscar 28/10: intet gemt væk)
-  const mere = [...(window.innerWidth > 700 ? [] : [["some", "SoMe"], ["mashups", "Mashups"]]), ["tilbud", "Tilbud"], ...(ugepakkeTom() && fane !== "bogforing" ? [] : [["bogforing", "Bogføring"]]), ["lager", "Lager"], ["pakker", "Pakker"]];   // Pakker: trin og regler til "Pak jobbet" (Oscar 27/10)   // Økonomi: penge ude, til dig, privat (Oscar 26/10: Salg skal kun være salg)
+  // Menu B (Oscar 10/11, skitse panel-menu-samlet): 5 faste + Mere. Forespørgsler er en underfane i Salg. Økonomi og Skat bliver fremme (Oscar 28/10: intet gemt væk)
+  const hoved = [["idag", "I dag"], ["opgaver", "Opgaver"], ["pakkelister", "Jobs"], ["salg", "Salg"], ["oekonomi", "Økonomi og Skat", "Økonomi"]];
+  const mere = [["some", "SoMe"], ["mashups", "Mashups"], ["tilbud", "Tilbud"], ...(ugepakkeTom() && fane !== "bogforing" ? [] : [["bogforing", "Bogføring"]]), ["lager", "Lager"], ["pakker", "Pakker"]];   // Pakker: trin og regler til "Pak jobbet" (Oscar 27/10)
   top.replaceChildren(
     h("span", {class: "brand"}, "Fabz"),
     h("nav", {class: "tabs"},
@@ -1033,6 +1036,12 @@ function tegn() {
   if (vis) vis();
   else if (S) visEditor();
   else visJobs();
+  if (fane === "salg" || fane === "foresp") {   // underfaner i Salg (menu B, Oscar 10/11)
+    const side = $("rod").firstChild, nye = (D.henvendelser || []).filter(x => x.status === "Ny").length;
+    if (side) side.prepend(h("div", {class: "underfaner", role: "tablist"}, [["salg", "Salg"], ["foresp", "Forespørgsler"]].map(([v, t]) =>
+      h("button", {type: "button", class: fane === v ? "aktiv" : "", "data-underfane": v, "aria-pressed": fane === v, onclick: () => { fane = v; if (v === "salg") SG.fremÅben = false; tegn(); window.scrollTo(0, 0); }},
+        t, v === "foresp" && nye ? h("span", {class: "uf-tal"}, String(nye)) : null))));
+  }
   if (!S && (fane === "kort" || fane === "rute")) {
     const side = $("rod").firstChild;
     if (side) side.prepend(h("div", {class: "subnav"},
