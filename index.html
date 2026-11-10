@@ -272,6 +272,12 @@ input[type=date]{color-scheme:light dark}
 .mu-faerdig{background:var(--ok-blid);color:var(--faerdig);border-radius:12px;padding:12px 14px;margin:12px 0 10px}.mu-faerdig b{display:block;font-size:16px;margin-bottom:2px}
 .mu-chip{display:inline-block;font-size:12.5px;background:var(--accent-blid);color:var(--accent);border-radius:99px;padding:2px 10px;margin:8px 0 12px;font-weight:500}
 @media (max-width:700px){.mu-knap .btn{flex:1 1 40%}.mu-start-lang{display:none}}
+.ud{margin-bottom:14px;padding:12px 16px}.ud-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;width:100%;background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}.ud-pil{color:var(--svagere)}
+.ud-bar{height:8px;background:var(--linje);border-radius:99px;overflow:hidden;margin-top:8px}.ud-bar div{height:100%;background:var(--accent);border-radius:99px}.ud-ok .ud-bar div{background:var(--ok)}
+.ud-dele{border-top:1px solid var(--linje);margin-top:10px;padding-top:6px;font-size:13.5px}.ud-dele div{display:flex;justify-content:space-between;gap:10px;padding:3px 0}
+@media (max-width:700px){.ud-pr{flex-basis:100%;order:3}}
+.uge-tilbud{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--flade);border:1px solid var(--linje);border-radius:12px;padding:10px 14px;margin:0 0 14px}.to>.uge-tilbud{grid-column:1/-1;margin:0;order:-1}
+.ut-prik{width:11px;height:11px;border-radius:50%;background:var(--linje);flex:none}.uge-tilbud.ok{background:var(--ok-blid);border-color:transparent;color:var(--faerdig)}.uge-tilbud.ok .ut-prik{background:var(--ok)}
 .fd-par{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.fd-forslag{background:var(--adv-blid);border-radius:10px;padding:12px 14px;margin-top:12px}.fd-forslag b{color:var(--adv)}.fd-knapper{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 .fd-liste{border:1px solid var(--linje);border-radius:10px;margin-top:12px}.fd-liste label{display:flex;gap:10px;padding:9px 12px;align-items:center;cursor:pointer}.fd-liste label+label{border-top:1px solid var(--linje)}.fd-kunde{flex:1;min-width:0}.fd-info{font-size:13px;white-space:nowrap}
 @media (max-width:700px){.fd-liste label{flex-wrap:wrap}.fd-info{flex-basis:100%;padding-left:28px}.fd-knapper .btn{flex:1}}
@@ -338,7 +344,7 @@ body.bar-synlig .beskeder{bottom:84px}
 .sm-ev{display:flex;gap:12px;align-items:center;padding:8px 0;color:inherit;text-decoration:none}.sm-play{width:48px;height:48px;border-radius:8px;background:linear-gradient(135deg,#6d28d9,#c13584);color:#fff;display:flex;align-items:center;justify-content:center;flex:none}
 .sm-ideer{margin:8px 0 0;padding-left:20px;line-height:1.6}
 @media (max-width:700px){.sm-gitter{grid-template-columns:minmax(0,1fr)}.sm-uge{gap:4px}.sm-dag{padding:6px 2px}.sm-linje{flex-wrap:wrap}.sm-uddrag{flex-basis:100%}}
-.kh{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.kh{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}.kh .btn{white-space:nowrap}
 .kh h1{margin:0;font-size:22px}.kh h2{margin:0;font-size:18px;flex:1}.kh h3{margin:0;font-size:13px;font-weight:600;flex:1}
 .mini{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid var(--linje);width:100%;text-align:left;background:none;border-left:0;border-right:0;border-bottom:0;font-size:13.5px}
 .kh + .mini,.mini:first-of-type{border-top:0}
@@ -1050,6 +1056,8 @@ function tegn() {
     if (side) side.prepend(h("div", {class: "underfaner", role: "tablist"}, [["salg", "Salg"], ["foresp", "Forespørgsler"]].map(([v, t]) =>
       h("button", {type: "button", class: fane === v ? "aktiv" : "", "data-underfane": v, "aria-pressed": fane === v, onclick: () => { fane = v; if (v === "salg") SG.fremÅben = false; tegn(); window.scrollTo(0, 0); }},
         t, v === "foresp" && nye ? h("span", {class: "uf-tal"}, String(nye)) : null))));
+    const ut = fane === "salg" ? ugeTilbud() : null;
+    if (side && ut) side.querySelector(".underfaner")?.after(ut);
   }
   if (!S && (fane === "kort" || fane === "rute")) {
     const side = $("rod").firstChild;
@@ -2830,6 +2838,34 @@ const plusDage = (iso, n) => { const d = dag(iso); d.setDate(d.getDate() + n); r
 const nuHHMM = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, "0")}.${String(d.getMinutes()).padStart(2, "0")}`; };
 const kr = v => `${Math.round(Number(v) || 0).toLocaleString("da-DK")} kr.`;
 const FD = {åben: null, valgt: null};
+// Udstyr til foråret (Oscar 10/11, skitse panel-udstyrsmaal-og-tilbud): puljen "Nyt anlæg" i Saxo med mål, frist og dele. Øverst i I dag til fristen
+const UD = {åben: false};
+function udstyrsLinje() {
+  const p = (D.mo?.overblik?.puljer || []).find(x => x.navn === "Nyt anlæg");
+  if (!p?.frist || !p.maal || iDag() > p.frist) return null;
+  const n = new Date(iDag()), f = new Date(p.frist), mdr = Math.max(1, (f.getFullYear() - n.getFullYear()) * 12 + f.getMonth() - n.getMonth());
+  const saldo = p.saldo || 0, mangler = Math.max(0, p.maal - saldo), pr = Math.round(mangler / mdr / 10) * 10, pct = Math.min(100, 100 * saldo / p.maal);
+  const nået = mangler === 0;
+  return h("div", {class: "kort2 ud" + (nået ? " ud-ok" : "")},
+    h("button", {class: "ud-top", type: "button", "aria-expanded": UD.åben, onclick: () => { UD.åben = !UD.åben; tegn(); }},
+      h("b", {}, p.titel || p.navn), h("span", {class: "muted ud-tal"}, `${krKort(saldo)} af ${krKort(p.maal)} kr.`), h("span", {class: "spacer"}),
+      h("span", {class: "muted ud-pr"}, nået ? "✓ Pengene er der" : `mangler ${krKort(pr)} kr. pr. md. til ${kortDato(p.frist)}`), h("span", {class: "ud-pil"}, UD.åben ? "▴" : "▾")),
+    h("div", {class: "ud-bar"}, h("div", {style: `width:${pct}%`})),
+    UD.åben ? h("div", {class: "ud-dele"}, (p.dele || []).map(d => h("div", {}, h("span", {}, d.navn), h("b", {}, `${d.ca ? "ca. " : ""}${krKort(d.kr)}`)))) : null);
+}
+// Ugens tilbud (Oscar 10/11): 1 nyt tilbud pr. uge på et job i januar-marts 2027, til og med februar. Tæller forespørgsler, der har fået tilbud (eller er booket) i ugen
+const UT_MAAL = 1, UT_FRA = "2027-01-01", UT_TIL = "2027-03-31", UT_SLUT = "2027-02-28";
+function ugeTilbud() {
+  const idag = iDag();
+  if (idag > UT_SLUT) return null;
+  const man = plusDage(idag, -((dag(idag).getDay() + 6) % 7));
+  const t = (D.henvendelser || []).filter(x => ["Tilbud sendt", "Booket"].includes(x.status) && (x.status_dato || "") >= man && (x.status_dato || "") <= idag
+    && x.eventdato && x.eventdato >= UT_FRA && x.eventdato <= UT_TIL);
+  const ok = t.length >= UT_MAAL;
+  return h("div", {class: "uge-tilbud" + (ok ? " ok" : "")}, h("span", {class: "ut-prik"}),
+    h("b", {}, `Ugens tilbud: ${Math.min(t.length, UT_MAAL)} af ${UT_MAAL}${ok ? " ✓" : ""}`),
+    h("span", {}, ok ? `${t[0].kunde.split(" (")[0]}, ${kortDato(t[0].eventdato)}` : "· nyt tilbud på et job i januar-marts"));
+}
 function dineroKandidater(fra, beloeb) {   // bogførte fakturaer efter jobdatoen, som ikke hører til et andet job. Samme beløb først, så nyeste
   const d = D.dinero || {}, brugt = new Set((D.betalinger || []).map(x => x.faktura_nr).filter(Boolean));
   const alle = [...(d.betalte || []).filter(f => f.length >= 4).map(f => ({dato: f[0], kr: Number(f[1]), kunde: f[2], nr: Number(f[3])})),
@@ -3089,7 +3125,7 @@ function visIDag() {
   if (dp?.plan_punkter?.length) {   // dagen er planlagt: kun planen (Oscar 28/10: "fokus skal holdes"); resten bag ét lukket link
     const tal = [[henv.length, "Forespørgsler"], [due.length, "Salg"],
       [ub && (ub.forfaldne || dm.length) ? (ub.forfaldne || 0) + dm.length : 0, "Penge ude"]].filter(([n]) => n).map(([n, t]) => `${t} ${n}`);
-    $("rod").replaceChildren(h("div", {class: "side"}, overskrift, fejlBjælker(),
+    $("rod").replaceChildren(h("div", {class: "side"}, overskrift, fejlBjælker(), udstyrsLinje(),
       h("div", {class: "fokus"}, planKort, evalueringKort(idag), ...jobKort, vagterKort(idag),   // vagtkort vises kun ved kollision eller nye vagter
         foreDag().ting.some(t => !t.klaret) ? foreIDag() : null,   // planlagt dag: forespørgsler, der skal svares eller følges op, står stadig fremme
         brydIgennem(henv, ub, dm),
@@ -3098,7 +3134,7 @@ function visIDag() {
     return;
   }
   const evKort = evalueringKort(idag);
-  $("rod").replaceChildren(h("div", {class: "side bred"}, overskrift, fejlBjælker(), evKort ? h("div", {style: "margin-bottom:16px"}, evKort) : null,
+  $("rod").replaceChildren(h("div", {class: "side bred"}, overskrift, fejlBjælker(), udstyrsLinje(), evKort ? h("div", {style: "margin-bottom:16px"}, evKort) : null,
     h("div", {class: "idag"}, planKort, h("div", {class: "stak"}, ...jobKort, resten[0], vagterKort(idag), ...resten.slice(1)))));
 }
 function brydIgennem(henv, ub, dm) {   // planlagt dag: nye forespørgsler og penge ude står over "Vis resten" (skitse panel-opfoelgning, Oscar ja 29/10)
