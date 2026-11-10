@@ -376,6 +376,11 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .bf-r{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-top:1px solid var(--linje)}.bf-r:first-child{border-top:0}.bf-r .t{flex:1;min-width:0}.bf-r .t b{display:block}
 .bf-r .t span{color:var(--svag)}.bf-r .kr{font-weight:600;white-space:nowrap}.bf-r input[type=checkbox]{margin-top:3px;width:18px;height:18px;flex:none}
 .bf-d{font-size:12.5px;color:var(--svag);margin-top:4px}.bf-ok{color:var(--ok)}.bf-fejl{color:var(--fejl)}
+.kv-nr{flex:none;display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--tekst);color:var(--flade);font-size:12px;font-weight:700;margin-top:1px}
+.kv-hvor{font-size:13px;color:var(--svag);margin-top:2px}.kv-hvor a{color:var(--accent);text-decoration:none;font-weight:500}.kv-hvor a:hover{text-decoration:underline}
+.kv .bf-r>.btn{flex:none}.kv-over b{text-decoration:line-through;opacity:.6}.kv-over .kv-nr{background:var(--faerdig)}
+.kv-faerdig{background:var(--faerdig-blid);border-radius:12px;padding:14px 16px;margin-top:10px;color:var(--faerdig);font-weight:var(--faerdig-vaegt)}.kv-klaret{margin-top:10px;font-weight:500}
+@media (max-width:700px){.kv .bf-r{flex-wrap:wrap}.kv .bf-r .t{flex-basis:calc(100% - 32px)}.kv .bf-r>.btn{margin-left:32px}}
 @media (max-width:700px){.bf-tal{grid-template-columns:1fr}.bf-r{flex-wrap:wrap}.bf-r .kr{margin-left:28px}}
 .jo{margin-top:8px}.jo-r{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;border:0;border-top:1px solid var(--linje);background:none;padding:10px 14px}
 .jo-r:first-child{border-top:0}.jo-r:hover,.jo-r.valgt{background:var(--hover)}
@@ -1437,18 +1442,38 @@ function betalingAfsnit(j, st) {
 // Robotten foreslår, Oscar godkender med ét ja. Den bogfører aldrig og sender aldrig: Godkend udfylder Dineros kladder og laver Gmail-udkast.
 const BF = {valgte: null, uge: null, åben: null, svar: {}};   // svar: {punkt-id: {konto, region}} til spørgsmål om nye leverandører
 const bfKr = (v, valuta) => v == null || v === "" ? "beløb ukendt" : Number(v).toLocaleString("da-DK", {minimumFractionDigits: 2, maximumFractionDigits: 2}) + (valuta && valuta !== "DKK" ? " " + valuta : " kr.");
-const ugepakkeTom = () => !(D.ugepakke && !Array.isArray(D.ugepakke) && D.ugepakke.punkter?.length);   // tom pakke: Bogføring står ikke i menuen (kodegennemgang 5/11)
+const kvHarNoget = pk => !!(pk?.kvitteringer && ((pk.kvitteringer.gor || []).length || (pk.kvitteringer.klaret || []).length));
+const ugepakkeTom = () => !(D.ugepakke && !Array.isArray(D.ugepakke) && (D.ugepakke.punkter?.length || kvHarNoget(D.ugepakke)));   // tom pakke: Bogføring står ikke i menuen (kodegennemgang 5/11)
+// Kvitteringer (Oscar 10/11 "nej alt skal ske i panelet", skitse panel-kvitteringstjek variant A): cloud-rutinens kvitteringstjek øverst i Ugens bogføring i stedet for en mail
+const kvOg = a => a.length > 1 ? a.slice(0, -1).join(", ") + " og " + a[a.length - 1] : a.join("");
+function kvBoks(pk) {
+  if (!kvHarNoget(pk)) return null;
+  const kv = pk.kvitteringer, gor = kv.gor || [], klaret = kv.klaret || [], åbne = gor.filter(g => !g.klaret), efter = ["ugepakke", "opgaver"];
+  const nr = klaret.map(k => k.bilag).filter(Boolean).sort((a, b) => a - b);
+  return h("div", {class: "kort2 kv", style: "margin-bottom:16px"},
+    h("div", {class: "kh"}, h("h1", {}, "Kvitteringer"), gor.length ? h("span", {class: "pill " + (åbne.length ? "gul" : "grøn")}, åbne.length ? `${åbne.length} at gøre` : "Alt klaret") : null,
+      h("div", {class: "spacer"})),   // ingen Åbn Dinero her (Oscar 10/11 "fjern 2 gange åbn dinero"): hvert punkt har sit eget link, og knappen står ved Kræver dig
+    !åbne.length ? h("div", {class: "kv-faerdig"}, "✓ Alle kvitteringer er på plads") : h("div", {class: "overskrift", style: "margin-top:12px"}, "Det skal du gøre"),
+    gor.length ? h("div", {class: "kort", style: "margin-top:" + (åbne.length ? "0" : "10px")}, gor.map((g, i) => h("div", {class: "bf-r" + (g.klaret ? " kv-over" : "")},
+      h("span", {class: "kv-nr"}, String(i + 1)),
+      h("div", {class: "t"}, h("b", {}, g.titel),
+        !g.klaret && (g.hvor || g.link) ? h("div", {class: "kv-hvor"}, g.hvor || "", g.link ? [g.hvor ? " " : "", h("a", {href: g.link, target: "_blank", rel: "noopener"}, (g.link_navn || "Åbn") + " ↗")] : null) : null),
+      h("button", {class: "btn lille" + (g.klaret ? " ghost" : ""), type: "button", onclick: () => kør("kvittering-klaret", [`--uge=${pk.uge}`, `--id=${g.id}`, ...(g.klaret ? ["--fortryd"] : [])],
+        {tekst: `${g.titel}: ${g.klaret ? "åben igen" : "klaret"}`, efter, med: () => { if (g.klaret) delete g.klaret; else g.klaret = iDag(); }})}, g.klaret ? "Fortryd" : "✓ Klaret")))) : null,
+    klaret.length ? h("div", {class: "bf-ok kv-klaret"}, `✓ Klaret af robotten: ${klaret.length} ${klaret.length === 1 ? "kvittering" : "kvitteringer"} sat på` + (nr.length ? ` · bilag ${kvOg(nr.map(String))}` : "")) : null);
+}
 function visBogfoering() {
   const pk = ugepakkeTom() ? null : D.ugepakke;
   if (!pk) return $("rod").replaceChildren(h("div", {class: "side"}, h("h1", {}, "Ugens bogføring"), tom("Robotten laver ugens pakke tirsdag morgen. Der er ingen endnu.")));
+  if (!pk.punkter?.length) return $("rod").replaceChildren(h("div", {class: "side"}, kvBoks(pk),
+    h("div", {class: "kort2"}, h("div", {class: "kh"}, h("h1", {}, `Ugens bogføring · uge ${Number(pk.uge.split("W")[1])}`)), h("div", {class: "muted"}, "Ingen nye bilag denne uge."))));
   if (BF.uge !== pk.uge) { BF.uge = pk.uge; BF.valgte = new Set(pk.punkter.filter(p => p.valgt).map(p => p.id)); BF.sikre = new Set(pk.punkter.filter(p => p.sikker).map(p => p.id)); BF.åben = null; }
   for (const p of pk.punkter) if (p.sikker && !BF.sikre.has(p.id)) { BF.sikre.add(p.id); if (p.valgt) BF.valgte.add(p.id); }   // besvaret ny leverandør tæller straks med i Godkend
   const P = pk.punkter, klar = pk.status === "klar", efter = ["ugepakke", "opgaver"];
   const sikre = P.filter(p => p.sikker && p.type !== "ignorer"), ikke = P.filter(p => p.type === "ignorer");
   const bogførte = sikre.filter(p => (p.bogfoert || {}).status === "ok"), aktive = sikre.filter(p => !bogførte.includes(p));   // Oscar 1/11: bogførte kan han ikke gøre mere ved
   const bogførtLinje = () => { const nr = bogførte.map(p => Number(String(p.bogfoert.tekst || "").match(/\d+$/)?.[0])).filter(Boolean).sort((a, b) => a - b);
-    return h("div", {class: "bf-r"}, h("div", {class: "t"}, h("b", {class: "bf-ok"}, `✓ ${bogførte.length} bogført` + (nr.length ? ` · bilag ${nr[0]}${nr.length > 1 ? "-" + nr[nr.length - 1] : ""}` : ""))),
-      h("a", {class: "btn lille", href: "https://app.dinero.dk/", target: "_blank", rel: "noopener"}, "Åbn Dinero ↗")); };
+    return h("div", {class: "bf-r"}, h("div", {class: "t"}, h("b", {class: "bf-ok"}, `✓ ${bogførte.length} bogført` + (nr.length ? ` · bilag ${nr[0]}${nr.length > 1 ? "-" + nr[nr.length - 1] : ""}` : "")))); };   // én Åbn Dinero: ved Kræver dig (Oscar 10/11)
   const kræver = P.filter(p => !p.sikker && p.type !== "ignorer"), åbne = kræver.filter(p => !p.klaret);
   const valgteSikre = sikre.filter(p => BF.valgte.has(p.id));
   const sumKr = valgteSikre.filter(p => (p.valuta || "DKK") === "DKK" && p.beloeb != null).reduce((a, p) => a + Number(p.beloeb), 0);
@@ -1505,7 +1530,7 @@ function visBogfoering() {
     if (!confirm(`Godkend ${v.length - ikke.length} ting${ikke.length ? ` (og skjul ${ikke.length} filer, der ikke er bilag)` : ""}? Robotten fylder kladderne ud i Dinero. Intet bliver bogført, før du trykker Bogfør.`)) return;
     kør("ugepakke-godkend", [`--uge=${pk.uge}`, `--valgte=${v.join(",")}`], {tekst: "Ugens bogføring godkendt", efter, med: () => { pk.status = "godkendt"; }}); };
   const minutter = Math.max(2, Math.round(åbne.reduce((a, p) => a + ((p.gruppe || "dinero") === "ja" ? 0.5 : p.gruppe === "selv" ? 3 : 1.5), 0)));   // et skøn: flueben ½ min., tjek 1½, bogfør selv 3
-  $("rod").replaceChildren(h("div", {class: "side"},
+  $("rod").replaceChildren(h("div", {class: "side"}, kvBoks(pk),
     h("div", {class: "kort2"},
       h("div", {class: "kh"}, h("h1", {}, `Ugens bogføring · uge ${uge}`), h("span", {class: "pill " + status[0]}, status[1]), h("div", {class: "spacer"}),
         !klar ? h("button", {class: "btn lille", type: "button", onclick: async () => { await genindlæs(efter); tegn(); }}, "Hent igen") : null),
