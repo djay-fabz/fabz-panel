@@ -989,8 +989,8 @@ function tegnTop() {
   const aktiv = v => fane === v || (v === "pakkelister" && (fane === "kort" || fane === "rute")) || (v === "salg" && fane === "foresp");
   const gå = v => { fane = v; MERE = false; if (v === "oekonomi") ØK.guide = null; if (v === "salg") SG.fremÅben = false; if (v === "pakkelister") { JH = null; S = null; } tegn(); window.scrollTo(0, 0); };
   // Menu B (Oscar 10/11, skitse panel-menu-samlet): 5 faste + Mere. Forespørgsler er en underfane i Salg. Økonomi og Skat bliver fremme (Oscar 28/10: intet gemt væk)
-  const hoved = [["idag", "I dag"], ["opgaver", "Opgaver"], ["pakkelister", "Jobs"], ["salg", "Salg"], ["oekonomi", "Økonomi og Skat", "Økonomi"]];
-  const mere = [["some", "SoMe"], ["mashups", "Mashups"], ["tilbud", "Tilbud"], ...(ugepakkeTom() && fane !== "bogforing" ? [] : [["bogforing", "Bogføring"]]), ["lager", "Lager"], ["pakker", "Pakker"]];   // Pakker: trin og regler til "Pak jobbet" (Oscar 27/10)
+  const hoved = [["idag", "I dag"], ["pakkelister", "Jobs"], ["salg", "Salg"], ["oekonomi", "Økonomi og Skat", "Økonomi"]];   // Opgaver under Mere (Oscar 10/11: "opgaver åbner jeg ikke selvstændig")
+  const mere = [["opgaver", "Opgaver"], ["some", "SoMe"], ["mashups", "Mashups"], ["tilbud", "Tilbud"], ...(ugepakkeTom() && fane !== "bogforing" ? [] : [["bogforing", "Bogføring"]]), ["lager", "Lager"], ["pakker", "Pakker"]];   // Pakker: trin og regler til "Pak jobbet" (Oscar 27/10)
   top.replaceChildren(
     h("span", {class: "brand"}, "Fabz"),
     h("nav", {class: "tabs"},
@@ -2954,10 +2954,11 @@ function visIDag() {
   };
   const planKort = h("div", {class: "kort2"},
     h("div", {class: "kh"}, h("h2", {}, "Dagens plan"),
+      dp?.plan_punkter?.length ? h("button", {class: "btn lille", type: "button", style: "margin-left:auto", onclick: () => { fane = "opgaver"; OP.vis = "plan"; tegn(); window.scrollTo(0, 0); }}, "Planlæg dag") : null,   // Opgaver ligger under Mere (Oscar 10/11), Planlæg dag nås herfra
       dp?.plan_punkter?.length ? h("button", {class: "btn lille", type: "button", title: "Åbner dagens printliste (PDF) fra pdf-mappen", onclick: async () => {   // Oscar 27/10: "hvordan printede jeg dagen?"
         const d = dag(idag), navn = `To-do ${["Søn", "Man", "Tir", "Ons", "Tor", "Fre", "Lør"][d.getDay()]} ${d.getDate()}-${d.getMonth() + 1}.pdf`;
         const link = await hentPdf("pdf/" + navn);
-        if (link) window.open(link, "_blank"); else alert(`Der er ingen printliste for i dag endnu (${navn}). Planlæg dagen under Opgaver, så laves den.`);
+        if (link) window.open(link, "_blank"); else alert(`Der er ingen printliste for i dag endnu (${navn}). Planlæg dagen, så laves den.`);
       }}, "Print listen") : null,
       mailStatus(idag, dp),
       dp?.moedt_ind ? h("span", {class: "muted lille"}, `Mødt ind ${dp.moedt_ind}` + (dp.moedetid ? ` · aftalt ${dp.moedetid}` : ""))
