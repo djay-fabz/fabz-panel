@@ -281,7 +281,8 @@ input[type=date]{color-scheme:light dark}
 .va{background:var(--flade);border:1px solid var(--linje);border-radius:12px;padding:9px 14px;margin:12px 0 4px}
 .va-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.va-prik{width:9px;height:9px;border-radius:50%;background:var(--ok);flex:none}.va-prik.rd{background:var(--fejl)}.va-prik.bl{background:var(--accent)}
 .va-adv{background:var(--fejl-blid);color:var(--fejl);border-radius:8px;padding:7px 11px;margin-top:8px;font-weight:500}
-.va-arb{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap;background:var(--accent-blid);border-radius:8px;padding:8px 11px}.va-arb .va-tid{width:110px}
+.va-arb{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap;background:var(--accent-blid);border-radius:8px;padding:8px 11px}.va-arb .va-tid{width:110px}.va-arb-tid{display:inline-flex;align-items:center;gap:8px}
+.va-koe{margin-top:8px;border-top:1px solid var(--linje)}.va-koe-r{display:flex;align-items:center;gap:10px;padding:6px 0}.va-koe-r+.va-koe-r{border-top:1px solid var(--linje)}
 .va-mere{margin-top:8px}.va-boks{border:1px solid var(--linje);border-radius:10px;padding:10px 12px 6px;margin-top:10px;background:var(--flade)}
 .va-boks-top{display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap}.va-nu{color:var(--svag);font-size:13px}.va-prikfarve{width:10px;height:10px;border-radius:3px;flex:none}
 .va-temp-prik{background:var(--accent)}.va-fugt-prik{background:#0d9488}
@@ -2553,35 +2554,48 @@ function vælg(valg, v, f) {
 const VA = {åben: false, arb: null, periode: "døgn"};
 const grad = v => v == null ? "–" : `${String(v.toFixed(1)).replace(".", ",")}°`;
 const minTekst = m => m == null ? "–" : m >= 60 ? `${Math.floor(m / 60)} t ${m % 60} min` : `${m} min`;
-function varmeArbejdsdag() {   // aktiv eller venter, ellers null
+function varmeKø() {   // planlagte arbejdsdage (Oscar 10/11): i dag og frem, sorteret. Det gamle format (én dag) læses også
   const a = D.varmeStyring || {}, d = iDag(), k = nuHHMM();
-  if (!a.dato || !a.fra || !a.til || a.dato < d || a.dato === d && k >= a.til) return null;
-  return {...a, aktiv: a.dato === d && a.fra <= k};
+  const dage = a.dage || (a.dato && a.fra && a.til ? [{...a, id: `${a.dato}-${a.fra.replace(".", "")}`}] : []);
+  return dage.filter(x => x.dato > d || x.dato === d && k < x.til).map(x => ({...x, aktiv: x.dato === d && x.fra <= k})).sort((x, y) => (x.dato + x.fra).localeCompare(y.dato + y.fra));
 }
 function varmeLinje() {
   const v = D.varme;
   if (!v) return null;
-  const s = v.sensor || {}, p = v.pumpe || {}, arb = varmeArbejdsdag(), idag = (v.dage || [])[0] || {};
+  const s = v.sensor || {}, p = v.pumpe || {}, kø = varmeKø(), arb = kø.find(x => x.aktiv), næste = kø.find(x => !x.aktiv), idag = (v.dage || [])[0] || {};
   const gammel = (Date.now() - new Date(v.opdateret)) / 60000 > 120;
   const adv = [...(v.advarsler || []), ...(gammel ? [`Ingen målinger siden ${kortDato(v.opdateret)} kl. ${v.opdateret.slice(11).replace(":", ".")}`] : [])];
-  const prik = adv.length ? "rd" : arb?.aktiv ? "bl" : "";
+  const prik = adv.length ? "rd" : arb ? "bl" : "";
+  const dagNavn = x => x.dato === iDag() ? "i dag" : x.dato === plusDage(iDag(), 1) ? "i morgen" : `${DAGE[dag(x.dato).getDay()].slice(0, 3)} ${kortDato(x.dato)}`;
+  const sætKø = dage => { D.varmeStyring = {dage}; };
   const gem = () => { const f = VA.arb; if (!f?.fra || !f?.til || f.til <= f.fra) return;
-    kør("varme-arbejdsdag", [`--fra=${f.fra}`, `--til=${f.til}`], {tekst: `Arbejdsdag ${f.fra}-${f.til}`, efter: ["varmeStyring"],
-      med: () => { D.varmeStyring = {dato: f.til > nuHHMM() ? iDag() : plusDage(iDag(), 1), fra: f.fra, til: f.til}; VA.arb = null; }}); };
-  const stop = () => kør("varme-stop", [], {tekst: "Arbejdsdag stoppet", efter: ["varmeStyring"], med: () => { D.varmeStyring = {}; }});
+    const dato = f.dag === "idag" ? iDag() : f.dag === "imorgen" ? plusDage(iDag(), 1) : f.dato;
+    if (!dato || dato < iDag() || dato === iDag() && f.til <= nuHHMM()) return;
+    kør("varme-arbejdsdag", [`--fra=${f.fra}`, `--til=${f.til}`, `--dato=${dato}`], {tekst: `Arbejdsdag ${dagNavn({dato})} ${f.fra}-${f.til}`, efter: ["varmeStyring"],
+      med: () => { sætKø([...kø, {id: `${dato}-${f.fra.replace(".", "")}`, dato, fra: f.fra, til: f.til}]); VA.arb = null; }}); };
+  const slet = x => kør("varme-slet", [`--id=${x.id}`], {tekst: `Arbejdsdag ${dagNavn(x)} slettet`, efter: ["varmeStyring"], med: () => { sætKø(kø.filter(y => y.id !== x.id)); }});
+  const stop = () => kør("varme-stop", [], {tekst: "Arbejdsdag stoppet", efter: ["varmeStyring"], med: () => { sætKø(kø.filter(y => !y.aktiv)); }});
   const tid = (felt, lbl) => h("input", {class: "input va-tid", type: "time", value: (VA.arb[felt] || "").replace(".", ":"), "aria-label": lbl,
     onchange: e => { VA.arb[felt] = e.target.value.replace(":", "."); }});
   const top = h("div", {class: "va-top"}, h("span", {class: "va-prik " + prik}),
-    arb?.aktiv ? [h("b", {}, "Arbejdsdag 18°"), h("span", {}, `til ${arb.til}`), h("span", {class: "muted va-tal"}, `${grad(s.temp)} · ${s.fugt ?? "–"} %`)]
+    arb ? [h("b", {}, "Arbejdsdag 18°"), h("span", {}, `til ${arb.til}`), h("span", {class: "muted va-tal"}, `${grad(s.temp)} · ${s.fugt ?? "–"} %`)]
       : [h("b", {}, "Varme"), h("span", {class: "va-tal"}, `${grad(s.temp)} · ${s.fugt ?? "–"} % · ${p.taendt ? "tændt" : "slukket"} · ${minTekst(idag.min)} i dag`),
-        h("span", {class: "pill va-pill " + (arb ? "blå" : "grøn")}, arb ? `Arbejdsdag ${arb.dato === iDag() ? "" : kortDato(arb.dato) + " "}${arb.fra}-${arb.til}` : "Automatik 8-12°")],
+        h("span", {class: "pill va-pill " + (næste ? "blå" : "grøn")}, næste ? `Arbejdsdag ${dagNavn(næste)} ${næste.fra}-${næste.til}` : "Automatik 8-12°")],
     h("div", {class: "spacer"}),
-    arb ? h("button", {class: "btn lille", type: "button", onclick: stop}, arb.aktiv ? "Stop nu" : "Fortryd")
-      : h("button", {class: "btn lille", type: "button", onclick: () => { VA.arb = VA.arb ? null : {fra: "07.30", til: "16.00"}; visLager(); }}, "Arbejdsdag"),
+    arb ? h("button", {class: "btn lille", type: "button", onclick: stop}, "Stop nu") : null,
+    h("button", {class: "btn lille", type: "button", onclick: () => { VA.arb = VA.arb ? null : {dag: "idag", dato: "", fra: "07.30", til: "16.00"}; visLager(); }}, "Arbejdsdag"),
     h("button", {class: "btn lille ghost va-fold", type: "button", "aria-label": VA.åben ? "Fold sammen" : "Fold ud", onclick: () => { VA.åben = !VA.åben; visLager(); }}, VA.åben ? "▴" : "▾"));
+  const planlagt = kø.filter(x => !x.aktiv);
   return h("div", {class: "va"}, top,
     adv.map(a => h("div", {class: "va-adv"}, a)),
-    VA.arb ? h("div", {class: "va-arb"}, "Fra", tid("fra", "Fra"), "til", tid("til", "Til"), h("button", {class: "btn primaer lille", type: "button", onclick: gem}, "Start")) : null,
+    VA.arb ? h("div", {class: "va-arb"},
+      seg([["idag", "I dag"], ["imorgen", "I morgen"], ["dato", "Vælg dato"]], VA.arb.dag, v2 => { VA.arb.dag = v2; visLager(); }),
+      VA.arb.dag === "dato" ? datoInput(VA.arb.dato, v2 => { VA.arb.dato = v2; }, {"aria-label": "Dato", style: "width:140px"}) : null,
+      h("span", {class: "va-arb-tid"}, "Fra", tid("fra", "Fra"), "til", tid("til", "Til")),
+      h("button", {class: "btn primaer lille", type: "button", onclick: gem}, "Gem")) : null,
+    planlagt.length ? h("div", {class: "va-koe"}, planlagt.map(x => h("div", {class: "va-koe-r"}, h("span", {class: "va-prik bl"}),
+      h("span", {}, `${dagNavn(x)[0].toUpperCase() + dagNavn(x).slice(1)} ${x.fra}-${x.til}`), h("span", {class: "muted"}, "18°"), h("div", {class: "spacer"}),
+      h("button", {class: "x", type: "button", title: "Slet", "aria-label": `Slet arbejdsdag ${dagNavn(x)}`, onclick: () => slet(x)}, "×")))) : null,
     VA.åben ? varmeDetaljer(v) : null);
 }
 function varmeDetaljer(v) {   // Oscar 10/11: temperatur og fugt som to tydeligt adskilte grafer med hver sin akse, pumpen som bånd under temperaturen, skala efter data
