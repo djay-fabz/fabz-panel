@@ -1078,8 +1078,9 @@ function spilletid(j) {
   const kal = (jobTider(j).find(l => /^spilletid\s*:/i.test(l)) || løs() || "").replace(/^spilletid\s*:\s*/i, "");
   const m = kal.match(/(\d{1,2}[.:]\d{2})\s*(?:-|–|til)\s*(\d{1,2}[.:]\d{2})?/), kunSlut = kal.match(/^til\s*(\d{1,2}[.:]\d{2})/i);
   const kalStart = m && !kunSlut ? m[1].replace(":", ".") : null, kalSlut = kunSlut ? kunSlut[1].replace(":", ".") : m && m[2] ? m[2].replace(":", ".") : null;
-  return g ? {start: g.start, slut: g.slut, ekstra: !!g.ekstra_time, gemt: true, kal, kalStart, kalSlut}
-    : {start: kalStart, slut: kalSlut, ekstra: false, gemt: false, kal, kalStart, kalSlut};
+  const pakkeTidlig = /Pakke og tilkøb:[^\n]*Tidlig ops(æ|ae)tning/i.test((j.besk || "").replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, ""));   // bryllupspakken "Tidlig opsætning & Toastmaster"
+  return g ? {start: g.start, slut: g.slut, ekstra: !!g.ekstra_time, gemt: true, kal, kalStart, kalSlut, opstilling: g.opstilling || null, pakkeTidlig}
+    : {start: kalStart, slut: kalSlut, ekstra: false, gemt: false, kal, kalStart, kalSlut, opstilling: null, pakkeTidlig};
 }
 // Rækkefølgen på samme dag (Oscar 9/11: Pincho 20.30 stod under Fox 01.00): efter spilletidens start, 00.00 til 05.59 er efter midnat, uden spilletid sidst
 function spilleOrden(j) {
@@ -1090,14 +1091,18 @@ function spilleOrden(j) {
 }
 const JT = {};   // kladder til spilletid pr. job
 function spilletidBlok(j) {
-  const sp = spilletid(j), key = jobNøgle(j), k = JT[key] ||= {start: sp.start || "", slut: sp.slut || "", ekstra: sp.ekstra};
+  const sp = spilletid(j), key = jobNøgle(j), minus30 = t => { const m = /^(\d{1,2})\.(\d{2})$/.exec(t || ""); if (!m) return ""; const x = (Number(m[1]) * 60 + Number(m[2]) + 1410) % 1440; return `${String(Math.floor(x / 60)).padStart(2, "0")}.${String(x % 60).padStart(2, "0")}`; };
+  const k = JT[key] ||= {start: sp.start || "", slut: sp.slut || "", ekstra: sp.ekstra, tidlig: !!sp.opstilling || sp.pakkeTidlig,
+    opFra: sp.opstilling?.fra || "", opTil: sp.opstilling?.til || "", tilbage: sp.opstilling?.tilbage || minus30(sp.start)};
   const forskel = sp.gemt && sp.kal && (sp.kalStart !== sp.start || sp.kalSlut !== sp.slut);
   const gem = () => {
     const tid = v => (v || "").trim().replace(":", ".");
     if (!/^\d{1,2}\.\d{2}$/.test(tid(k.start))) { alert("Skriv starttiden som 21.00."); return; }
     if (tid(k.slut) && !/^\d{1,2}\.\d{2}$/.test(tid(k.slut))) { alert("Skriv sluttiden som 01.00, eller lad den stå tom (til luk)."); return; }
-    kør("spilletid", [j.dato, j.navn, `--start=${tid(k.start)}`, ...(tid(k.slut) ? [`--slut=${tid(k.slut)}`] : []), `--ekstra=${k.ekstra ? "ja" : "nej"}`],
-      {tekst: `${j.navn}: spilletid`, efter: ["jobtider"], med: () => { if (!D.jobtider || Array.isArray(D.jobtider)) D.jobtider = {}; D.jobtider[key] = {start: tid(k.start).padStart(5, "0"), slut: tid(k.slut) ? tid(k.slut).padStart(5, "0") : null, ekstra_time: !!k.ekstra}; delete JT[key]; }});
+    if (k.tidlig && (!/^\d{1,2}\.\d{2}$/.test(tid(k.opFra)) || !/^\d{1,2}\.\d{2}$/.test(tid(k.opTil)) || !/^\d{1,2}\.\d{2}$/.test(tid(k.tilbage)))) { alert("Skriv opstilling fra, til og tilbage kl. som 11.00."); return; }
+    const op = k.tidlig ? [`--opstilling=${tid(k.opFra)}-${tid(k.opTil)}`, `--tilbage=${tid(k.tilbage)}`] : [];
+    kør("spilletid", [j.dato, j.navn, `--start=${tid(k.start)}`, ...(tid(k.slut) ? [`--slut=${tid(k.slut)}`] : []), `--ekstra=${k.ekstra ? "ja" : "nej"}`, ...op],
+      {tekst: `${j.navn}: spilletid`, efter: ["jobtider"], med: () => { if (!D.jobtider || Array.isArray(D.jobtider)) D.jobtider = {}; D.jobtider[key] = {...(k.tidlig ? {opstilling: {fra: tid(k.opFra).padStart(5, "0"), til: tid(k.opTil).padStart(5, "0"), tilbage: tid(k.tilbage).padStart(5, "0")}} : {}), start: tid(k.start).padStart(5, "0"), slut: tid(k.slut) ? tid(k.slut).padStart(5, "0") : null, ekstra_time: !!k.ekstra}; delete JT[key]; }});
   };
   return h("div", {class: "gruppe", style: "margin-top:12px"},
     h("div", {style: "display:flex;align-items:center;gap:8px;flex-wrap:wrap"}, h("div", {class: "overskrift", style: "margin:0"}, "Spilletid"),
@@ -1107,6 +1112,13 @@ function spilletidBlok(j) {
       felt("Slut", h("input", {class: "input", inputmode: "numeric", placeholder: "luk", value: k.slut, style: "width:96px", oninput: e => { k.slut = e.target.value; }})),
       felt("Mulig ekstra time", seg(["Ja", "Nej"], k.ekstra ? "Ja" : "Nej", v => { k.ekstra = v === "Ja"; tegn(); })),
       h("button", {class: "btn primaer", type: "button", onclick: gem}, "Gem")),
+    // Tidlig opsætning (Oscar 10/11, skitse koereliste-tidlig-opsaetning): opstilling, hjem, og tilbage til festen. Kørslen bliver to ture
+    h("div", {class: "overskrift", style: "margin:14px 0 8px"}, "Tidlig opsætning"),
+    h("div", {class: "rk spilletid", style: "align-items:flex-end;flex-wrap:wrap;gap:10px"},
+      seg(["Nej", "Ja"], k.tidlig ? "Ja" : "Nej", v => { k.tidlig = v === "Ja"; if (k.tidlig && !k.tilbage) k.tilbage = minus30(k.start); tegn(); }),
+      k.tidlig ? [felt("Opstilling fra", h("input", {class: "input", inputmode: "numeric", placeholder: "11.00", value: k.opFra, style: "width:96px", oninput: e => { k.opFra = e.target.value; }})),
+        felt("til", h("input", {class: "input", inputmode: "numeric", placeholder: "13.00", value: k.opTil, style: "width:96px", oninput: e => { k.opTil = e.target.value; }})),
+        felt("Tilbage kl.", h("input", {class: "input", inputmode: "numeric", placeholder: "21.00", value: k.tilbage, style: "width:96px", oninput: e => { k.tilbage = e.target.value; }}))] : null),
     forskel ? h("div", {class: "lille", style: "margin-top:8px;color:var(--adv)"}, "Kalenderen siger: " + sp.kal) : null);
 }
 const jobStatus = j => {
@@ -4715,12 +4727,24 @@ function vælgRuteJob(nøgle) {   // henter adresse og ankomsttid fra jobbets bo
   const r = RU, j = jobs().find(x => jobRuteNøgle(x) === nøgle);
   r.job = j ? nøgle : ""; r.svar = null; r.postnr = j ? postnr(jobAdresse(j)) : null;
   if (!j) return;
-  const gemt = (D.jobrute || {})[nøgle];
-  if (gemt?.input) {
+  const gemt = (D.jobrute || {})[nøgle], tidlig = !!spilletid(j).opstilling;
+  if (gemt?.input && (!tidlig || (gemt.input.stop || []).length >= 5)) {   // en gemt plan med én tur bruges ikke, når der nu er tidlig opsætning
     const i = gemt.input;
     r.koeretoej = i.koeretoej || "trailer";
     r.stop = i.stop.map((x, k) => ({navn: x.navn || "", adr: x.adresse || "", lat: x.lat ?? null, lon: x.lon ?? null, ophold: x.ophold ? String(x.ophold) : "", note: x.note || "",
       tid: x.tid || (k === 0 ? i.afgang : k === i.stop.length - 1 ? i.fremme : "") || ""}));
+    return;
+  }
+  const op = spilletid(j).opstilling;
+  if (op && jobAdresse(j)) {   // tidlig opsætning (Oscar 10/11): lager → stedet (opstilling) → hjem → stedet (festen) → lager, med traileren begge ture
+    const sp = spilletid(j), min = (a, b) => { const t = x => Number(x.slice(0, 2)) * 60 + Number(x.slice(3)); return ((t(b) - t(a)) + 1440) % 1440; };
+    const LAGER = {navn: "Lager", adr: "Åhavevej, 8600 Silkeborg"}, HJEM = {navn: "Hjem", adr: "Vejlsøvej 51, 8600 Silkeborg"}, sted = {navn: j.navn, adr: jobAdresse(j), lat: null, lon: null};
+    r.koeretoej = "trailer";
+    r.stop = [{...nyttStop(), ...LAGER},
+      {...nyttStop(), ...sted, tid: op.fra, ophold: String(min(op.fra, op.til)), note: "Opstilling og lydtjek"},
+      {...nyttStop(), ...HJEM},
+      {...nyttStop(), ...sted, tid: op.tilbage, ophold: String(min(op.tilbage, sp.slut || sp.start) + 60), note: `Spilletid ${sp.start || ""}-${sp.slut || "luk"} og nedpakning`},
+      {...nyttStop(), ...LAGER}];
     return;
   }
   const tekst = (j.besk || "").replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "");
