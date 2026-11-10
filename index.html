@@ -141,7 +141,7 @@ input[type=date]{color-scheme:light dark}
 .sd-liste{background:var(--flade);border:1px solid var(--linje);border-radius:14px;overflow:hidden}.sd-r{display:flex;align-items:center;gap:14px;padding:12px 16px}.sd-r+.sd-r{border-top:1px solid var(--linje)}.sd-mk{flex:none;width:20px;height:20px;border-radius:50%;border:2px solid var(--svagere)}.sd-r.ok .sd-mk{background:var(--faerdig);border-color:var(--faerdig)}.sd-t{flex:1;min-width:0;display:block;text-align:left;background:none;border:0;padding:0;color:inherit;font:inherit}.sd-t b{display:block;font-weight:600}.sd-t span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sd-r.ok b{text-decoration:line-through;font-weight:500;color:var(--svag)}.sd-r .btn{flex:none;margin:0}
 .sp-start{background:var(--flade);border:1px solid var(--linje);border-radius:14px;padding:18px 20px;display:flex;justify-content:space-between;align-items:center;gap:14px}.sp-start h1{margin:0 0 2px;font-size:21px}.sp-start .btn{margin:0;padding:11px 22px;font-size:15px;border-radius:10px}.sp-uge{display:flex;gap:8px;margin:10px 0}.sp-uge div{flex:1;background:var(--flade);border:1px solid var(--linje);border-radius:8px;padding:8px 4px;text-align:center;font-size:13px;color:var(--svag)}.sp-uge .ok{background:var(--faerdig-blid);border-color:transparent;color:var(--faerdig);font-weight:var(--faerdig-vaegt)}.sp-uge .nu{border-color:var(--accent);color:var(--accent);font-weight:600}.sp-uge .graa{opacity:.45}.sp-tid{font-size:34px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}.idag-salg .sp-start h1{font-size:19px}@media (max-width:700px){.sp-start{flex-direction:column;align-items:stretch}.sp-start .btn{width:100%}.sp-lang{display:none}}
 .pl-salg{display:flex;gap:8px;align-items:center;grid-column:1/-1;font-size:13px}.pl-salg .input{flex:1}.pl-lnk{background:none;border:0;padding:0;color:var(--accent);font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}.planpunkt.fravalgt>.input:first-child{text-decoration:line-through;opacity:.55}.planpunkt.fravalgt .min{opacity:.55}.skub{background:var(--adv-blid);border:1px solid var(--adv);border-radius:10px;padding:12px 14px;margin-top:10px}.skub-top{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px}.skub-top b{flex:1;min-width:0}.skub-krav{background:var(--flade);border:1px solid var(--linje);border-radius:8px;margin-top:8px}.skub-krav label{display:flex;gap:10px;align-items:flex-start;padding:9px 12px;cursor:pointer}.skub-krav label+label{border-top:1px solid var(--linje)}.skub-krav input{width:18px;height:18px;margin:1px 0 0;flex:none}.skub-ok{background:var(--faerdig-blid);color:var(--faerdig);font-weight:var(--faerdig-vaegt);border-radius:10px;padding:10px 14px;margin-bottom:10px}.skub-ryk{flex-wrap:wrap;align-items:center}.skub-ryk .dato-felt{max-width:170px}.skub-valg{display:flex;gap:6px;flex-wrap:wrap}.skub-valg .valgt{border-color:var(--accent);color:var(--accent)}.skub .r1{display:flex;gap:8px;margin-top:8px}.skub .r1 .input{flex:1}.sk-kort{display:none}@media (max-width:700px){.skub-valg .btn{flex:1 1 40%}.skub-ryk .btn:not(.primaer){flex:1 1 40%;white-space:nowrap}.skub-ryk .dato-felt{flex:1 1 50%;max-width:none;min-width:0}.sk-lang{display:none}.sk-kort{display:inline}}
-.md-link,.mu-link{color:var(--accent);text-decoration:none;font-weight:500}.plan-link{color:inherit;text-decoration:none}.plan-link::after{content:" ›";color:var(--svag)}.plan-link:hover{color:var(--accent)}.md-link:hover,.mu-link:hover{text-decoration:underline}
+.md-link,.mu-link{color:var(--accent);text-decoration:none;font-weight:500}.md-link:hover,.mu-link:hover{text-decoration:underline}
 .sd-faerdig{background:var(--faerdig-blid);border-radius:14px;padding:26px;text-align:center}.sd-f-t{color:var(--faerdig);font-size:21px;font-weight:var(--faerdig-vaegt);margin-bottom:12px}.sd-fold{background:var(--flade);border:1px solid var(--linje);border-radius:12px;margin-top:8px}.sd-fold>summary{padding:12px 16px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;font-weight:500}.sd-fold>summary::-webkit-details-marker{display:none}.sd-fold>summary::after{content:"›";color:var(--svagere)}.sd-fold[open]>summary::after{content:"⌄"}.sd-fold .kompakt{margin:0 12px 12px}.sd-fold .to,.sd-fold .side{padding-left:12px;padding-right:12px}.sd-fold .salg-status{margin-top:0}
 .mu{max-width:760px}.mu-fokus{background:var(--flade);border:1px solid var(--linje);border-radius:16px;padding:22px 24px;margin-bottom:22px}
 .mu-uge{display:flex;align-items:center;gap:8px;margin-bottom:16px}.mu-prik{width:10px;height:10px;border-radius:50%;background:var(--linje)}.mu-prik.ok{background:var(--accent)}
@@ -269,6 +269,15 @@ input[type=date]{color-scheme:light dark}
 /* lager-fanen */
 .lagerside{max-width:1228px;margin:0 auto;padding:28px 24px 130px}
 .lagertop{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.va{background:var(--flade);border:1px solid var(--linje);border-radius:12px;padding:9px 14px;margin:12px 0 4px}
+.va-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.va-prik{width:9px;height:9px;border-radius:50%;background:var(--ok);flex:none}.va-prik.rd{background:var(--fejl)}.va-prik.bl{background:var(--accent)}
+.va-adv{background:var(--fejl-blid);color:var(--fejl);border-radius:8px;padding:7px 11px;margin-top:8px;font-weight:500}
+.va-arb{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap;background:var(--accent-blid);border-radius:8px;padding:8px 11px}.va-arb .va-tid{width:110px}
+.va-mere{margin-top:8px}.va-graf{width:100%;height:120px;display:block}.va-band{fill:var(--ok-blid)}.va-temp{fill:none;stroke:var(--accent);stroke-width:2;vector-effect:non-scaling-stroke}
+.va-fugt{fill:none;stroke:#9ca3af;stroke-width:1.5;stroke-dasharray:4 3;vector-effect:non-scaling-stroke}.va-kort{fill:#f59e0b}.va-lbl{font-size:11px;fill:var(--svagere)}
+.va-forkl{display:flex;gap:16px;font-size:12px;margin-top:4px}.va-l{display:inline-block;width:14px;height:3px;margin-right:5px;vertical-align:middle;background:var(--accent)}.va-l.f{background:#9ca3af}.va-l.k{background:#f59e0b;height:6px;border-radius:2px}
+.va-tab{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}.va-tab td,.va-tab th{padding:6px 8px;border-top:1px solid var(--linje);text-align:left}.va-tab th{font-size:11.5px;color:var(--svagere);text-transform:uppercase;letter-spacing:.06em;border-top:0}
+@media (max-width:700px){.va-top{gap:8px}}
 .lagertop h1{font-size:22px;margin:0}
 .lagertop .input{width:240px}
 .lhd,.lr{display:grid;grid-template-columns:minmax(180px,2.2fr) 140px 112px 112px minmax(160px,2fr) 32px;gap:8px;align-items:center;padding:6px 12px}
@@ -729,7 +738,7 @@ const fil = (p, std = []) => sikker(p, async () => { const r = await laesFil(p);
 let GQL = null;
 const DATAFILER = ["kalender", "udstyr", "pakkelister", "opgaver", "jobpakkelister", "henvendelser", "dagsplaner", "indtaegter", "typer", "salg", "festkort",
   "klubkort", "salgslog", "klubkort_tekster", "strategi", "jobrute", "jobtider", "salgjobs", "kortmaaling", "evalueringer", "salgslaering", "setups", "maanedsoversigt", "priser",
-  "leads", "betalinger", "honorarsedler", "jobstatus", "fejl", "hov", "ugepakke", "mailoversigt", "vagter", "some", "linkedin", "mashups", "salgssprints"].map(x => `data/${x}.json`).concat(["tools/klubkort/kort.json"]);
+  "leads", "betalinger", "honorarsedler", "jobstatus", "fejl", "hov", "ugepakke", "mailoversigt", "vagter", "some", "linkedin", "mashups", "salgssprints", "varme", "varme_styring"].map(x => `data/${x}.json`).concat(["tools/klubkort/kort.json"]);
 async function hentSamlet() {
   const t0 = performance.now();
   try {
@@ -761,7 +770,7 @@ async function hentDataFiler() {
     ...["data/henvendelser.json", "data/dagsplaner.json", "data/indtaegter.json", "data/typer.json", "data/salg.json", "data/festkort.json", "data/klubkort.json", "data/salgslog.json"].map(p => fil(p)),
     sikker("data/klubkort_tekster.json", laesKkTekster, [])]);
   D = {kalender, udstyr, lister, opgaver, jobpl, henvendelser, dagsplaner, indtaegter, typer, salg, festkort, klubkort, salgslog, kkTekster};
-  const [strategi, jobrute, jobtider, salgjobs, kortmaaling, evalueringer, salgslaering, setups, mo, priser, leads, betalinger, honorarsedler, jobstatus, fejl, hov, ugepakke, mailoversigt, vagter, some, linkedin, mashups, salgssprints] = await Promise.all([
+  const [strategi, jobrute, jobtider, salgjobs, kortmaaling, evalueringer, salgslaering, setups, mo, priser, leads, betalinger, honorarsedler, jobstatus, fejl, hov, ugepakke, mailoversigt, vagter, some, linkedin, mashups, salgssprints, varme, varmeStyring] = await Promise.all([
     fil("data/strategi.json", {}), fil("data/jobrute.json", {}), fil("data/jobtider.json"), fil("data/salgjobs.json"),   // hvilket firma i Salg et job kom fra (fabz.py salg-job)
     fil("data/kortmaaling.json"), fil("data/evalueringer.json"),   // scanninger og tilmeldinger pr. kort (tools/kortmaaling.mjs hver nat)
     fil("data/salgslaering.json"),   // forslag fra opkaldene (Tal på Salg)
@@ -775,8 +784,9 @@ async function hentDataFiler() {
     fil("data/ugepakke.json"),   // ugens bogføring (fabz_bogholder.py): robottens forslag, Oscar godkender
     fil("data/mailoversigt.json", null),   // dagens mailoversigt (tools/mailoversigt.py via panel.yml ved Mødt ind)
     fil("data/vagter.json", null),   // vagter fra Planday/Deltaplan (tools/vagter.py i kalender.yml)
-    fil("data/some.json", {opslag: [], ideer: []}), fil("data/linkedin.json", {}), fil("data/mashups.json", null), fil("data/salgssprints.json", [])]);   // + salgssprints (30 min salg, Oscar 9/11)   // + Mashups (fabz_mashups.py, Oscar 9/11)   // SoMe-fanen (fabz_some.py) og LinkedIn-målet
-  Object.assign(D, {strategi, jobrute, jobtider, salgjobs, kortmaaling, evalueringer, salgslaering, setups, mo, priser, leads, betalinger, honorarsedler, jobstatus, fejl, hov, ugepakke, mailoversigt, vagter, some, linkedin, mashups, salgssprints});
+    fil("data/some.json", {opslag: [], ideer: []}), fil("data/linkedin.json", {}), fil("data/mashups.json", null), fil("data/salgssprints.json", []),
+    fil("data/varme.json", null), fil("data/varme_styring.json", {})]);   // varmepumpen på lageret (tools/varme.py i varme.yml, Oscar 10/11)   // + salgssprints (30 min salg, Oscar 9/11)   // + Mashups (fabz_mashups.py, Oscar 9/11)   // SoMe-fanen (fabz_some.py) og LinkedIn-målet
+  Object.assign(D, {strategi, jobrute, jobtider, salgjobs, kortmaaling, evalueringer, salgslaering, setups, mo, priser, leads, betalinger, honorarsedler, jobstatus, fejl, hov, ugepakke, mailoversigt, vagter, some, linkedin, mashups, salgssprints, varme, varmeStyring});
 }
 function manglerBesked() {
   besked({id: "mangler", klasse: "adv", titel: "GitHub svarer ikke lige nu, prøver igen …", punkter: ["Kunne ikke hente: " + MANGLER.join(", ")],
@@ -2498,6 +2508,61 @@ const erÆndret = w => { const o = D.udstyr.find(u => u.navn === w._orig); retur
 function vælg(valg, v, f) {
   return h("select", {class: "felt", onchange: e => f(e.target.value)}, valg.map(x => h("option", {value: x, selected: x === v}, x)));
 }
+// ---------- Varmepumpen på lageret (Oscar 10/11, skitse panel-lager-varme B "som undertitel"): én linje, der kan foldes ud ----------
+const VA = {åben: false, arb: null};
+const grad = v => v == null ? "–" : `${String(v.toFixed(1)).replace(".", ",")}°`;
+const minTekst = m => m == null ? "–" : m >= 60 ? `${Math.floor(m / 60)} t ${m % 60} min` : `${m} min`;
+function varmeArbejdsdag() {   // aktiv eller venter, ellers null
+  const a = D.varmeStyring || {}, d = iDag(), k = nuHHMM();
+  if (!a.dato || !a.fra || !a.til || a.dato < d || a.dato === d && k >= a.til) return null;
+  return {...a, aktiv: a.dato === d && a.fra <= k};
+}
+function varmeLinje() {
+  const v = D.varme;
+  if (!v) return null;
+  const s = v.sensor || {}, p = v.pumpe || {}, arb = varmeArbejdsdag(), idag = (v.dage || [])[0] || {};
+  const gammel = (Date.now() - new Date(v.opdateret)) / 60000 > 120;
+  const adv = [...(v.advarsler || []), ...(gammel ? [`Ingen målinger siden ${kortDato(v.opdateret)} kl. ${v.opdateret.slice(11).replace(":", ".")}`] : [])];
+  const prik = adv.length ? "rd" : arb?.aktiv ? "bl" : "";
+  const gem = () => { const f = VA.arb; if (!f?.fra || !f?.til || f.til <= f.fra) return;
+    kør("varme-arbejdsdag", [`--fra=${f.fra}`, `--til=${f.til}`], {tekst: `Arbejdsdag ${f.fra}-${f.til}`, efter: ["varmeStyring"],
+      med: () => { D.varmeStyring = {dato: f.til > nuHHMM() ? iDag() : plusDage(iDag(), 1), fra: f.fra, til: f.til}; VA.arb = null; }}); };
+  const stop = () => kør("varme-stop", [], {tekst: "Arbejdsdag stoppet", efter: ["varmeStyring"], med: () => { D.varmeStyring = {}; }});
+  const tid = (felt, lbl) => h("input", {class: "input va-tid", type: "time", value: (VA.arb[felt] || "").replace(".", ":"), "aria-label": lbl,
+    onchange: e => { VA.arb[felt] = e.target.value.replace(":", "."); }});
+  const top = h("div", {class: "va-top"}, h("span", {class: "va-prik " + prik}),
+    arb?.aktiv ? [h("b", {}, "Arbejdsdag 18°"), h("span", {}, `til ${arb.til}`), h("span", {class: "muted va-tal"}, `${grad(s.temp)} · ${s.fugt ?? "–"} %`)]
+      : [h("b", {}, "Varme"), h("span", {class: "va-tal"}, `${grad(s.temp)} · ${s.fugt ?? "–"} % · ${p.taendt ? "tændt" : "slukket"} · ${minTekst(idag.min)} i dag`),
+        h("span", {class: "pill va-pill " + (arb ? "blå" : "grøn")}, arb ? `Arbejdsdag ${arb.dato === iDag() ? "" : kortDato(arb.dato) + " "}${arb.fra}-${arb.til}` : "Automatik 8-12°")],
+    h("div", {class: "spacer"}),
+    arb ? h("button", {class: "btn lille", type: "button", onclick: stop}, arb.aktiv ? "Stop nu" : "Fortryd")
+      : h("button", {class: "btn lille", type: "button", onclick: () => { VA.arb = VA.arb ? null : {fra: "07.30", til: "16.00"}; visLager(); }}, "Arbejdsdag"),
+    h("button", {class: "btn lille ghost va-fold", type: "button", "aria-label": VA.åben ? "Fold sammen" : "Fold ud", onclick: () => { VA.åben = !VA.åben; visLager(); }}, VA.åben ? "▴" : "▾"));
+  return h("div", {class: "va"}, top,
+    adv.map(a => h("div", {class: "va-adv"}, a)),
+    VA.arb ? h("div", {class: "va-arb"}, "Fra", tid("fra", "Fra"), "til", tid("til", "Til"), h("button", {class: "btn primaer lille", type: "button", onclick: gem}, "Start")) : null,
+    VA.åben ? varmeDetaljer(v) : null);
+}
+function varmeDetaljer(v) {
+  const W = 800, H = 120, x0 = 30, slut = new Date(v.opdateret).getTime(), start = slut - 864e5;
+  const x = iso => x0 + (new Date(iso).getTime() - start) / 864e5 * (W - x0), yT = t => 100 - (t - 4) * 7.5, yF = f => 100 - (f - 30) * 2.2;
+  const ns = "http://www.w3.org/2000/svg", el = (n, a) => { const e = document.createElementNS(ns, n); for (const k in a) e.setAttribute(k, a[k]); return e; };
+  const svg = el("svg", {viewBox: `0 0 ${W} ${H}`, class: "va-graf", preserveAspectRatio: "none"});
+  svg.append(el("rect", {x: x0, y: yT(12), width: W - x0, height: yT(8) - yT(12), class: "va-band"}));
+  const m = (v.maalinger || []).filter(r => r[1] != null && new Date(r[0]).getTime() >= start);
+  if (m.length) svg.append(el("polyline", {points: m.map(r => `${x(r[0]).toFixed(1)},${yT(r[1]).toFixed(1)}`).join(" "), class: "va-temp"}));
+  const mf = m.filter(r => r[2] != null);
+  if (mf.length) svg.append(el("polyline", {points: mf.map(r => `${x(r[0]).toFixed(1)},${yF(r[2]).toFixed(1)}`).join(" "), class: "va-fugt"}));
+  for (const [fra, til] of v.taendt || []) { const a = Math.max(x0, x(fra)), b = til ? x(til) : W; svg.append(el("rect", {x: a, y: 112, width: Math.max(2, b - a), height: 6, rx: 2, class: "va-kort"})); }
+  const lbl = (tx, xx, yy) => { const t = el("text", {x: xx, y: yy, class: "va-lbl"}); t.textContent = tx; svg.append(t); };
+  lbl("12°", 0, yT(12) + 4); lbl("8°", 0, yT(8) + 4);
+  const dage = (v.dage || []).filter(d => d.min != null || d.lavest != null);
+  return h("div", {class: "va-mere"},
+    h("div", {class: "overskrift"}, "Sidste døgn"), svg,
+    h("div", {class: "va-forkl muted"}, h("span", {}, h("i", {class: "va-l t"}), "temperatur"), h("span", {}, h("i", {class: "va-l f"}), "fugt"), h("span", {}, h("i", {class: "va-l k"}), "pumpen kører")),
+    dage.length ? h("table", {class: "va-tab"}, h("tr", {}, h("th", {}, "Dag"), h("th", {}, "Kørt"), h("th", {}, "Lavest"), h("th", {}, "Højest fugt")),
+      dage.map(d => h("tr", {}, h("td", {}, `${DAGE[dag(d.dato).getDay()].slice(0, 2)} ${kortDato(d.dato)}`), h("td", {}, minTekst(d.min)), h("td", {}, grad(d.lavest)), h("td", {}, d.hoejest_fugt == null ? "–" : `${d.hoejest_fugt} %`)))) : null);
+}
 function visLager() {
   if (!L) nulstilLager();
   const y = window.scrollY;
@@ -2509,6 +2574,7 @@ function visLager() {
       h("div", {class: "spacer"}), søg,
       h("label", {class: "muted lille"}, h("input", {type: "checkbox", checked: L.udgaaede, onchange: e => { L.udgaaede = e.target.checked; visLager(); }}), " Vis udgået"),
       h("button", {class: "btn primaer", type: "button", onclick: () => { L.visNy = true; visLager(); $("nyNavn")?.focus(); }}, "+ Nyt udstyr")),
+    varmeLinje(),
     L.visNy ? nyForm() : null,
     h("div", {class: "lhd"}, h("span", {}, "Navn"), h("span", {}, "Kategori"), h("span", {}, "Antal"), h("span", {}, "Status"), h("span", {}, "Fast note"), h("span", {})),
     L.ny.length ? h("div", {class: "gruppe", "data-gruppe": ""}, h("div", {class: "overskrift"}, "Nyt, gemmes når du trykker Gem"),
@@ -2627,7 +2693,7 @@ async function gemLager() {
 
 // ---------- fælles: kør fabz.py-kommandoer fra panelet ----------
 const FILER = {evalueringer: "data/evalueringer.json", jobstatus: "data/jobstatus.json", jobtider: "data/jobtider.json", kortmaaling: "data/kortmaaling.json", salgjobs: "data/salgjobs.json", salgslaering: "data/salgslaering.json", henvendelser: "data/henvendelser.json", opgaver: "data/opgaver.json", betalinger: "data/betalinger.json", honorarsedler: "data/honorarsedler.json", ugepakke: "data/ugepakke.json", dagsplaner: "data/dagsplaner.json",
-               indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json", salgslog: "data/salgslog.json", mo: "data/maanedsoversigt.json", strategi: "data/strategi.json", leads: "data/leads.json", mailoversigt: "data/mailoversigt.json", vagter: "data/vagter.json", fejl: "data/fejl.json", hov: "data/hov.json", some: "data/some.json", mashups: "data/mashups.json", salgssprints: "data/salgssprints.json", linkedin: "data/linkedin.json"};
+               indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json", salgslog: "data/salgslog.json", mo: "data/maanedsoversigt.json", strategi: "data/strategi.json", leads: "data/leads.json", mailoversigt: "data/mailoversigt.json", vagter: "data/vagter.json", fejl: "data/fejl.json", hov: "data/hov.json", some: "data/some.json", mashups: "data/mashups.json", salgssprints: "data/salgssprints.json", varme: "data/varme.json", varmeStyring: "data/varme_styring.json", linkedin: "data/linkedin.json"};
 async function laesValgfri(p) { const r = await laesFil(p); return r ? r.json() : []; }
 async function genindlæs(navne) { await Promise.all(navne.map(async n => { D[n] = n === "kkTekster" ? await laesKkTekster() : await laesValgfri(FILER[n]); })); }
 const plusDage = (iso, n) => { const d = dag(iso); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
@@ -2821,7 +2887,7 @@ function visIDag() {
               e.target.closest(".cb").classList.toggle("gjort", e.target.checked);
             }}),
             h("span", {class: "t" + (salgRød(p) ? " rød" : "")},
-              planOpg(p)?.job_opgave === "salg" ? h("a", {href: "#", class: "plan-link", onclick: e => { e.preventDefault(); SG.vis = null; SG.valgt = null; SG.alleÅben = false; fane = "salg"; tegn(); window.scrollTo(0, 0); }}, p.tekst)
+              planOpg(p)?.job_opgave === "salg" ? h("a", {href: "#", onclick: e => { e.preventDefault(); SG.vis = null; SG.valgt = null; SG.alleÅben = false; fane = "salg"; tegn(); window.scrollTo(0, 0); }}, p.tekst)
                 : erMashupPunkt(p) ? [p.tekst, ...muLinksAlene(D.mashups?.naeste).flatMap(a => { a.className = "mu-link"; return [a]; }), h("a", {href: "#mashups", class: "mu-link", onclick: e => { e.preventDefault(); MU.valgt = null; fane = "mashups"; tegn(); window.scrollTo(0, 0); }}, "Mashups ›")] : p.tekst),
             p.min ? h("span", {class: "muted lille"}, p.min + " min") : null,
             fulgtOp ? (p.brugt != null ? h("span", {class: "muted lille"}, "brugt " + p.brugt + " min") : null)
