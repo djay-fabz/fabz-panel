@@ -494,6 +494,13 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .sx{background:var(--flade);border:1px solid var(--linje);border-radius:14px;overflow:hidden}.sx .pulje{border:0;border-radius:0;margin:0;border-bottom:1px solid var(--linje)}.sx .pulje:last-child{border-bottom:0}
 .hb-w{position:relative;padding-bottom:16px}.hb-w .pbar{position:relative}.hb-w .pbar s{position:absolute;top:0;bottom:0;width:2px;background:var(--tekst)}.hb-mk{position:absolute;bottom:0;transform:translateX(-50%);white-space:nowrap;font-size:11.5px;color:var(--svag)}
 .d1-h{font-weight:700;font-size:17px;margin-bottom:2px}.d1-g{font-size:12.5px;font-weight:600;color:var(--svag);text-transform:uppercase;letter-spacing:.05em;margin:12px 0 0}
+.kj{align-items:flex-start}.kj>.btn{order:2}.kj-f{flex:1 1 300px;min-width:0}.kj:has(.kj-f[open])>.btn{display:none}
+.kj-f>summary{list-style:none;cursor:pointer;display:flex;gap:22px;align-items:center;justify-content:space-between;flex-wrap:wrap}.kj-f>summary::-webkit-details-marker{display:none}
+.kj-se{display:inline-flex;align-items:center;gap:5px;color:var(--accent,#2563eb);font-weight:600;font-size:13px;line-height:1;white-space:nowrap;margin-left:auto}
+.kj-pil{width:6px;height:6px;border-right:1.6px solid currentColor;border-bottom:1.6px solid currentColor;transform:translateY(-2px) rotate(45deg)}.kj-f[open] .kj-pil{transform:translateY(1px) rotate(-135deg)}
+.kj-fold{margin-top:12px;border:1px solid var(--linje);border-radius:10px;overflow:hidden}.kj-l{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 12px;border-top:1px solid var(--linje)}.kj-l:first-child{border-top:0}
+.kj-t{display:flex;flex-direction:column;min-width:0}.kj-u{font-size:12.5px;color:var(--svag)}.kj-h{display:flex;gap:16px;align-items:center;white-space:nowrap}.kj-s{background:var(--flade);font-weight:700}
+.kj-job{background:none;border:0;padding:8px 12px;color:var(--accent,#2563eb);font-weight:600;font-size:13px;cursor:pointer;border-top:1px solid var(--linje);width:100%;text-align:left}
 .ov-r{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--linje);flex-wrap:wrap}.ov-r:first-child{padding-top:0}.ov-r:last-child{border-bottom:0;padding-bottom:0}.ov-t{flex:1 1 300px;min-width:0}.ov-t b.rd-t{color:var(--fejl)}.ov-n{font-variant-numeric:tabular-nums;color:var(--svag);font-size:13.5px;margin-top:2px}.ov-n b{color:var(--tekst);letter-spacing:.02em}
 .hov{background:var(--fejl-blid);border:0;border-left:6px solid var(--fejl)}.hov h2{margin:0;font-size:20px}.hov p{margin:4px 0 12px}.hov textarea{width:100%;margin-bottom:8px}.hov-plan{margin-top:4px}.hov-svar{margin-top:8px;color:var(--svag)}.hov-svar b{color:var(--tekst)}
 .kuv-r{border-top:1px solid var(--linje)}.kuv-l{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;padding:12px 18px;cursor:pointer}.kuv-l span:first-child{flex:1}.kuv-l b{font-weight:600}.kuv-ch{color:var(--svagere);font-size:18px;transition:transform .15s}.kuv-r.aaben .kuv-ch{transform:rotate(90deg)}.kuv-d{padding:0 18px 12px}.kuv-d .pm{font-size:13px;color:var(--svag)}.kuv-d .btn{margin-top:8px}
@@ -533,7 +540,7 @@ details.sg-r{margin:0;border:0;border-top:1px solid var(--linje);border-radius:0
 .sg-md.y{background:var(--adv-blid)}.sg-md.y .s{color:var(--adv)}.sg-md.fri{background:var(--flade2);border:1px solid var(--linje)}.sg-md.fri .s{color:var(--tekst)}.sg-v.y{color:var(--adv)}.sg-md .gem{font-weight:600}.sg-linjer{margin-top:12px;background:var(--flade);border:1px solid var(--linje);border-radius:14px;overflow:hidden}details.sg-l{margin:0;border:0;border-radius:0}.sg-linjer>details.sg-l+details.sg-l{border-top:1px solid var(--linje)}details.sg-l>summary{font-weight:400}details.sg-l>summary::before{content:none}details.sg-l[open]>summary::before{content:none}details.sg-l>summary::after{content:"›";margin-left:auto;color:var(--svagere)}details.sg-l[open]>summary::after{content:"⌄"}
 .sg-ind{padding:4px 12px 12px}.sg-h{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 4px;font-weight:600}.sg-h .sg-prik{margin-top:1px}.sg-ht{flex:1;min-width:180px}
 .sg-under{margin-top:6px;border:1px solid var(--linje);border-radius:10px;overflow:hidden}.sg-under>details.sg-l{border:0;border-radius:0}.sg-under>details.sg-l+details.sg-l{border-top:1px solid var(--linje)}.sg-ek{color:var(--svagere)}.sg-prik{width:8px;height:8px;border-radius:50%;flex:none;background:var(--fejl)}.sg-prik.y{background:var(--adv)}
-.op-mk{font-size:12px;font-weight:600;padding:3px 9px;border-radius:99px;background:var(--ok-blid);color:var(--ok)}.op-mk.r{background:var(--fejl-blid);color:var(--fejl)}
+.op-mk{font-size:12px;font-weight:600;padding:3px 9px;border-radius:99px;background:var(--ok-blid);color:var(--ok)}.op-mk.r{background:var(--fejl-blid);color:var(--fejl)}.op-mk.y{background:var(--adv-blid);color:var(--adv)}.mo-gl .sg-prik.rd,.mo-gl .sg-prik.y{visibility:hidden}
 @media(max-width:700px){.sg-mdr{grid-template-columns:repeat(3,1fr)}.sg-v{font-size:22px}.sg-m,.sg-ek{display:none}}
 .rd-top{margin-top:14px;background:var(--flade);border:1px solid var(--linje);border-radius:16px;padding:16px 18px}.rd-top .t{font-size:13px;color:var(--svag);font-weight:600}
 .rd-top .v{font-size:40px;font-weight:800;letter-spacing:-.02em;line-height:1.1}.rd-top .v.neg{color:var(--fejl)}.rd-loen{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
@@ -744,12 +751,22 @@ function tjek(r, hvad) {
   throw new Error(`${hvad}: GitHub svarede ${r.status}`);
 }
 async function laesFil(p) {
-  if (GQL && GQL.has(p)) { const v = GQL.get(p); return v === null ? null : new Response(v); }   // hentet i det samlede GraphQL-kald
+  const k = KILDE_FILER[p];
+  if (GQL && GQL.has(p)) { const v = GQL.get(p); if (k) KH[k] = v === null ? null : await kildeHash(v); return v === null ? null : new Response(v); }   // hentet i det samlede GraphQL-kald
   const r = await gh(`/repos/${REPO}/contents/${sti(p)}?ref=${BRANCH}&t=${Date.now()}`, {raw: true});
-  if (r.status === 404) return null;
+  if (r.status === 404) { if (k) KH[k] = null; return null; }
   tjek(r, p);
+  if (k) { const v = await r.text(); KH[k] = await kildeHash(v); return new Response(v); }
   return r;
 }
+// Friskhedstjek (11/11, efter Ranum): maanedsoversigt.json gemmer en hash af de filer, den er regnet af. Er en af dem ændret siden, vises ingen pengealarm
+// fra den gamle oversigt, og panelet beder om en ny beregning (kalender.yml, som Mødt ind). Samme hash som fabz_kerne.kilde_hash: sha256, 16 tegn
+const KILDE_FILER = {"data/jobstatus.json": "jobstatus", "data/betalinger.json": "betalinger", "data/indtaegter.json": "indtaegter", "data/skat.json": "skat"}, KH = {};
+async function kildeHash(tekst) {
+  try { const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(tekst)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("").slice(0, 16); }
+  catch { return undefined; }   // uden crypto.subtle: ukendt, ikke gammel
+}
+const moGammel = () => Object.entries(D.mo?.kilder || {}).some(([n, x]) => KH[n] !== undefined && KH[n] !== x);
 async function laesJson(p) {
   const r = await laesFil(p);
   if (!r) throw new Error(`Fandt ikke ${p}. Tjek at tokenen har adgang til ${REPO}.`);
@@ -789,7 +806,7 @@ const fil = (p, std = []) => sikker(p, async () => { const r = await laesFil(p);
 let GQL = null;
 const DATAFILER = ["kalender", "udstyr", "pakkelister", "opgaver", "jobpakkelister", "henvendelser", "dagsplaner", "indtaegter", "typer", "salg", "festkort",
   "klubkort", "salgslog", "klubkort_tekster", "strategi", "jobrute", "jobtider", "salgjobs", "kortmaaling", "evalueringer", "salgslaering", "setups", "maanedsoversigt", "priser",
-  "leads", "betalinger", "honorarsedler", "jobstatus", "fejl", "hov", "ugepakke", "mailoversigt", "vagter", "some", "linkedin", "mashups", "salgssprints", "varme", "varme_styring", "dinero"].map(x => `data/${x}.json`).concat(["tools/klubkort/kort.json"]);
+  "leads", "betalinger", "honorarsedler", "jobstatus", "fejl", "hov", "ugepakke", "mailoversigt", "vagter", "some", "linkedin", "mashups", "salgssprints", "varme", "varme_styring", "dinero", "skat"].map(x => `data/${x}.json`).concat(["tools/klubkort/kort.json"]);
 async function hentSamlet() {
   const t0 = performance.now();
   try {
@@ -837,7 +854,7 @@ async function hentDataFiler() {
     fil("data/vagter.json", null),   // vagter fra Planday/Deltaplan (tools/vagter.py i kalender.yml)
     fil("data/some.json", {opslag: [], ideer: []}), fil("data/linkedin.json", {}), fil("data/mashups.json", null), fil("data/salgssprints.json", []),
     fil("data/varme.json", null), fil("data/varme_styring.json", {}),
-    fil("data/dinero.json", null)]);   // de bogførte fakturaer (tools/dinero_sync.py hver morgen): "Sendt fra Dinero" ved jobbet (Oscar 10/11)   // varmepumpen på lageret (tools/varme.py i varme.yml, Oscar 10/11)   // + salgssprints (30 min salg, Oscar 9/11)   // + Mashups (fabz_mashups.py, Oscar 9/11)   // SoMe-fanen (fabz_some.py) og LinkedIn-målet
+    fil("data/dinero.json", null), fil("data/skat.json", null)]);   // skat.json kun til friskhedstjekket (tallene står i maanedsoversigt.json)   // de bogførte fakturaer (tools/dinero_sync.py hver morgen): "Sendt fra Dinero" ved jobbet (Oscar 10/11)   // varmepumpen på lageret (tools/varme.py i varme.yml, Oscar 10/11)   // + salgssprints (30 min salg, Oscar 9/11)   // + Mashups (fabz_mashups.py, Oscar 9/11)   // SoMe-fanen (fabz_some.py) og LinkedIn-målet
   Object.assign(D, {strategi, jobrute, jobtider, salgjobs, kortmaaling, evalueringer, salgslaering, setups, mo, priser, leads, betalinger, honorarsedler, jobstatus, fejl, hov, ugepakke, mailoversigt, vagter, some, linkedin, mashups, salgssprints, varme, varmeStyring, dinero});
 }
 function manglerBesked() {
@@ -2934,7 +2951,9 @@ async function gemLager() {
 const FILER = {evalueringer: "data/evalueringer.json", jobstatus: "data/jobstatus.json", jobtider: "data/jobtider.json", kortmaaling: "data/kortmaaling.json", salgjobs: "data/salgjobs.json", salgslaering: "data/salgslaering.json", henvendelser: "data/henvendelser.json", opgaver: "data/opgaver.json", betalinger: "data/betalinger.json", honorarsedler: "data/honorarsedler.json", ugepakke: "data/ugepakke.json", dagsplaner: "data/dagsplaner.json",
                indtaegter: "data/indtaegter.json", typer: "data/typer.json", salg: "data/salg.json", festkort: "data/festkort.json", klubkort: "data/klubkort.json", salgslog: "data/salgslog.json", mo: "data/maanedsoversigt.json", strategi: "data/strategi.json", leads: "data/leads.json", mailoversigt: "data/mailoversigt.json", vagter: "data/vagter.json", fejl: "data/fejl.json", hov: "data/hov.json", some: "data/some.json", mashups: "data/mashups.json", salgssprints: "data/salgssprints.json", varme: "data/varme.json", varmeStyring: "data/varme_styring.json", dinero: "data/dinero.json", linkedin: "data/linkedin.json"};
 async function laesValgfri(p) { const r = await laesFil(p); return r ? r.json() : []; }
-async function genindlæs(navne) { await Promise.all(navne.map(async n => { D[n] = n === "kkTekster" ? await laesKkTekster() : await laesValgfri(FILER[n]); })); }
+async function genindlæs(navne) {
+  if (navne.some(n => Object.values(KILDE_FILER).includes(n)) && !navne.includes("mo")) navne = [...navne, "mo"];   // kilden og oversigten hentes sammen, så friskhedstjekket ikke ser en halv ændring
+  await Promise.all(navne.map(async n => { D[n] = n === "kkTekster" ? await laesKkTekster() : await laesValgfri(FILER[n]); })); }
 const plusDage = (iso, n) => { const d = dag(iso); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
 const næsteHverdag = iso => { let x = plusDage(iso, 1); while ([0, 6].includes(dag(x).getDay())) x = plusDage(x, 1); return x; };
 const planIMorgen = () => new Date().getHours() >= 15;   // Oscar 11/11: planlæg i morgen ved dagens slut (15.50-16.00)
@@ -5663,6 +5682,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   const sk = (D.mo || {}).skat, mo = D.mo || {}, ob = mo.overblik || {linjer: {}, bjaelker: [], puljer: []}, P = ØK.P || {};
   const top = h("div", {class: "kh"}, h("h1", {}, "Økonomi og Skat"), h("div", {class: "spacer"}),
     (() => { const d = [mo.drift_pr || mo.dinero_pr, mo.raad?.saldo_dato].filter(Boolean).sort()[0], gl = d && (dag(iDag()) - dag(d)) / 864e5 > 35;   // ét grønt/rødt opdateret-mærke (Oscar 3/11)
+      if (moGammel()) { if (!OMR.status) setTimeout(startOmregning, 0); return h("span", {class: "op-mk " + (OMR.status === "fejl" ? "r" : "y")}, OMR.status === "fejl" ? "● Tallene er ikke regnet igen" : "● Regner tallene igen …"); }   // friskhedstjek (11/11)
       return d ? h("span", {class: "op-mk" + (gl ? " r" : "")}, `● Opdateret ${kortDato(d)}`) : null; })());
   if (!sk) return $("rod").replaceChildren(h("div", {class: "side bred"}, top, h("div", {class: "kort2 sk"},
     h("div", {class: "muted"}, "Skattetallene kommer med næste Dinero-hentning (hver morgen kl. 7)."))));
@@ -6206,18 +6226,20 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   const jobNr = id => (D.jobstatus?.jobs || []).find(j => j.indtaegt_id === id), jobFærdig = r => ["faerdig", "skylder"].includes((D.jobstatus?.jobs || []).find(j => j.job_noegle === r.job_noegle)?.status);
   const kommetSent = x => (D.betalinger || []).some(r => r.indtaegt_id === x.id && (r.betalt_dato || r.godkendt || "") >= FD.fra && !r.venter);   // venter (fx "Jan overfører i næste uge"): pengene er ikke på kontoen, ingen overførsel
   if (FD) (D.indtaegter || []).filter(x => x.type === "B-indkomst" && (x.dato >= FD.fra || kommetSent(x)) && !(x.auto && betFor(x))).forEach(x => {
-    if (FD.fordelt[x.id]?.brugt || jobNr(x.id)?.fordelt) return;   // jobstatus: pengene er fordelt eller brugt, intet at flytte (Oscar 5/11)
+    const bR = (D.betalinger || []).find(q => q.indtaegt_id === x.id) || betFor(x), hon = (bR?.omk || []).filter(o => o.type === "honorar"), honÅ = P0.inbox && P0.d1 && hon.some(o => !o.seddel_betalt);   // hjælpernes honorar (fx Victoria) sendes fra Lønkonto+ (Oscar 11/11)
+    if ((FD.fordelt[x.id]?.brugt || jobNr(x.id)?.fordelt) && !honÅ) return;   // jobstatus: pengene er fordelt eller brugt, intet at flytte (Oscar 5/11). Et usendt honorar holder linjen
+    const erFordelt = !!(FD.fordelt[x.id]?.brugt || jobNr(x.id)?.fordelt);
     const jp = jobNr(x.id)?.plan, f = FD.fordelt[x.id] || {}, skat = f.skat ? f.skat.kr : jp ? skatDelKr(jp.skat) : skatDel(x.beloeb), rest = jp ? jp.til_loen + jp.skat - skat : x.beloeb - skat;   // jobbets plan: honoraret er hjælpernes penge og skal ikke til Buffer (revision 5/11)
     const plads = HB ? HB.maal - HB.saldo : (P.buffer?.maal || 0) - (P.buffer?.saldo || 0);
     const tilBuf = Math.max(0, Math.min(rest, plads + (f.buffer?.kr || 0))), tilOps = rest - tilBuf;
     const dele = [["skat", "Skat-puljen", skat], ["buffer", HB ? "Husleje d. 1 + Buffer" : "Buffer", tilBuf], ["opsparing", P.opsparing?.navn || "Opsparing", tilOps]].filter(d => d[2] > 0 && !((skV || skStop) && d[0] === "skat"));   // skatten venter: den del bliver på Lønkonto+
-    if (!dele.length || dele.every(d => f[d[0]])) return;
+    if ((!dele.length || dele.every(d => f[d[0]])) && !honÅ) return;
     medLinje.add(x.id);
     const flyt = ([del, n, b]) => { const br = betFor(x); if (br && br.status !== "faerdig") godkend(br, br.dato >= iDag());   // kun én gang, også når flere dele trykkes samlet   // lukker også robottens opgave "Tjek at pengene er kommet"
       if (del === "skat") kør("pulje", ["flyt", "Skat", String(b), `--art=B-indkomst`, `--job=${(D.betalinger || []).find(q => q.indtaegt_id === x.id)?.job_noegle || `${x.dato}|${x.fra.toLowerCase()}`}`], {tekst: `Skat-puljen +${krKort(b)} kr.`, efter: ["mo"], med: () => puljeMed("Skat", b)});
       privatSend({kommando: "fordel", id: String(x.id), del, kr: b, job_kr: x.beloeb}, `${x.fra}: ${krKort(b)} kr. til ${n}`); };
     // pengene står på Lønkonto+, til de flyttes: fordelingen står i Overførsler med det samme, med konto og reg.nr. (Oscar 5/11)
-    if (P0.inbox && P0.d1) dele.filter(d => !f[d[0]]).forEach(d => klubD1.push({id: `klub-${x.id}-${d[0]}`, kr: d[2], pulje: d[1], hvem: `${x.fra} ${kortDato(x.dato)}`, bet: x.id, r: (D.betalinger || []).find(q => q.indtaegt_id === x.id) || betFor(x), fn: () => flyt(d)}));
+    if (P0.inbox && P0.d1) klubD1.push({x, dele, f: erFordelt ? Object.fromEntries(dele.map(d => [d[0], true])) : f, r: bR, hon, flyt, erFordelt});
     else betLinjer.push(betL("g", [h("b", {}, `${x.fra} har betalt ${krKort(x.beloeb)} kr.`), ` på Lønkonto+ (Danløn).`, ` Læg ${dele.map(([, n, b]) => `${krKort(b)} kr. i ${n}`).join(" og ")}.`],
       knap("✓ Overført", () => dele.filter(d => !f[d[0]]).forEach(flyt), true)));
   });
@@ -6257,13 +6279,14 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   const nMangler = jobsDerMangler().length;
   const manglerBj = nMangler ? [h("button", {class: "bj y bj-knap", type: "button", onclick: () => { ØK.åbne.add("mangler"); tegn(); setTimeout(() => document.getElementById("rd-mangler")?.scrollIntoView({behavior: "smooth", block: "start"}), 50); }},
     h("span", {class: "bj-t"}, h("b", {}, `${nMangler} ${nMangler === 1 ? "job mangler" : "jobs mangler"} din opmærksomhed`)), h("span", {class: "bj-pil"}, "›"))] : [];
-  const alle = [...fejlBjælker(), ...betLinjer, ...prisBj, ...gør, ...manglerBj].map((x, i) => [x, i]).sort((a, b) => farve(a[0]) - farve(b[0]) || a[1] - b[1]).map(x => x[0]);
-  const bjælker = h("div", {class: "bjaelker bet-linjer"}, alle.length ? alle : mo.raad?.frit < 0 || mo.raad?.advarsel ? null : h("div", {class: "bj g"}, h("span", {class: "bj-t"}, h("b", {}, "✓ Alt er grønt."), " Pengene rækker, og skatten passer.")));
+  const moGl = moGammel() && OMR.status !== "fejl";   // friskhedstjek (11/11): mens der regnes igen, ingen pengealarm og ingen overførsler, kun robotternes fejl. Fejler beregningen, vises de gamle bjælker igen med det røde mærke (revision 11/11)
+  const alle = [...fejlBjælker(), ...(moGl ? [] : [...betLinjer, ...prisBj, ...gør, ...manglerBj])].map((x, i) => [x, i]).sort((a, b) => farve(a[0]) - farve(b[0]) || a[1] - b[1]).map(x => x[0]);
+  const bjælker = h("div", {class: "bjaelker bet-linjer"}, alle.length ? alle : moGl || mo.raad?.frit < 0 || mo.raad?.advarsel ? null : h("div", {class: "bj g"}, h("span", {class: "bj-t"}, h("b", {}, "✓ Alt er grønt."), " Pengene rækker, og skatten passer.")));
   // Hov (Oscar 2/11, skitse panel-hov-kuverter-2): højst 30 dage før firmakontoen og bufferen ikke rækker (fabz_raad advarsel_dage 30, minus det
   // ledige i Husleje d. 1 + Buffer over mærket). Oscar skriver sin plan, og en planlagt Claude-opgave svarer (fabz.py hov-svar)
   const HA = RD?.advarsel, hovLedig = HB0 ? Math.max(0, HB0.saldo - HB0.maerke) : 0, hovMangler = HA ? Math.round(HA.mangler - hovLedig) : 0;
   const hovDage = HA ? Math.round((dag(HA.ym + "-01") - dag(iDag())) / 864e5) : null, hovPlan = HA ? (D.hov || []).filter(x => x.ym === HA.ym).at(-1) : null;
-  const hovKort = HA && hovMangler > 0 && hovDage <= 30 ? h("div", {class: "kort2 hov", style: "margin-top:12px"},
+  const hovKort = !moGl && HA && hovMangler > 0 && hovDage <= 30 ? h("div", {class: "kort2 hov", style: "margin-top:12px"},
     h("h2", {}, hovDage > 0 ? `Hov, du har ikke penge nok om ${hovDage} ${hovDage === 1 ? "dag" : "dage"}` : "Hov, du har ikke penge nok"),
     h("p", {}, `D. ${kortDato(HA.ym + "-01")} mangler der ${krKort(hovMangler)} kr. på firmakontoen og i bufferen.`),
     hovPlan ? [h("div", {class: "hov-plan"}, h("b", {}, "Din plan: "), hovPlan.tekst),
@@ -6274,13 +6297,36 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
           kør("hov-plan", [`--ym=${HA.ym}`, `--mangler=${hovMangler}`, `--tekst=${tx}`], {tekst: "Plan sendt til Claude", efter: ["hov"],
             med: () => { (D.hov = D.hov || []).push({id: "…", ym: HA.ym, mangler: hovMangler, tekst: tx, tid: new Date().toISOString(), svar: null}); }}); }, true)]) : null;
   // alle klubjobs' dele går fra Lønkonto+ til Saxo: én overførsel med det samlede beløb og fordelingen under (Oscar 3/11). ✓ registrerer hele fordelingen
-  if (klubD1.length) { const pr = {}; klubD1.forEach(o => { pr[o.pulje] = (pr[o.pulje] || 0) + o.kr; });
-    ovL.unshift(ovR("klub-saxo", `Overfør ${krKort(klubD1.reduce((s, o) => s + o.kr, 0))} kr. fra Lønkonto+ til Saxo`, nrT(P0.kontonr?.Saxo), () => { klubD1.forEach(o => o.fn()); const pr1 = {};   // jobstatus: samme tryk markerer jobbene fordelt
-        klubD1.forEach(o => { (pr1[o.bet] = pr1[o.bet] || {r: o.r, skat: 0}); if (o.pulje === "Skat-puljen") pr1[o.bet].skat += o.kr; });
-        Object.values(pr1).filter(q => q.r).forEach(q => kør("betaling-fordelt", [`--job=${q.r.navn}`, `--dato=${q.r.dato}`, `--skat=${q.skat}`, "--uden-pulje"], {tekst: `${q.r.navn}: fordelt`, efter: ["betalinger", "jobstatus"], med: () => { q.r.fordelt = {dato: iDag(), skat: q.skat}; }})); }, false,
-      [` (${[...new Set(klubD1.map(o => o.hvem))].join(", ")})`, h("div", {class: "muted lille"}, Object.entries(pr).map(([n, k]) => `${krKort(k)} kr. ${n}`).join(" · "))])); }
-  const d1Kort = lavD1();
-  const ovKort0 = ovL.length ? h("div", {class: "kort2 ov-k", style: "margin-top:12px"}, ovL) : null;
+  // klubjobs (Oscar 11/11, skitse panel-klubjob-se-mere-2, B): én linje pr. job med det, der skal gøres, og Se mere med hvert sted: Saxo, hjælperne og det,
+  // der bliver på Lønkonto+ (fx skatten til restskatten). ✓ på hver linje, eller ét ✓ for det hele. Jobbet markeres fordelt, når alt er gjort
+  klubD1.slice().reverse().forEach(k => {
+    const {x, dele, f, r, hon} = k, åben = dele.filter(d => !f[d[0]]), hÅ = hon.filter(o => !o.seddel_betalt), saxo = dele.reduce((s, d) => s + d[2], 0), saxoÅ = åben.reduce((s, d) => s + d[2], 0);
+    const hKr = hon.reduce((s, o) => s + (o.kr || 0), 0), bliver = Math.max(0, x.beloeb - saxo - hKr), id = `kj-${x.id}`, hvem = `${x.fra} ${kortDato(x.dato)}`;
+    const skatKr = (dele.find(d => d[0] === "skat") || [])[2] || 0, saxoLøn = dele.filter(d => d[0] !== "skat").reduce((s, d) => s + d[2], 0);   // løndelen, der flyttes til Saxo (revision 11/11: tælles ikke igen i lønnen fra klubjobs)
+    const fordelt = () => { if (r) kør("betaling-fordelt", [`--job=${r.navn}`, `--dato=${r.dato}`, `--skat=${skatKr}`, `--saxo=${saxoLøn}`, "--uden-pulje"], {tekst: `${r.navn}: fordelt`, efter: ["betalinger", "jobstatus"], med: () => { r.fordelt = {dato: iDag(), skat: skatKr}; }}); };
+    const sendt = navne => { if (!r) return; const omk = (r.omk || []).map(o => ({navn: o.navn, kr: o.indtastet ?? o.kr, moms: !!o.moms, betalt: !!o.betalt, ...(o.type ? {type: o.type} : {}), ...(o.seddel ? {seddel: o.seddel} : {}),
+        ...(o.seddel_betalt || (o.type === "honorar" && navne.includes(o.navn)) ? {seddel_betalt: o.seddel_betalt || iDag()} : {})}));   // kun status: jobbets tal og skatten ændres ikke (revision 5/11)
+      kør("betaling-omk", [`--job=${r.navn}`, `--dato=${r.dato}`, `--omk=${JSON.stringify(omk)}`], {tekst: `${hvem}: sendt til ${navne.join(" og ")}`, efter: ["betalinger", "jobstatus"],
+        med: () => { (r.omk || []).forEach(o => { if (o.type === "honorar" && navne.includes(o.navn)) o.seddel_betalt = iDag(); }); }}); };
+    // jobbet markeres fordelt med det samme, når Saxo-delen er flyttet: så tæller lønnen fra klubjobs det ikke også (revision 11/11: Ranum talt to gange). Honoraret holder linjen åben
+    const gørSaxo = () => { åben.forEach(k.flyt); if (!k.erFordelt) fordelt(); }, alt = () => { if (saxoÅ) gørSaxo(); if (hÅ.length) sendt(hÅ.map(o => o.navn)); };
+    const kunSaxo = gørSaxo, kunHon = o => sendt([o.navn]);
+    const dele_ = [saxoÅ ? `${krKort(saxoÅ)} kr. til Saxo` : null, ...hÅ.map(o => `${krKort(o.kr)} kr. til ${o.navn}`)].filter(Boolean), n = dele_.length;
+    const pil = h("span", {class: "kj-pil"});
+    const række = (navn, under, kr_, handling) => h("div", {class: "kj-l"}, h("span", {class: "kj-t"}, h("b", {}, navn), under ? h("span", {class: "kj-u"}, under) : null), h("span", {class: "kj-h"}, h("b", {}, `${krKort(kr_)} kr.`), handling));
+    const færdig = t => h("span", {class: "muted lille"}, t);
+    ovL.unshift(h("div", {class: "ov-r kj", "data-ov": "klub-saxo", "data-job": String(x.id)},
+      knap(n > 2 ? "✓ Overført alle" : n === 2 ? "✓ Overført begge" : saxoÅ ? "✓ Overført" : "✓ Sendt", alt, !ovL.length),
+      h("details", rdFold(id, {class: "kj-f"}), h("summary", {}, h("b", {}, `${hvem}: overfør ${dele_.join(" og ")}`), h("span", {class: "kj-se"}, "Se mere", pil)),
+        h("div", {class: "kj-fold"},
+          saxo ? række("Til Saxo", [dele.map(d => `${krKort(d[2])} kr. ${d[1]}`).join(" · "), nrT(P0.kontonr?.Saxo) ? h("span", {class: "ov-n"}, nrT(P0.kontonr?.Saxo)) : null], saxo, saxoÅ ? knap("✓ Overført", kunSaxo, true) : færdig("Overført")) : null,
+          hon.map(o => række(`Til ${o.navn}`, "Honorar", o.kr, o.seddel_betalt ? færdig("Sendt") : knap("✓ Sendt", () => kunHon(o)))),
+          bliver ? række("Bliver på Lønkonto+", skV ? `Til restskatten senest ${kortDato(skV.frist)}` : skStop ? "Skatten venter, til tallene er afstemt" : "Omkostninger på jobbet", bliver, null) : null,
+          h("div", {class: "kj-l kj-s"}, h("span", {}, `${x.fra} betalte`), h("span", {}, `${krKort(x.beloeb)} kr.`)),
+          r ? h("button", {class: "kj-job", type: "button", onclick: () => visJobNøgle(r.job_noegle)}, "Åbn jobbet ›") : null))));
+  });
+  const d1Kort = moGl ? null : lavD1();
+  const ovKort0 = ovL.length && !moGl ? h("div", {class: "kort2 ov-k", style: "margin-top:12px"}, ovL) : null;
   const fsKort =
     gammeltÅr || !fsRækker.length ? null : FF ? h("div", {class: "fs-kort"},
       h("div", {class: "fs-kh"}, `Forskudsopgørelse ${sk.aar}`, " ", h("span", {class: "pill gul"}, FF.svar && !FF.svar.fejl ? `Tjek ${FF.svar.punkter.length} ting` : "Skriv det, skat.dk viser")),
@@ -6382,7 +6428,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     fk.alder ? hRk([fk.alder, `Opdater kontoudtoget (${fk.gl} dage gammelt)`, knap("Opdater →", mål("guide:bank"))]) : null,
     h("div", {class: "rd-l"}, h("span", {}, "Saldo ", kilde("kontoudtog", RD.saldo_dato)), h("b", {}, `${krKort(RD.saldo)} kr.`)),
     h("div", {class: "sg-under"}, fk.poster.map(fkPost))] : [];
-  $("rod").replaceChildren(h("div", {class: "side bred skat-side"}, top, msKort, hovKort, d1Kort, ovKort0, bjælker, sælgKort, udstyrsLinje(),   // Oscar 11/11: under "måneder dækket", ikke på I dag
+  $("rod").replaceChildren(h("div", {class: "side bred skat-side" + (moGl ? " mo-gl" : "")}, top, msKort, hovKort, d1Kort, ovKort0, bjælker, moGl ? null : sælgKort, udstyrsLinje(),   // Oscar 11/11: under "måneder dækket", ikke på I dag
      
     h("div", {class: "sg-linjer"},
       linje("mangler", null, nMangler ? h("span", {}, "Mangler noget ", h("span", {class: "pill y"}, String(nMangler))) : "Mangler noget", manglerDel()),
@@ -7007,6 +7053,26 @@ async function startMorgenkørsler() {
   }
 }
 
+// Ny beregning, når månedsoversigten er ældre end sine kilder: samme vej som Mødt ind (kalender.yml regner maanedsoversigt --gem). Én gang pr. indlæsning
+const OMR = {status: null};
+async function startOmregning() {
+  if (OMR.status || !moGammel()) return;
+  OMR.status = "regner"; if (fane === "oekonomi") tegn();
+  const t0 = Date.now(), runs = async () => (await tjek(await gh(`/repos/${REPO}/actions/workflows/kalender.yml/runs?per_page=10&t=${Date.now()}`), "kørselsstatus").json()).workflow_runs;
+  try {
+    let kører = (await runs()).find(x => x.status !== "completed");
+    if (!kører) tjek(await gh(`/repos/${REPO}/actions/workflows/kalender.yml/dispatches`, {method: "POST", body: {ref: BRANCH, inputs: {opgaver: "false"}}}), "kalender-workflowet");
+    while (Date.now() - t0 < 300000) {
+      await sleep(8000);
+      const rs = await runs(), r = kører ? rs.find(x => x.id === kører.id) : rs.find(x => Date.parse(x.created_at) >= t0 - 60000);
+      if (r && r.status === "completed") break;
+    }
+    await hentData();
+    OMR.status = moGammel() ? "fejl" : null;
+  } catch (e) { console.warn("Ny beregning af månedsoversigten:", e); OMR.status = "fejl"; }
+  tegn();
+}
+
 // ---------- hent alle jobs ----------
 async function hentJobs() {
   henterJobs = true;
@@ -7065,6 +7131,7 @@ async function start() {
   S = null; L = null;
   læsAdresse();
   tegn();
+  startOmregning();
 }
 window.addEventListener("beforeunload", e => {
   if (sender > 0 || (L && (ændringer().length || L.ny.length))) { e.preventDefault(); e.returnValue = ""; }
