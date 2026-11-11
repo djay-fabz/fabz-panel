@@ -373,7 +373,7 @@ body.bar-synlig .beskeder{bottom:84px}
 .smaa-blok{border:1px solid var(--linje);border-radius:10px;margin:6px 0;background:var(--flade2)}.smaa-blok>.cb{border-top:0;padding:8px 10px;align-items:center}.smaa-blok>.cb input{margin-top:0}
 .smaa-ind{border-top:1px solid var(--linje);padding:2px 10px 6px 36px}.smaa-ind .cb{font-size:14px;padding:6px 0}.smaa-ind .cb:first-child{border-top:0}
 .smaa-fold{background:none;border:0;color:var(--svag);font-size:15px;cursor:pointer;padding:0 4px}
-.planpunkt .smaa-meta{grid-column:1/-1}.smaa-meta{flex-basis:100%;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12.5px;color:var(--svag);padding:2px 2px 0}.smaa-navne{flex-basis:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.planpunkt .smaa-meta{grid-column:1/-1}.smaa-liste{flex-basis:100%;margin:2px 0 0;padding-left:16px}.smaa-liste li{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:1px 0}.smaa-meta{flex-basis:100%;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12.5px;color:var(--svag);padding:2px 2px 0}.smaa-navne{flex-basis:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .afslut{margin-top:16px;padding:12px;border-radius:10px;background:var(--flade2)}
 .to{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:24px;max-width:1228px;margin:0 auto;padding:28px 24px}
 .detalje-kol{position:sticky;top:calc(var(--top) + 16px);align-self:start;max-height:calc(100vh - var(--top) - 32px);overflow:auto}
@@ -3925,8 +3925,8 @@ function planlægPanel() {
           h("button", {class: "x", type: "button", title: "Fjern", onclick: () => { p[hv].splice(i, 1); tegn(); }}, "×"),
           OP.flyt === `${hv}|${i}` ? h("div", {class: "pl-flyt-menu"}, halvdele.filter(([v]) => v !== hv).map(([v, t]) =>
             h("button", {class: "btn lille", type: "button", onclick: () => { p[hv].splice(i, 1); p[v].push(x); OP.flyt = null; tegn(); }}, "Flyt til " + t.toLowerCase()))) : null,
-          x.smaating?.length ? h("div", {class: "smaa-meta"}, h("span", {}, `${x.smaating.length} af ${x.smaating_i_alt ?? x.smaating.length} småting`),
-            h("span", {class: "smaa-navne"}, x.smaating.map(y => y.tekst).join(" · "))) : null,
+          x.smaating?.length ? h("div", {class: "smaa-meta"}, h("span", {}, `${x.smaating.length} småting`),   // Oscar 11/11: én pr. linje, uden bunkens antal
+            h("ul", {class: "smaa-liste"}, x.smaating.map(y => h("li", {}, y.tekst)))) : null,
           erSalgPunkt(x) ? salgFravalg(p, x) : null)),   // salgssprintet (Oscar 9/11): hvem først, og Ikke i dag med en grund
         h("button", {class: "btn ghost lille", type: "button", onclick: () => { p[hv].push({tekst: "", min: 15}); tegn(); }}, "+ Punkt")); }),
       felt("Noter til planen (valgfrit)", tekstfelt(p, "noter", {rows: 2})),
@@ -3942,6 +3942,9 @@ function planlægPanel() {
       OP.planPdf?.link ? pdfKnapper(OP.planPdf.link, OP.planPdf.navn) : null) : null);
 }
 // ---------- Fravalg af dagens sprint og skubbede opgaver (Oscar 9/11, skitse panel-salg-fravalg) ----------
+// "Dynaudio A/S" → "Dynaudio", "Skovby Møbelfabrik A/S" → "Skovby", "DK Company A/S" → "DK Company" (Oscar 11/11: korte navne, så linjen ikke klippes)
+const kortFirma = n => { const o = String(n || "").replace(/\s*\(.*?\)/g, "").replace(/[,\s]+(A\/S|ApS|I\/S|IVS|K\/S|P\/S|a\/s|aps)\.?$/i, "").trim().split(/\s+/);
+  return o.length > 1 && o[0].length > 3 && o[1].length >= 6 ? o[0] : o.slice(0, 2).join(" "); };
 const erSalgPunkt = x => /^(Salg 30 min \(sprint \d+ af \d+\)|Ring til \d+ \(Salg\))$/.test((x.tekst || "").trim()) || (x.id != null && D.opgaver.some(o => o.id === x.id && o.job_opgave === "salg"));
 function salgFravalg(p, x) {   // "Ikke i dag": en kort grund, punktet streges over, og fabz.py plan lukker dagens salgsopgave med grunden (fredagsstatus)
   if (p.salg_fravalg) return h("div", {class: "pl-salg"}, h("span", {class: "muted", style: "flex:1"}, "Ikke i dag: " + p.salg_fravalg),
@@ -3952,7 +3955,7 @@ function salgFravalg(p, x) {   // "Ikke i dag": en kort grund, punktet streges o
         oninput: e => { OP.salgGrund = e.target.value; }, onkeydown: e => { if (e.key === "Enter") gem(); }}),
       h("button", {class: "btn primaer lille", type: "button", onclick: gem}, "Gem"));
   }
-  return h("div", {class: "pl-salg"}, h("span", {class: "muted", style: "flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"}, x.navne?.length ? "Hvem først · " + x.navne.join(" · ") : ""),
+  return h("div", {class: "pl-salg"}, h("span", {class: "muted", style: "flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"}, x.navne?.length ? "Ring til: " + x.navne.map(kortFirma).join(", ") : ""),   // Oscar 11/11: ikke "Hvem først"
     h("button", {class: "pl-lnk", type: "button", onclick: () => { OP.salgGrund = ""; tegn(); }}, "Ikke i dag"));
 }
 const SKUB_GRÆNSE = 3;   // samme tal som SKUB_GRAENSE i fabz_dagsplan.py
