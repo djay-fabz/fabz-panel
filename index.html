@@ -272,6 +272,14 @@ input[type=date]{color-scheme:light dark}
 .mu-faerdig{background:var(--ok-blid);color:var(--faerdig);border-radius:12px;padding:12px 14px;margin:12px 0 10px}.mu-faerdig b{display:block;font-size:16px;margin-bottom:2px}
 .mu-chip{display:inline-block;font-size:12.5px;background:var(--accent-blid);color:var(--accent);border-radius:99px;padding:2px 10px;margin:8px 0 12px;font-weight:500}
 @media (max-width:700px){.mu-knap .btn{flex:1 1 40%}.mu-start-lang{display:none}}
+.pl-bh{display:flex;align-items:baseline;gap:10px;margin:2px 0 0}.pl-bh b{font-size:18px}.pl-tid{color:var(--svag);font-size:13px}.pl-min{color:var(--svag);font-size:13px}.pl-min.over{color:#c9a07a}
+.pl-bar{position:relative;height:3px;background:var(--linje);border-radius:99px;margin:8px 0 4px}.pl-bar i{position:absolute;left:0;top:0;bottom:0;background:var(--accent);border-radius:99px;opacity:.85}.pl-bar i.over{background:#c9a07a;opacity:1}
+.pl-bar .fuld{position:absolute;top:-3px;width:1px;height:9px;background:var(--svag)}
+.lg .planpunkt{grid-template-columns:1fr auto 30px 24px!important;grid-template-areas:none!important;gap:6px;margin:0;padding:5px 0;border-top:1px solid var(--linje)}.lg .planpunkt:first-of-type{border-top:0}
+.lg .planpunkt>.input:first-child{grid-area:auto;border-color:transparent;background:transparent;font-size:15px;padding:5px 4px}.lg .planpunkt>.input:first-child:focus,.lg .planpunkt>.input:first-child:hover{border-color:var(--linje);background:var(--flade2)}
+.pl-mins{display:flex;align-items:center;gap:3px;color:var(--svag);font-size:13px}.pl-mins .min{width:52px;-moz-appearance:textfield;appearance:textfield;min-height:0!important;padding:3px 4px;text-align:right;border-color:transparent;background:transparent;color:var(--svag);font-size:13px;grid-area:auto}.pl-mins .min::-webkit-inner-spin-button,.pl-mins .min::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}.pl-mins .min:focus,.pl-mins .min:hover{border-color:var(--linje);background:var(--flade2)}
+.pl-flyt{border:1px solid var(--linje);background:none;border-radius:6px;color:var(--svagere);font:inherit;font-size:13px;padding:2px 0;cursor:pointer}.pl-flyt[aria-expanded="true"]{color:var(--accent);border-color:var(--accent)}
+.planpunkt>.x{grid-area:auto}.pl-flyt-menu{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap;padding:2px 0 4px}
 .pl-stop{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px}.pl-stop .forvalgt{border-color:var(--accent)}.pl-stop .valgt{background:var(--accent);border-color:var(--accent);color:var(--accent-tekst)}
 .ud{margin-bottom:14px;padding:12px 16px}.ud-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;width:100%;background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}.ud-pil{color:var(--svagere)}
 .ud-bar{height:8px;background:var(--linje);border-radius:99px;overflow:hidden;margin-top:8px}.ud-bar div{height:100%;background:var(--accent);border-radius:99px}.ud-ok .ud-bar div{background:var(--ok)}
@@ -593,8 +601,7 @@ details.sg-r{margin:0;border:0;border-top:1px solid var(--linje);border-radius:0
   .lr>:nth-child(1){grid-area:navn}.lr>:nth-child(2){grid-area:kat}.lr>:nth-child(3){grid-area:antal}.lr>:nth-child(4){grid-area:status}.lr>:nth-child(5){grid-area:note}.lr>:nth-child(6){grid-area:pakke}.lr>:nth-child(7){grid-area:x}
   .felt,.input,select.input{min-height:40px}
   .nyform{grid-template-columns:1fr 1fr}
-  .planpunkt:not([style]){grid-template-columns:1fr 64px 40px;grid-template-areas:"tekst min x" "flyt flyt flyt"}
-  .planpunkt:not([style])>.input:first-child{grid-area:tekst}.planpunkt .min{grid-area:min}.planpunkt .flyt{grid-area:flyt}.planpunkt>.x{grid-area:x}
+  .lg .planpunkt>.input:first-child{font-size:15px}   /* Planlæg dag på telefonen: samme række som på pc (Oscar 11/11) */
 }
 </style>
 </head>
@@ -3877,14 +3884,18 @@ function planlægPanel() {
           ondragleave: e => { e.currentTarget.classList.remove("over"); },
           ondrop: e => { e.preventDefault(); e.currentTarget.classList.remove("over");
             const o = D.opgaver.find(x => String(x.id) === e.dataTransfer.getData("text/plain")); if (o && planTilføj(o, hv)) tegn(); }},
-          h("div", {class: "overskrift"}, navn + (hv !== "hvis_tid" ? ` · ${sum} af ${led ?? "?"} min` : ""),   // farverne er taget af igen (Oscar 11/11: ikke trafiklys), skitse panel-planlaeg-hierarki
-          led != null && sum > led ? h("span", {class: "rød", style: "margin-left:8px;text-transform:none"}, `${sum - led} min for meget`) : null),
+          // Oscar 11/11, skitse panel-planlaeg-hierarki A: stort bloknavn, tidsrummet småt, minuttallet gråt og en tynd linje, der fyldes. Overbooket: resten i en dæmpet, varm tone
+          h("div", {class: "pl-bh"}, h("b", {}, navn), hv === "hvis_tid" ? null : h("span", {class: "pl-tid"}, ((hv === "foer_frokost" ? p.foer_tid : p.efter_tid) || "").replace(" til ", "-")),
+            h("span", {class: "spacer"}), hv !== "hvis_tid" ? h("span", {class: "pl-min" + (led != null && sum > led ? " over" : "")}, `${sum} af ${led ?? "?"} min`) : null),
+          hv !== "hvis_tid" && led ? (() => { const tot = Math.max(sum, led), blå = Math.min(sum, led) / tot * 100, fuld = led / tot * 100;
+            return h("div", {class: "pl-bar"}, h("i", {style: `width:${blå}%`}), sum > led ? h("i", {class: "over", style: `left:${fuld}%;width:${100 - fuld}%`}) : null, h("span", {class: "fuld", style: `left:calc(${fuld}% - 1px)`})); })() : null,
         p[hv].map((x, i) => h("div", {class: "planpunkt" + (/VÆLG/.test(x.tekst) ? " mangler" : "") + (p.salg_fravalg && erSalgPunkt(x) ? " fravalgt" : "")},
           h("input", {class: "input", value: x.tekst, oninput: e => { x.tekst = e.target.value; e.target.parentElement.classList.toggle("mangler", /VÆLG/.test(x.tekst)); }}),
-          h("input", {class: "input min", type: "number", min: "0", value: x.min ?? "", placeholder: "min", oninput: e => { x.min = e.target.value === "" ? null : Number(e.target.value); }}),
-          h("select", {class: "input flyt", title: "Flyt", onchange: e => { const til = e.target.value; if (til === hv) return; p[hv].splice(i, 1); p[til].push(x); tegn(); }},
-            halvdele.map(([v, t]) => h("option", {value: v, selected: v === hv}, t))),
+          h("label", {class: "pl-mins"}, h("input", {class: "input min", type: "number", min: "0", value: x.min ?? "", placeholder: "–", "aria-label": "Minutter", oninput: e => { x.min = e.target.value === "" ? null : Number(e.target.value); }}), "min"),
+          h("button", {class: "pl-flyt", type: "button", title: "Flyt", "aria-label": "Flyt", "aria-expanded": OP.flyt === `${hv}|${i}`, onclick: () => { OP.flyt = OP.flyt === `${hv}|${i}` ? null : `${hv}|${i}`; tegn(); }}, "⇅"),
           h("button", {class: "x", type: "button", title: "Fjern", onclick: () => { p[hv].splice(i, 1); tegn(); }}, "×"),
+          OP.flyt === `${hv}|${i}` ? h("div", {class: "pl-flyt-menu"}, halvdele.filter(([v]) => v !== hv).map(([v, t]) =>
+            h("button", {class: "btn lille", type: "button", onclick: () => { p[hv].splice(i, 1); p[v].push(x); OP.flyt = null; tegn(); }}, "Flyt til " + t.toLowerCase()))) : null,
           x.smaating?.length ? h("div", {class: "smaa-meta"}, h("span", {}, `${x.smaating.length} af ${x.smaating_i_alt ?? x.smaating.length} småting`),
             h("span", {class: "smaa-navne"}, x.smaating.map(y => y.tekst).join(" · "))) : null,
           erSalgPunkt(x) ? salgFravalg(p, x) : null)),   // salgssprintet (Oscar 9/11): hvem først, og Ikke i dag med en grund
