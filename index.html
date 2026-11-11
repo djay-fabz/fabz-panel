@@ -2210,6 +2210,15 @@ function kkBryd(tekst, f, s, b) {
   }
   return ud;
 }
+function kkJaevn(tekst, f, s, b) {   // som jaevn() i klubkort.py: færrest linjer, smalleste bredde med samme antal
+  const flad = String(tekst).split(/\s+/).filter(Boolean).join(" "), n = kkBryd(flad, f, s, b).length;
+  while (b > 10 && kkBryd(flad, f, s, b - 1).length === n) b -= 1;
+  return kkBryd(flad, f, s, b);
+}
+function kkLinjer(tekst, f, s, b) {   // som linjer_til(): Oscars linjeskift, når de kan være der, ellers jævnt fordelt
+  const egne = String(tekst).replace(/\r/g, "").split("\n").map(l => l.trim()).filter(Boolean);
+  return egne.every(l => kkBredde(l, f, s) <= b) ? egne : kkJaevn(tekst, f, s, b);
+}
 function kkLayout(k, M) {   // samme regler som layout() i tools/klubkort/klubkort.py
   const tekst = String(k.tekst || "").trim(), svar = String(k.svar || "").trim();
   if (!tekst) return null;
@@ -2217,10 +2226,10 @@ function kkLayout(k, M) {   // samme regler som layout() i tools/klubkort/klubko
   while (svar && kkBredde(svar, M.popl, ss) > M.TEKST_B && ss > M.SVAR_MIN) ss -= 0.5;
   if (svar && kkBredde(svar, M.popl, ss) > M.TEKST_B) return "svar";
   for (let s = M.STR; s >= M.MIN_STR; s -= 0.5) {
-    const linjer = kkBryd(tekst, M.serif, s, M.TEKST_B), lh = s * 0.45;
+    const linjer = kkLinjer(tekst, M.serif, s, M.TEKST_B), lh = s * 0.45;
     const bund = M.TEKST_TOP + s * 0.33 + (linjer.length - 1) * lh + (svar ? 5 + ss * 0.35 : 0);
     if (linjer.length <= M.MAX_LINJER && linjer.every(l => kkBredde(l, M.serif, s) <= M.TEKST_B) && bund <= M.TEKST_BUND)
-      return {str: s, linjer, lh, svar, ss};
+      return {str: s, linjer, lh, svar, ss, ned: (M.TEKST_BUND - bund) / 2};
   }
   return null;
 }
@@ -2257,7 +2266,7 @@ function kkArk(kortene, R, link) {   // kortene: [{tekst, svar, kamp}] i rækkef
       const F = M.M + M.RAMME;
       svg.append(el("rect", {x: ox + F, y: oy + F, width: W - 2 * F, height: H - 2 * F, fill: "none", stroke: farve(M.farver.bord), "stroke-width": 0.3}));
       if (L && typeof L === "object") {
-        const y = oy + M.TEKST_TOP + L.str * 0.33;
+        const y = oy + M.TEKST_TOP + L.ned + L.str * 0.33;
         L.linjer.forEach((l, j) => svg.append(el("text", {x: cx, y: y + j * L.lh, "font-family": "kkSerif", "font-size": L.str / KK_MM,
           fill: farve(M.farver.moerk), "text-anchor": "middle", class: "kk-t"}, l)));
         if (L.svar) svg.append(el("text", {x: cx, y: y + (L.linjer.length - 1) * L.lh + 5 + L.ss * 0.35, "font-family": "kkPopl",
