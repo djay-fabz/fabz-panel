@@ -282,8 +282,13 @@ input[type=date]{color-scheme:light dark}
 .planpunkt>.x{grid-area:auto}
 .pl-dag{display:flex;align-items:center;gap:8px;color:var(--svag);font-size:13.5px;margin:2px 0 6px}.pl-ret{background:none;border:0;color:var(--svagere);font:inherit;cursor:pointer;padding:2px 6px;border-radius:6px}.pl-ret:hover{color:var(--accent)}
 .lg .planpunkt>.input:first-child{font-weight:500;color:var(--tekst)}.pl-mins{font-size:12px}.pl-mins .min{font-size:12.5px;color:var(--svagere)}
+.pl-seg{margin:10px 0 2px}.pl-ny{font-size:11px;color:var(--accent);border:1px solid var(--accent);border-radius:99px;padding:0 7px;margin-left:8px;font-weight:500}.ny-r{display:flex;gap:10px;align-items:baseline}
+.ikke-naaet{border:1px solid var(--linje);border-radius:12px;padding:10px 14px;margin:12px 0 6px;background:var(--flade2)}.in-h{display:flex;align-items:baseline;gap:10px;margin-bottom:4px}.in-h b{font-size:15px}
+.in-r{display:flex;align-items:center;gap:10px;padding:4px 0;cursor:pointer}.in-r input{width:16px;height:16px;margin:0;flex:none;accent-color:var(--pl-brun)}.in-t{flex:1;min-width:0}.in-r.fra .in-t{color:var(--svag)}
+.pl-foerst{font-size:11.5px;border:1px solid var(--pl-brun);color:var(--pl-brun);border-radius:99px;padding:0 8px;align-self:center;white-space:nowrap}
+.lg .pl-tl .planpunkt.foerst:before{background:var(--pl-brun)}
 .pl-tl{margin:6px 0 0 5px;padding-left:18px;border-left:1px solid var(--linje)}
-.lg .pl-tl .planpunkt{position:relative;grid-template-columns:1fr auto!important;border-top:0;padding:4px 8px;margin:0 0 4px -8px;border-radius:10px;cursor:pointer}
+.lg .pl-tl .planpunkt{position:relative;grid-template-columns:1fr auto auto!important;border-top:0;padding:4px 8px;margin:0 0 4px -8px;border-radius:10px;cursor:pointer}
 .lg .pl-tl .planpunkt:before{content:"";position:absolute;left:-23px;top:15px;width:8px;height:8px;border-radius:50%;background:var(--flade);border:1.5px solid var(--pl-brun)}
 .lg .pl-tl .planpunkt.aktiv{background:var(--flade2)}.lg .pl-tl .planpunkt.aktiv:before{background:var(--pl-brun)}
 @media (max-width:700px){.lg .pl-tl .pl-mins .min{width:34px;padding:3px 2px!important}.lg .pl-tl .planpunkt{gap:2px}}
@@ -2882,6 +2887,8 @@ const FILER = {evalueringer: "data/evalueringer.json", jobstatus: "data/jobstatu
 async function laesValgfri(p) { const r = await laesFil(p); return r ? r.json() : []; }
 async function genindlæs(navne) { await Promise.all(navne.map(async n => { D[n] = n === "kkTekster" ? await laesKkTekster() : await laesValgfri(FILER[n]); })); }
 const plusDage = (iso, n) => { const d = dag(iso); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+const næsteHverdag = iso => { let x = plusDage(iso, 1); while ([0, 6].includes(dag(x).getDay())) x = plusDage(x, 1); return x; };
+const planIMorgen = () => new Date().getHours() >= 15;   // Oscar 11/11: planlæg i morgen ved dagens slut (15.50-16.00)
 const nuHHMM = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, "0")}.${String(d.getMinutes()).padStart(2, "0")}`; };
 const kr = v => `${Math.round(Number(v) || 0).toLocaleString("da-DK")} kr.`;
 const FD = {åben: null, valgt: null};
@@ -3087,7 +3094,10 @@ function visIDag() {
   };
   const planKort = h("div", {class: "kort2"},
     h("div", {class: "kh"}, h("h2", {}, "Dagens plan"),
-      dp?.plan_punkter?.length ? h("button", {class: "btn lille", type: "button", style: "margin-left:auto", onclick: () => { fane = "opgaver"; OP.vis = "plan"; tegn(); window.scrollTo(0, 0); }}, "Planlæg dag") : null,   // Opgaver ligger under Mere (Oscar 10/11), Planlæg dag nås herfra
+      dp?.planlagt_den && dp.planlagt_den < idag && dp.planlagt_kl ? h("span", {class: "muted lille"}, `planlagt ${dp.planlagt_den === plusDage(idag, -1) ? "i går" : kortDato(dp.planlagt_den)} ${dp.planlagt_kl}`) : null,
+      dp?.plan_punkter?.length ? h("button", {class: "btn lille", type: "button", style: "margin-left:auto", onclick: () => { fane = "opgaver"; OP.vis = "plan";
+        if (planIMorgen() && OP.planDato !== næsteHverdag(idag)) { OP.planDato = næsteHverdag(idag); OP.plan = null; }
+        tegn(); window.scrollTo(0, 0); }}, planIMorgen() ? "Planlæg i morgen" : "Planlæg dag") : null,   // Oscar 11/11: ved dagens slut planlægges i morgen   // Opgaver ligger under Mere (Oscar 10/11), Planlæg dag nås herfra
       dp?.plan_punkter?.length ? h("button", {class: "btn lille", type: "button", title: "Åbner dagens printliste (PDF) fra pdf-mappen", onclick: async () => {   // Oscar 27/10: "hvordan printede jeg dagen?"
         const d = dag(idag), navn = `To-do ${["Søn", "Man", "Tir", "Ons", "Tor", "Fre", "Lør"][d.getDay()]} ${d.getDate()}-${d.getMonth() + 1}.pdf`;
         const link = await hentPdf("pdf/" + navn);
@@ -3101,6 +3111,9 @@ function visIDag() {
     dp?.plan_punkter?.length ? [
       ...[["foer_frokost", dp.plan_punkter.some(p => p.halvdel === "efter_frokost") ? "Før frokost" : "Arbejdstid"], ["efter_frokost", "Efter frokost"], ["hvis_tid", "Hvis der er tid"]].map(([hv, navn]) => {
         const ps = dp.plan_punkter.filter(p => p.halvdel === hv);
+        // Oscar 11/11: planen fra i går laves ikke om. Nye opgaver fra i dag (fx fra mailen) står nederst før frokost med mærket "ny"
+        const nye = hv === "foer_frokost" && dp.planlagt_den && dp.planlagt_den < idag
+          ? D.opgaver.filter(o => o.oprettet === idag && !["Færdig", "Venter"].includes(o.status) && !erSalgRing(o) && !dp.plan_punkter.some(p => p.id === o.id || p.smaating?.some(x => x.id === o.id))) : [];
         return ps.length ? h("div", {class: "lg"}, h("div", {class: "overskrift"}, navn), ps.map(p => p.smaating?.length ? småBlok(p) :
           h("label", {class: "cb" + (nået.includes(p.nr) || salgKlaret(p) ? " gjort" : "")},
             h("input", {type: "checkbox", checked: nået.includes(p.nr), disabled: fulgtOp, onchange: e => {
@@ -3115,7 +3128,8 @@ function visIDag() {
             fulgtOp ? (p.brugt != null ? h("span", {class: "muted lille"}, "brugt " + p.brugt + " min") : null)
               : h("input", {class: "input", type: "number", min: "0", max: "720", placeholder: "brugt, min", style: "width:92px;padding:4px 8px;margin-left:8px", value: brugt[p.nr] ?? "",
                   oninput: e => { if (e.target.value === "") delete brugt[p.nr]; else brugt[p.nr] = Number(e.target.value); lager.set(BRUGT_KEY(idag), JSON.stringify(brugt)); },
-                  onclick: e => e.stopPropagation()})))) : null;
+                  onclick: e => e.stopPropagation()}))),
+          nye.map(o => h("div", {class: "cb ny-r"}, h("span", {class: "t"}, o.titel, h("span", {class: "pl-ny"}, "ny")), o.estimat ? h("span", {class: "muted lille"}, o.estimat + " min") : null))) : null;
       }),
       fulgtOp ? [h("div", {class: "godk ok", style: "margin-top:14px"}, dp.naaet_min != null && dp.planlagt_min != null ? `Fulgt op: nået ${dp.naaet_min} af ${dp.planlagt_min} min` : "Fulgt op: gemmes …"), estimatForslag(dp)]
         : afslutDag(idag, () => nået, () => brugt, () => småK)
@@ -3864,7 +3878,8 @@ function planTilføj(o, hv) {   // lægger en opgave ind i den åbne plan (klik 
 function planlægPanel() {
   const idag = iDag();
   gemForslag();
-  if (!OP.planDato) OP.planDato = (D.dagsplaner || []).some(x => x.dato === idag && x.plan_punkter?.length) || new Date().getHours() >= 14 ? plusDage(idag, 1) : idag;
+  if (!OP.planDato) OP.planDato = (D.dagsplaner || []).some(x => x.dato === idag && x.plan_punkter?.length) || planIMorgen() ? næsteHverdag(idag) : idag;
+  const næste = næsteHverdag(idag), næsteNavn = næste === plusDage(idag, 1) ? "I morgen" : ["Søn", "Man", "Tir", "Ons", "Tor", "Fre", "Lør"][dag(næste).getDay()] + " " + kortDato(næste);
   const p = OP.plan;
   const lavForslag = async (tom) => {
     for (const [k, v] of [["planFra", OP.planFra], ["planStop", OP.planStop]]) if (v && !/^\d{1,2}[.:]\d{2}$/.test(v)) { alert("Skriv tiden som 10.00."); return; }
@@ -3908,6 +3923,8 @@ function planlægPanel() {
   const halvdele = [["foer_frokost", enkelt ? "Arbejdstid" : "Før frokost"], ...(enkelt ? [] : [["efter_frokost", "Efter frokost"]]), ["hvis_tid", "Hvis der er tid"]];
   return h("div", {class: "kort2"},
     h("div", {class: "kh"}, h("h2", {}, "Planlæg dag"), h("button", {class: "x", type: "button", onclick: () => { OP.vis = null; tegn(); }}, "×")),
+    h("div", {class: "seg pl-seg"}, [[idag, "I dag"], [næste, næsteNavn]].map(([d, t]) =>   // Oscar 11/11: efter kl. 15 står den på i morgen, og du kan skifte tilbage
+      h("button", {type: "button", class: OP.planDato === d ? "aktiv" : "", onclick: () => { if (OP.planDato === d) return; OP.planDato = d; OP.plan = null; OP.planIndst = false; OP.planSvar = null; tegn(); }}, t))),
     p && !OP.planIndst ? h("div", {class: "pl-dag"}, planDagLinje(p),   // Oscar 11/11: indstillingerne samlet i én linje, når planen er lavet
       h("button", {class: "pl-ret", type: "button", title: "Ret dag og tid", "aria-label": "Ret dag og tid", onclick: () => { OP.planIndst = true; tegn(); }}, "✎")) :
     h("div", {style: "display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;align-items:end;margin-top:8px"},
@@ -3925,6 +3942,7 @@ function planlægPanel() {
       mp.kør ? h("button", {class: "btn lille", type: "button", onclick: () => kør("mailoversigt", [], {tekst: "Mailoversigt", efter: [], med: () => { D.mailoversigt = {dato: idagPlan, status: "bestilt", tid: nuHHMM()}; }})}, "Kør den nu") : null) : null,
     !p ? h("div", {class: "muted lille", style: "margin-top:8px"}, "Foreslå en plan: panelet foreslår opgaver til tiden, og du kan rette bagefter. Lav selv: tom plan, du vælger opgaverne.") : null,
     p ? [
+      p.dato > idag ? ikkeNåetBoks(p, idag) : null,
       skubBoks(p),
       ...halvdele.map(([hv, navn]) => { const sum = p[hv].reduce((s, x) => s + (p.salg_fravalg && erSalgPunkt(x) ? 0 : Number(x.min) || 0), 0), led = hv === "foer_frokost" ? p.ledig_foer : hv === "efter_frokost" ? p.ledig_efter : null;
         return h("div", {class: "lg slip",
@@ -3938,9 +3956,10 @@ function planlægPanel() {
           hv !== "hvis_tid" && led ? (() => { const tot = Math.max(sum, led), blå = Math.min(sum, led) / tot * 100, fuld = led / tot * 100;
             return h("div", {class: "pl-bar"}, h("i", {style: `width:${blå}%`}), sum > led ? h("i", {class: "over", style: `left:${fuld}%;width:${100 - fuld}%`}) : null, h("span", {class: "fuld", style: `left:calc(${fuld}% - 1px)`})); })() : null,
         h("div", {class: "pl-tl"}, p[hv].map((x, i) => { const nøgle = `${hv}|${i}`;   // Oscar 11/11: tidslinje uden klokkeslæt, en prik pr. opgave, knapperne først når du trykker
-         return h("div", {class: "planpunkt" + (/VÆLG/.test(x.tekst) ? " mangler" : "") + (p.salg_fravalg && erSalgPunkt(x) ? " fravalgt" : "") + (OP.plAktiv === nøgle ? " aktiv" : ""),
+         return h("div", {class: "planpunkt" + (x.foerst ? " foerst" : "") + (/VÆLG/.test(x.tekst) ? " mangler" : "") + (p.salg_fravalg && erSalgPunkt(x) ? " fravalgt" : "") + (OP.plAktiv === nøgle ? " aktiv" : ""),
             onclick: e => { if (e.target.closest(".pl-handl,.pl-salg")) return; OP.plAktiv = nøgle; document.querySelectorAll(".planpunkt.aktiv").forEach(r => r.classList.remove("aktiv")); e.currentTarget.classList.add("aktiv"); }},
           h("input", {class: "input", value: x.tekst, oninput: e => { x.tekst = e.target.value; e.target.parentElement.classList.toggle("mangler", /VÆLG/.test(x.tekst)); }}),
+          x.foerst ? h("span", {class: "pl-foerst"}, "Først") : null,
           h("label", {class: "pl-mins"}, h("input", {class: "input min", type: "number", min: "0", value: x.min ?? "", placeholder: "–", "aria-label": "Minutter", oninput: e => { x.min = e.target.value === "" ? null : Number(e.target.value); }}), "min"),
           x.smaating?.length ? h("div", {class: "smaa-meta"},   // Oscar 11/11: én pr. linje, aldrig afskåret
             h("ul", {class: "smaa-liste"}, x.smaating.map(y => h("li", {}, y.tekst)))) : null,
@@ -3958,12 +3977,49 @@ function planlægPanel() {
         h("button", {class: "btn" + (OP.planStopAnden ? " valgt" : ""), type: "button", onclick: () => { OP.planStopAnden = !OP.planStopAnden; OP.planStopOk = null; tegn(); }}, "Anden tid"),
         OP.planStopAnden ? [h("input", {class: "input", style: "width:96px", inputmode: "numeric", placeholder: "17.30", value: OP.planStop || "", "aria-label": "Stoptid", oninput: e => { OP.planStop = e.target.value.trim(); }}),
           h("button", {class: "btn primaer", type: "button", disabled: OP.planArbejder, onclick: () => { if (!/^\d{1,2}[.:]\d{2}$/.test(OP.planStop || "")) { alert("Skriv tiden som 17.30."); return; } OP.planStopAnden = false; lavForslag(false); }}, "Lav forslaget igen")] : null) : null,
-      h("button", {class: "btn primaer stor", type: "button", style: "margin-top:12px", disabled: OP.planArbejder || (p.stop_krav && !OP.planStopOk), onclick: godkend}, OP.planArbejder ? "Arbejder …" : "Godkend og print")
+      h("button", {class: "btn primaer stor", type: "button", style: "margin-top:12px", disabled: OP.planArbejder || (p.stop_krav && !OP.planStopOk), onclick: godkend}, OP.planArbejder ? "Arbejder …" : p.dato > iDag() ? "Godkend og print til " + (p.dato === plusDage(iDag(), 1) ? "i morgen" : ["søndag", "mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag"][dag(p.dato).getDay()]) : "Godkend og print")
     ] : null,
     OP.planSvar ? h("div", {class: "svar " + OP.planSvar.klasse}, h("b", {}, OP.planSvar.titel),
       OP.planSvar.punkter?.length ? h("ul", {}, OP.planSvar.punkter.map(x => h("li", {}, x))) : null,
       OP.planPdf?.link ? pdfKnapper(OP.planPdf.link, OP.planPdf.navn) : null) : null);
 }
+// ---------- Ikke nået i dag (Oscar 11/11, skitse panel-planlaeg-i-morgen) ----------
+// Når du planlægger i morgen: det fra dagens plan, der ikke blev krydset af, og salgsopkald, der skulle være taget i dag. Intet er valgt på forhånd.
+// Salgsopkald lægges forrest i salgsblokkens Ring til, andre opgaver som punkter.
+const erSalgRing = o => !!(o.salg_auto || o.salg_lead || o.job_opgave === "salg" || ((o.titel || "").startsWith("Ring til") && o.type === "Salg og opfølgning"));
+function ikkeNået(idag) {   // seneste plan til og med i dag: det der ikke er færdigt, og firmaerne i dens Ring til. Så forfaldne salgsopkald, ældste først
+  const åben = o => o && !["Færdig", "Venter"].includes(o.status) && o.job_opgave !== "salg";
+  const dp = (D.dagsplaner || []).filter(x => x.dato <= idag && x.plan_punkter?.length).sort((a, b) => b.dato.localeCompare(a.dato))[0];
+  const set = new Set(), ud = [], tag = o => { if (åben(o) && !set.has(o.id)) { set.add(o.id); ud.push(o); } };
+  (dp?.plan_punkter || []).filter(p => p.halvdel !== "hvis_tid").forEach(p => [p.id, ...(p.smaating || []).map(x => x.id)].forEach(id => id != null && tag(D.opgaver.find(o => o.id === id))));
+  const navne = new Set((dp?.plan_punkter || []).flatMap(p => p.navne || []));
+  const salg = D.opgaver.filter(o => erSalgRing(o) && o.job_opgave !== "salg" && !/^afvent\b/i.test(o.titel || ""));
+  salg.filter(o => navne.has(o.salg_lead)).forEach(tag);
+  salg.filter(o => (o.deadline && o.deadline <= idag) || o.planlagt === idag).sort((a, b) => (a.deadline || "9").localeCompare(b.deadline || "9") || a.id - b.id).forEach(tag);
+  return ud;
+}
+function ikkeNåetBoks(p, idag) {
+  const liste = ikkeNået(idag);
+  if (!liste.length) return null;
+  const salg = p.foer_frokost.find(erSalgPunkt), halvdele = ["foer_frokost", "efter_frokost", "hvis_tid"];
+  const somNavn = o => erSalgRing(o) && salg && o.salg_lead && !/^send\b/i.test(o.titel || "");
+  const valgt = o => somNavn(o) ? (salg.navne || []).includes(o.salg_lead) : halvdele.some(k => p[k].some(x => x.id === o.id));
+  const skift = (o, til) => {
+    if (somNavn(o)) salg.navne = til ? [o.salg_lead, ...(salg.navne || []).filter(n => n !== o.salg_lead)] : (salg.navne || []).filter(n => n !== o.salg_lead);
+    else if (til) planTilføj(o);
+    else halvdele.forEach(k => { p[k] = p[k].filter(x => x.id !== o.id); });
+    tegn();
+  };
+  const v = liste.filter(valgt), min = v.filter(o => !somNavn(o)).reduce((s, o) => s + (Number(o.estimat) || 0), 0);
+  return h("div", {class: "ikke-naaet"},
+    h("div", {class: "in-h"}, h("b", {}, "Ikke nået i dag"), h("span", {class: "spacer"}), h("span", {class: "muted lille"}, `${v.length} valgt` + (min ? ` · ${min} min` : ""))),
+    (OP.inAlle ? liste : liste.slice(0, IN_VIS)).map(o => h("label", {class: "in-r" + (valgt(o) ? "" : " fra")},
+      h("input", {type: "checkbox", checked: valgt(o), onchange: e => skift(o, e.target.checked)}),
+      h("span", {class: "in-t"}, (o.titel || "").replace(/\s*\([^)]*\)\s*$/, "").replace(/\s*\(\+?\d[\d ]+\)/, "")),
+      o.estimat ? h("span", {class: "muted lille"}, o.estimat + " min") : null)),
+    liste.length > IN_VIS ? h("button", {class: "pl-lnk", type: "button", style: "margin-top:4px", onclick: () => { OP.inAlle = !OP.inAlle; tegn(); }}, OP.inAlle ? "Vis færre" : `+ ${liste.length - IN_VIS} mere`) : null);
+}
+const IN_VIS = 6;
 function planDagLinje(p) {   // "Ons 11/11 · 09.50-16.00 · frokost efter kalenderen"
   const d = new Date((OP.planDato || iDag()) + "T12:00"), dag = ["Søn", "Man", "Tir", "Ons", "Tor", "Fre", "Lør"][d.getDay()] + " " + d.getDate() + "/" + (d.getMonth() + 1);
   const del = t => (t || "").split(" til "), fra = del(p.foer_tid)[0] || OP.planFra || "nu", til = del(p.efter_tid || p.foer_tid)[1] || OP.planStop || "16.00";
