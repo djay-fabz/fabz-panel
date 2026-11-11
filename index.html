@@ -5585,12 +5585,17 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     if (T === "efter") gør.push(trin("rd", [h("b", {}, `Restskatten er ikke betalt: ${krKort(A + B)} kr.`), ` Fristen var ${F}.` + flyt_], betalt));
     if (T === "betalt") gør.push(trin("rd", [h("b", {}, `${skV.kunde} har betalt ${krKort(skV.kr)} kr.`), iDag() > skV.frist ? ` Fristen var ${F}. Betal ${fraHvor} til Skattekontoen nu.` + flyt_ : ` Betal ${fraHvor} til Skattekontoen senest ${F}.` + saxoT + flyt_], betalt));
   }
+  // Victorias del (Oscar 11/11, skitse panel-victoria-andel): samme dage som lønbjælken, med teksten til hende. Claude sender intet, Oscar kopierer
+  { const V_ = P.victoria, D1_ = P.d1;
+    if (V_ && D1_ && iDag() >= (D1_.vis_fra || D1_.dato) && iDag() < D1_.dato) gør.push(trin(V_.forskel < 0 ? "y" : "g", [h("b", {}, `${V_.navn} til ${kortDato(V_.d1)}: ${krKort(V_.i_alt)} kr.`),
+      V_.forskel < 0 ? ` Hun sender ${krKort(V_.sender)} kr. i dag, så der mangler ${krKort(-V_.forskel)} kr.` : V_.forskel > 0 ? ` Hun sender ${krKort(V_.sender)} kr. i dag, ${krKort(V_.forskel)} kr. for meget.` : " Det passer med det, hun sender."],
+      h("button", {class: "btn lille", type: "button", onclick: e => { navigator.clipboard?.writeText(V_.sms); e.target.textContent = "Kopieret"; }}, "Kopiér SMS"))); }
   // lønbjælken (skitse panel-gem-x): kun 2 bankdage før d. 1, og kun hvor pengene skal tages fra. Mangler der penge, vises det med det samme
-  { const rd_ = mo.raad, lk = rd_?.loen_klub, B = P.d1?.beloeb;
+  { const rd_ = mo.raad, lk = rd_?.loen_klub, vU = P.victoria?.d1 === P.d1?.dato ? P.victoria?.sendt?.under || 0 : 0, B = P.d1?.beloeb == null ? P.d1?.beloeb : P.d1.beloeb + vU;   // Victoria under budgettet: Oscar mangler forskellen til d. 1 (revision 11/11)
     if (rd_?.loen_dato && lk && B) { const A = rd_.loen_d1 ?? rd_.loen_naeste ?? 0, Y = lk.kr, M = B - A - Y, D1 = kortDato(rd_.loen_dato), af100 = x => Math.ceil(x / 100) * 100;
-      const forf = (lk.forfaldne || []).map(q => q.navn).join(" og ");
-      if (M > 0) gør.push(trin("rd", [h("b", {}, `Der mangler ${krKort(af100(M))} kr. til regningerne d. ${D1}.`), ` Firmakontoen kan give ${krKort(A)} kr., og ${krKort(Y)} kr. ${lk.kommet >= Y ? "er kommet" : "kommer"} fra klubjobs.` + (forf ? ` ${forf} er forfalden og tæller ikke med.` : "")]));
-      else if (iDag() >= (P.d1.vis_fra || rd_.loen_vis_fra || rd_.loen_dato)) gør.push(trin("g", [h("b", {}, `Til d. ${D1}:`), ` Tag ${krKort(af100(Math.max(0, B - Y)))} kr. fra firmakontoen. ${krKort(Y)} kr. ${lk.kommet >= Y ? "er kommet" : "kommer"} på Lønkonto+ fra klubjobs. Så er regningerne på ${krKort(B)} kr. dækket.`])); } }
+      const forf = (lk.forfaldne || []).map(q => q.navn).join(" og "), vT = vU ? ` ${P.victoria.navn} har sendt ${krKort(vU)} kr. mindre end budgettet, og det er lagt til.` : "";
+      if (M > 0) gør.push(trin("rd", [h("b", {}, `Der mangler ${krKort(af100(M))} kr. til regningerne d. ${D1}.`), ` Firmakontoen kan give ${krKort(A)} kr., og ${krKort(Y)} kr. ${lk.kommet >= Y ? "er kommet" : "kommer"} fra klubjobs.` + (forf ? ` ${forf} er forfalden og tæller ikke med.` : "") + vT]));
+      else if (iDag() >= (P.d1.vis_fra || rd_.loen_vis_fra || rd_.loen_dato)) gør.push(trin("g", [h("b", {}, `Til d. ${D1}:`), ` Tag ${krKort(af100(Math.max(0, B - Y)))} kr. fra firmakontoen. ${krKort(Y)} kr. ${lk.kommet >= Y ? "er kommet" : "kommer"} på Lønkonto+ fra klubjobs. Så er regningerne på ${krKort(B)} kr. dækket.` + vT])); } }
   // 2 dage før en faktura forfalder (Oscar 2/11): gul, så skatten er klar, når pengene kommer
   // ✓ Overført på hvert banner (Oscar 5/11: pengene var kommet, men der var ikke noget at trykke på); kontoudtoget ser pengene: "har betalt"
   // skat fra job, hvor pengene ER kommet, men beløbet ikke er overført (Oscar 5/11): rød, med job og beløb, ét tryk. Også når jobbet mangler andet, fx B-indkomst.dk (Ranum 19/6)
@@ -5963,6 +5968,19 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   // Automatiske (El, sygeforsikring) trækkes selv, når regningen kommer. Tallene regnes i privat-data
   // Kuverterne (Oscar 2/11, skitse panel-hov-kuverter-2): en stille liste med navn og saldo uden farver; tryk for detaljer og Hæv.
   // Mangler en kuvert penge, står det i Overførsler. Varme og Vand står for sig nederst med "Vis graf"
+  const victoriaDel = V => [   // Victorias del (Oscar 11/11): linjerne, det hun sender i dag, og teksten til hende
+    V.linjer.map(x => h("div", {class: "pl-l"}, h("span", {}, x.navn, x.i_alt !== x.kr ? h("span", {class: "muted"}, ` ${krKort(x.i_alt)} / ${Math.round(1 / V.andel)}`) : null), h("b", {}, `${krKort(x.kr)} kr.`))),
+    h("div", {class: "pl-l"}, h("b", {}, "I alt"), h("b", {}, `${krKort(V.i_alt)} kr.`)),
+    h("div", {class: "pl-l"}, h("span", {}, "Hun sender i dag"), h("b", {style: V.forskel < 0 ? "color:var(--adv)" : ""}, `${krKort(V.sender)} kr.` + (V.forskel ? ` (${V.forskel > 0 ? "+" : "−"}${krKort(Math.abs(V.forskel))})` : " ✓"))),
+    V.tjen_foer_skat ? h("div", {class: "pl-l"}, h("span", {}, `Sender hun ikke de ${krKort(-V.forskel)} kr., skal du tjene før skat`), h("b", {}, `${krKort(V.tjen_foer_skat)} kr./md. Det er med i Basis.`)) : null,
+    V.sendt?.under ? h("div", {class: "pl-l", style: "color:var(--adv)"}, h("span", {}, `Hun har sendt ${krKort(V.sendt.kr)} kr., ${krKort(V.sendt.under)} kr. mindre end budgettet`), h("b", {}, `−${krKort(V.sendt.under)} kr.`)) : null,   // revision 11/11
+    V.sendt?.ret_selv ? h("div", {class: "pl-l"}, h("span", {}, V.sendt.ret_selv > 0 ? `Overførslen til Buffer er lavet: læg selv ${krKort(V.sendt.ret_selv)} kr. mere i Buffer` : `Overførslen til Buffer er lavet: flyt selv ${krKort(-V.sendt.ret_selv)} kr. tilbage fra Buffer`), h("b", {})) : null,   // budgettet regner kun med det, hun sender (Oscar 11/11)
+    // det hun har sendt til d. 1 (Oscar 11/11): over budgettet går til Buffer i Saxo som en overførsel på listen. Fast aftale gør beløbet til budget
+    h("div", {class: "pl-l"}, h("span", {}, `Har sendt til ${kortDato(V.d1)}`), h("span", {style: "display:flex;gap:6px;align-items:center"},
+      h("input", {type: "number", inputmode: "numeric", style: "width:96px", value: String(V.sendt?.kr ?? V.sender), id: "vic-sendt"}),
+      h("button", {class: "btn lille", type: "button", onclick: () => { const b = Math.round(Number($("vic-sendt").value)); if (b > 0) privatSend({kommando: "victoria-sendt", d1: V.d1, beloeb: b}, `${V.navn} har sendt ${krKort(b)} kr.`); }}, V.sendt ? "Ret" : "Gem"))),
+    !V.fast && V.i_alt > V.sender ? h("button", {class: "btn lille", type: "button", style: "margin-top:6px", onclick: () => { if (confirm(`Betaler ${V.navn} fast ${krKort(V.i_alt)} kr. om måneden fra nu? Så regner budgettet med det.`)) privatSend({kommando: "victoria-fast", beloeb: V.i_alt}, `${V.navn} fast ${krKort(V.i_alt)} kr.`); }}, `Fast aftale: ${krKort(V.i_alt)} kr.`) : null,
+    h("div", {style: "margin-top:8px"}, V.sms), h("button", {class: "btn lille", type: "button", style: "margin-top:6px", onclick: e => { navigator.clipboard?.writeText(V.sms); e.target.textContent = "Kopieret"; }}, "Kopiér SMS")];
   const kuvNavn = n => n.replace(/ danmark$/i, "");
   const kuvL = DP ? DP.linjer.filter(x => !x.maal && x.maal !== 0) : [];
   const regFold = kuvL.length ? h("div", {class: "kort2 kuv"}, h("div", {class: "kuv-h"}, h("b", {}, "Kuverterne")),
@@ -6224,6 +6242,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
       kasseL.length ? linje("kasse", null, h("span", {}, "Kassen"), h("div", {class: "sg-under"}, kasseL.map(j => h("div", {class: "rd-l"}, h("span", {}, `${kortDato(j.forventet)} ${j.navn}`), h("b", {}, `${krKort(j.maade === "dinero" ? j.plan.ekskl + j.plan.moms : j.plan.ekskl)} kr.`)))), h("div", {class: "rd-l"}, h("span", {}, "I alt"), h("b", {}, `${krKort(kasseL.reduce((s, j) => s + (j.maade === "dinero" ? j.plan.ekskl + j.plan.moms : j.plan.ekskl), 0))} kr.`))) : null,
       linje("saxo", null, "Saxo og kontanter", puljer),
       regFold ? linje("kuv", null, "Kuverter", regFold) : null,
+      P.victoria ? linje("victoria", P.victoria.forskel < 0 || P.victoria.sendt?.under ? "y" : null, `${P.victoria.navn} til ${kortDato(P.victoria.d1)}`, victoriaDel(P.victoria)) : null,
       fbKort2 ? linje("fvs", null, "Varme, Vand og Strøm", fbKort2) : null,
       linje("detaljer", null, "Detaljer", låstListe, ubS.antal && sælgKort ? null : fold("Fakturaer og depositum", pengeListe()), overblik, tjekFold, fordFold, fold("Omsætning pr. måned", vejKort(false))))));
 }
