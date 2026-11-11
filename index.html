@@ -2892,7 +2892,7 @@ const planIMorgen = () => new Date().getHours() >= 15;   // Oscar 11/11: planlæ
 const nuHHMM = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, "0")}.${String(d.getMinutes()).padStart(2, "0")}`; };
 const kr = v => `${Math.round(Number(v) || 0).toLocaleString("da-DK")} kr.`;
 const FD = {åben: null, valgt: null};
-// Udstyr til foråret (Oscar 10/11, skitse panel-udstyrsmaal-og-tilbud): puljen "Nyt anlæg" i Saxo med mål, frist og dele. Øverst i I dag til fristen
+// Udstyr til foråret (Oscar 10/11, skitse panel-udstyrsmaal-og-tilbud): puljen "Nyt anlæg" i Saxo med mål, frist og dele. I Økonomi under "måneder dækket" (flyttet fra I dag 11/11)
 const UD = {åben: false};
 function udstyrsLinje() {
   const p = (D.mo?.overblik?.puljer || []).find(x => x.navn === "Nyt anlæg");
@@ -2904,7 +2904,7 @@ function udstyrsLinje() {
     h("button", {class: "ud-top", type: "button", "aria-expanded": UD.åben, onclick: () => { UD.åben = !UD.åben; tegn(); }},
       h("b", {}, p.titel || p.navn), h("span", {class: "muted ud-tal"}, `${krKort(saldo)} af ${krKort(p.maal)} kr.`), h("span", {class: "spacer"}),
       h("span", {class: "muted ud-pr"}, nået ? "✓ Pengene er der" : `mangler ${krKort(pr)} kr. pr. md. til ${kortDato(p.frist)}`), h("span", {class: "ud-pil"}, UD.åben ? "▴" : "▾")),
-    h("div", {class: "ud-bar"}, h("div", {style: `width:${pct}%`})),
+    UD.åben ? h("div", {class: "ud-bar"}, h("div", {style: `width:${pct}%`})) : null,   // lukket: én linje (Oscar 11/11)
     UD.åben ? h("div", {class: "ud-dele"}, (p.dele || []).map(d => h("div", {}, h("span", {}, d.navn), h("b", {}, `${d.ca ? "ca. " : ""}${krKort(d.kr)}`)))) : null);
 }
 // Ugens tilbud (Oscar 10/11): 1 nyt tilbud pr. uge på et job i januar-marts 2027, til og med februar. Tæller forespørgsler, der har fået tilbud (eller er booket) i ugen
@@ -3186,7 +3186,7 @@ function visIDag() {
   if (dp?.plan_punkter?.length) {   // dagen er planlagt: kun planen (Oscar 28/10: "fokus skal holdes"); resten bag ét lukket link
     const tal = [[henv.length, "Forespørgsler"], [due.length, "Salg"],
       [ub && (ub.forfaldne || dm.length) ? (ub.forfaldne || 0) + dm.length : 0, "Penge ude"]].filter(([n]) => n).map(([n, t]) => `${t} ${n}`);
-    $("rod").replaceChildren(h("div", {class: "side"}, overskrift, fejlBjælker(), udstyrsLinje(),
+    $("rod").replaceChildren(h("div", {class: "side"}, overskrift, fejlBjælker(),
       h("div", {class: "fokus"}, planKort, evalueringKort(idag), ...jobKort, vagterKort(idag),   // vagtkort vises kun ved kollision eller nye vagter
         foreDag().ting.some(t => !t.klaret) ? foreIDag() : null,   // planlagt dag: forespørgsler, der skal svares eller følges op, står stadig fremme
         brydIgennem(henv, ub, dm),
@@ -3195,7 +3195,7 @@ function visIDag() {
     return;
   }
   const evKort = evalueringKort(idag);
-  $("rod").replaceChildren(h("div", {class: "side bred"}, overskrift, fejlBjælker(), udstyrsLinje(), evKort ? h("div", {style: "margin-bottom:16px"}, evKort) : null,
+  $("rod").replaceChildren(h("div", {class: "side bred"}, overskrift, fejlBjælker(), evKort ? h("div", {style: "margin-bottom:16px"}, evKort) : null,
     h("div", {class: "idag"}, planKort, h("div", {class: "stak"}, ...jobKort, resten[0], vagterKort(idag), ...resten.slice(1)))));
 }
 function brydIgennem(henv, ub, dm) {   // planlagt dag: nye forespørgsler og penge ude står over "Vis resten" (skitse panel-opfoelgning, Oscar ja 29/10)
@@ -6334,7 +6334,8 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     fk.alder ? hRk([fk.alder, `Opdater kontoudtoget (${fk.gl} dage gammelt)`, knap("Opdater →", mål("guide:bank"))]) : null,
     h("div", {class: "rd-l"}, h("span", {}, "Saldo ", kilde("kontoudtog", RD.saldo_dato)), h("b", {}, `${krKort(RD.saldo)} kr.`)),
     h("div", {class: "sg-under"}, fk.poster.map(fkPost))] : [];
-  $("rod").replaceChildren(h("div", {class: "side bred skat-side"}, top, msKort, hovKort, d1Kort, ovKort0, bjælker, sælgKort,
+  $("rod").replaceChildren(h("div", {class: "side bred skat-side"}, top, msKort, hovKort, d1Kort, ovKort0, bjælker, sælgKort, udstyrsLinje(),   // Oscar 11/11: under "måneder dækket", ikke på I dag
+     
     h("div", {class: "sg-linjer"},
       linje("mangler", null, nMangler ? h("span", {}, "Mangler noget ", h("span", {class: "pill y"}, String(nMangler))) : "Mangler noget", manglerDel()),
       linje("skat", værst(skatH.map(x => x[0])), `Skat ${sk.aar}`, skatH.map(hRk), fsKort, tallenBag, fold("Registrér B-indkomst", bIndkomstKort(bLinjer))),
