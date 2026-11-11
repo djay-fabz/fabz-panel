@@ -282,6 +282,9 @@ input[type=date]{color-scheme:light dark}
 .planpunkt>.x{grid-area:auto}
 .pl-dag{display:flex;align-items:center;gap:8px;color:var(--svag);font-size:13.5px;margin:2px 0 6px}.pl-ret{background:none;border:0;color:var(--svagere);font:inherit;cursor:pointer;padding:2px 6px;border-radius:6px}.pl-ret:hover{color:var(--accent)}
 .lg .planpunkt>.input:first-child{font-weight:500;color:var(--tekst)}.pl-mins{font-size:12px}.pl-mins .min{font-size:12.5px;color:var(--svagere)}
+.pd{margin-top:14px}.pd-k{padding:12px 16px;margin:0}.pd-top{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}.pd-ind{flex:1;min-width:220px}
+.pd-r{display:flex;align-items:center;gap:10px;padding:3px 0}.pd-i{width:14px;color:var(--ok);font-weight:600}.pd-r.pd-mg .pd-i,.pd-r.pd-mg .pd-t{color:var(--adv)}.pd-t{flex:1;min-width:0}
+.pd-kort{display:flex;align-items:center;gap:10px;border-top:1px solid var(--linje);margin-top:10px;padding-top:10px}.pd-kort .pd-r{flex:1}
 .pl-seg{margin:10px 0 2px}.pl-ny{font-size:11px;color:var(--accent);border:1px solid var(--accent);border-radius:99px;padding:0 7px;margin-left:8px;font-weight:500}.ny-r{display:flex;gap:10px;align-items:baseline}
 .ikke-naaet{border:1px solid var(--linje);border-radius:12px;padding:10px 14px;margin:12px 0 6px;background:var(--flade2)}.in-h{display:flex;align-items:baseline;gap:10px;margin-bottom:4px}.in-h b{font-size:15px}
 .in-r{display:flex;align-items:center;gap:10px;padding:4px 0;cursor:pointer}.in-r input{width:16px;height:16px;margin:0;flex:none;accent-color:var(--pl-brun)}.in-t{flex:1;min-width:0}.in-r.fra .in-t{color:var(--svag)}
@@ -1227,6 +1230,7 @@ function visJobSide(j) {   // alt til ét job samlet: pakkeliste, kort, kørsel,
     h("div", {class: "muted"}, [`${DAGE[d.getDay()]} ${visDato(j.dato)}`, j.sted].filter(Boolean).join(" · "),
       (j.sted || "").trim() ? null : h("span", {class: "pill rød-pill", style: "margin-left:8px"}, "Ingen adresse")),
     tider.length ? h("div", {class: "muted lille", style: "margin-top:6px"}, tider.join(" · ")) : null,
+    printDokBlok(j, st),
     j.afholdt ? null : h("button", {class: "btn lille", type: "button", style: "margin-top:10px", onclick: () => tbStart(tbFraJob(j))}, "Lav tilbud"),
     sidstPåBlok(j),
     betalingAfsnit(j, st),
@@ -1235,6 +1239,41 @@ function visJobSide(j) {   // alt til ét job samlet: pakkeliste, kort, kørsel,
     afsnit("Pakkeliste", st.pak[0].toUpperCase() + st.pak.slice(1), st.klar, h("button", {class: "btn primaer lille", type: "button", onclick: () => åbnJob(j)}, "Åbn pakkeliste")),
     afsnit("Skilte", st.kortTekst, st.kort, h("button", {class: "btn lille", type: "button", onclick: () => { KT.job = st.key; KT.slags = null; KT.fk = KT.kk = null; KT.fraJob = true; fane = "kort"; tegn(); window.scrollTo(0, 0); }}, "Åbn skilte")),
     afsnit("Kørsel", st.kørsel ? "Plan gemt" : "Ikke lavet", st.kørsel, h("button", {class: "btn lille", type: "button", onclick: () => { vælgRuteJob(st.key); fane = "rute"; tegn(); window.scrollTo(0, 0); }}, st.kørsel ? "Åbn kørsel" : "Lav kørsel"))));
+}
+// ---------- Print dokumenter (Oscar 11/11, skitse panel-print-dokumenter) ----------
+// Øverst på jobbet: én A4-PDF med kørelisten og den godkendte pakkeliste (job-dokumenter). Det der er klar, printes. Det der mangler, står som en linje.
+// Kort og skilte printes for sig (andet papir), med knappen samme sted.
+const PD = {};
+function printDokBlok(j, st) {
+  const jp = jobplTilJob(j), r = PD[st.key] ||= {};
+  const gåPakke = () => åbnJob(j), gåKørsel = () => { vælgRuteJob(st.key); fane = "rute"; tegn(); window.scrollTo(0, 0); };
+  const gåKort = () => { KT.job = st.key; KT.slags = null; KT.fk = KT.kk = null; KT.fraJob = true; fane = "kort"; tegn(); window.scrollTo(0, 0); };
+  const lnk = (t, f) => h("button", {class: "pl-lnk", type: "button", onclick: f}, t);
+  const række = (ok, tekst, link) => h("div", {class: "pd-r" + (ok ? "" : " pd-mg")}, h("span", {class: "pd-i"}, ok ? "✓" : "!"), h("span", {class: "pd-t"}, tekst), link || null);
+  const print = async () => {
+    r.arbejder = true; r.fejl = null; tegn();
+    try {
+      const sv = await kørOgVent("job-dokumenter", [st.key]);
+      if (!sv || sv.status === "FEJL") r.fejl = sv?.fejl || "Intet svar efter 4 minutter.";
+      else {
+        r.mangler = sv.mangler || [];
+        const f = sv.pdf ? await laesFil(sv.pdf) : null;
+        if (!f) r.fejl = "PDF'en kunne ikke hentes.";
+        else { const a = h("a", {href: URL.createObjectURL(new Blob([await f.arrayBuffer()], {type: "application/pdf"})), download: decodeURIComponent(sv.pdf.split("/").pop())}); document.body.append(a); a.click(); a.remove(); }
+      }
+    } catch (e) { r.fejl = e.message; }
+    r.arbejder = false; if (JH === st.key) tegn();
+  };
+  return h("div", {class: "pd"},
+    h("div", {class: "overskrift", style: "margin:0 0 6px"}, "Print dokumenter"),
+    h("div", {class: "kort2 pd-k"},
+      h("div", {class: "pd-top"}, h("div", {class: "pd-ind"},
+          st.kørsel ? række(true, "Køreliste med QR til Google Maps") : række(false, "Kørsel mangler", lnk("Lav kørsel", gåKørsel)),
+          st.klar ? række(true, "Pakkeliste" + (jp?.godkendt ? `, godkendt ${kortDato(jp.godkendt)}` : ", godkendt")) : række(false, jp ? "Pakkeliste ikke godkendt" : "Pakkeliste mangler", lnk("Åbn pakkeliste", gåPakke))),
+        h("button", {class: "btn primaer", type: "button", disabled: r.arbejder || (!st.kørsel && !st.klar && !jobTider(j).length), onclick: print}, r.arbejder ? "Laver PDF …" : "Print dokumenter")),
+      r.fejl ? h("div", {class: "pd-r pd-mg"}, h("span", {class: "pd-i"}, "!"), h("span", {class: "pd-t"}, r.fejl)) : null,
+      h("div", {class: "pd-kort"}, st.kort ? række(true, "Kort og skilte") : række(false, st.kortTekst === "Skal laves" ? "Kort og skilte mangler" : "Ingen kort eller skilte", lnk("Lav kort", gåKort)),
+        h("button", {class: "btn", type: "button", disabled: !st.kort, onclick: gåKort}, "Print kort"))));
 }
 function vagtRække(v, nårTekst) {
   const d = dag(v.dato), dage = Math.round((d - dag(iDag())) / 864e5);
@@ -2071,14 +2110,13 @@ function tegnListe() {
   const fod = h("div", {class: "lfod"},
     h("div", {class: "resume lille", style: advN ? "color:var(--adv)" : "color:var(--svag)"},
       `${linjer.length} linjer · ${stk} stk` + (advN ? ` · ${advN} advarsler` : "") + (S.transport ? "" : " · vælg transport")),
-    låst ? h("div", {class: "rk", style: "gap:8px;flex-wrap:wrap;margin:0"}, h("button", {class: "btn primaer stor", type: "button", disabled: optaget, onclick: hentGodkendtPdf}, optaget ? "Arbejder …" : "Hent PDF"), koerelistePrint())
+    // Oscar 11/11: pakkelisten godkendes her og printes fra jobbet (Print dokumenter). Ingen Hent PDF eller Køreliste her
+    låst ? null
       : linjer.length && !S.transport && !optaget
         ? h("button", {class: "btn stor", type: "button", style: "border-color:var(--adv);color:var(--adv)",   // tydeligt hvad der mangler (Oscar 28/10)
             onclick: () => { const el = $("trin-transport"); if (el) { el.scrollIntoView({behavior: "smooth", block: "center"}); el.classList.add("markeret"); setTimeout(() => el.classList.remove("markeret"), 1200); } }},
-            "Vælg transport for at lave PDF ↑")
-        : h("button", {class: "btn primaer stor", type: "button", disabled: !kan || !!overLager(linjer).length || startMangler(), title: overLager(linjer).length ? "Mere end lageret på listen, se den røde boks øverst" : "", onclick: () => send("pdf")},
-          optaget ? "Arbejder …" : overLager(linjer).length ? "Ret antal over lageret først ↑" : startMangler() ? "Skriv starttid på jobbet først" : "Lav pakkeliste (PDF)"),
-    låst ? null : h("div", {style: "margin-top:8px"}, koerelistePrint()),
+            "Vælg transport ↑")
+        : null,
     låst ? h("div", {class: "lille muted", style: "margin-top:6px"}, "Listen er godkendt og låst. Tryk Genåbn liste øverst for at rette den.") : gemBlok,
     h("div", {id: "svar"}));
   k.replaceChildren(hoved, krop, fod);
