@@ -3154,9 +3154,9 @@ function visIDag() {
       }}, "Print listen") : null,
       mailStatus(idag, dp),
       dp?.moedt_ind ? h("span", {class: "muted lille"}, `Mødt ind ${dp.moedt_ind}` + (dp.moedetid ? ` · aftalt ${dp.moedetid}` : ""))
-        : h("button", {class: "btn lille", type: "button", onclick: () => kør("moedt-ind", [nuHHMM()], {tekst: "Mødt ind", efter: ["dagsplaner"],
+        : h("button", {class: "btn lille", type: "button", onclick: () => { startMorgenkørsler(); return kør("moedt-ind", [nuHHMM()], {tekst: "Mødt ind", efter: ["dagsplaner"],
             med: () => { const x = (D.dagsplaner ||= []).find(x => x.dato === idag); if (x) x.moedt_ind = nuHHMM(); else D.dagsplaner.push({dato: idag, moedt_ind: nuHHMM()});
-              if (!(D.mailoversigt?.dato === idag && D.mailoversigt.status === "sendt")) D.mailoversigt = {dato: idag, status: "bestilt", tid: nuHHMM()}; }})}, "Mødt ind nu")),   // Mødt ind starter mailoversigten (eneste vej, 28/10)
+              if (!(D.mailoversigt?.dato === idag && D.mailoversigt.status === "sendt")) D.mailoversigt = {dato: idag, status: "bestilt", tid: nuHHMM()}; }}); }}, "Mødt ind nu")),   // Mødt ind starter mailoversigten (eneste vej, 28/10) og Dinero og kalender, hvis de ikke er kørt i dag (R1, 11/11)
     dp?.plan_punkter?.length ? [
       ...[["foer_frokost", dp.plan_punkter.some(p => p.halvdel === "efter_frokost") ? "Før frokost" : "Arbejdstid"], ["efter_frokost", "Efter frokost"], ["hvis_tid", "Hvis der er tid"]].map(([hv, navn]) => {
         const ps = dp.plan_punkter.filter(p => p.halvdel === hv);
@@ -6993,6 +6993,19 @@ function nySalgForm() {
         SG.vis = null; SG.ny = {};
       }});
     }}, "Tilføj"));
+}
+
+// ---------- Mødt ind: morgenens Dinero og kalender (R1, 11/11) ----------
+// GitHub starter de planlagte kørsler op til 8 timer for sent. Er Dinero eller kalenderen ikke kørt (eller i gang) i dag, starter Mødt ind dem, som Hent alle jobs gør.
+async function startMorgenkørsler() {
+  const midnat = new Date(); midnat.setHours(0, 0, 0, 0);
+  for (const [wf, inputs] of [["dinero.yml", {}], ["kalender.yml", {opgaver: "true"}]]) {
+    try {
+      const r = tjek(await gh(`/repos/${REPO}/actions/workflows/${wf}/runs?created=${encodeURIComponent(">=" + midnat.toISOString())}&per_page=30&t=${Date.now()}`), wf);
+      const kørt = (await r.json()).workflow_runs.some(x => x.status !== "completed" || x.conclusion === "success");
+      if (!kørt) tjek(await gh(`/repos/${REPO}/actions/workflows/${wf}/dispatches`, {method: "POST", body: {ref: BRANCH, inputs}}), wf);
+    } catch (e) { console.warn("Mødt ind: kunne ikke starte " + wf, e); }
+  }
 }
 
 // ---------- hent alle jobs ----------
