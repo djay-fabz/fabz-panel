@@ -1075,6 +1075,9 @@ function læsAdresse() {   // efter data er hentet: en detalje, der ikke findes 
   else if (FANER.includes(k)) fane = k;
 }
 function tegn() {
+  // Oscar 11/11: "den sender en op til toppen når man trykker". Kolonner med egen rullebjælke (fx Planlæg dag i .detalje-kol) laves på ny ved hver tegning,
+  // så rullepositionen gemmes og sættes igen, når det er samme visning
+  const rulNøgle = [fane, OP.vis, OP.valgt, JH].join("|"), rulFør = [...document.querySelectorAll(".detalje-kol, .liste-kol")].map(e => [e.className, e.scrollTop]);
   document.body.classList.remove("bar-synlig");
   tegnTop();
   const vis = {idag: visIDag, bogforing: visBogfoering, tilbud: visTilbud, opgaver: visOpgaver, foresp: visForesp, salg: visSalg, oekonomi: visSkat, pakker: visPakker, some: visSome, mashups: visMashups, lager: visLager, kort: visKort, rute: visRute}[fane];
@@ -1095,7 +1098,10 @@ function tegn() {
       h("button", {type: "button", class: "btn ghost lille", onclick: () => { fane = "pakkelister"; tegn(); window.scrollTo(0, 0); }}, JH ? "← Tilbage til jobbet" : "← Jobs")));
   }
   skrivAdresse();
+  if (rulNøgle === SIDST_RUL) rulFør.forEach(([kl, top]) => { const e = document.querySelector("." + kl.split(" ")[0]); if (e && top) e.scrollTop = top; });
+  SIDST_RUL = rulNøgle;
 }
+let SIDST_RUL = null;
 
 // ---------- startside: jobs ----------
 const visJobNøgle = nøgle => { fane = "pakkelister"; S = null; JH = nøgle; tegn(); window.scrollTo(0, 0); };   // jobbets side fra en anden fane (fx Økonomi: job uden pris)
