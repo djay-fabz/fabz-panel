@@ -272,6 +272,7 @@ input[type=date]{color-scheme:light dark}
 .mu-faerdig{background:var(--ok-blid);color:var(--faerdig);border-radius:12px;padding:12px 14px;margin:12px 0 10px}.mu-faerdig b{display:block;font-size:16px;margin-bottom:2px}
 .mu-chip{display:inline-block;font-size:12.5px;background:var(--accent-blid);color:var(--accent);border-radius:99px;padding:2px 10px;margin:8px 0 12px;font-weight:500}
 @media (max-width:700px){.mu-knap .btn{flex:1 1 40%}.mu-start-lang{display:none}}
+.pl-fyld{padding:1px 8px;border-radius:99px;font-weight:700}.pl-fyld.g{background:var(--ok-blid);color:var(--ok)}.pl-fyld.y{background:var(--adv-blid);color:var(--adv)}.pl-fyld.r{background:var(--fejl-blid);color:var(--fejl)}
 .ud{margin-bottom:14px;padding:12px 16px}.ud-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;width:100%;background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}.ud-pil{color:var(--svagere)}
 .ud-bar{height:8px;background:var(--linje);border-radius:99px;overflow:hidden;margin-top:8px}.ud-bar div{height:100%;background:var(--accent);border-radius:99px}.ud-ok .ud-bar div{background:var(--ok)}
 .ud-dele{border-top:1px solid var(--linje);margin-top:10px;padding-top:6px;font-size:13.5px}.ud-dele div{display:flex;justify-content:space-between;gap:10px;padding:3px 0}
@@ -3864,8 +3865,6 @@ function planlægPanel() {
       mp.kør ? h("button", {class: "btn lille", type: "button", onclick: () => kør("mailoversigt", [], {tekst: "Mailoversigt", efter: [], med: () => { D.mailoversigt = {dato: idagPlan, status: "bestilt", tid: nuHHMM()}; }})}, "Kør den nu") : null) : null,
     !p ? h("div", {class: "muted lille", style: "margin-top:8px"}, "Foreslå en plan: panelet foreslår opgaver til tiden, og du kan rette bagefter. Lav selv: tom plan, du vælger opgaverne.") : null,
     p ? [
-      h("div", {class: "muted lille", style: "margin-top:8px"}, enkelt ? `${dagNavnLang(p.dato)} · arbejdstid ${p.foer_tid}, ingen frokostpause` : `${dagNavnLang(p.dato)} · før frokost ${p.foer_tid} · efter frokost ${p.efter_tid}`),
-      h("div", {class: "muted lille", style: "margin-top:4px"}, "Tilføj opgaver fra listen til venstre: tryk, vælg Før frokost, Efter frokost eller Hvis der er tid under opgaven, eller træk den over i en blok."),
       skubBoks(p),
       ...halvdele.map(([hv, navn]) => { const sum = p[hv].reduce((s, x) => s + (p.salg_fravalg && erSalgPunkt(x) ? 0 : Number(x.min) || 0), 0), led = hv === "foer_frokost" ? p.ledig_foer : hv === "efter_frokost" ? p.ledig_efter : null;
         return h("div", {class: "lg slip",
@@ -3873,7 +3872,7 @@ function planlægPanel() {
           ondragleave: e => { e.currentTarget.classList.remove("over"); },
           ondrop: e => { e.preventDefault(); e.currentTarget.classList.remove("over");
             const o = D.opgaver.find(x => String(x.id) === e.dataTransfer.getData("text/plain")); if (o && planTilføj(o, hv)) tegn(); }},
-          h("div", {class: "overskrift"}, navn + (hv !== "hvis_tid" ? ` · ${sum} af ${led ?? "?"} min` : ""),
+          h("div", {class: "overskrift"}, navn, hv !== "hvis_tid" ? [" · ", h("span", {class: "pl-fyld " + planFyld(sum, led)}, `${sum} af ${led ?? "?"} min`)] : null,
           led != null && sum > led ? h("span", {class: "rød", style: "margin-left:8px;text-transform:none"}, `${sum - led} min for meget`) : null),
         p[hv].map((x, i) => h("div", {class: "planpunkt" + (/VÆLG/.test(x.tekst) ? " mangler" : "") + (p.salg_fravalg && erSalgPunkt(x) ? " fravalgt" : "")},
           h("input", {class: "input", value: x.tekst, oninput: e => { x.tekst = e.target.value; e.target.parentElement.classList.toggle("mangler", /VÆLG/.test(x.tekst)); }}),
@@ -3893,6 +3892,8 @@ function planlægPanel() {
       OP.planPdf?.link ? pdfKnapper(OP.planPdf.link, OP.planPdf.navn) : null) : null);
 }
 // ---------- Fravalg af dagens sprint og skubbede opgaver (Oscar 9/11, skitse panel-salg-fravalg) ----------
+// Hvor fyldt en blok er (Oscar 11/11): grøn 70-100 % af den ledige tid (forslaget fylder med vilje 80 %, FYLD i fabz_dagsplan), gul under, rød over
+const planFyld = (sum, led) => !led ? "" : sum > led ? "r" : sum >= led * 0.7 ? "g" : "y";
 const erSalgPunkt = x => /^(Salg 30 min \(sprint \d+ af \d+\)|Ring til \d+ \(Salg\))$/.test((x.tekst || "").trim()) || (x.id != null && D.opgaver.some(o => o.id === x.id && o.job_opgave === "salg"));
 function salgFravalg(p, x) {   // "Ikke i dag": en kort grund, punktet streges over, og fabz.py plan lukker dagens salgsopgave med grunden (fredagsstatus)
   if (p.salg_fravalg) return h("div", {class: "pl-salg"}, h("span", {class: "muted", style: "flex:1"}, "Ikke i dag: " + p.salg_fravalg),
