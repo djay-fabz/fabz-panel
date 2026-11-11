@@ -281,6 +281,7 @@ input[type=date]{color-scheme:light dark}
 .planpunkt>.x{grid-area:auto}
 .pl-dag{display:flex;align-items:center;gap:8px;color:var(--svag);font-size:13.5px;margin:2px 0 6px}.pl-ret{background:none;border:0;color:var(--svagere);font:inherit;cursor:pointer;padding:2px 6px;border-radius:6px}.pl-ret:hover{color:var(--accent)}
 .lg .planpunkt>.input:first-child{font-weight:500;color:var(--tekst)}.pl-mins{font-size:12px}.pl-mins .min{font-size:12.5px;color:var(--svagere)}
+.pdf-laast{opacity:.55;pointer-events:none}
 .pd{margin-top:14px}.pd-k{padding:12px 16px;margin:0}.pd-top{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}.pd-ind{flex:1;min-width:220px}
 .pd-r{display:flex;align-items:center;gap:10px;padding:3px 0}.pd-i{width:14px;color:var(--ok);font-weight:600}.pd-r.pd-mg .pd-i,.pd-r.pd-mg .pd-t{color:var(--adv)}.pd-t{flex:1;min-width:0}
 .pd-kort{display:flex;align-items:center;gap:10px;border-top:1px solid var(--linje);margin-top:10px;padding-top:10px}.pd-kort .pd-r{flex:1}
@@ -2184,6 +2185,13 @@ function gætAnledning(j) {
   const t = nøgle(m ? m[1] : "").split(/[ ,]/)[0];
   return ANLEDNING[t] || "Fest";
 }
+// Oscar 11/11: mens en PDF laves, kan intet i dialogen ændres (PDF'en laves af et øjebliksbillede fra trykket). Låses op, når den er færdig eller fejler
+function låsDialog(el, låst) {
+  if (!låst || !el) return el;
+  el.classList.add("pdf-laast");
+  el.querySelectorAll("button,input,textarea,select").forEach(x => { x.disabled = true; });
+  return el;
+}
 function festkortBlok(j, st, gentegn) {
   const rec = festkortTilJob(j);
   const fk = st.fk ||= {navne: rec?.navne || j.navn, anledning: rec?.anledning || gætAnledning(j), åben: false, svar: null};
@@ -2219,12 +2227,12 @@ function festkortBlok(j, st, gentegn) {
           D.opgaver = D.opgaver.filter(o => !(o.job_noegle === k && o.job_opgave === "sangene" && o.status !== "Færdig"));
           fk.svar = null; gentegn();
         }}); }}, "Fjern kortene") : null,
-      h("button", {class: "btn " + (rec ? "ghost lille" : "godkend"), type: "button", onclick: () => { fk.åben = !fk.åben; gentegn(); }},
+      h("button", {class: "btn " + (rec ? "ghost lille" : "godkend"), type: "button", disabled: fk.arbejder, onclick: () => { fk.åben = !fk.åben; gentegn(); }},
         fk.åben ? "Luk" : rec ? "Lav igen" : "Lav kort")),
     fk.åben ? h("div", {style: "margin-top:10px;color:var(--tekst);font-weight:400"},
-      h("div", {class: "felter", style: "grid-template-columns:1.4fr 1fr;margin-top:0"},
+      låsDialog(h("div", {class: "felter", style: "grid-template-columns:1.4fr 1fr;margin-top:0"},
         h("label", {}, h("span", {class: "etiket"}, "Navne på kortet"), h("input", {class: "input", value: fk.navne, oninput: e => { fk.navne = e.target.value; }})),
-        h("label", {}, h("span", {class: "etiket"}, "Anledning"), h("input", {class: "input", value: fk.anledning, placeholder: "Fx Bryllup", oninput: e => { fk.anledning = e.target.value; opdLinje(); }}))),
+        h("label", {}, h("span", {class: "etiket"}, "Anledning"), h("input", {class: "input", value: fk.anledning, placeholder: "Fx Bryllup", oninput: e => { fk.anledning = e.target.value; opdLinje(); }}))), fk.arbejder),
       visLinje,
       h("button", {class: "btn primaer", type: "button", style: "margin-top:10px", disabled: fk.arbejder, onclick: lav}, fk.arbejder ? "Laver kort …" : "Lav visitkort og barskilt"),
       fk.svar ? h("div", {class: "svar " + fk.svar.klasse}, h("b", {}, fk.svar.titel),
@@ -2451,7 +2459,7 @@ function klubkortBlok(j, st, gentegn) {
       h("button", {class: "btn lille", type: "button", onclick: () => brugTekst(t)}, "Brug"))));
   };
   const indhold = kk.åben ? h("div", {class: "kk-kol"},
-    h("div", {},
+    låsDialog(h("div", {},
       h("div", {style: "display:flex;justify-content:flex-end"}, h("button", {class: "btn", type: "button", onclick: () => { kk.tidl = !kk.tidl; gentegn(); }},
         kk.tidl ? "Skjul tidligere godkendte" : "Se tidligere godkendte")),
       kk.tidl ? tidligere() : null,
@@ -2459,7 +2467,7 @@ function klubkortBlok(j, st, gentegn) {
       h("div", {style: "display:flex;justify-content:space-between;margin-top:8px"},
         h("button", {class: "kk-link", type: "button", onclick: () => { kk.linjer.push(fraTekst(null)); gentegn(); }}, "+ Tilføj linje"),
         kk.auto ? null : h("button", {class: "kk-link", type: "button", onclick: () => { kk.auto = true; gentegn(); }}, "↺ Fordel automatisk")),
-      pladsBoks),
+      pladsBoks), kk.arbejder),
     h("div", {}, arkBoks,
       h("button", {class: "btn primaer", type: "button", style: "margin-top:10px;width:100%", disabled: kk.arbejder, onclick: lav}, kk.arbejder ? "Laver PDF …" : "Lav PDF"),
       svarBoks)) : null;
@@ -2470,7 +2478,7 @@ function klubkortBlok(j, st, gentegn) {
   return h("div", {class: "godk kk" + (rec ? " ok" : ""), style: "flex-direction:column;align-items:stretch"},
     h("div", {style: "display:flex;align-items:center;gap:10px"},
       h("span", {class: "fyld"}, rec ? `✓ Klubkort lavet ${kortDato(rec.lavet)}` : "Klubkort med QR-kode"),
-      h("button", {class: "btn " + (rec ? "ghost lille" : "godkend"), type: "button", onclick: () => { kk.åben = !kk.åben; gentegn(); }},
+      h("button", {class: "btn " + (rec ? "ghost lille" : "godkend"), type: "button", disabled: kk.arbejder, onclick: () => { kk.åben = !kk.åben; gentegn(); }},
         kk.åben ? "Luk" : rec ? "Lav igen" : "Lav kort")),
     indhold ? h("div", {style: "margin-top:10px;color:var(--tekst);font-weight:400"}, indhold) : null);
 }
