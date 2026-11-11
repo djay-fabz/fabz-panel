@@ -4001,10 +4001,11 @@ function skubBoks(p) {
   const svar = (valg, ekstra, med) => { const n = (o.planlagt_historik || []).length, g = st.grund.trim();
     kør("opgave-skub", [`--id=${o.id}`, `--valg=${valg}`, ...ekstra], {tekst: `#${o.id}: ${SKUB_TEKST[valg]}`, efter, med: () => {
       OP.skubOk = null; (o.skub_svar ||= []).push({dato: iDag(), valg, grund: valg === "drop" ? g : "", antal: n}); med?.(); OP.skub = null; }}); };
-  const iDagForrest = kritisk => svar(kritisk ? "kritisk" : "idag", [], () => {   // forrest før frokost, lige efter salget
+  const iDagForrest = kritisk => svar(kritisk ? "kritisk" : "idag", [], () => {   // forrest før frokost, lige efter Tjek mail og salget
     if (kritisk) o.prioritet = "Høj";
     fjern();
-    const ff = "foer_frokost", i = p[ff].length && erSalgPunkt(p[ff][0]) ? 1 : 0;
+    const ff = "foer_frokost"; let i = 0;   // efter Tjek mail og salget (Oscar 11/11)
+    while (i < p[ff].length && (erSalgPunkt(p[ff][i]) || /^tjek mail/i.test((p[ff][i].tekst || "").trim()))) i++;
     p[ff].splice(i, 0, {tekst: o.titel, min: o.estimat ?? null, id: o.id, ...(o.deadline && o.deadline < p.dato ? {overskredet: true} : {})});
   });
   const ryk = v => { if (!v || v <= iDag() || Date.now() < (OP.skubLås || 0)) return; OP.skubLås = Date.now() + 900; setTimeout(() => { if (fane === "opgaver") tegn(); }, 950); svar("ryk", [`--deadline=${v}`], () => { o.deadline = v; }); };
