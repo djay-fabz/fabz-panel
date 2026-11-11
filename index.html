@@ -281,6 +281,10 @@ input[type=date]{color-scheme:light dark}
 .pl-flyt{border:1px solid var(--linje);background:none;border-radius:6px;color:var(--svagere);font:inherit;font-size:13px;padding:2px 0;cursor:pointer}.pl-flyt[aria-expanded="true"]{color:var(--accent);border-color:var(--accent)}
 .planpunkt>.x{grid-area:auto}.pl-flyt-menu{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap;padding:2px 0 4px}
 .pl-stop{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px}.pl-stop .forvalgt{border-color:var(--accent)}.pl-stop .valgt{background:var(--accent);border-color:var(--accent);color:var(--accent-tekst)}
+.si{margin:14px 0}.si-ide{border:1px solid var(--linje);border-radius:12px;padding:12px 14px;margin-top:10px;background:var(--flade2)}.si-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.si-top b{font-size:15.5px}
+.si-fra{color:var(--svag);font-size:12.5px;margin-top:3px}.si-opt{margin-top:8px;font-size:13.5px}.si-opt div{display:flex;gap:8px;padding:2px 0}.si-opt i{width:12px;height:12px;border:1.3px solid var(--svag);border-radius:3px;flex:none;margin-top:3px}
+.si-tekst{margin-top:8px;padding:8px 10px;border-left:2px solid var(--linje);font-size:13.5px;white-space:pre-wrap}.si-sp{border-left-color:var(--accent)}.si-sp textarea{display:block;width:100%;margin-top:6px}
+.si-knap{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}@media (max-width:700px){.si-knap .btn{flex:1}}
 .ud{margin-bottom:14px;padding:12px 16px}.ud-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;width:100%;background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}.ud-pil{color:var(--svagere)}
 .ud-bar{height:8px;background:var(--linje);border-radius:99px;overflow:hidden;margin-top:8px}.ud-bar div{height:100%;background:var(--accent);border-radius:99px}.ud-ok .ud-bar div{background:var(--ok)}
 .ud-dele{border-top:1px solid var(--linje);margin-top:10px;padding-top:6px;font-size:13.5px}.ud-dele div{display:flex;justify-content:space-between;gap:10px;padding:3px 0}
@@ -3486,16 +3490,20 @@ function visSome() {
     godk.map(o => SM.åben === o.id || SM.ret === o.id ? someKort(o) : h("button", {type: "button", class: "sm-linje", "data-id": o.id, onclick: () => { SM.åben = o.id; tegn(); }},
       somePiller(o), h("span", {class: "sm-tid"}, someTid(o.tid)), h("span", {class: "sm-uddrag"}, o.tekst || o.emne || ""),
       o.status === "planlagt" ? h("span", {class: "pill g"}, "I Metricool") : h("span", {class: "pill rd"}, "Venter på Metricool"))));
-  const klipJobs = jobs().filter(j => j.dato <= plusDage(idag, 14)).slice(0, 4);
+  const optagOpg = (D.opgaver || []).filter(o => o.some_ide && o.status !== "Færdig").sort((a, b) => (a.deadline || "").localeCompare(b.deadline || ""));   // fra Brug den (Oscar 11/11)
+  const klipJobs = jobs().filter(j => j.dato <= plusDage(idag, 14) && !optagOpg.some(o => o.job_noegle === jobNøgle(j))).slice(0, Math.max(0, 4 - optagOpg.length));
   const selv = h("div", {class: "kort2"}, h("div", {class: "kh"}, h("h2", {}, "Du gør selv")),
     privat.map(o => h("div", {class: "sm-selv", "data-id": o.id}, h("span", {class: "sm-k", style: `background:${SOME_KAN.privat[1]}`}, "Privat"),
       h("div", {class: "sm-selv-t"}, o.tid ? h("b", {}, someTid(o.tid).replace(/ kl\..*/, "") + ": ") : null, o.tekst),
       h("div", {class: "sm-knapper"},
         h("button", {class: "btn lille", type: "button", onclick: e => { navigator.clipboard?.writeText(o.tekst); e.target.textContent = "Kopieret"; }}, "Kopiér tekst"),
         h("button", {class: "btn lille", type: "button", onclick: () => kør("some-postet", [o.id], {tekst: "Privat opslag postet", efter: ["some"], med: () => someSæt(o.id, {status: "udgivet", udgivet: idag})})}, "Postet")))),
+    optagOpg.map(o => h("div", {class: "sm-selv"}, h("span", {class: "sm-k", style: "background:#c13584"}, "Klip"),
+      h("div", {class: "sm-selv-t"}, h("b", {}, `${SOME_DAG[dag(o.ikke_foer || o.deadline).getDay()][0].toUpperCase() + SOME_DAG[dag(o.ikke_foer || o.deadline).getDay()].slice(1)} ${kortDato(o.ikke_foer || o.deadline)}: `),
+        (o.faerdig_naar || []).map(k => k.krav).join(", ").replace(/^./, c => c.toLowerCase()) + ` (${o.titel.replace(/^Optag til ([^:]+):.*/, "til $1")})`))),
     klipJobs.map(j => h("div", {class: "sm-selv"}, h("span", {class: "sm-k", style: "background:#c13584"}, "Klip"),
       h("div", {class: "sm-selv-t"}, h("b", {}, `${SOME_DAG[dag(j.dato).getDay()][0].toUpperCase() + SOME_DAG[dag(j.dato).getDay()].slice(1)} ${kortDato(j.dato)}, ${j.navn}: `), "film 3 korte klip"))),
-    !privat.length && !klipJobs.length ? tom("Intet lige nu.") : null);
+    !privat.length && !klipJobs.length && !optagOpg.length ? tom("Intet lige nu.") : null);
   const iMdr = o => o.status === "udgivet" && ((o.udgivet || o.tid || "").slice(0, 7) === mdr);
   const tal = D.some?.tal?.maaned === mdr ? D.some.tal.visninger : null;
   const li = D.linkedin || {}, uge = someUge(idag), maal = li.maal || {};
@@ -3512,7 +3520,28 @@ function visSome() {
       h("div", {}, h("b", {}, `${r.job} ${kortDato(r.dato)}`), h("div", {}, `${r.media.length} klip`)))),
     idéer.length ? h("ul", {class: "sm-ideer"}, idéer.map(t => h("li", {}, t))) : null,
     !ev.length && !idéer.length ? tom("Ingen klip endnu.") : null);
-  $("rod").replaceChildren(h("div", {class: "side bred sm"}, h("h1", {}, "SoMe"), stribe, h("div", {class: "sm-gitter"}, venstre, h("div", {class: "sm-hoejre"}, selv, måned, klipIdéer))));
+  $("rod").replaceChildren(h("div", {class: "side bred sm"}, h("h1", {}, "SoMe"), stribe, ugensIdéer(), h("div", {class: "sm-gitter"}, venstre, h("div", {class: "sm-hoejre"}, selv, måned, klipIdéer))));
+}
+// Ugens idéer (Oscar 11/11, skitse panel-some-ugens-ideer): 2-3 konkrete opslag ud fra det, han laver. Brug den: kladde + optagelsesopgave. Ikke nu: væk.
+// Handler idéen om noget, han har oplevet, stiller robotten ét spørgsmål og skriver teksten ud fra svaret
+const SI = {svar: {}};
+function ugensIdéer() {
+  const idéer = (D.some?.uge_ideer || []).filter(u => u.status === "ny" || u.status === "svar").slice(-5);
+  if (!idéer.length) return null;
+  const sæt = (u, x) => () => { Object.assign(u, x); };
+  return h("div", {class: "kort2 si"}, h("div", {class: "kh"}, h("h2", {}, `Ugens idéer (${idéer.length})`)),
+    idéer.map(u => h("div", {class: "si-ide", "data-id": u.id},
+      h("div", {class: "si-top"}, h("span", {class: "sm-k", style: `background:${SOME_KAN[u.kanal][1]}`}, SOME_KAN[u.kanal][0]), h("b", {}, u.titel)),
+      h("div", {class: "si-fra"}, "Fra " + u.fra.replace(/^fra\s+/i, "")),
+      (u.optag || []).filter(t => !/^ingen optagelse/i.test(t)).length ? h("div", {class: "si-opt"}, u.optag.filter(t => !/^ingen optagelse/i.test(t)).map(t => h("div", {}, h("i"), t))) : null,
+      u.tekst ? h("div", {class: "si-tekst"}, u.tekst)
+        : u.status === "svar" ? h("div", {class: "si-tekst"}, `Dit svar: ${u.svar}. Teksten skrives ud fra det.`)
+        : h("div", {class: "si-tekst si-sp"}, u.sporgsmaal, h("textarea", {class: "input", rows: 2, placeholder: "Skriv et par ord …", value: SI.svar[u.id] || "", oninput: e => { SI.svar[u.id] = e.target.value; }})),
+      h("div", {class: "si-knap"},
+        u.tekst ? h("button", {class: "btn primaer", type: "button", onclick: () => kør("some-ide-brug", [`--id=${u.id}`], {tekst: `${u.titel}: kladde`, efter: ["some", "opgaver", "linkedin"], med: sæt(u, {status: "brugt"})})}, "Brug den")
+          : u.status !== "svar" ? h("button", {class: "btn primaer", type: "button", onclick: () => { const t = (SI.svar[u.id] || "").trim(); if (!t) return;
+              kør("some-ide-svar", [`--id=${u.id}`, `--tekst=${t}`], {tekst: "Svaret er gemt", efter: ["some"], med: sæt(u, {status: "svar", svar: t})}); }}, "Skriv teksten ud fra mit svar") : null,
+        h("button", {class: "btn", type: "button", onclick: () => kør("some-ide-ikke", [`--id=${u.id}`], {tekst: `${u.titel}: ikke nu`, efter: ["some"], med: sæt(u, {status: "ikke"})})}, "Ikke nu")))));
 }
 
 // Evaluering pr. job (Oscar 7/11, skitse panel-evaluering): står på I dag fra morgenen efter jobbet, til der er trykket Færdig. Intet lukker før. Data ligger i data/evalueringer.json (fabz_evaluering.py),
