@@ -308,7 +308,7 @@ input[type=date]{color-scheme:light dark}
 .dp-anl{background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}.dp-bar{grid-column:1/3;margin-top:-2px}
 .dp-n{background:var(--flade);border-radius:10px;padding:9px 12px;margin-top:12px}
 .dp-in{display:flex;gap:8px;margin-top:12px}.dp-in .input:first-child{flex:1;min-width:0}.dp-kr{width:110px;flex:none}
-.dp-g b.rd-t{color:var(--fejl)}
+.dp-g b.rd-t{color:var(--fejl)}.dp-mk{display:inline-block;background:var(--fejl-blid);color:var(--fejl);border-radius:99px;padding:1px 8px;font-size:12.5px;font-weight:600;margin-left:6px}.dp-lin{grid-column:1/3;border-top:1px solid var(--linje);margin:2px 0}
 @media (max-width:700px){.dp-in{flex-wrap:wrap}.dp-in .input:first-child{flex-basis:100%}.dp-kr{flex:1}}
 .dp-svar{border:1px solid var(--linje);border-radius:10px;padding:10px 12px;margin-top:10px;display:flex;flex-direction:column;gap:4px}.dp-svar.fejl{color:var(--fejl)}
 @media (max-width:700px){.ud-pr{flex-basis:100%;order:3}}
@@ -2990,7 +2990,12 @@ function dinePenge() {
   if (!RD) return null;
   const F = P.d1 && P.inbox ? d1Fordeling(P, mo) : null, frit = Math.round((RD.loen_d1 ?? RD.frit) - (F ? F.firma : RD.loen_naeste || 0));   // det, der er frit d. 1 (frit_d1), minus det, firmaet giver d. 1. Ikke dagens frit (revision 12/11)
   const r = (navn, højre, rød, ekstra) => [h("span", {}, navn), h("b", {class: rød ? "rd-t" : ""}, højre), ekstra || null];
-  const rk = [...r("Firmakontoen, frit efter løn d. 1", `${krKort(frit)} kr.`, frit < 0)];
+  const rk = [];
+  // lønnen d. 1 står altid, stille (Oscar 12/11, R2, skitse panel-dine-penge-loen): ingen farve, når den er dækket, kun et rødt mærke, når den mangler.
+  // Samme regnestykke som Til d. 1-bjælken (B − Husleje d. 1 − det firmaet kan give − klubjobs på vej) og samme beløb, som Spørg sender med (--d1)
+  if (F && F.B && RD.loen_dato && RD.loen_dato === P.d1.dato) { const M = Math.ceil((F.B - F.saxo - (RD.loen_d1 ?? RD.loen_naeste ?? 0) - F.Y) / 100) * 100;
+    rk.push(h("span", {}, `Løn d. ${kortDato(RD.loen_dato)}`), h("b", {class: "dp-loen"}, `${krKort(F.B)} kr.`, M > 0 ? h("span", {class: "dp-mk"}, `mangler ${krKort(M)}`) : " ✓"), h("div", {class: "dp-lin"})); }
+  rk.push(...r("Firmakontoen, frit efter løn d. 1", `${krKort(frit)} kr.`, frit < 0));
   if (HB) rk.push(...r("Husleje d. 1 + Buffer", HB.saldo >= HB.maal ? `${krKort(HB.maal)} af ${krKort(HB.maal)} kr. ✓` : `${krKort(HB.saldo)} af ${krKort(HB.maal)} kr.`));
   if (anl) {   // Nyt anlæg: tryk for delene og det, der mangler pr. md. (samme tal som den gamle udstyrslinje, Oscar 10/11)
     const mdr = anl.frist ? Math.max(1, (dag(anl.frist).getFullYear() - dag(iDag()).getFullYear()) * 12 + dag(anl.frist).getMonth() - dag(iDag()).getMonth()) : 0, mangler = Math.max(0, (anl.maal || 0) - (anl.saldo || 0));
