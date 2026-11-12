@@ -1303,7 +1303,8 @@ function printDokBlok(j, st) {
       h("div", {class: "pd-top"}, h("div", {class: "pd-ind"},
           st.kørsel ? række(true, "Køreliste med QR til Google Maps") : række(false, "Kørsel mangler", lnk("Lav kørsel", gåKørsel)),
           st.klar ? række(true, "Pakkeliste" + (jp?.godkendt ? `, godkendt ${kortDato(jp.godkendt)}` : ", godkendt")) : række(false, jp ? "Pakkeliste ikke godkendt" : "Pakkeliste mangler", lnk("Åbn pakkeliste", gåPakke))),
-        h("button", {class: "btn primaer", type: "button", disabled: r.arbejder || (!st.kørsel && !st.klar && !jobTider(j).length), onclick: print}, r.arbejder ? "Laver PDF …" : "Print dokumenter")),
+        (() => { const intet = !st.kørsel && !st.klar;   // Oscar 12/11: grå og ikke-trykbar, når hverken kørsel eller pakkeliste er lavet, som Print kort
+          return h("button", {class: "btn" + (intet ? "" : " primaer"), type: "button", disabled: r.arbejder || intet, onclick: print}, r.arbejder ? "Laver PDF …" : "Print dokumenter"); })()),
       r.fejl ? h("div", {class: "pd-r pd-mg"}, h("span", {class: "pd-i"}, "!"), h("span", {class: "pd-t"}, r.fejl)) : null,
       h("div", {class: "pd-kort"}, st.kort ? række(true, "Kort og skilte") : række(false, st.kortTekst === "Skal laves" ? "Kort og skilte mangler" : "Ingen kort eller skilte", lnk("Lav kort", gåKort)),
         h("button", {class: "btn", type: "button", disabled: !st.kort, onclick: gåKort}, "Print kort"))));
