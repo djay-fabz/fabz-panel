@@ -3241,11 +3241,11 @@ function visIDag() {
               e.target.closest(".cb").classList.toggle("gjort", e.target.checked);
             }}),
             h("span", {class: "t" + (salgRød(p) ? " rød" : "")},
-              planOpg(p)?.job_opgave === "salg" ? h("a", {href: "#", onclick: e => { e.preventDefault(); SG.vis = null; SG.valgt = null; SG.alleÅben = false; fane = "salg"; tegn(); window.scrollTo(0, 0); }}, p.tekst)
+              planOpg(p)?.job_opgave === "salg" ? [p.tekst, h("a", {href: "#salg", class: "mu-link", onclick: e => { e.preventDefault(); SG.vis = null; SG.valgt = null; SG.alleÅben = false; fane = "salg"; tegn(); window.scrollTo(0, 0); }}, "Salg ›")]   // Oscar 12/11: ikke et blåt understreget link
                 : erMashupPunkt(p) ? [p.tekst, ...muLinksAlene(D.mashups?.naeste).flatMap(a => { a.className = "mu-link"; return [a]; }), h("a", {href: "#mashups", class: "mu-link", onclick: e => { e.preventDefault(); MU.valgt = null; fane = "mashups"; tegn(); window.scrollTo(0, 0); }}, "Mashups ›")] : p.tekst),
             p.min ? h("span", {class: "muted lille"}, p.min + " min") : null,
             fulgtOp ? (p.brugt != null ? h("span", {class: "muted lille"}, "brugt " + p.brugt + " min") : null)
-              : h("input", {class: "input", type: "number", min: "0", max: "720", placeholder: "brugt, min", style: "width:92px;padding:4px 8px;margin-left:8px", value: brugt[p.nr] ?? "",
+              : h("input", {class: "input", type: "number", min: "0", max: "720", placeholder: "brugt, min", style: "width:112px;padding:4px 8px;margin-left:8px", value: brugt[p.nr] ?? "",
                   oninput: e => { if (e.target.value === "") delete brugt[p.nr]; else brugt[p.nr] = Number(e.target.value); lager.set(BRUGT_KEY(idag), JSON.stringify(brugt)); },
                   onclick: e => e.stopPropagation()}))),
           nye.map(o => h("div", {class: "cb ny-r"}, h("span", {class: "t"}, o.titel, h("span", {class: "pl-ny"}, "ny")), o.estimat ? h("span", {class: "muted lille"}, o.estimat + " min") : null))) : null;
