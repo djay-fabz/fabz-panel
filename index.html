@@ -230,7 +230,7 @@ input[type=date]{color-scheme:light dark}
 @media (prefers-color-scheme:dark){.kk-mk{background:#221a3a;border-color:#4a3a7a;color:#c4b5fd}}
 @media (prefers-color-scheme:dark){.sx-mk.s{background:#3a1717;color:#fca5a5}.sx-mk.f{background:#3a2a12;color:#fcd34d}}
 .godk{display:flex;align-items:center;gap:10px;margin-top:14px;padding:10px 12px;border-radius:10px;background:var(--flade2);font-size:13px}
-.godk.ok{background:var(--ok-blid);color:var(--ok);font-weight:600}
+.godk.ok{background:var(--faerdig-blid);color:var(--faerdig);font-weight:600}
 .godk .fyld{flex:1}
 .btn.godkend{border-color:var(--ok);color:var(--ok);background:none}
 .btn.godkend:hover{background:var(--ok-blid)}
@@ -262,19 +262,20 @@ input[type=date]{color-scheme:light dark}
   .rkoer{margin:3px 0 0 14px;padding:4px 12px;gap:12px;border-radius:0 8px 8px 0}.rkoer h2{font-size:15px}
   .rnote{margin-top:2px}}
 .svar{margin-top:10px;padding:10px 12px;border-radius:10px;font-size:13px;background:var(--flade2)}
-.svar.ok{background:var(--ok-blid)}.svar.adv{background:var(--adv-blid)}.svar.fejl{background:var(--fejl-blid)}
+.svar.ok{background:var(--faerdig-blid)}.svar.adv{background:var(--adv-blid)}.svar.fejl{background:var(--fejl-blid)}
 .svar ul{margin:4px 0 0;padding-left:18px}
 .svar a.btn{display:inline-block;margin-top:8px;text-decoration:none}
 
 /* lager-fanen */
 .lagerside{max-width:1228px;margin:0 auto;padding:28px 24px 130px}
 .mu-tid{font-size:34px;font-weight:700;letter-spacing:.5px;margin-top:10px;font-variant-numeric:tabular-nums}.mu-bar{height:7px;background:var(--linje);border-radius:99px;overflow:hidden;margin:6px 0 14px}.mu-bar div{height:100%;background:var(--ok);border-radius:99px}
-.mu-faerdig{background:var(--ok-blid);color:var(--faerdig);border-radius:12px;padding:12px 14px;margin:12px 0 10px}.mu-faerdig b{display:block;font-size:16px;margin-bottom:2px}
+.mu-faerdig{background:var(--faerdig-blid);color:var(--faerdig);border-radius:12px;padding:12px 14px;margin:12px 0 10px}.mu-faerdig b{display:block;font-size:16px;margin-bottom:2px}
 .mu-chip{display:inline-block;font-size:12.5px;background:var(--accent-blid);color:var(--accent);border-radius:99px;padding:2px 10px;margin:8px 0 12px;font-weight:500}
 @media (max-width:700px){.mu-knap .btn{flex:1 1 40%}.mu-start-lang{display:none}}
 .pl-bh{display:flex;align-items:baseline;gap:10px;margin:2px 0 0}.pl-bh b{font-size:18px}.pl-tid{color:var(--svag);font-size:13px}.pl-min{color:var(--svag);font-size:13px}.pl-min.over{color:var(--pl-over)}
 .pl-bar{position:relative;height:3px;background:var(--linje);border-radius:99px;margin:8px 0 4px}.pl-bar i{position:absolute;left:0;top:0;bottom:0;background:var(--pl-brun);border-radius:99px}.pl-bar i.over{background:var(--pl-over)}   /* Oscar 11/11: brun i stedet for blå, kobber når blokken er overbooket */
-:root{--pl-brun:#8f7356;--pl-over:#c2733e}@media (prefers-color-scheme:dark){:root{--pl-brun:#a88d70;--pl-over:#d98f5c}}
+:root{--pl-brun:#8f7356;--pl-over:#c2733e;--faerdig:#3b2f24;--faerdig-blid:#f2ebe3}@media (prefers-color-scheme:dark){:root{--pl-brun:#a88d70;--pl-over:#d98f5c;--faerdig:#e8d9c6;--faerdig-blid:#2a231c}}
+/* Oscar 12/11: "gider ikke grøn kan vi gøre den brun også". Færdig-flader er dæmpet brune som tidslinjen. Grønne mærker for opdateret og i planen bliver */
 .pl-bar .fuld{position:absolute;top:-3px;width:1px;height:9px;background:var(--svag)}
 .lg .planpunkt{grid-template-columns:1fr auto auto auto!important;grid-template-areas:none!important;gap:6px;margin:0;padding:5px 0;border-top:1px solid var(--linje)}.lg .planpunkt:first-of-type{border-top:0}
 .lg .planpunkt>.input:first-child{grid-area:auto;border-color:transparent;background:transparent;font-size:15px;padding:5px 4px}.lg .planpunkt>.input:first-child:focus,.lg .planpunkt>.input:first-child:hover{border-color:var(--linje);background:var(--flade2)}
@@ -315,7 +316,7 @@ input[type=date]{color-scheme:light dark}
 .dp-svar{border:1px solid var(--linje);border-radius:10px;padding:10px 12px;margin-top:10px;display:flex;flex-direction:column;gap:4px}.dp-svar.fejl{color:var(--fejl)}
 @media (max-width:700px){.ud-pr{flex-basis:100%;order:3}}
 .uge-tilbud{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--flade);border:1px solid var(--linje);border-radius:12px;padding:10px 14px;margin:0 0 14px}.to>.uge-tilbud{grid-column:1/-1;margin:0;order:-1}
-.ut-prik{width:11px;height:11px;border-radius:50%;background:var(--linje);flex:none}.uge-tilbud.ok{background:var(--ok-blid);border-color:transparent;color:var(--faerdig)}.uge-tilbud.ok .ut-prik{background:var(--ok)}
+.ut-prik{width:11px;height:11px;border-radius:50%;background:var(--linje);flex:none}.uge-tilbud.ok{background:var(--faerdig-blid);border-color:transparent;color:var(--faerdig)}.uge-tilbud.ok .ut-prik{background:var(--ok)}
 .fd-par{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.fd-forslag{background:var(--adv-blid);border-radius:10px;padding:12px 14px;margin-top:12px}.fd-forslag b{color:var(--adv)}.fd-knapper{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 .fd-liste{border:1px solid var(--linje);border-radius:10px;margin-top:12px}.fd-liste label{display:flex;gap:10px;padding:9px 12px;align-items:center;cursor:pointer}.fd-liste label+label{border-top:1px solid var(--linje)}.fd-kunde{flex:1;min-width:0}.fd-info{font-size:13px;white-space:nowrap}
 @media (max-width:700px){.fd-liste label{flex-wrap:wrap}.fd-info{flex-basis:100%;padding-left:28px}.fd-knapper .btn{flex:1}}
