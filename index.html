@@ -142,7 +142,7 @@ input[type=date]{color-scheme:light dark}
 .sd-liste{background:var(--flade);border:1px solid var(--linje);border-radius:14px;overflow:hidden}.sd-r{display:flex;align-items:center;gap:14px;padding:12px 16px}.sd-r+.sd-r{border-top:1px solid var(--linje)}.sd-mk{flex:none;width:20px;height:20px;border-radius:50%;border:2px solid var(--svagere)}.sd-r.ok .sd-mk{background:var(--faerdig);border-color:var(--faerdig)}.sd-t{flex:1;min-width:0;display:block;text-align:left;background:none;border:0;padding:0;color:inherit;font:inherit}.sd-t b{display:block;font-weight:600}.sd-t span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sd-r.ok b{text-decoration:line-through;font-weight:500;color:var(--svag)}.sd-r .btn{flex:none;margin:0}
 .sp-start{background:var(--flade);border:1px solid var(--linje);border-radius:14px;padding:18px 20px;display:flex;justify-content:space-between;align-items:center;gap:14px}.sp-start h1{margin:0 0 2px;font-size:21px}.sp-start .btn{margin:0;padding:11px 22px;font-size:15px;border-radius:10px}.sp-uge{display:flex;gap:8px;margin:10px 0}.sp-uge div{flex:1;background:var(--flade);border:1px solid var(--linje);border-radius:8px;padding:8px 4px;text-align:center;font-size:13px;color:var(--svag)}.sp-uge .ok{background:var(--faerdig-blid);border-color:transparent;color:var(--faerdig);font-weight:var(--faerdig-vaegt)}.sp-uge .nu{border-color:var(--accent);color:var(--accent);font-weight:600}.sp-uge .graa{opacity:.45}.sp-tid{font-size:34px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}.idag-salg .sp-start h1{font-size:19px}@media (max-width:700px){.sp-start{flex-direction:column;align-items:stretch}.sp-start .btn{width:100%}.sp-lang{display:none}}
 .pl-salg{display:flex;gap:8px;align-items:center;grid-column:1/-1;font-size:13px}.pl-salg .input{flex:1}.pl-lnk{background:none;border:0;padding:0;color:var(--accent);font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}.planpunkt.fravalgt>.input:first-child{text-decoration:line-through;opacity:.55}.planpunkt.fravalgt .min{opacity:.55}.skub{background:var(--adv-blid);border:1px solid var(--adv);border-radius:10px;padding:12px 14px;margin-top:10px}.skub-top{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px}.skub-top b{flex:1;min-width:0}.skub-krav{background:var(--flade);border:1px solid var(--linje);border-radius:8px;margin-top:8px}.skub-krav label{display:flex;gap:10px;align-items:flex-start;padding:9px 12px;cursor:pointer}.skub-krav label+label{border-top:1px solid var(--linje)}.skub-krav input{width:18px;height:18px;margin:1px 0 0;flex:none}.skub-ok{background:var(--faerdig-blid);color:var(--faerdig);font-weight:var(--faerdig-vaegt);border-radius:10px;padding:10px 14px;margin-bottom:10px}.skub-ryk{flex-wrap:wrap;align-items:center}.skub-ryk .dato-felt{max-width:170px}.skub-valg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.skub-valg .btn{min-width:0;white-space:normal}   /* fire faste pladser med samme bredde (Oscar 11/11) */.skub-valg .valgt{border-color:var(--accent);color:var(--accent)}.skub .r1{display:flex;gap:8px;margin-top:8px}.skub .r1 .input{flex:1}.sk-kort{display:none}@media (max-width:700px){.skub-valg{grid-template-columns:repeat(2,minmax(0,1fr))}.skub-ryk .btn:not(.primaer){flex:1 1 40%;white-space:nowrap}.skub-ryk .dato-felt{flex:1 1 50%;max-width:none;min-width:0}.sk-lang{display:none}.sk-kort{display:inline}}
-.md-link,.mu-link{color:var(--accent);text-decoration:none;font-weight:500}.md-link:hover,.mu-link:hover{text-decoration:underline}
+.md-link,.mu-link{color:var(--tekst);text-decoration:none;font-weight:600}.md-link:hover,.mu-link:hover{text-decoration:underline}
 .sd-faerdig{background:var(--faerdig-blid);border-radius:14px;padding:26px;text-align:center}.sd-f-t{color:var(--faerdig);font-size:21px;font-weight:var(--faerdig-vaegt);margin-bottom:12px}.sd-fold{background:var(--flade);border:1px solid var(--linje);border-radius:12px;margin-top:8px}.sd-fold>summary{padding:12px 16px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;font-weight:500}.sd-fold>summary::-webkit-details-marker{display:none}.sd-fold>summary::after{content:"›";color:var(--svagere)}.sd-fold[open]>summary::after{content:"⌄"}.sd-fold .kompakt{margin:0 12px 12px}.sd-fold .to,.sd-fold .side{padding-left:12px;padding-right:12px}.sd-fold .salg-status{margin-top:0}
 .mu{max-width:760px}.mu-fokus{background:var(--flade);border:1px solid var(--linje);border-radius:16px;padding:22px 24px;margin-bottom:22px}
 .mu-uge{display:flex;align-items:center;gap:8px;margin-bottom:16px}.mu-prik{width:10px;height:10px;border-radius:50%;background:var(--linje)}.mu-prik.ok{background:var(--accent)}
@@ -1343,12 +1343,12 @@ function jobOpgaver(j, st) {
     med: () => { o.status = "Færdig"; o.faerdig_dato = iDag(); o.konklusion = `Linket er sendt ${kortDato(iDag())}`; (o.faerdig_naar || []).forEach(k => { k.ok = true; }); }});
   const række = (o, færdig) => !færdig && o.job_opgave === "sangene" ? h("div", {class: "jo-r"},
     h("span", {class: "jo-m"}, "○"),
-    h("span", {class: "jo-t", style: "flex:1"}, h("b", {}, o.titel), h("span", {class: "pre muted"}, (o.kontekst || "").split("\n").filter(l => /^(Link|Mail|Telefon):/.test(l)).join("\n"))),
+    h("span", {class: "jo-t", style: "flex:1"}, h("b", {}, o.titel), h("span", {class: "pre muted"}, (o.kontekst || "").split("\n").filter(l => /^(Link|Mail|Telefon):/.test(l)).join("\n"))   /* adressen her skal kunne kopieres til kunden, så den står hel */),
     h("button", {class: "btn godkend lille", type: "button", disabled: o.id === "…", onclick: () => { if (confirm("Har du sendt linket til kunden? Så stopper påmindelserne.")) sendt(o); }}, "✓ Sendt"))
   : [h("button", {type: "button", class: "jo-r" + (JOÅ === o.id ? " valgt" : ""), "aria-expanded": JOÅ === o.id ? "true" : "false", onclick: () => åbn(o)},
     h("span", {class: "jo-m" + (færdig ? " ok" : "")}, færdig ? "✓" : "○"),
     h("span", {class: "jo-t", style: "flex:1"}, h("b", {}, o.titel),
-      færdig ? h("span", {class: o.konklusion ? "" : "muted"}, o.konklusion || "Ingen konklusion skrevet")
+      færdig ? h("span", {class: o.konklusion ? "" : "muted"}, o.konklusion ? mdLinks(o.konklusion) : "Ingen konklusion skrevet")
         : h("span", {class: "muted"}, [o.deadline ? h("span", {}, "Frist " + visDato(o.deadline)) : null,
             (o.faerdig_naar || []).length ? `${o.faerdig_naar.filter(k => k.ok).length}/${o.faerdig_naar.length} krav` : null].filter(Boolean).flatMap((x, i) => i ? [" · ", x] : [x]))),
     h("span", {class: "muted"}, JOÅ === o.id ? "▴" : "▾")),
@@ -3469,17 +3469,25 @@ function someKort(o) {
 // Data i den private data/mashups.json: ingen sangtitler eller kommentarer i dette repo.
 const MU = {valgt: null, ret: false, næste: null, idéer: false, åbenIdé: null, ny: false};
 const MU_MAAL = 2;
-const MD_LINK = /\[([^\]\n]+)\]\(([^)\s]+)\)/g;
-function mdLinks(t) {   // [tekst](https://...) bliver et klikbart link (Oscar 9/11: "Se video"); kun https, bygget som DOM, ingen innerHTML
-  const ud = []; let i = 0;
-  for (const m of String(t || "").matchAll(MD_LINK)) {
-    let ok = false; try { ok = new URL(m[2]).protocol === "https:"; } catch {}
+// Links i fritekst fra data (Oscar 12/11: "den skulle være link hvid tekst på se video ikke hele linket"). Én funktion til alle tekster:
+// [tekst](https://...) bliver et link med teksten, og en rå https-adresse bliver "Se video ›" (YouTube/Vimeo) eller "Åbn link ›". Adressen vises aldrig,
+// et kolon lige før adressen fjernes. Kun https, bygget som DOM, ingen innerHTML, åbner i ny fane
+const MD_LINK = /\[([^\]\n]+)\]\((https:\/\/[^)\s]+)\)|https:\/\/[^\s<>"'()\[\]]+/g;
+const linkNavn = u => /(^|\.)(youtube\.com|youtu\.be|vimeo\.com)$/i.test((() => { try { return new URL(u).hostname; } catch { return ""; } })()) ? "Se video ›" : "Åbn link ›";
+function mdLinks(t) {
+  const tekst = String(t || ""), ud = []; let i = 0;
+  for (const m of tekst.matchAll(MD_LINK)) {
+    let url = m[2] || m[0], navn = m[1], slut = m.index + m[0].length;
+    if (!m[2]) { const hale = url.match(/[.,;:!?]+$/); if (hale) { url = url.slice(0, -hale[0].length); slut -= hale[0].length; } navn = linkNavn(url); }
+    let ok = false; try { ok = new URL(url).protocol === "https:"; } catch {}
     if (!ok) continue;
-    if (m.index > i) ud.push(t.slice(i, m.index));
-    ud.push(h("a", {class: "md-link", href: m[2], target: "_blank", rel: "noopener noreferrer", onclick: e => e.stopPropagation()}, m[1]));
-    i = m.index + m[0].length;
+    let før = tekst.slice(i, m.index);
+    if (!m[2]) før = før.replace(/:\s*$/, " ");   // "(optagelse): https://..." -> "(optagelse) Se video ›"
+    if (før) ud.push(før);
+    ud.push(h("a", {class: "md-link", href: url, target: "_blank", rel: "noopener noreferrer", onclick: e => e.stopPropagation()}, navn));
+    i = slut;
   }
-  if (i < String(t || "").length) ud.push(String(t).slice(i));
+  if (i < tekst.length) ud.push(tekst.slice(i));
   return ud;
 }
 const muLinksAlene = t => mdLinks(t).filter(x => typeof x !== "string");
@@ -3602,7 +3610,7 @@ function visMashups() {
   const idéer = m.ideer.filter(x => !x.startet);
   const idéListe = MU.idéer ? h("div", {style: "margin-top:4px"}, idéer.map(x => { const åben = MU.åbenIdé === x.id, mt = muMatch(x);
     let ta = (x.toneart || []).filter(Boolean).join(" "), tb = (x.bpm || []).filter(Boolean).join(" ");
-    return [h("button", {class: "mu-ide", type: "button", onclick: () => { MU.åbenIdé = åben ? null : x.id; tegn(); }}, h("span", {}, x.tekst),
+    return [h("button", {class: "mu-ide", type: "button", onclick: () => { MU.åbenIdé = åben ? null : x.id; tegn(); }}, h("span", {}, mdLinks(x.tekst)),
         h("span", {class: "lille", style: "color:var(--svagere)"}, [(x.toneart || []).filter(Boolean).length === 2 ? x.toneart.join("·") : "", (x.bpm || []).filter(Boolean).length === 2 ? x.bpm.join("·") : "", mt].filter(Boolean).join(" · "))),
       åben ? h("div", {class: "mu-ide-ret"},
         h("input", {class: "input", placeholder: "Toneart, fx 8A 9A", value: ta, oninput: e => { ta = e.target.value; }}),
@@ -3631,7 +3639,7 @@ function muNummer(m, n) {   // et nummer med alle Premises kommentarer
     n.sendt_premise ? h("div", {class: "muted lille", style: "margin-bottom:10px"}, "Sendt til Premise " + kortDato(n.sendt_premise))
       : h("button", {class: "btn", type: "button", style: "margin-bottom:14px", onclick: () => ret(["--sendt"], () => { n.sendt_premise = iDag(); }, "Sendt til Premise")}, "Sendt til Premise"),
     h("h3", {style: "margin:10px 0 6px"}, "Premise"),
-    [...(n.kommentarer || [])].reverse().map(x => h("div", {class: "mu-k"}, h("div", {class: "muted lille"}, kortDato(x.dato)), x.tekst)),
+    [...(n.kommentarer || [])].reverse().map(x => h("div", {class: "mu-k"}, h("div", {class: "muted lille"}, kortDato(x.dato)), mdLinks(x.tekst))),
     h("textarea", {class: "input", rows: 3, placeholder: "Premises kommentar", style: "width:100%;margin-top:8px", oninput: e => { k = e.target.value; }}),
     h("button", {class: "btn primaer", type: "button", style: "margin-top:8px", onclick: () => { const t = k.trim(); if (t) kør("mashup-kommentar", [n.id, t], {tekst: "Kommentar gemt", efter,
       med: () => { (n.kommentarer ||= []).push({dato: iDag(), tekst: t}); n.sendt_premise ||= iDag(); }}); }}, "Gem kommentar")));
@@ -3696,9 +3704,9 @@ function ugensIdéer() {
   return h("div", {class: "kort2 si"}, h("div", {class: "kh"}, h("h2", {}, `Ugens idéer (${idéer.length})`)),
     idéer.map(u => h("div", {class: "si-ide", "data-id": u.id},
       h("div", {class: "si-top"}, h("span", {class: "sm-k", style: `background:${SOME_KAN[u.kanal][1]}`}, SOME_KAN[u.kanal][0]), h("b", {}, u.titel)),
-      h("div", {class: "si-fra"}, "Fra " + u.fra.replace(/^fra\s+/i, "")),
-      (u.optag || []).filter(t => !/^ingen optagelse/i.test(t)).length ? h("div", {class: "si-opt"}, u.optag.filter(t => !/^ingen optagelse/i.test(t)).map(t => h("div", {}, h("i"), t))) : null,
-      u.tekst ? h("div", {class: "si-tekst"}, u.tekst)
+      h("div", {class: "si-fra"}, mdLinks("Fra " + u.fra.replace(/^fra\s+/i, ""))),
+      (u.optag || []).filter(t => !/^ingen optagelse/i.test(t)).length ? h("div", {class: "si-opt"}, u.optag.filter(t => !/^ingen optagelse/i.test(t)).map(t => h("div", {}, h("i"), ...mdLinks(t)))) : null,
+      u.tekst ? h("div", {class: "si-tekst"}, mdLinks(u.tekst))
         : u.status === "svar" ? h("div", {class: "si-tekst"}, `Dit svar: ${u.svar}. Teksten skrives ud fra det.`)
         : h("div", {class: "si-tekst si-sp"}, u.sporgsmaal, h("textarea", {class: "input", rows: 2, placeholder: "Skriv et par ord …", value: SI.svar[u.id] || "", oninput: e => { SI.svar[u.id] = e.target.value; }})),
       h("div", {class: "si-knap"},
@@ -4034,7 +4042,7 @@ function opgaveDetalje(o, indlejret) {   // indlejret: på jobbets side, hvor ti
   const ret = (felt, v, tekst) => kør("ret", [String(o.id), `${felt}=${v ?? ""}`], {tekst: tekst || `#${o.id} ${felt}`, efter,
     med: () => { if (v === "" || v == null) delete o[felt]; else o[felt] = felt === "estimat" ? Number(v) : v; }});
   const st = {krav: "", note: "", faktisk: o.estimat ?? "", konklusion: o.konklusion || ""};
-  const infoLinje = (navn, v) => v ? h("div", {class: "info"}, h("div", {class: "etiket"}, navn), h("div", {class: "pre"}, v)) : null;
+  const infoLinje = (navn, v) => v ? h("div", {class: "info"}, h("div", {class: "etiket"}, navn), h("div", {class: "pre"}, mdLinks(v))) : null;
   return h("div", {class: indlejret ? "" : "kort2"},
     indlejret ? null : h("div", {class: "kh"}, h("h2", {}, `#${o.id} ${o.titel}`)),
     o.job_opgave === "ugepakke" ? h("button", {class: "btn primaer", type: "button", style: "margin-bottom:10px", onclick: () => { fane = "bogforing"; tegn(); window.scrollTo(0, 0); }}, "Åbn Ugens bogføring") : null,
@@ -4057,7 +4065,7 @@ function opgaveDetalje(o, indlejret) {   // indlejret: på jobbets side, hvor ti
     o.mail_link ? h("div", {class: "rk", style: "gap:8px;margin-top:8px"}, h("a", {class: "btn lille", href: o.mail_link, target: "_blank", rel: "noopener"}, "Åbn mail"),
       o.mail_udkast ? h("a", {class: "btn lille", href: o.mail_udkast, target: "_blank", rel: "noopener"}, "Åbn udkast") : null) : null,
     infoLinje("Formål", o.formaal), infoLinje("Første skridt", o.foerste_skridt), indlejret && (o.kontekst || "").length > 200   // på jobbet: lang kontekst foldet sammen, så omfanget kan ses med det samme
-      ? h("details", {class: "info"}, h("summary", {class: "etiket", style: "cursor:pointer"}, "Kontekst (tryk for at vise)"), h("div", {class: "pre"}, o.kontekst))
+      ? h("details", {class: "info"}, h("summary", {class: "etiket", style: "cursor:pointer"}, "Kontekst (tryk for at vise)"), h("div", {class: "pre"}, mdLinks(o.kontekst)))
       : infoLinje("Kontekst", o.kontekst), infoLinje("Venter på", o.venter_paa),
     h("div", {class: "etiket", style: "margin-top:16px"}, "Færdig når"),
     krav.map((k, i) => h("label", {class: "cb" + (k.ok ? " gjort" : "")},
@@ -4068,7 +4076,7 @@ function opgaveDetalje(o, indlejret) {   // indlejret: på jobbets side, hvor ti
       h("button", {class: "btn", type: "button", onclick: () => { if (!st.krav.trim()) return;
         kør("krav", ["--", String(o.id), st.krav.trim()], {tekst: `#${o.id} nyt krav`, efter, med: () => { (o.faerdig_naar ||= []).push({krav: st.krav.trim(), ok: false}); }}); }}, "Tilføj")) : null,
     h("div", {class: "etiket", style: "margin-top:16px"}, "Noter"),
-    (o.noter || []).map(n => h("div", {class: "note pre"}, n)),
+    (o.noter || []).map(n => h("div", {class: "note pre"}, mdLinks(n))),
     h("div", {class: "rk"}, inp(st, "note", {placeholder: "Skriv en note"}),
       h("button", {class: "btn", type: "button", onclick: () => { if (!st.note.trim()) return;
         kør("note", ["--", String(o.id), st.note.trim()], {tekst: `#${o.id} note`, efter, med: () => { (o.noter ||= []).push(`${iDag()}: ${st.note.trim()}`); }}); }}, "Gem")),
@@ -5040,7 +5048,7 @@ function visMaaling() {
           h("span", {class: "mål-n"}, h("b", {}, `Nr. ${r.nr} · ${r.tekst.replace(/\n/g, " ")}`),
             h("span", {class: "muted lille"}, r.få ? "For få scanninger endnu" : bedst ? "Bedst: " + bedst[0] : `Hængt ${r.hængt} gange`)),
           h("span", {class: "mål-t"}, `${r.scan} · ${r.hængt}×`), pil("k" + r.nr)),
-        åben === "k" + r.nr ? h("div", {class: "mål-det"}, h("div", {class: "pre", style: "font-size:15px"}, r.tekst),
+        åben === "k" + r.nr ? h("div", {class: "mål-det"}, h("div", {class: "pre", style: "font-size:15px"}, mdLinks(r.tekst)),
           Object.keys(r.steder).length ? h("div", {class: "chips", style: "margin-top:8px"}, Object.entries(r.steder).map(([k, v]) => h("span", {class: "chip"}, k + " ", h("b", {}, String(Math.round(v.scan / v.n))), " scan/kort"))) : null,
           h("div", {class: "muted lille", style: "margin-top:8px"}, [...r.jobs].join(" · "))) : null];
       })) : tom("Ingen klubkort lavet endnu.")];
@@ -5450,7 +5458,7 @@ function visSalg() {
     h("div", {class: "cc-dele"}, h("span", {class: leadsIDag.length >= 1 ? "ok" : ""}, "Formiddag" + (leadsIDag.length >= 1 ? " ✓" : "")), h("span", {class: leadsIDag.length >= 2 ? "ok" : ""}, "Eftermiddag" + (leadsIDag.length >= 2 ? " ✓" : ""))),
     h("div", {class: "cc-træk"}, traekKnap()),
     rows.filter(erCold).sort((a, b) => (b.oprettet || "").localeCompare(a.oprettet || "")).map(s => h("button", {type: "button", class: "kort2 cc-kort" + (SG.vis === "s" && SG.valgt === s.navn ? " valgt" : ""), onclick: () => salgÅbn(s.navn)},
-      h("div", {class: "cc-navn"}, s.navn), h("div", {class: "muted lille"}, s.kontakt || ""), s.naeste ? h("div", {style: "margin-top:6px"}, s.naeste) : null)),
+      h("div", {class: "cc-navn"}, s.navn), h("div", {class: "muted lille"}, s.kontakt || ""), s.naeste ? h("div", {style: "margin-top:6px"}, mdLinks(s.naeste)) : null)),
     h("div", {class: "kort2", style: "margin-top:12px"}, h("div", {class: "overskrift", style: "margin:0"}, "Ugens cold call"), h("div", {class: "cc-tal"}, `${ugeTræk} af 10`), ccUgeTal(mandag, idag)),
     indgangListe()];
   const venstre = h("div", {class: "liste-kol"},
@@ -7134,7 +7142,7 @@ function salgFolder(s) {
   const personer = (s.kontaktpersoner || []).map(x => h("div", {class: x.til ? "muted" : ""}, x.til ? x.navn : h("b", {}, x.navn), x.rolle ? ` (${x.rolle})` : "", " ", [x.fra && kortDato(x.fra), x.til && kortDato(x.til)].filter(Boolean).join(" til ")));
   const lenker = [["Hjemmeside", v("hjemmeside")], ["Kontaktside", v("kontaktside")], ["LinkedIn", v("linkedin_side")]].filter(([, u]) => u && u !== "ukendt").map(([t, u]) => h("a", {class: "link-r", href: /^https?:/.test(u) ? u : "https://" + u, target: "_blank", rel: "noopener"}, t));
   const hist = [...log.map(x => h("div", {class: "fl-h"}, h("span", {class: "muted"}, kortDato(x.dato)), " ", x.art === "note" ? h("span", {class: "muted"}, x.tekst) : [x.kanal, x.person ? ` · ${x.person}` : "", x.resultat ? ` · ${x.resultat}` : "", h("div", {class: "muted"}, x.tekst)])),
-    s.historik ? h("div", {class: "pre lille muted", style: "margin-top:8px"}, s.historik) : null].filter(Boolean);
+    s.historik ? h("div", {class: "pre lille muted", style: "margin-top:8px"}, mdLinks(s.historik)) : null].filter(Boolean);
   const åbne = SG.k.folder ||= {};   // en fold bliver åben, når siden tegnes igen
   // Ret kontaktperson (Oscar 6/11): salg-kontakt --kontaktperson, så den gamle kontakt får en til-dato, og den gamle tekst står i historikken
   const rk_ = SG.k.retKontakt;
@@ -7255,7 +7263,7 @@ function salgDetalje(s) {
     s.naeste_opfoelgning ? h("div", {class: "muted lille"}, dagNavnLang(s.naeste_opfoelgning)) : null,
     s.kontakt || s.telefon ? h("div", {class: "info"}, h("div", {class: "etiket"}, "Kontaktperson"), h("div", {class: "pre"}, visKontakt(s)),
       ringKnap(s)) : null,
-    s.naeste ? h("div", {class: "info"}, h("div", {class: "etiket"}, "Næste skridt"), h("div", {class: "pre", style: "font-size:15px"}, s.naeste)) : null,
+    s.naeste ? h("div", {class: "info"}, h("div", {class: "etiket"}, "Næste skridt"), h("div", {class: "pre", style: "font-size:15px"}, mdLinks(s.naeste))) : null,
     h("div", {class: "seg kform", style: "margin-top:14px"}, [["opkald", "Opkald"], ["anden", "Anden kontakt"]].map(([v, t]) =>
       h("button", {type: "button", class: (SG.kform || "opkald") === v ? "aktiv" : "", onclick: () => { SG.kform = v; tegn(); }}, t))),
     (SG.kform || "opkald") === "opkald" ? opkaldBlok(s, k) : h("div", {class: "afslut"},
