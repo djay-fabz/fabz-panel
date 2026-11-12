@@ -5247,7 +5247,8 @@ const salgVej = s => (s.kontakt || "").replace(/\s*\([^)]*\)?/g, "").split(/[,·
 const salgKunde = navn => (D.salg || []).find(x => x.navn === navn);
 function salgUgemt() {
   const k = SG.k || {}, s = salgKunde(SG.valgt);
-  return SG.vis === "s" && !!s && !!(k.opk?.fik || k.opk?.skridt || (k.tekst || "").trim() || (k.kontaktperson || "").trim() || k.opfoelgning || k.status || k.ingen || (k.naeste || "").trim());
+  const o = k.opk || {}, opkUgemt = !!(o.fik || o.skridt || o.aabning || (o.aabningT || "").trim() || o.titel || (o.titelT || "").trim() || o.pain || o.sagde?.length || (o.note || "").trim() || (o.rigtig || "").trim());   // Oscar 12/11: også en dikteret åbning gemmes på kunden
+  return SG.vis === "s" && !!s && !!(opkUgemt || (k.tekst || "").trim() || (k.kontaktperson || "").trim() || k.opfoelgning || k.status || k.ingen || (k.naeste || "").trim());
 }
 function salgGemKladde() { if (salgUgemt()) SG.kladder[SG.valgt] = SG.k; }
 function salgÅbn(navn) {
@@ -6801,12 +6802,12 @@ const OPK_PAIN = [["ikke_naaet", "Ikke nået"], ["tomt_dansegulv", "Tomt dansegu
 const opkMed = (v, tekst) => v === "andet" || v === "Andet" ? ((tekst || "").trim() ? `Andet: ${tekst.trim()}` : "Andet") : v;
 function opkaldBlok(s, k) {
   const o = k.opk ||= {fik: null, sagde: [], skridt: null, rigtig: "", rigtigK: "", sender: false, note: "", hNavn: "", hMail: "", hTlf: "",
-    aabning: lager.get("opk-aabning") || "Holder I fester?", aabningT: lager.get("opk-aabning-tekst") || "", titel: "ved_ikke", titelT: "", pain: "ikke_naaet", painT: "", overMin: false};
+    aabning: null, aabningT: "", titel: null, titelT: "", pain: null, painT: "", overMin: false};   // Oscar 12/11: tomt for hver ny kunde, intet følger med fra sidste opkald
   const henvist = o.sagde.includes("henviste");   // "Henviste videre" (Oscar 3/11): den nye bliver hovedkontakt, ring i morgen
   const knap = (v, t, valgt, fn) => h("button", {type: "button", class: "opk-k" + (valgt ? " valgt" : ""), onclick: fn}, t);
-  const målFelter = () => ({aabning: opkMed(o.aabning, o.aabningT), ...(o.titel !== "ved_ikke" ? {titel: opkMed(o.titel, o.titelT)} : {}),
-    ...(o.fik === "rigtig" ? {pain: opkMed(o.pain, o.painT)} : {}), ...(o.overMin && o.fik && o.fik !== "svarede_ikke" ? {over_min: true} : {})});
-  const målArgs = () => { const m = målFelter(); return [`--aabning=${m.aabning}`, ...(m.titel ? [`--titel=${m.titel}`] : []), ...(m.pain ? [`--pain=${m.pain}`] : []), ...(m.over_min ? ["--over-min"] : [])]; };
+  const målFelter = () => ({...(o.aabning ? {aabning: opkMed(o.aabning, o.aabningT)} : {}), ...(o.titel && o.titel !== "ved_ikke" ? {titel: opkMed(o.titel, o.titelT)} : {}),
+    ...(o.fik === "rigtig" && o.pain ? {pain: opkMed(o.pain, o.painT)} : {}), ...(o.overMin && o.fik && o.fik !== "svarede_ikke" ? {over_min: true} : {})});
+  const målArgs = () => { const m = målFelter(); return [...(m.aabning ? [`--aabning=${m.aabning}`] : []), ...(m.titel ? [`--titel=${m.titel}`] : []), ...(m.pain ? [`--pain=${m.pain}`] : []), ...(m.over_min ? ["--over-min"] : [])]; };
   const vælgFik = v => {   // Reception m.fl.: næste skridt er valgt på forhånd, så det er to tryk
     o.fik = o.fik === v ? null : v;
     if (o.fik && o.fik !== "rigtig" && !o.skridt) { o.skridt = "ring_uge"; o.autoSkridt = true; }
@@ -6847,11 +6848,11 @@ function opkaldBlok(s, k) {
   };
   const under = h("div", {class: "afslut opk-del"}, h("div", {class: "opk-trin"}, "Under opkaldet"),
     h("div", {class: "etiket"}, "Åbning"),
-    chipRække(OPK_ÅBNING, o.aabning, v => { o.aabning = v; lager.set("opk-aabning", v); }, o.aabningT, v => { o.aabningT = v; lager.set("opk-aabning-tekst", v); }, "Andet"),
+    chipRække(OPK_ÅBNING, o.aabning, v => { o.aabning = o.aabning === v ? null : v; }, o.aabningT, v => { o.aabningT = v; }, "Andet"),
     h("div", {class: "etiket", style: "margin-top:10px"}, "Titel"),
-    chipRække(OPK_TITEL, o.titel, v => { o.titel = v; }, o.titelT, v => { o.titelT = v; }),
+    chipRække(OPK_TITEL, o.titel, v => { o.titel = o.titel === v ? null : v; }, o.titelT, v => { o.titelT = v; }),
     o.fik === "rigtig" ? [h("div", {class: "etiket", style: "margin-top:10px"}, "Pain"),
-      chipRække(OPK_PAIN, o.pain, v => { o.pain = v; }, o.painT, v => { o.painT = v; })] : null);
+      chipRække(OPK_PAIN, o.pain, v => { o.pain = o.pain === v ? null : v; }, o.painT, v => { o.painT = v; })] : null);
   const efter = h("div", {class: "afslut opk-del"}, h("div", {class: "opk-trin"}, "Lige efter"),
     h("div", {class: "etiket"}, "Fik fat i"),
     h("div", {class: "opk-grid"}, OPK_FIK.map(([v, t]) => knap(v, t, o.fik === v, () => vælgFik(v)))),
