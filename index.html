@@ -435,6 +435,7 @@ button.r:disabled{cursor:default;opacity:.7}
 .rk .fl{margin:0;flex:1}
 textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .info{margin-top:12px}.pre{white-space:pre-wrap}
+.tb-kørsel{display:flex;align-items:center;gap:8px;margin:-4px 0 10px;font-size:13.5px;flex-wrap:wrap}.tb-k-ok{color:var(--pl-brun)}
 .tb-linje{display:grid;grid-template-columns:minmax(0,1fr) 110px 36px;gap:8px;margin-bottom:8px}.tb-bel{position:relative;display:block}.tb-bel .input{width:100%}.tb-rabat .tb-bel .input{padding-left:22px}.tb-minus{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--svag);pointer-events:none}
 .tb-r{display:flex;justify-content:space-between;gap:12px;padding:2px 0}
 .tb-adv{margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--adv-blid);color:var(--adv)}
@@ -4828,9 +4829,49 @@ function tbSendtKnap() {   // tilbud lavet fra en forespørgsel: sæt den til Ti
     }});
   }}, "Markér som sendt");
 }
+// ---------- Kørsel foreslås under Sted (Oscar 12/11, skitse tilbud-koersel-auto): afstand fra lageret på Åhavevej ----------
+// Samme regel som fabz-tilbud: over 50 km i fugleflugt giver kørsel, 4 kr. pr. km tur/retur ad vej. Adressen via Photon, vejen via OSRM, begge fra browseren
+const LAGER_KOORD = {lat: 56.16282, lon: 9.55481}, KØRSEL_GRÆNSE = 50, KM_PRIS = 4;
+const TBK = new Map();   // sted -> {status: "henter"|"ok"|"fejl", fugl, km}
+const fugleflugt = (a, b) => { const r = Math.PI / 180, dLat = (b.lat - a.lat) * r, dLon = (b.lon - a.lon) * r;
+  const x = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLon / 2) ** 2; return 6371 * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x)); };
+async function tbKørselBeregn() {
+  const sted = (TB?.sted || "").trim();
+  if (!sted || TBK.has(sted)) return;
+  TBK.set(sted, {status: "henter"}); if (fane === "tilbud") tegn();
+  let ud;
+  try {
+    const f = (await hentForslag(sted))[0];
+    if (!f) ud = {status: "fejl"};
+    else {
+      const fugl = Math.round(fugleflugt(LAGER_KOORD, f));
+      ud = {status: "ok", fugl};
+      if (fugl > KØRSEL_GRÆNSE) {
+        try { const r = await (await fetch(`https://router.project-osrm.org/route/v1/driving/${LAGER_KOORD.lon},${LAGER_KOORD.lat};${f.lon},${f.lat}?overview=false`)).json();
+          ud.km = Math.round(2 * r.routes[0].distance / 1000); } catch { ud.vejFejl = true; }
+      }
+    }
+  } catch { ud = {status: "fejl"}; }
+  TBK.set(sted, ud); if (fane === "tilbud") tegn();
+}
+function tbKørselLinje() {
+  const sted = (TB.sted || "").trim(), k = sted && TBK.get(sted);
+  if (!k) return null;
+  const linje = (...x) => h("div", {class: "tb-kørsel"}, ...x);
+  if (k.status === "henter") return linje(h("span", {class: "muted"}, "Finder afstanden …"));
+  if (k.status === "fejl") return linje(h("span", {class: "muted"}, "Fandt ikke adressen"));
+  if (k.fugl <= KØRSEL_GRÆNSE) return linje(h("span", {class: "tb-k-ok"}, "✓"), `${k.fugl} km i fugleflugt: ingen kørsel`);
+  if (!k.km) return linje(`${k.fugl} km i fugleflugt: kørsel, men vejen kunne ikke beregnes`);
+  if (String(TB.km) === String(k.km)) return linje(h("span", {class: "tb-k-ok"}, "✓"), `Kørsel lagt ind: ${k.km} km tur/retur, ${tbKr(k.km * KM_PRIS)}`);
+  if (TB.koersel_nej === sted) return null;
+  return linje(`${k.km} km tur/retur: læg ${tbKr(k.km * KM_PRIS)} oveni?`, h("span", {class: "spacer"}),
+    h("button", {class: "btn primaer lille", type: "button", onclick: () => { TB.km = String(k.km); delete TB.koersel_nej; tbGem(); tegn(); }}, "Ja"),
+    h("button", {class: "btn lille", type: "button", onclick: () => { TB.koersel_nej = sted; tbGem(); tegn(); }}, "Nej"));
+}
 function visTilbud() {
   if (!TB) { try { TB = tbFlytRabat(JSON.parse(lager.get(TB_KEY) || "null")); } catch { TB = null; } }
   if (!TB) TB = tbNy();
+  if ((TB.sted || "").trim() && !TBK.has(TB.sted.trim())) setTimeout(tbKørselBeregn, 0);
   const sæt = (k, v) => { TB[k] = v; tbGem(); opdater(); };
   const t = (k, attr = {}) => h("input", {class: "input", value: TB[k] ?? "", ...attr, oninput: e => sæt(k, e.target.value)});
   const tf = (k, rows, ph) => h("textarea", {class: "input", rows, placeholder: ph || "", value: TB[k] ?? "", oninput: e => sæt(k, e.target.value)});
@@ -4882,7 +4923,8 @@ function visTilbud() {
         felt("Dato", datoInput(TB.evdato, iso => sæt("evdato", iso))),
         felt("Gæster", t("gaester", {placeholder: "80"}))),
       datoAdv,
-      felt("Sted", t("sted", {placeholder: "Marselis Hotel, Strandvejen 25, 8000 Aarhus"})),
+      felt("Sted", t("sted", {placeholder: "Marselis Hotel, Strandvejen 25, 8000 Aarhus", onchange: () => tbKørselBeregn()})),
+      tbKørselLinje(),
       felt("Tider", t("tider", {placeholder: "Opstilling fra 17.00, musik 19.00-01.00"})),
       advBoks,
       h("div", {class: "overskrift", style: "margin-top:18px"}, "I får"),
