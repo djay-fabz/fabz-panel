@@ -5488,11 +5488,12 @@ function salgDagKort(påIDag = false) {   // påIDag (Oscar 8/11: "jeg vil se de
   const tilSalg = () => { if (påIDag) { fane = "salg"; SG.alleÅben = false; window.scrollTo(0, 0); } };
   const åbn = t => { tilSalg(); if (!(SG.vis === "s" && SG.valgt === t.navn)) salgÅbn(t.navn); SG.k.logÅben = true; tegn(); document.querySelector(".detalje-kol")?.scrollIntoView({block: "nearest"}); };
   const knap = t => { if (t.klaret) return null;
-    const nr = t.r ? tlfNr(t.r.telefon) : tlfNr(t.s.telefon) || tlfNr(t.s.kontakt), gå = () => t.r ? (tilSalg(), trækLead(t.r)) : åbn(t);
+    const nr = t.r ? tlfNr(t.r.telefon) : tlfNr(t.s.telefon) || tlfNr(t.s.kontakt), gå = () => t.r ? (tilSalg(), åbnLead(t.r)) : åbn(t);
     return nr ? h("a", {class: "btn lille primaer", href: "tel:" + nr.replace(/\s+/g, ""), onclick: gå}, "Ring " + nr) : h("button", {class: "btn lille", type: "button", onclick: gå}, "Log kontakt"); };
   const sætning = t => t.r ? (t.r.rolle || "").replace(/\s*\(.*$/, "").trim() : t.s.svar ? `${t.s.svar.person} har svaret` : (t.s.naeste || t.s.status || "").split(/(?<=[.!?])\s/)[0];
+  // Oscar 12/11: alle kunder i listen kan åbnes når som helst, rækkefølgen er kun et forslag
   const række = t => h("div", {class: "sd-r" + (t.klaret ? " ok" : "")},
-    h("span", {class: "sd-mk"}), h(t.s ? "button" : "div", {class: "sd-t", ...(t.s ? {type: "button", onclick: () => { tilSalg(); salgÅbn(t.navn); }} : {})}, h("b", {}, t.navn), t.klaret ? null : h("span", {class: "muted lille"}, sætning(t))), knap(t));
+    h("span", {class: "sd-mk"}), h("button", {class: "sd-t", type: "button", onclick: () => { tilSalg(); if (t.s) salgÅbn(t.navn); else åbnLead(t.r); }}, h("b", {}, t.navn), t.klaret ? null : h("span", {class: "muted lille"}, sætning(t))), knap(t));
   const liste = () => h("div", {class: "sd-liste"}, [...ting.filter(t => t.klaret), ...ting.filter(t => !t.klaret)].map(række));
   const færdig = (t, knapTekst, min) => h("div", {class: "sd-faerdig"}, h("div", {class: "sd-f-t"}, t), h("button", {class: "btn", type: "button", onclick: () => startSprint(min)}, knapTekst));
   if (kører) {   // mens han ringer: uret tæller ned, listen står
@@ -5546,6 +5547,13 @@ function traekKnap() {   // Træk en kontakt (Oscar 26/10): næste firma fra lea
   return h("button", {class: "btn primaer", type: "button", title: `Næste: ${navn}, ${r.by || ""} (${r.prioritet || "?"}, ${r.km || "?"} km). ${tilbage} tilbage i listen`,
     onclick: () => trækLead(r)}, `Træk en kontakt (${tilbage})`);
 }
+// Åbn en kunde fra leadlisten: findes den allerede i Salg, åbnes kortet, ellers trækkes den og åbnes. Det åbne korts tekst gemmes først (Oscar 12/11: noten kom på det forkerte kort)
+function åbnLead(r) {
+  const navn = leadNavn(r), s = salgKunde(navn);
+  if (s) { if (!(SG.vis === "s" && SG.valgt === navn)) salgÅbn(navn); return; }
+  salgGemKladde();
+  return trækLead(r);
+}
 function trækLead(r) {
   const navn = leadNavn(r);
   return kør("salg-traek", [`--id=${r.id}`], {tekst: `Trukket: ${navn}`, efter: ["salg", "leads", "opgaver"], med: () => {
@@ -5554,7 +5562,8 @@ function trækLead(r) {
         kontakt: [r.direktoer ? [r.direktoer, r.direktoer_stilling].filter(Boolean).join(", ") : r.rolle_navn, r.rolle, r.telefon].filter(Boolean).join(" · "), direktoer: r.direktoer, direktoer_stilling: r.direktoer_stilling,
         naeste_opfoelgning: iDag(), telefon: r.telefon || "", linkedin_side: r.linkedin_side || "", kontaktside: r.kontaktside || "",
         historik: `${iDag()}: trukket fra leadlisten (${r.prioritet}). ${[r.by + (r.km ? ", " + r.km + " km" : ""), r.ansatte ? r.ansatte + " ansatte" : "", r.branche, r.personaleforening ? "Personaleforening: " + r.personaleforening : "", r.tegn ? "Tegn: " + r.tegn : ""].filter(Boolean).join(" | ")}`};
-      (D.salg ||= []).push(ny); SG.vis = "s"; SG.valgt = navn; SG.k = {}; gemKladderLager();
+      if (!salgKunde(navn)) (D.salg ||= []).push(ny);
+      salgGemKladde(); SG.vis = "s"; SG.valgt = navn; SG.k = SG.kladder[navn] || {}; delete SG.kladder[navn]; gemKladderLager();
     }});
 }
 // ---------- Pakker (indstillinger): trin, regler og linjer. Gemmes samlet med fabz.py setup-gem ----------
