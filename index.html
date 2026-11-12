@@ -4599,6 +4599,9 @@ const tbMinus = (iso, n) => plusDage(iso, -n);
 const tbEsc = s => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;");
 const tbTal = s => { const t = String(s ?? "").replace(/\s|kr\.?/gi, "").replace(/\./g, "").replace(",", "."); return t === "" ? 0 : Number(t); };
 
+const TB_INTRO_T = "Her er mit tilbud ud fra vores snak. Herunder står præcis, hvad I får, og hvad det koster.";
+const TB_INTRO_OB = "Hermed bekræfter jeg aftalen. Herunder står alt, vi har aftalt, så I kan sende det direkte videre internt.";
+const erRabatLinje = l => tbTal(l.beloeb) < 0 || /^\s*(aftalt\s+)?(rabat|prisnedslag)\b/i.test(l.tekst || "");
 function tbBeregn(T) {   // samme regler som lav_tilbud.py. Giver {fejl} eller alle tal og tekster
   const erhverv = T.kundetype === "erhverv", ob = T.type === "ordrebekraeftelse";
   const idag = T.dato || iDag(), ev = T.evdato;
@@ -4607,8 +4610,14 @@ function tbBeregn(T) {   // samme regler som lav_tilbud.py. Giver {fejl} eller a
   if (!(firma || T.navn).trim()) return {fejl: T.kundetype === "erhverv" ? "Skriv kundens firma eller navn." : "Skriv kundens navn."};
   const gyldig = ob ? null : plusDage(idag, 14);
   const linjer = [];
+  // Oscar 12/11 (PanzerGlass): rabat står ét sted. En prislinje "Aftalt rabat" (eller et negativt beløb) bliver til Aftalt prisnedslag,
+  // og står den også i feltet, er det en fejl i stedet for dobbelt rabat
+  const rabatLinjer = T.linjer.filter(l => (l.tekst.trim() || String(l.beloeb).trim()) && erRabatLinje(l));
+  if (rabatLinjer.length && tbTal(T.rabat)) return {fejl: "Rabatten står både som prislinje og i Aftalt prisnedslag. Brug kun feltet Aftalt prisnedslag."};
+  const linjeRabat = rabatLinjer.reduce((a, l) => a + Math.abs(tbTal(l.beloeb)), 0);
   for (const l of T.linjer) {
     if (!l.tekst.trim() && !String(l.beloeb).trim()) continue;
+    if (erRabatLinje(l)) continue;
     const b = tbTal(l.beloeb);
     if (!l.tekst.trim() || !Number.isFinite(b)) return {fejl: "Hver prislinje skal have tekst og beløb."};
     linjer.push({tekst: l.tekst.trim(), beloeb: b});
@@ -4620,7 +4629,7 @@ function tbBeregn(T) {   // samme regler som lav_tilbud.py. Giver {fejl} eller a
   if (!linjer.length) return {fejl: "Skriv mindst én prislinje."};
   const g = (String(T.gaester || "").match(/\d+/g) || []).map(Number);
   const mange = g.length && Math.max(...g) > 100;
-  const brutto = linjer.reduce((a, l) => a + l.beloeb, 0), rabat = tbTal(T.rabat);   // rabat som prislinjerne: ekskl. moms på erhverv, inkl. moms på privat (Oscar 6/11)
+  const brutto = linjer.reduce((a, l) => a + l.beloeb, 0), rabat = tbTal(T.rabat) + linjeRabat;   // rabat som prislinjerne: ekskl. moms på erhverv, inkl. moms på privat (Oscar 6/11)
   if (!Number.isFinite(rabat) || rabat < 0) return {fejl: "Prisnedslaget skal være et beløb i kr."};
   if (rabat > brutto) return {fejl: "Prisnedslaget kan ikke være større end prisen."};
   const s = brutto - rabat;
@@ -4659,8 +4668,7 @@ function tbHtml(T, R) {   // HTML'en fra lav_tilbud.py, linje for linje
   if (rabat) pris += `<tr><td>Aftalt prisnedslag</td><td class="n">−${tbKr(rabat)}</td></tr>`;
   pris += erhverv ? `<tr class="sub"><td>I alt ekskl. moms</td><td class="n">${tbKr(s)}</td></tr><tr><td>Moms 25 %</td><td class="n">${tbKr(moms)}</td></tr><tr class="tot"><td>I alt inkl. moms</td><td class="n">${tbKr(total)}</td></tr>`
     : `<tr class="tot"><td>I alt inkl. moms</td><td class="n">${tbKr(total)}</td></tr><tr class="sm"><td>Heraf moms</td><td class="n">${tbKr(moms)}</td></tr>`;
-  const intro = T.intro.trim() || (ob ? "Hermed bekræfter jeg aftalen. Herunder står alt, vi har aftalt, så I kan sende det direkte videre internt."
-    : "Her er mit tilbud ud fra vores snak. Herunder står præcis, hvad I får, og hvad det koster.");
+  const egen = T.intro.trim(), intro = egen && !(ob && egen === TB_INTRO_T) ? egen : (ob ? TB_INTRO_OB : TB_INTRO_T);   // tilbuddets standardtekst følger ikke med til bekræftelsen
   const slut = ob ? (erhverv ? "Bekræft venligst aftalen ved at svare ja på mailen." : "Når depositum er betalt, er datoen jeres.")
     : "Lad mig høre, om det lyder som den rigtige plan for jer, så sætter jeg et endeligt kryds i kalenderen.";
   const meta = `${titel} nr. ${tbEsc(nr)}<br>${tbDato(idag)}` + (ob ? "" : `<br>Gælder til ${tbDato(R.gyldig)}`);
@@ -4851,7 +4859,7 @@ function visTilbud() {
     h("div", {class: "kort2"},
       h("div", {class: "rk", style: "margin-top:0;flex-wrap:wrap"},
         seg([["erhverv", "Erhverv"], ["privat", "Privat"]], TB.kundetype, skiftType),
-        seg([["tilbud", "Tilbud"], ["ordrebekraeftelse", "Ordrebekræftelse"]], TB.type, v => { TB.type = v; tbGem(); tegn(); })),
+        seg([["tilbud", "Tilbud"], ["ordrebekraeftelse", "Ordrebekræftelse"]], TB.type, v => { if (v !== TB.type && v === "ordrebekraeftelse") TB.dato = iDag(); TB.type = v; tbGem(); tegn(); })),   // bekræftelsen dateres i dag (Oscar 12/11)
       h("div", {style: "margin-top:14px"}, tbPakkeVælger()),
       h("div", {class: "overskrift", style: "margin-top:18px"}, "Kunde"),
       h("div", {class: "felter3"}, TB.kundetype === "erhverv" ? felt("Firma", t("firma")) : null, felt("Navn", t("navn")), felt("Mail", t("mail", {type: "email"})), felt("Telefon", t("tlf", {inputmode: "tel"}))),
@@ -4873,12 +4881,12 @@ function visTilbud() {
       h("div", {class: "felter3"},
         felt("Kørsel uden for 50 km (km tur/retur)", t("km", {inputmode: "numeric", placeholder: "0"})),
         felt("Bro/færge (kr.)", t("bro", {inputmode: "numeric", placeholder: "0"})),
-        felt("Tilbudsdato", datoInput(TB.dato, iso => sæt("dato", iso || iDag())))),
+        felt(TB.type === "ordrebekraeftelse" ? "Dato" : "Tilbudsdato", datoInput(TB.dato, iso => sæt("dato", iso || iDag())))),
       felt(TB.kundetype === "erhverv" ? "Aftalt prisnedslag (kr. ekskl. moms)" : "Aftalt prisnedslag (kr. inkl. moms)", t("rabat", {inputmode: "numeric", placeholder: "0", style: "max-width:200px"})),
       h("div", {class: "overskrift", style: "margin-top:18px"}, "Særlige betingelser"),
       felt("Ét punkt pr. linje", tf("vilkaar_ekstra", 2)),
       h("div", {class: "overskrift", style: "margin-top:18px"}, "Tekst (valgfri)"),
-      felt("Indledning (tom = standard)", tf("intro", 2, "Her er mit tilbud ud fra vores snak. Herunder står præcis, hvad I får, og hvad det koster.")),
+      felt("Indledning (tom = standard)", tf("intro", 2, TB.type === "ordrebekraeftelse" ? TB_INTRO_OB : TB_INTRO_T)),
       felt("Note før afslutningen", tf("noter", 2))),
     h("div", {style: "margin-top:16px"}, sum),
     h("div", {class: "rk", style: "margin-top:16px"},
