@@ -3391,7 +3391,11 @@ function afslutDag(dato, nået, brugt, småK = () => []) {
       if (st.score) privatSend({kommando: "humoer", slags: "dag", dato, score: st.score, note: st.note.trim()}, `Humør ${HUMOER[st.score - 1]}`);
       kør("dag-opfoelg", [dato, ...(dato === iDag() ? [`--kl=${nuHHMM()}`] : []), ...(st.uplanlagt.trim() ? [`--uplanlagt=${st.uplanlagt.trim()}`] : []), "--naaet", ...n.map(String), ...(b.length ? ["--brugt", ...b] : []), ...(sk.length ? ["--smaating", ...sk.map(String)] : [])],
         {tekst: "Opfølgning på dagen", efter: ["dagsplaner", "opgaver"], med: () => { const x = D.dagsplaner.find(x => x.dato === dato); const færdige = new Set([...sk, ...(x?.plan_punkter || []).filter(p => n.includes(p.nr)).flatMap(p => (p.smaating || []).map(y => y.id))]);
-          D.opgaver.forEach(o => { if (færdige.has(o.id)) o.status = "Færdig"; });
+          // et nået punkt lukker sin opgave og krydser kravene af (samme regel som fabz.py dag-opfoelg, Oscar 12/11), undtagen en bid kortere end estimatet
+          const nm = {}; (x?.plan_punkter || []).filter(p => n.includes(p.nr) && p.id != null && !p.smaating?.length).forEach(p => { nm[p.id] = (nm[p.id] || 0) + (Number(p.min) || 0); });
+          Object.entries(nm).forEach(([id, m]) => { const o = D.opgaver.find(y => y.id === Number(id)), rest = o ? (Number(o.estimat) || 0) - (Number(o.tid_brugt) || 0) : 0;
+            if (o && !erSalgRing(o) && !(m && rest > 0 && m < rest)) færdige.add(o.id); });
+          D.opgaver.forEach(o => { if (færdige.has(o.id) && o.status !== "Færdig") { o.status = "Færdig"; o.faerdig_dato = dato; (o.faerdig_naar || []).forEach(k => { k.ok = true; }); } });
           if (x) { x.status = "Fulgt op"; x.naaede_punkter = n;
           // samme regel som fabz.py dag-opfoelg: minutterne for de nåede punkter, "hvis der er tid" tæller ikke (rettes, når de rigtige data kommer)
           x.naaet_min = (x.plan_punkter || []).filter(p => n.includes(p.nr) && p.halvdel !== "hvis_tid").reduce((s, p) => s + (Number(p.min) || 0), 0) + småMin(x, n, sk);
