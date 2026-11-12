@@ -395,6 +395,8 @@ body.bar-synlig .beskeder{bottom:84px}
 .cb input{margin-top:3px;width:16px;height:16px;accent-color:var(--accent);flex:none}
 .cb .t{flex:1}
 .cb.gjort .t{color:var(--svagere);text-decoration:line-through}
+/* Robotten slår selv op (Oscar 12/11, skitse opgaver-klogere 1-2): stille, brun markering, ingen trafiklys */
+.robot-boks{margin-top:14px;padding:12px 16px}.rb-ov{font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--svagere);margin:10px 0 2px}.rb-ov:first-child{margin-top:0}.rb-r{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:7px 0;border-top:1px solid var(--linje)}.rb-ov+.rb-r{border-top:0}.rb-t{flex:1;min-width:0}.rb-r.gjort .rb-t{color:var(--svag);text-decoration:line-through;text-decoration-color:var(--svagere)}.rb-flu{color:var(--pl-brun);width:12px}.rb-r button.rb-t{background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}.pill.fri{background:none;border:1px dashed var(--svagere);color:var(--svag)}.pill.brun{background:none;border:1px solid var(--pl-brun);color:var(--pl-brun)}.et-tryk{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 10px}.et-boks{border:1px solid var(--linje);background:var(--bg);border-radius:12px;padding:10px 12px;margin:0 0 12px}.et-boks .rk{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px}.et-boks .rk:first-child{margin-top:0}.btn.valgt-brun{border-color:var(--pl-brun);color:var(--pl-brun)}
 .luk-boks{margin-top:14px;padding:14px 16px}.luk-boks .kh{margin-bottom:4px}.luk-r{display:flex;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--linje)}.luk-r:first-of-type{border-top:0}.luk-t{flex:1;min-width:0}
 .smaa-blok{border:1px solid var(--linje);border-radius:10px;margin:6px 0;background:var(--flade2)}.smaa-blok>.cb{border-top:0;padding:8px 10px;align-items:center}.smaa-blok>.cb input{margin-top:0}
 .smaa-ind{border-top:1px solid var(--linje);padding:2px 10px 6px 36px}.smaa-ind .cb{font-size:14px;padding:6px 0}.smaa-ind .cb:first-child{border-top:0}
@@ -3866,6 +3868,7 @@ function visOpgaver() {
       h("button", {type: "button", class: "chip" + (OP.filter === f ? " aktiv" : ""), onclick: () => { OP.filter = f; tegn(); }}, f))),
     OP.filter !== "Færdige" ? salgFastRække() : null,
     OP.filter !== "Færdige" ? lukBoks() : null,
+    OP.filter !== "Færdige" ? robotBoks() : null,
     h("div", {class: "kort", style: "margin-top:14px"}, liste.length ? liste.map(o => {
       const krav = o.faerdig_naar || [], ok = krav.filter(k => k.ok).length;
       const planlægger = OP.vis === "plan" && !!OP.plan && o.status !== "Færdig" && o.id !== "…";
@@ -3882,8 +3885,11 @@ function visOpgaver() {
             o.estimat != null && o.estimat <= SMAATING_MAKS && o.status !== "Færdig" && !erSalgRing(o) ? h("span", {class: "pill"}, "småting") : null,
             krav.length ? h("span", {}, `${ok}/${krav.length} krav`) : null,
             o.status === "I gang" || o.status === "Venter" ? h("span", {class: "pill " + (o.status === "I gang" ? "blå" : "")}, o.status) : null,
+            o.status === "Venter" && vækTekst(o) ? h("span", {}, vækTekst(o)) : null,
+            udenFrist(o) ? h("span", {class: "pill fri"}, "ingen frist") : null,
             iPlanen ? h("span", {class: "pill grøn"}, "i planen") : null)));
-      if (!planlægger || iPlanen) return række;
+      if (!planlægger) return udenFrist(o) ? [række, fristKnapper(o)] : o.status === "Venter" && !o.vaek_naar ? [række, venterUdenVæk(o)] : række;
+      if (iPlanen) return række;
       // under planlægning vælges halvdelen her (Oscar 28/10: opgaverne skal kun stå i venstre side, ikke også i planpanelet)
       const valg = OP.plan.enkelt ? [["foer_frokost", "+ Plan"], ["hvis_tid", "+ Hvis der er tid"]]
         : [["foer_frokost", "+ Før frokost"], ["efter_frokost", "+ Efter frokost"], ["hvis_tid", "+ Hvis der er tid"]];
@@ -3926,6 +3932,96 @@ function lukBoks() {
       h("button", {class: "btn lille", type: "button", onclick: () => kør("opgave-behold", [String(o.id)], {tekst: `Beholdt: ${o.titel}`, efter: ["opgaver", "salg"],
         med: () => { delete o.luk_spoerg; o.deadline = plusDage(iDag(), 7); o.beholdt = iDag(); }})}, "Behold"))));
 }
+// ---------- Robotten slår selv op (Oscar 12/11, skitse opgaver-klogere 1-3) ----------
+// Morgenrobotten (fabz.py oprydning) lukker det, kilden viser er gjort, og vækker Venter-opgaver. Her: det gjorte først (med Fortryd),
+// "Ser gjort ud?" (mailrobotten, ✓ Gjort / Nej) og Vækket. Ét tryk på hver opgave: ✓ Gjort, Venter (væk mig når) og Skub. Alt går gennem opgave-skub
+const VÆK_VALG = [["pakke", "Pakken er leveret"], ["dato", "En dato"], ["mail", "Mail fra …"], ["opgave", "En anden opgave er færdig"]];
+const etTryk = (o, valg, tekst, med, ekstra = []) => kør("opgave-skub", [`--id=${o.id}`, `--valg=${valg}`, ...ekstra], {tekst: `#${o.id}: ${tekst}`, efter: ["opgaver"], med});
+const næsteDag = n => { const d = dag(iDag()); return plusDage(iDag(), ((n - d.getDay() + 7) % 7) || 7); };   // n: 1 = mandag, 5 = fredag. Altid efter i dag
+function vækTekst(o) {
+  const v = o.vaek_naar;
+  if (!v) return "";
+  if (v.slags === "pakke") return "når pakken er leveret";
+  if (v.slags === "dato") return v.vaerdi ? kortDato(v.vaerdi) : "";
+  if (v.slags === "mail") return `når der kommer mail fra ${v.vaerdi}`;
+  const t = D.opgaver.find(x => x.id === Number(v.vaerdi));
+  return t ? `når "${t.titel.length > 50 ? t.titel.slice(0, 48) + " …" : t.titel}" er færdig` : "";
+}
+const udenFrist = o => !o.deadline && !o.ingen_frist && !["Færdig", "Venter"].includes(o.status) && !erSalgRing(o) && o.id !== "…";
+function gjortTryk(o) {
+  etTryk(o, "gjort", "gjort", () => { (o.faerdig_naar || []).forEach(k => { k.ok = true; }); o.status = "Færdig"; o.faerdig_dato = iDag(); delete o.ser_gjort; });
+}
+function venterGem(o, st) {
+  const v = st.slags, val = String(st.vaerdi ?? "").trim();
+  if (v === "dato" && !(val > iDag())) { alert("Vælg en dato efter i dag."); return; }
+  if ((v === "mail" || v === "opgave") && !val) { alert(v === "mail" ? "Skriv, hvem mailen er fra." : "Vælg opgaven."); return; }
+  const vp = (st.venter_paa ?? o.venter_paa ?? "").trim();
+  etTryk(o, "venter", "venter", () => { o.status = "Venter"; if (vp) o.venter_paa = vp; if (v) o.vaek_naar = {slags: v, vaerdi: v === "opgave" ? Number(val) : val, fra: iDag()}; else delete o.vaek_naar; delete o.vaekket; OP.et = null; },
+    [...(v ? [`--vaek=${v}`, `--vaerdi=${val}`] : []), ...(vp ? [`--venter-paa=${vp}`] : [])]);
+}
+function vækValg(o, st) {   // de fire valg og feltet til det valgte. Pakke gemmer med det samme
+  const andre = D.opgaver.filter(x => x.id !== o.id && x.status !== "Færdig" && !erSalgRing(x)).sort((a, b) => a.titel.localeCompare(b.titel, "da"));
+  return [h("div", {class: "rk"}, VÆK_VALG.map(([v, t]) => h("button", {class: "btn lille" + (st.slags === v ? " valgt-brun" : ""), type: "button",
+      onclick: () => { st.slags = v; st.vaerdi = ""; if (v === "pakke") venterGem(o, st); else tegn(); }}, t))),
+    st.slags === "dato" ? h("div", {class: "rk"}, datoInput(st.vaerdi, x => { st.vaerdi = x; }, {"aria-label": "Væk mig den"}), h("button", {class: "btn primaer lille", type: "button", onclick: () => venterGem(o, st)}, "Gem")) : null,
+    st.slags === "mail" ? h("div", {class: "rk"}, h("input", {class: "input", value: st.vaerdi, placeholder: "Fx Victoria eller DPD", "aria-label": "Mail fra",
+        oninput: e => { st.vaerdi = e.target.value; }, onkeydown: e => { if (e.key === "Enter") venterGem(o, st); }}), h("button", {class: "btn primaer lille", type: "button", onclick: () => venterGem(o, st)}, "Gem")) : null,
+    st.slags === "opgave" ? h("div", {class: "rk"}, sel([["", "Vælg opgave"], ...andre.map(x => [String(x.id), x.titel.length > 70 ? x.titel.slice(0, 68) + " …" : x.titel])], st, "vaerdi"),
+      h("button", {class: "btn primaer lille", type: "button", onclick: () => venterGem(o, st)}, "Gem")) : null];
+}
+const etSt = (o, hvad) => OP.et?.id === o.id && OP.et.hvad === hvad ? OP.et : null;
+const etÅbn = (o, hvad) => { OP.et = etSt(o, hvad) ? null : {id: o.id, hvad, slags: "", vaerdi: "", venter_paa: o.venter_paa || "", grund: ""}; tegn(); };
+function fristKnapper(o) {   // "ingen frist": fire knapper under rækken (Oscar 12/11)
+  const sæt = d => etTryk(o, "frist", `frist ${kortDato(d)}`, () => { o.deadline = d; }, [`--deadline=${d}`]);
+  return h("div", {class: "planvalg"}, h("button", {class: "btn ghost lille", type: "button", onclick: () => sæt(næsteDag(5))}, "Fredag"),
+    h("button", {class: "btn ghost lille", type: "button", onclick: () => sæt(næsteDag(1))}, "Næste uge"),
+    h("button", {class: "btn ghost lille", type: "button", onclick: () => sæt(plusDage(iDag(), 30))}, "Om en måned"),
+    h("button", {class: "btn ghost lille", type: "button", onclick: () => etTryk(o, "ingen_frist", "ingen frist", () => { o.ingen_frist = iDag(); })}, "Ingen frist"));
+}
+function venterUdenVæk(o) {   // på Venter uden væk mig: de fire valg under rækken
+  const st = (OP.væk ||= {})[o.id] ||= {slags: "", vaerdi: ""};
+  return h("div", {class: "planvalg", style: "display:block"}, vækValg(o, st));
+}
+function robotBoks() {
+  const idag = iDag();
+  const lukket = D.opgaver.filter(o => o.status === "Færdig" && o.lukket_af === "oprydning" && o.faerdig_dato === idag);
+  const ser = D.opgaver.filter(o => o.ser_gjort && o.status !== "Færdig");
+  const vækket = D.opgaver.filter(o => o.vaekket && !["Færdig", "Venter"].includes(o.status) && (o.vaekket.dato || "") >= plusDage(idag, -2));
+  if (!lukket.length && !ser.length && !vækket.length) return null;
+  const åbn = o => { OP.vis = "opgave"; OP.valgt = o.id; tegn(); };
+  return h("div", {class: "kort2 robot-boks"},
+    lukket.length ? [h("div", {class: "rb-ov"}, "Gjort af robotten i dag"), lukket.map(o => h("div", {class: "rb-r gjort"}, h("span", {class: "rb-flu"}, "✓"), h("span", {class: "rb-t"}, o.titel),
+      h("span", {class: "muted lille"}, o.robot_grund || ""),
+      h("button", {class: "btn lille", type: "button", onclick: () => etTryk(o, "aaben", "åbnet igen", () => {
+        o.status = "Ikke startet"; o.robot_nej = idag; ["lukket_af", "faerdig_dato", "konklusion", "robot_grund"].forEach(k => delete o[k]); (o.faerdig_naar || []).forEach(k => { k.ok = false; }); })}, "Fortryd")))] : null,
+    ser.length ? [h("div", {class: "rb-ov"}, "Ser gjort ud?"), ser.map(o => h("div", {class: "rb-r"}, h("button", {class: "rb-t", type: "button", onclick: () => åbn(o)}, o.titel),
+      h("span", {class: "muted lille"}, o.ser_gjort.grund || ""),
+      h("button", {class: "btn lille", type: "button", onclick: () => gjortTryk(o)}, "✓ Gjort"),
+      h("button", {class: "btn lille", type: "button", onclick: () => etTryk(o, "ikke_gjort", "ikke gjort", () => { delete o.ser_gjort; o.ser_gjort_nej = idag; })}, "Nej")))] : null,
+    vækket.length ? [h("div", {class: "rb-ov"}, "Vækket"), vækket.map(o => h("div", {class: "rb-r"}, h("button", {class: "rb-t", type: "button", onclick: () => åbn(o)}, o.titel),
+      h("span", {class: "muted lille"}, o.vaekket.grund || ""), o.deadline ? h("span", {class: "pill brun"}, kortDato(o.deadline)) : null))] : null);
+}
+function etTrykPanel(o) {   // øverst på en åben opgave: ✓ Gjort · Venter · Skub (skitse opgaver-klogere 1)
+  if (o.status === "Færdig") return null;
+  const v = etSt(o, "venter"), sk = etSt(o, "skub");
+  const skub = d => etTryk(o, "skub", `skubbet til ${kortDato(d)}`, () => { o.planlagt = d; OP.et = null; }, [`--deadline=${d}`]);
+  return [h("div", {class: "et-tryk"}, h("button", {class: "btn gj", type: "button", onclick: () => gjortTryk(o)}, "✓ Gjort"),
+      h("button", {class: "btn" + (v ? " valgt-brun" : ""), type: "button", onclick: () => etÅbn(o, "venter")}, "Venter"),
+      h("button", {class: "btn" + (sk ? " valgt-brun" : ""), type: "button", onclick: () => etÅbn(o, "skub")}, "Skub")),
+    v ? h("div", {class: "et-boks"}, h("div", {class: "rk"}, h("b", {}, "Venter på")),
+      h("div", {class: "rk"}, h("input", {class: "input", value: v.venter_paa, placeholder: "Fx smartstikkene er ikke kommet", "aria-label": "Venter på", oninput: e => { v.venter_paa = e.target.value; }})),
+      h("div", {class: "rk"}, h("b", {}, "Væk mig når")), vækValg(o, v)) : null,
+    sk ? h("div", {class: "et-boks"}, h("div", {class: "rk"},
+      h("button", {class: "btn lille", type: "button", onclick: () => skub(iDag())}, "I dag"),
+      h("button", {class: "btn lille", type: "button", onclick: () => skub(plusDage(iDag(), 1))}, "I morgen"),
+      h("button", {class: "btn lille", type: "button", onclick: () => skub(næsteDag(5))}, "Fredag"),
+      h("button", {class: "btn lille", type: "button", onclick: () => skub(næsteDag(1))}, "Næste uge"),
+      datoInput(sk.vaerdi, x => { sk.vaerdi = x; }, {"aria-label": "Skub til"}),
+      h("button", {class: "btn lille", type: "button", onclick: () => { if (sk.vaerdi >= iDag()) skub(sk.vaerdi); }}, "Gem")),
+      h("div", {class: "rk"}, h("input", {class: "input", value: sk.grund, placeholder: "Drop den: hvorfor?", "aria-label": "Grund", oninput: e => { sk.grund = e.target.value; }}),
+        h("button", {class: "btn lille", type: "button", onclick: () => { const g = sk.grund.trim(); if (!g) return;
+          etTryk(o, "drop", "opgivet", () => { o.status = "Færdig"; o.droppet = true; o.faerdig_dato = iDag(); OP.et = null; }, [`--grund=${g}`]); }}, "Drop den"))) : null];
+}
 let JOÅ = null;   // opgaven der er foldet ud på jobbets side
 function opgaveDetalje(o, indlejret) {   // indlejret: på jobbets side, hvor titlen allerede står i rækken
   if (!o) return tom("Opgaven findes ikke længere.");
@@ -3939,6 +4035,8 @@ function opgaveDetalje(o, indlejret) {   // indlejret: på jobbets side, hvor ti
   return h("div", {class: indlejret ? "" : "kort2"},
     indlejret ? null : h("div", {class: "kh"}, h("h2", {}, `#${o.id} ${o.titel}`)),
     o.job_opgave === "ugepakke" ? h("button", {class: "btn primaer", type: "button", style: "margin-bottom:10px", onclick: () => { fane = "bogforing"; tegn(); window.scrollTo(0, 0); }}, "Åbn Ugens bogføring") : null,
+    indlejret ? null : etTrykPanel(o),
+    o.status === "Venter" && vækTekst(o) ? h("div", {class: "muted", style: "margin-bottom:8px"}, "Vækkes " + vækTekst(o)) : null,
     o.status === "Færdig" ? h("div", {class: "godk ok"}, `Færdig ${o.faerdig_dato ? kortDato(o.faerdig_dato) : ""}` + (o.faktisk != null ? ` · ${o.faktisk} min` : ""))
       : seg(O_STATUS, o.status, v => ret("status", v, `#${o.id} ${v}`)),
     h("div", {class: "felter3"},
@@ -4192,12 +4290,14 @@ function salgFravalg(p, x) {   // "Ikke i dag": en kort grund, punktet streges o
 const SKUB_GRÆNSE = 3;   // samme tal som SKUB_GRAENSE i fabz_dagsplan.py
 // Køen i Planlæg dag (Oscar 10/11, skitse panel-skub-allerede-gjort): opgaver over deadline og opgaver planlagt 3 gange, én ad gangen.
 // Rækkefølge: kritiske (Høj) først, så over deadline med den ældste deadline, så de skubbede. Svaret i dag (tag den i dag / kritisk) tæller som klaret for i dag.
+// Stadig aktuel? (Oscar 12/11, skitse opgaver-klogere 3): planlagt for mindst 7 dage siden, ikke lavet og ikke planlagt igen, og intet svar siden
+const glemt = (o, d) => !!(o.planlagt && o.planlagt <= plusDage(d, -7) && !(o.skub_svar || []).some(s => s.dato >= o.planlagt) && !(o.deadline && o.deadline > plusDage(d, 7)));
 function hængerKø(dato) {
   const d = dato || iDag(), høj = o => o.prioritet === "Høj" ? 1 : 0;
   return D.opgaver.filter(o => !["Færdig", "Venter"].includes(o.status) && o.job_opgave !== "salg" && !o.salg_auto && !o.salg_lead && !(o.ikke_foer && o.ikke_foer > d)
       && !(o.skub_svar || []).some(s => s.dato === iDag() && ["idag", "kritisk"].includes(s.valg))
-      && ((o.deadline && o.deadline < d) || ((o.planlagt_historik || []).length >= SKUB_GRÆNSE && !(o.skub_svar || []).some(s => s.antal >= o.planlagt_historik.length))))
-    .map(o => ({o, over: !!(o.deadline && o.deadline < d)}))
+      && ((o.deadline && o.deadline < d) || ((o.planlagt_historik || []).length >= SKUB_GRÆNSE && !(o.skub_svar || []).some(s => s.antal >= o.planlagt_historik.length)) || glemt(o, d)))
+    .map(o => ({o, over: !!(o.deadline && o.deadline < d), glemt: !(o.deadline && o.deadline < d) && (o.planlagt_historik || []).length < SKUB_GRÆNSE}))
     .sort((a, b) => høj(b.o) - høj(a.o) || b.over - a.over || (a.o.deadline || "9").localeCompare(b.o.deadline || "9")
       || (b.o.planlagt_historik || []).length - (a.o.planlagt_historik || []).length || a.o.id - b.o.id);
 }
@@ -4238,7 +4338,7 @@ function skubBoks(p) {
     knap("drop", "Opgiv den", "Opgiv")];
   const mandag = (() => { const d = dag(iDag()); return plusDage(iDag(), ((8 - d.getDay()) % 7) || 7); })();
   return h("div", {class: "skub"}, ok,
-    h("div", {class: "skub-top"}, h("b", {}, x.over ? `"${o.titel}" havde deadline ${kortDato(o.deadline)}` : `"${o.titel}" er planlagt ${o.planlagt_historik.length} gange uden at blive lavet`),
+    h("div", {class: "skub-top"}, h("b", {}, x.over ? `"${o.titel}" havde deadline ${kortDato(o.deadline)}` : x.glemt ? `Stadig aktuel? "${o.titel}" var planlagt ${kortDato(o.planlagt)}` : `"${o.titel}" er planlagt ${o.planlagt_historik.length} gange uden at blive lavet`),
       o.prioritet === "Høj" ? h("span", {class: "pill rød-pill"}, "Høj") : null, kø.length > 1 ? h("span", {class: "pill"}, `1 af ${kø.length}`) : null),
     h("div", {class: "skub-valg"}, knapper),
     st.valg === "ryk" ? h("div", {class: "r1 skub-ryk"},
