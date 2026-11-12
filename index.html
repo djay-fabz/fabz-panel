@@ -304,6 +304,13 @@ input[type=date]{color-scheme:light dark}
 .ud{margin-bottom:14px;padding:12px 16px}.ud-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;width:100%;background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}.ud-pil{color:var(--svagere)}
 .ud-bar{height:8px;background:var(--linje);border-radius:99px;overflow:hidden;margin-top:8px}.ud-bar div{height:100%;background:var(--accent);border-radius:99px}.ud-ok .ud-bar div{background:var(--ok)}
 .ud-dele{border-top:1px solid var(--linje);margin-top:10px;padding-top:6px;font-size:13.5px}.ud-dele div{display:flex;justify-content:space-between;gap:10px;padding:3px 0}
+.dp{margin-bottom:14px}.dp h2{margin:0 0 10px}.dp-g{display:grid;grid-template-columns:1fr auto;gap:7px 14px;align-items:center}.dp-g>b{text-align:right}
+.dp-anl{background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}.dp-bar{grid-column:1/3;margin-top:-2px}
+.dp-n{background:var(--flade);border-radius:10px;padding:9px 12px;margin-top:12px}
+.dp-in{display:flex;gap:8px;margin-top:12px}.dp-in .input:first-child{flex:1;min-width:0}.dp-kr{width:110px;flex:none}
+.dp-g b.rd-t{color:var(--fejl)}
+@media (max-width:700px){.dp-in{flex-wrap:wrap}.dp-in .input:first-child{flex-basis:100%}.dp-kr{flex:1}}
+.dp-svar{border:1px solid var(--linje);border-radius:10px;padding:10px 12px;margin-top:10px;display:flex;flex-direction:column;gap:4px}.dp-svar.fejl{color:var(--fejl)}
 @media (max-width:700px){.ud-pr{flex-basis:100%;order:3}}
 .uge-tilbud{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--flade);border:1px solid var(--linje);border-radius:12px;padding:10px 14px;margin:0 0 14px}.to>.uge-tilbud{grid-column:1/-1;margin:0;order:-1}
 .ut-prik{width:11px;height:11px;border-radius:50%;background:var(--linje);flex:none}.uge-tilbud.ok{background:var(--ok-blid);border-color:transparent;color:var(--faerdig)}.uge-tilbud.ok .ut-prik{background:var(--ok)}
@@ -499,7 +506,7 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .kj-se{display:inline-flex;align-items:center;gap:5px;color:var(--accent,#2563eb);font-weight:600;font-size:13px;line-height:1;white-space:nowrap;margin-left:auto}
 .kj-pil{width:6px;height:6px;border-right:1.6px solid currentColor;border-bottom:1.6px solid currentColor;transform:translateY(-2px) rotate(45deg)}.kj-f[open] .kj-pil{transform:translateY(1px) rotate(-135deg)}
 .kj-fold{margin-top:12px;border:1px solid var(--linje);border-radius:10px;overflow:hidden}.kj-l{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 12px;border-top:1px solid var(--linje)}.kj-l:first-child{border-top:0}
-.kj-t{display:flex;flex-direction:column;min-width:0}.kj-u{font-size:12.5px;color:var(--svag)}.kj-u .ov-n{display:block}.kj-h{display:flex;gap:16px;align-items:center;white-space:nowrap}.kj-s{background:var(--flade);font-weight:700}
+.kj-t{display:flex;flex-direction:column;min-width:0}.kj-u{font-size:12.5px;color:var(--svag)}.kj-u .ov-n{display:block}.kj-h{display:flex;gap:16px;align-items:center;white-space:nowrap}.kj-s{background:var(--flade);font-weight:700}.kj-0{color:var(--ok);font-weight:600}
 .kj-job{background:none;border:0;padding:8px 12px;color:var(--accent,#2563eb);font-weight:600;font-size:13px;cursor:pointer;border-top:1px solid var(--linje);width:100%;text-align:left}
 .ov-r{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--linje);flex-wrap:wrap}.ov-r:first-child{padding-top:0}.ov-r:last-child{border-bottom:0;padding-bottom:0}.ov-t{flex:1 1 300px;min-width:0}.ov-t b.rd-t{color:var(--fejl)}.ov-n{font-variant-numeric:tabular-nums;color:var(--svag);font-size:13.5px;margin-top:2px}.ov-n b{color:var(--tekst);letter-spacing:.02em}
 .hov{background:var(--fejl-blid);border:0;border-left:6px solid var(--fejl)}.hov h2{margin:0;font-size:20px}.hov p{margin:4px 0 12px}.hov textarea{width:100%;margin-bottom:8px}.hov-plan{margin-top:4px}.hov-svar{margin-top:8px;color:var(--svag)}.hov-svar b{color:var(--tekst)}
@@ -2974,6 +2981,45 @@ function udstyrsLinje() {
       h("span", {class: "muted ud-pr"}, nået ? "✓ Pengene er der" : `mangler ${krKort(pr)} kr. pr. md. til ${kortDato(p.frist)}`), h("span", {class: "ud-pil"}, UD.åben ? "▴" : "▾")),
     UD.åben ? h("div", {class: "ud-bar"}, h("div", {style: `width:${pct}%`})) : null,   // lukket: én linje (Oscar 11/11)
     UD.åben ? h("div", {class: "ud-dele"}, (p.dele || []).map(d => h("div", {}, h("span", {}, d.navn), h("b", {}, `${d.ca ? "ca. " : ""}${krKort(d.kr)}`)))) : null);
+}
+// Dine penge (Oscar 12/11, skitse panel-b-som-firma 3B): regnskabsfyren. Firmakontoen, Husleje d. 1 + Buffer, Nyt anlæg og Skat-puljen i ét kort,
+// den næste flytning, og "Skal du købe noget?", som spørger fabz_raad (samme regnestykke som Claude). Klubjobs er firmapenge: kun skatten holdes adskilt
+const DP = {hvad: "", kr: "", svar: null, venter: false};
+function dinePenge() {
+  const mo = D.mo || {}, RD = mo.raad, sk = mo.skat || {}, P = ØK.P || {}, HB = P.husbuffer, anl = (mo.overblik?.puljer || []).find(x => x.navn === "Nyt anlæg");
+  if (!RD) return null;
+  const F = P.d1 && P.inbox ? d1Fordeling(P, mo) : null, frit = Math.round((RD.loen_d1 ?? RD.frit) - (F ? F.firma : RD.loen_naeste || 0));   // det, der er frit d. 1 (frit_d1), minus det, firmaet giver d. 1. Ikke dagens frit (revision 12/11)
+  const r = (navn, højre, rød, ekstra) => [h("span", {}, navn), h("b", {class: rød ? "rd-t" : ""}, højre), ekstra || null];
+  const rk = [...r("Firmakontoen, frit efter løn d. 1", `${krKort(frit)} kr.`, frit < 0)];
+  if (HB) rk.push(...r("Husleje d. 1 + Buffer", HB.saldo >= HB.maal ? `${krKort(HB.maal)} af ${krKort(HB.maal)} kr. ✓` : `${krKort(HB.saldo)} af ${krKort(HB.maal)} kr.`));
+  if (anl) {   // Nyt anlæg: tryk for delene og det, der mangler pr. md. (samme tal som den gamle udstyrslinje, Oscar 10/11)
+    const mdr = anl.frist ? Math.max(1, (dag(anl.frist).getFullYear() - dag(iDag()).getFullYear()) * 12 + dag(anl.frist).getMonth() - dag(iDag()).getMonth()) : 0, mangler = Math.max(0, (anl.maal || 0) - (anl.saldo || 0));
+    rk.push(h("button", {class: "dp-anl", type: "button", "aria-expanded": UD.åben, onclick: () => { UD.åben = !UD.åben; tegn(); }}, h("span", {}, anl.titel || "Nyt anlæg", h("span", {class: "ud-pil"}, UD.åben ? " ▴" : " ▾"))),
+      h("b", {}, anl.maal ? `${krKort(anl.saldo || 0)} af ${krKort(anl.maal)} kr.` : `${krKort(anl.saldo || 0)} kr.`),
+      anl.maal ? h("div", {class: "ud-bar dp-bar"}, h("div", {style: `width:${Math.min(100, 100 * (anl.saldo || 0) / anl.maal)}%`})) : null,
+      UD.åben ? h("div", {class: "ud-dele dp-bar"}, mdr && mangler ? h("div", {}, h("span", {}, `Mangler pr. md. til ${kortDato(anl.frist)}`), h("b", {}, `${krKort(Math.round(mangler / mdr / 10) * 10)} kr.`)) : null,
+        (anl.dele || []).map(x => h("div", {}, h("span", {}, x.navn), h("b", {}, `${x.ca ? "ca. " : ""}${krKort(x.kr)}`)))) : null);
+  }
+  const skM = Math.round(sk.mangler_paa_kontoen || 0);
+  rk.push(...r("Skat-puljen", skM > 0 ? `mangler ${krKort(skM)} kr.` : "✓ Dækket", skM > 0));
+  // næste flytning: det næste klubjob, der kommer, og hvor resten går hen (samme regel som klubjob-linjen)
+  const kj = (D.jobstatus?.jobs || []).filter(j => j.maade === "overfoersel" && j.status === "aaben" && !j.kommet && j.plan && (j.forventet || j.dato) >= iDag()).sort((a, b) => (a.forventet || a.dato).localeCompare(b.forventet || b.dato))[0];
+  let næste = null;
+  if (kj) { const rest = kj.plan.til_loen, plads = HB ? Math.max(0, HB.maal - HB.saldo) : rest, hvem = `${kj.navn.split(" (")[0]} ${kortDato(kj.dato)} kommer.`;
+    næste = HB && plads <= 0 && anl ? `${hvem} Buffer er fuld, så resten går til Nyt anlæg.` : rest > plads && anl ? `${hvem} ${krKort(plads)} kr. til Husleje d. 1 + Buffer og ${krKort(rest - plads)} kr. til Nyt anlæg.` : `${hvem} Resten går til Husleje d. 1 + Buffer.`; }
+  const spørg = async () => { const b = Math.round(Number(String(DP.kr).replace(/\./g, "").replace(",", ".")));
+    if (!(b > 0)) return alert("Skriv beløbet i kr.");
+    DP.venter = true; DP.svar = null; tegn();
+    try { const sv = await kørOgVent("raad", [String(b), ...(F ? [`--d1=${Math.round(F.B)}`, `--husleje=${Math.round(F.saxo)}`] : [])]);
+      DP.svar = !sv ? {fejl: "Intet svar efter 4 minutter."} : sv.status === "FEJL" ? {fejl: sv.fejl} : {hvad: DP.hvad.trim(), kr: b, linjer: sv.info.filter(l => !/^OK/.test(l))};
+    } catch (e) { DP.svar = {fejl: e.message}; }
+    DP.venter = false; tegn(); };
+  return h("div", {class: "kort2 dp"}, h("h2", {}, "Dine penge"), h("div", {class: "dp-g"}, rk),
+    næste ? h("div", {class: "dp-n"}, h("b", {}, "Næste: "), næste) : null,
+    h("div", {class: "dp-in"}, h("input", {class: "input", placeholder: "Skal du købe noget?", value: DP.hvad, oninput: e => { DP.hvad = e.target.value; }}),
+      h("input", {class: "input dp-kr", inputmode: "numeric", placeholder: "kr.", value: DP.kr, oninput: e => { DP.kr = e.target.value; }}),
+      h("button", {class: "btn", type: "button", disabled: DP.venter, onclick: spørg}, DP.venter ? "Regner…" : "Spørg")),
+    DP.svar ? h("div", {class: "dp-svar" + (DP.svar.fejl ? " fejl" : "")}, DP.svar.fejl ? DP.svar.fejl : [h("b", {}, `${DP.svar.hvad ? DP.svar.hvad + ", " : ""}${krKort(DP.svar.kr)} kr.`), ...DP.svar.linjer.map(l => h("div", {}, l))]) : null);
 }
 // Ugens tilbud (Oscar 10/11): 1 nyt tilbud pr. uge på et job i januar-marts 2027, til og med februar. Tæller forespørgsler, der har fået tilbud (eller er booket) i ugen
 const UT_MAAL = 1, UT_FRA = "2027-01-01", UT_TIL = "2027-03-31", UT_SLUT = "2027-02-28";
@@ -5760,8 +5806,10 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     const B = P.d1?.beloeb == null ? P.d1?.beloeb : P.d1.beloeb + vU;   // Victoria under budgettet: Oscar mangler forskellen til d. 1 (revision 11/11)
     if (rd_?.loen_dato && lk && B) { const A = rd_.loen_d1 ?? rd_.loen_naeste ?? 0, Y = lk.kr, M = B - F_.saxo - A - Y, D1 = kortDato(rd_.loen_dato), af100 = x => Math.ceil(x / 100) * 100;
       const forf = (lk.forfaldne || []).map(q => q.navn).join(" og "), vT = vU ? ` ${krKort(vU)} kr. mere, fordi ${P.victoria.navn} har sendt mindre.` : "";
-      if (M > 0) gør.push(trin("rd", [h("b", {}, `Der mangler ${krKort(af100(M))} kr. til regningerne d. ${D1}.`), ` Firmakontoen kan give ${krKort(A)} kr., og ${krKort(Y)} kr. ${lk.kommet >= Y ? "er kommet" : "kommer"} fra klubjobs.` + (forf ? ` ${forf} er forfalden og tæller ikke med.` : "") + vT]));
-      else if (iDag() >= (P.d1.vis_fra || rd_.loen_vis_fra || rd_.loen_dato)) gør.push(trin("g", [h("b", {}, `Til d. ${D1}:`), ` Tag ${krKort(F_.firma)} kr. fra firmakontoen. ${krKort(Y)} kr. ${lk.kommet >= Y ? "er kommet" : "kommer"} på Lønkonto+ fra klubjobs. ${F_.saxo ? ` ${krKort(F_.saxo)} kr. kommer fra Saxo.` : ""} Så er regningerne på ${krKort(B)} kr. dækket.` + vT])); } }
+      // klubjobs er firmapenge (Oscar 12/11, skitse panel-b-som-firma): de lander i Husleje d. 1, ingen særskilt løn fra klubjobs. Regnestykket er det samme
+      const hl = F_.saxo + Y, hlT = !Y ? `${krKort(F_.saxo)} kr. ligger klar i Husleje d. 1.` : F_.saxo ? `${krKort(F_.saxo)} kr. ligger klar i Husleje d. 1, og ${krKort(Y)} kr. kommer dertil.` : `${krKort(Y)} kr. kommer til Husleje d. 1.`;
+      if (M > 0) gør.push(trin("rd", [h("b", {}, `Der mangler ${krKort(af100(M))} kr. til regningerne d. ${D1}.`), ` Firmakontoen kan give ${krKort(A)} kr.` + (hl ? ` ${hlT}` : "") + (forf ? ` ${forf} er forfalden og tæller ikke med.` : "") + vT]));
+      else if (iDag() >= (P.d1.vis_fra || rd_.loen_vis_fra || rd_.loen_dato)) gør.push(trin("g", [h("b", {}, `Til d. ${D1}:`), ` Tag ${krKort(F_.firma)} kr. fra firmakontoen.` + (hl ? ` ${hlT}` : "") + ` Så er regningerne på ${krKort(B)} kr. dækket.` + vT])); } }
   // 2 dage før en faktura forfalder (Oscar 2/11): gul, så skatten er klar, når pengene kommer
   // ✓ Overført på hvert banner (Oscar 5/11: pengene var kommet, men der var ikke noget at trykke på); kontoudtoget ser pengene: "har betalt"
   // skat fra job, hvor pengene ER kommet, men beløbet ikke er overført (Oscar 5/11): rød, med job og beløb, ét tryk. Også når jobbet mangler andet, fx B-indkomst.dk (Ranum 19/6)
@@ -6232,10 +6280,13 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     const jp = jobNr(x.id)?.plan, f = FD.fordelt[x.id] || {}, skat = f.skat ? f.skat.kr : jp ? skatDelKr(jp.skat) : skatDel(x.beloeb), rest = jp ? jp.til_loen + jp.skat - skat : x.beloeb - skat;   // jobbets plan: honoraret er hjælpernes penge og skal ikke til Buffer (revision 5/11)
     const plads = HB ? HB.maal - HB.saldo : (P.buffer?.maal || 0) - (P.buffer?.saldo || 0);
     const tilBuf = Math.max(0, Math.min(rest, plads + (f.buffer?.kr || 0))), tilOps = rest - tilBuf;
-    const dele = [["skat", "Skat-puljen", skat], ["buffer", HB ? "Husleje d. 1 + Buffer" : "Buffer", tilBuf], ["opsparing", P.opsparing?.navn || "Opsparing", tilOps]].filter(d => d[2] > 0 && !(skStop && d[0] === "skat"));   // skatten går til Skat-puljen, også når den venter på en kunde (Oscar 12/11: Lønkonto+ skal være tom). Kun ikke-afstemte tal holder den tilbage
+    // over Husleje d. 1 + Buffer: Nyt anlæg i Saxo (Oscar 12/11: "først fylde den helt op", så spare op til udstyr). Uden puljen som før: Opsparing
+    const anlæg = (mo.overblik?.puljer || []).some(q => q.navn === "Nyt anlæg");
+    const dele = [["skat", "Skat-puljen", skat], ["buffer", HB ? "Husleje d. 1 + Buffer" : "Buffer", tilBuf], anlæg ? ["anlaeg", "Nyt anlæg", tilOps] : ["opsparing", P.opsparing?.navn || "Opsparing", tilOps]].filter(d => d[2] > 0 && !(skStop && d[0] === "skat"));   // skatten går til Skat-puljen, også når den venter på en kunde (Oscar 12/11: Lønkonto+ skal være tom). Kun ikke-afstemte tal holder den tilbage
     if ((!dele.length || dele.every(d => f[d[0]])) && !honÅ) return;
     medLinje.add(x.id);
     const flyt = ([del, n, b]) => { const br = betFor(x); if (br && br.status !== "faerdig") godkend(br, br.dato >= iDag());   // kun én gang, også når flere dele trykkes samlet   // lukker også robottens opgave "Tjek at pengene er kommet"
+      if (del === "anlaeg") kør("pulje", ["flyt", "Nyt anlæg", String(b)], {tekst: `Nyt anlæg +${krKort(b)} kr.`, efter: ["mo"], med: () => puljeMed("Nyt anlæg", b)});
       if (del === "skat") kør("pulje", ["flyt", "Skat", String(b), `--art=B-indkomst`, `--job=${(D.betalinger || []).find(q => q.indtaegt_id === x.id)?.job_noegle || `${x.dato}|${x.fra.toLowerCase()}`}`], {tekst: `Skat-puljen +${krKort(b)} kr.`, efter: ["mo"], med: () => puljeMed("Skat", b)});
       privatSend({kommando: "fordel", id: String(x.id), del, kr: b, job_kr: x.beloeb}, `${x.fra}: ${krKort(b)} kr. til ${n}`); };
     // pengene står på Lønkonto+, til de flyttes: fordelingen står i Overførsler med det samme, med konto og reg.nr. (Oscar 5/11)
@@ -6321,7 +6372,8 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
         h("div", {class: "kj-fold"},
           saxo ? række("Til Saxo", [dele.map(d => `${krKort(d[2])} kr. ${d[1]}`).join(" · "), nrT(P0.kontonr?.Saxo) ? h("span", {class: "ov-n"}, nrT(P0.kontonr?.Saxo)) : null], saxo, saxoÅ ? knap("✓ Overført", kunSaxo, true) : færdig("Overført")) : null,
           hon.map(o => række(`Til ${o.navn}`, "Honorar", o.kr, o.seddel_betalt ? færdig("Sendt") : knap("✓ Sendt", () => kunHon(o)))),
-          bliver ? række("Bliver på Lønkonto+", skStop ? "Skatten venter, til tallene er afstemt" : "Omkostninger på jobbet", bliver, null) : null,
+          bliver ? række("Bliver på Lønkonto+", skStop ? "Skatten venter, til tallene er afstemt" : "Omkostninger på jobbet", bliver, null)
+            : h("div", {class: "kj-l kj-0"}, h("span", {}, "Tilbage på Lønkonto+"), h("span", {}, "0 kr.")),   // Oscar 12/11: Lønkonto+ skal være tom (skitse panel-b-som-firma)
           h("div", {class: "kj-l kj-s"}, h("span", {}, `${x.fra} betalte`), h("span", {}, `${krKort(x.beloeb)} kr.`)),
           r ? h("button", {class: "kj-job", type: "button", onclick: () => visJobNøgle(r.job_noegle)}, "Åbn jobbet ›") : null))));
   });
@@ -6428,7 +6480,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     fk.alder ? hRk([fk.alder, `Opdater kontoudtoget (${fk.gl} dage gammelt)`, knap("Opdater →", mål("guide:bank"))]) : null,
     h("div", {class: "rd-l"}, h("span", {}, "Saldo ", kilde("kontoudtog", RD.saldo_dato)), h("b", {}, `${krKort(RD.saldo)} kr.`)),
     h("div", {class: "sg-under"}, fk.poster.map(fkPost))] : [];
-  $("rod").replaceChildren(h("div", {class: "side bred skat-side" + (moGl ? " mo-gl" : "")}, top, msKort, hovKort, d1Kort, ovKort0, bjælker, moGl ? null : sælgKort, udstyrsLinje(),   // Oscar 11/11: under "måneder dækket", ikke på I dag
+  $("rod").replaceChildren(h("div", {class: "side bred skat-side" + (moGl ? " mo-gl" : "")}, top, msKort, hovKort, d1Kort, ovKort0, bjælker, moGl ? null : sælgKort, moGl ? null : dinePenge() || udstyrsLinje(),   // Oscar 11/11: under "måneder dækket", ikke på I dag
      
     h("div", {class: "sg-linjer"},
       linje("mangler", null, nMangler ? h("span", {}, "Mangler noget ", h("span", {class: "pill y"}, String(nMangler))) : "Mangler noget", manglerDel()),
