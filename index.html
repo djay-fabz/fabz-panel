@@ -282,6 +282,7 @@ input[type=date]{color-scheme:light dark}
 .pl-dag{display:flex;align-items:center;gap:8px;color:var(--svag);font-size:13.5px;margin:2px 0 6px}.pl-ret{background:none;border:0;color:var(--svagere);font:inherit;cursor:pointer;padding:2px 6px;border-radius:6px}.pl-ret:hover{color:var(--accent)}
 .lg .planpunkt>.input:first-child{font-weight:500;color:var(--tekst)}.pl-mins{font-size:12px}.pl-mins .min{font-size:12.5px;color:var(--svagere)}
 .pdf-laast{opacity:.55;pointer-events:none}
+.fast-r{border:1px solid var(--linje);background:var(--flade);border-radius:12px;padding:10px 14px;margin-top:12px}.fast-top{display:flex;align-items:baseline;gap:10px;width:100%;background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}.fast-top b{font-size:15px}.fast-r .planvalg{margin-top:8px}
 .pd{margin-top:14px}.pd-k{padding:12px 16px;margin:0}.pd-top{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}.pd-ind{flex:1;min-width:220px}
 .pd-r{display:flex;align-items:center;gap:10px;padding:3px 0}.pd-i{width:14px;color:var(--ok);font-weight:600}.pd-r.pd-mg .pd-i,.pd-r.pd-mg .pd-t{color:var(--adv)}.pd-t{flex:1;min-width:0}
 .pd-kort{display:flex;align-items:center;gap:10px;border-top:1px solid var(--linje);margin-top:10px;padding-top:10px}.pd-kort .pd-r{flex:1}
@@ -3854,6 +3855,7 @@ function visOpgaver() {
       h("button", {class: "btn primaer", type: "button", onclick: () => { OP.vis = "ny"; OP.ny = {prioritet: "Mellem", kategori: "Internet opgave"}; tegn(); }}, "+ Ny opgave")),
     h("div", {class: "chips"}, ["Åbne", "I dag", "Venter", "Færdige"].map(f =>
       h("button", {type: "button", class: "chip" + (OP.filter === f ? " aktiv" : ""), onclick: () => { OP.filter = f; tegn(); }}, f))),
+    OP.filter !== "Færdige" ? salgFastRække() : null,
     OP.filter !== "Færdige" ? lukBoks() : null,
     h("div", {class: "kort", style: "margin-top:14px"}, liste.length ? liste.map(o => {
       const krav = o.faerdig_naar || [], ok = krav.filter(k => k.ok).length;
@@ -3882,6 +3884,24 @@ function visOpgaver() {
     OP.vis === "ny" ? nyOpgaveForm() : OP.vis === "plan" ? planlægPanel() : OP.vis === "opgave" ? opgaveDetalje(D.opgaver.find(o => o.id === OP.valgt))
       : tom("Vælg en opgave, lav en ny, eller planlæg dagen."));
   $("rod").replaceChildren(h("div", {class: "to"}, venstre, højre));
+}
+// ---------- Salg som fast række øverst i Opgaver, og sprint 2-4 samme dag (Oscar 12/11, skitse panel-opgaver-faste-haster) ----------
+// Under planlægning: + Før frokost / + Efter frokost / + Hvis der er tid lægger næste sprint i planen (ekstra_sprint). Salg-kortet siger så "1 sprint mere i dag"
+const erSprintPunkt = x => /^Salg 30 min \(sprint (\d+) af (\d+)\)$/.test((x?.tekst || "").trim());
+function næsteSprintNr(p) {
+  const nr = ["foer_frokost", "efter_frokost", "hvis_tid"].flatMap(k => p[k]).filter(erSprintPunkt).map(x => +x.tekst.match(/sprint (\d+)/)[1]);
+  return nr.length ? Math.max(...nr) + 1 : ugeSprints(p.dato, true) + 1;
+}
+function salgFastRække() {
+  const idag = iDag(), å = D.opgaver.filter(o => erSalgRing(o) && o.job_opgave !== "salg" && !["Færdig", "Venter"].includes(o.status));
+  const over = å.filter(o => o.deadline && o.deadline < idag).length, mål = sprintMål(), n = ugeSprints(idag);
+  const p = OP.vis === "plan" ? OP.plan : null, næste = p ? næsteSprintNr(p) : null;
+  const valg = p ? (p.enkelt ? [["foer_frokost", "+ Plan"], ["hvis_tid", "+ Hvis der er tid"]] : [["foer_frokost", "+ Før frokost"], ["efter_frokost", "+ Efter frokost"], ["hvis_tid", "+ Hvis der er tid"]]) : [];
+  const læg = hv => { const nl = p[hv].findIndex(x => /^Nedlukning/.test(x.tekst || "")); p[hv].splice(nl < 0 ? p[hv].length : nl, 0, {tekst: `Salg 30 min (sprint ${næste} af ${mål})`, min: SPRINT_MIN, ekstra_sprint: true}); tegn(); };
+  return h("div", {class: "fast-r"},
+    h("button", {class: "fast-top", type: "button", onclick: () => { fane = "salg"; SG.alleÅben = false; tegn(); window.scrollTo(0, 0); }},
+      h("b", {}, "Salg"), h("span", {class: "muted lille"}, `${n} af ${mål} sprints i denne uge · ${å.length} opkald` + (over ? `, ${over} over frist` : "")), h("span", {class: "spacer"}), h("span", {class: "muted"}, "›")),
+    p && næste <= mål ? h("div", {class: "planvalg"}, valg.map(([hv, t]) => h("button", {class: "btn ghost lille", type: "button", onclick: () => læg(hv)}, t))) : null);
 }
 // "Skal de lukkes?" (Oscar 8/11, skitse panel-uden-forsinket): morgenrobotten (fabz.py oprydning) markerer forældede opgaver med luk_spoerg.
 // Luk gør dem Færdige med noten "lukket: ikke længere aktuel" (intet slettes), Behold giver 7 dage mere. Opgaver om penge kommer aldrig her
@@ -4147,7 +4167,7 @@ function planDagLinje(p) {   // "Ons 11/11 · 09.50-16.00 · frokost efter kalen
 // "Dynaudio A/S" → "Dynaudio", "Skovby Møbelfabrik A/S" → "Skovby", "DK Company A/S" → "DK Company" (Oscar 11/11: korte navne, så linjen ikke klippes)
 const kortFirma = n => { const o = String(n || "").replace(/\s*\(.*?\)/g, "").replace(/[,\s]+(A\/S|ApS|I\/S|IVS|K\/S|P\/S|a\/s|aps)\.?$/i, "").trim().split(/\s+/);
   return o.length > 1 && o[0].length > 3 && o[1].length >= 6 ? o[0] : o.slice(0, 2).join(" "); };
-const erSalgPunkt = x => /^(Salg 30 min \(sprint \d+ af \d+\)|Ring til \d+ \(Salg\))$/.test((x.tekst || "").trim()) || (x.id != null && D.opgaver.some(o => o.id === x.id && o.job_opgave === "salg"));
+const erSalgPunkt = x => !x?.ekstra_sprint && /^(Salg 30 min \(sprint \d+ af \d+\)|Ring til \d+ \(Salg\))$/.test((x.tekst || "").trim()) || (x.id != null && D.opgaver.some(o => o.id === x.id && o.job_opgave === "salg"));
 function salgFravalg(p, x) {   // "Ikke i dag": en kort grund, punktet streges over, og fabz.py plan lukker dagens salgsopgave med grunden (fredagsstatus)
   if (p.salg_fravalg) return h("div", {class: "pl-salg"}, h("span", {class: "muted", style: "flex:1"}, "Ikke i dag: " + p.salg_fravalg),
     h("button", {class: "pl-lnk", type: "button", onclick: () => { delete p.salg_fravalg; tegn(); }}, "Fortryd"));
@@ -5454,6 +5474,11 @@ function salgDagKort(påIDag = false) {   // påIDag (Oscar 8/11: "jeg vil se de
       h("div", {class: "sd-bar sp-bar"}, h("div", {style: `width:${Math.min(100, 100 * (nu - kører.start) / (kører.min * 6e4))}%`})), liste()];
   }
   if (uge >= mål) return [færdig(`✓ Ugens salg er klaret · ${uge} af ${mål} sprints`, "Ét sprint mere", SPRINT_MIN)];
+  // Oscar 12/11: står der flere sprints i dagens plan, siger kortet "1 sprint mere i dag" i stedet for færdig
+  const dp_ = (D.dagsplaner || []).find(x => x.dato === idag), planSprints = 1 + (dp_?.plan_punkter || []).filter(p => p.ekstra_sprint).length;
+  const iDagKlaret = salgSprints().filter(s => s.dato === idag && sprintKlaret(s)).length;
+  if (dagsSprintKlaret(idag) && iDagKlaret < planSprints && uge < mål) { const rest = planSprints - iDagKlaret;
+    return [færdig(`Du har ${rest} sprint mere i dag · ${ringetOp(idag)} ringet op indtil nu`, `Start sprint ${uge + 1} af ${mål}`, SPRINT_MIN)]; }
   if (dagsSprintKlaret(idag)) return [færdig(`✓ 30 min salg klaret · ${ringetOp(idag)} ringet op`, "10 min mere", EKSTRA_MIN)];
   // ugedagene: klaret ✓, i dag, og de dage der ikke skal bruges i denne uge er dæmpede
   const mandag = ugeMandag(idag), hverdag = (dag(idag).getDay() + 6) % 7 < 5;
