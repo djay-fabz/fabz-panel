@@ -4638,7 +4638,7 @@ function tbBeregn(T) {   // samme regler som lav_tilbud.py. Giver {fejl} eller a
   const betaling = erhverv ? [
     `Der betales ikke depositum. Aftalen er bindende, og datoen er jeres, når I har bekræftet ${ob ? "denne ordrebekræftelse" : "ordrebekræftelsen"} skriftligt.`,
     "Det fulde beløb faktureres efter arrangementet med betaling netto 8 dage.", afl,
-    "Forlængelse på aftenen: 3.000 kr. ekskl. moms pr. påbegyndt time.",
+    "Udgifter, der hører direkte til jobbet, fx parkering, dækkes af kunden.",   // Oscar 12/11: ingen forlængelse på firmafester, kun privat. Samme tekst som lav_tilbud.py
     "KODA og Gramex ved firmafester er kundens eller feststedets ansvar."] : [
     `Depositum på 20 % (${tbKr(dep)}) faktureres ved bekræftelse. Datoen er jeres, når depositum er betalt. Depositum refunderes ikke.`,
     `Restbeløbet (${tbKr(total - dep)}) betales senest ${tbDato(tbMinus(ev, 14))}.`, afl,
