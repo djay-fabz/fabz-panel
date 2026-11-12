@@ -3561,9 +3561,12 @@ function visMashups() {
       h("select", {class: "input", style: "width:auto", onchange: e => { fs = Number(e.target.value); }}, faser.map((x, i) => h("option", {value: i + 1, selected: i + 1 === fase}, `Fase ${i + 1}: ${x.navn}`))),
       h("button", {class: "btn primaer", type: "button", onclick: () => kør("mashup-ret", ["--naeste", t, "--fase", String(fs)], {tekst: "Mashups rettet", efter, med: () => { m.naeste = t; m.fase = fs; MU.ret = false; }})}, "Gem"),
       h("button", {class: "mu-lnk", type: "button", onclick: () => { MU.ret = false; tegn(); }}, "Fortryd")); };
-  const edits = m.numre.filter(n => n.type === "edit" && n.sendt_premise).length, bedømt = m.numre.filter(n => n.type === "mashup" && muDom(n.titel)).length;
+  // Milepæle i forløbet "lær ved at kopiere" (Oscar 12/11): fase 1 = Chris Deluxe-videoen, fase 2 = Kun For Mig x 100, egne = numre startet fra en idé
+  const mash = m.numre.filter(n => n.type === "mashup"), egne = mash.filter(n => n.fra_ide);
+  const påJob = mash.filter(n => n.status === "Prøvet på job" || muDom(n.titel)).length, sendt = egne.filter(n => n.sendt_premise).length, bedømt = egne.filter(n => muDom(n.titel)).length;
   const mp = (ok, t, x) => h("span", {}, (ok ? "● " : "○ ") + t + (!ok && x ? ` (${x})` : ""));
-  const mile = h("div", {class: "mu-mile"}, mp(fase >= 3, "Ableton genopfrisket"), mp(edits >= 2, "2 edits sendt til Premise", edits), mp(bedømt >= 3, "3 mashups bedømt", bedømt));
+  const mile = h("div", {class: "mu-mile"}, mp(fase >= 2, "Chris Deluxe-mashup lavet"), mp(fase >= 3, "1. mashup kopieret og A/B-tjekket"),
+    mp(påJob >= 3, "3 mashups spillet på job", påJob), mp(sendt >= 2, "2 egne sendt til Premize", sendt), mp(bedømt >= 3, "3 egne bedømt", bedømt));
   const fokus = MU.ret ? h("div", {class: "mu-fokus"}, h("div", {class: "mu-o"}, f.overskrift || ""), retFelt())
     : fd && !kører ? h("div", {class: "mu-fokus fd"},
         h("div", {class: "mu-o"}, "★ Ugens mål er nået"),
