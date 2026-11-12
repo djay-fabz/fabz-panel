@@ -4839,25 +4839,34 @@ const LAGER_KOORD = {lat: 56.16282, lon: 9.55481}, KØRSEL_GRÆNSE = 50, KM_PRIS
 const TBK = new Map();   // sted -> {status: "henter"|"ok"|"fejl", fugl, km}
 const fugleflugt = (a, b) => { const r = Math.PI / 180, dLat = (b.lat - a.lat) * r, dLon = (b.lon - a.lon) * r;
   const x = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLon / 2) ** 2; return 6371 * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x)); };
+const medFrist = (ms) => { const c = new AbortController(); setTimeout(() => c.abort(), ms); return c.signal; };
+async function tbGeokod(sted) {   // Photon først (forstår stednavne), Nominatim som reserve, når Photon hænger eller intet finder (12/11: Photon svarede ikke)
+  try { const f = (await hentForslag(sted, medFrist(6000)))[0]; if (f) return f; } catch {}
+  try {
+    const r = await (await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=dk&q=${encodeURIComponent(sted)}`, {signal: medFrist(8000)})).json();
+    if (r[0]) return {lat: Number(r[0].lat), lon: Number(r[0].lon)};
+  } catch {}
+  return null;
+}
 async function tbKørselBeregn() {
   const sted = (TB?.sted || "").trim();
   if (!sted || TBK.has(sted)) return;
-  TBK.set(sted, {status: "henter"}); if (fane === "tilbud") tegn();
+  TBK.set(sted, {status: "henter"}); tbKørselOpdater();
   let ud;
-  try {
-    const f = (await hentForslag(sted))[0];
-    if (!f) ud = {status: "fejl"};
-    else {
-      const fugl = Math.round(fugleflugt(LAGER_KOORD, f));
-      ud = {status: "ok", fugl};
-      if (fugl > KØRSEL_GRÆNSE) {
-        try { const r = await (await fetch(`https://router.project-osrm.org/route/v1/driving/${LAGER_KOORD.lon},${LAGER_KOORD.lat};${f.lon},${f.lat}?overview=false`)).json();
-          ud.km = Math.round(2 * r.routes[0].distance / 1000); } catch { ud.vejFejl = true; }
-      }
+  const f = await tbGeokod(sted);
+  if (!f) ud = {status: "fejl"};
+  else {
+    const fugl = Math.round(fugleflugt(LAGER_KOORD, f));
+    ud = {status: "ok", fugl};
+    if (fugl > KØRSEL_GRÆNSE) {
+      try { const r = await (await fetch(`https://router.project-osrm.org/route/v1/driving/${LAGER_KOORD.lon},${LAGER_KOORD.lat};${f.lon},${f.lat}?overview=false`, {signal: medFrist(10000)})).json();
+        ud.km = Math.round(2 * r.routes[0].distance / 1000); } catch { ud.vejFejl = true; }
     }
-  } catch { ud = {status: "fejl"}; }
-  TBK.set(sted, ud); if (fane === "tilbud") tegn();
+  }
+  TBK.set(sted, ud); tbKørselOpdater();
 }
+// kun linjen under Sted tegnes om, så et felt, man er ved at skrive i, ikke mister markøren
+function tbKørselOpdater() { const el = document.getElementById("tb-kørsel-plads"); if (fane === "tilbud" && el) el.replaceChildren(...[tbKørselLinje()].filter(Boolean)); }
 function tbKørselLinje() {
   const sted = (TB.sted || "").trim(), k = sted && TBK.get(sted);
   if (!k) return null;
@@ -4928,7 +4937,7 @@ function visTilbud() {
         felt("Gæster", t("gaester", {placeholder: "80"}))),
       datoAdv,
       felt("Sted", t("sted", {placeholder: "Marselis Hotel, Strandvejen 25, 8000 Aarhus", onchange: () => tbKørselBeregn()})),
-      tbKørselLinje(),
+      h("div", {id: "tb-kørsel-plads"}, tbKørselLinje()),
       felt("Tider", t("tider", {placeholder: "Opstilling fra 17.00, musik 19.00-01.00"})),
       advBoks,
       h("div", {class: "overskrift", style: "margin-top:18px"}, "I får"),
