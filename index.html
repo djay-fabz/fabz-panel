@@ -6232,7 +6232,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     const jp = jobNr(x.id)?.plan, f = FD.fordelt[x.id] || {}, skat = f.skat ? f.skat.kr : jp ? skatDelKr(jp.skat) : skatDel(x.beloeb), rest = jp ? jp.til_loen + jp.skat - skat : x.beloeb - skat;   // jobbets plan: honoraret er hjælpernes penge og skal ikke til Buffer (revision 5/11)
     const plads = HB ? HB.maal - HB.saldo : (P.buffer?.maal || 0) - (P.buffer?.saldo || 0);
     const tilBuf = Math.max(0, Math.min(rest, plads + (f.buffer?.kr || 0))), tilOps = rest - tilBuf;
-    const dele = [["skat", "Skat-puljen", skat], ["buffer", HB ? "Husleje d. 1 + Buffer" : "Buffer", tilBuf], ["opsparing", P.opsparing?.navn || "Opsparing", tilOps]].filter(d => d[2] > 0 && !((skV || skStop) && d[0] === "skat"));   // skatten venter: den del bliver på Lønkonto+
+    const dele = [["skat", "Skat-puljen", skat], ["buffer", HB ? "Husleje d. 1 + Buffer" : "Buffer", tilBuf], ["opsparing", P.opsparing?.navn || "Opsparing", tilOps]].filter(d => d[2] > 0 && !(skStop && d[0] === "skat"));   // skatten går til Skat-puljen, også når den venter på en kunde (Oscar 12/11: Lønkonto+ skal være tom). Kun ikke-afstemte tal holder den tilbage
     if ((!dele.length || dele.every(d => f[d[0]])) && !honÅ) return;
     medLinje.add(x.id);
     const flyt = ([del, n, b]) => { const br = betFor(x); if (br && br.status !== "faerdig") godkend(br, br.dato >= iDag());   // kun én gang, også når flere dele trykkes samlet   // lukker også robottens opgave "Tjek at pengene er kommet"
@@ -6321,7 +6321,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
         h("div", {class: "kj-fold"},
           saxo ? række("Til Saxo", [dele.map(d => `${krKort(d[2])} kr. ${d[1]}`).join(" · "), nrT(P0.kontonr?.Saxo) ? h("span", {class: "ov-n"}, nrT(P0.kontonr?.Saxo)) : null], saxo, saxoÅ ? knap("✓ Overført", kunSaxo, true) : færdig("Overført")) : null,
           hon.map(o => række(`Til ${o.navn}`, "Honorar", o.kr, o.seddel_betalt ? færdig("Sendt") : knap("✓ Sendt", () => kunHon(o)))),
-          bliver ? række("Bliver på Lønkonto+", skV ? `Til restskatten senest ${kortDato(skV.frist)}` : skStop ? "Skatten venter, til tallene er afstemt" : "Omkostninger på jobbet", bliver, null) : null,
+          bliver ? række("Bliver på Lønkonto+", skStop ? "Skatten venter, til tallene er afstemt" : "Omkostninger på jobbet", bliver, null) : null,
           h("div", {class: "kj-l kj-s"}, h("span", {}, `${x.fra} betalte`), h("span", {}, `${krKort(x.beloeb)} kr.`)),
           r ? h("button", {class: "kj-job", type: "button", onclick: () => visJobNøgle(r.job_noegle)}, "Åbn jobbet ›") : null))));
   });
