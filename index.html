@@ -435,7 +435,7 @@ button.r:disabled{cursor:default;opacity:.7}
 .rk .fl{margin:0;flex:1}
 textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .info{margin-top:12px}.pre{white-space:pre-wrap}
-.tb-linje{display:grid;grid-template-columns:minmax(0,1fr) 110px 36px;gap:8px;margin-bottom:8px}
+.tb-linje{display:grid;grid-template-columns:minmax(0,1fr) 110px 36px;gap:8px;margin-bottom:8px}.tb-bel{position:relative;display:block}.tb-bel .input{width:100%}.tb-rabat .tb-bel .input{padding-left:22px}.tb-minus{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--svag);pointer-events:none}
 .tb-r{display:flex;justify-content:space-between;gap:12px;padding:2px 0}
 .tb-adv{margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--adv-blid);color:var(--adv)}
 .bet-omk{border-top:1px solid var(--linje);margin-top:10px;padding-top:10px}.bet-omk-r{display:flex;gap:8px;align-items:center;margin-top:6px}.bet-omk-n{flex:1;min-width:0}
@@ -4596,6 +4596,15 @@ const tbNy = () => ({type: "tilbud", kundetype: "erhverv", dato: iDag(), firma: 
   linjer: [{tekst: "", beloeb: ""}], km: "", bro: "", intro: "", noter: "", gaester_ok: false});
 let TB = null;
 const tbGem = () => lager.set(TB_KEY, JSON.stringify(TB));
+// Oscar 12/11: "Aftalt prisnedslag skal være en mulighed når man laver en linje". Det gamle felt (T.rabat) flyttes til en minuslinje
+function tbFlytRabat(T) {
+  if (!T) return T;
+  T.linjer ||= [];
+  T.linjer.forEach(l => { if (!l.rabat && erRabatLinje(l)) { l.rabat = true; l.beloeb = String(Math.abs(tbTal(l.beloeb)) || l.beloeb); } });
+  if (tbTal(T.rabat)) { T.linjer.push({tekst: "Aftalt prisnedslag", beloeb: String(Math.abs(tbTal(T.rabat))), rabat: true}); }
+  T.rabat = "";
+  return T;
+}
 const tbKr = n => { const f = Math.floor(n), r = n - f === 0.5 ? (f % 2 ? f + 1 : f) : Math.round(n); return String(r).replace(/\B(?=(\d{3})+(?!\d))/g, ".") + " kr."; };   // som Pythons round()
 const tbDato = iso => { const d = dag(iso); return `${d.getDate()}. ${MDL[d.getMonth()]} ${d.getFullYear()}`; };
 const tbMinus = (iso, n) => plusDage(iso, -n);
@@ -4604,7 +4613,7 @@ const tbTal = s => { const t = String(s ?? "").replace(/\s|kr\.?/gi, "").replace
 
 const TB_INTRO_T = "Her er mit tilbud ud fra vores snak. Herunder står præcis, hvad I får, og hvad det koster.";
 const TB_INTRO_OB = "Hermed bekræfter jeg aftalen. Herunder står alt, vi har aftalt, så I kan sende det direkte videre internt.";
-const erRabatLinje = l => tbTal(l.beloeb) < 0 || /^\s*(aftalt\s+)?(rabat|prisnedslag)\b/i.test(l.tekst || "");
+const erRabatLinje = l => !!l.rabat || tbTal(l.beloeb) < 0 || /^\s*(aftalt\s+)?(rabat|prisnedslag)\b/i.test(l.tekst || "");
 function tbBeregn(T) {   // samme regler som lav_tilbud.py. Giver {fejl} eller alle tal og tekster
   const erhverv = T.kundetype === "erhverv", ob = T.type === "ordrebekraeftelse";
   const idag = T.dato || iDag(), ev = T.evdato;
@@ -4613,10 +4622,10 @@ function tbBeregn(T) {   // samme regler som lav_tilbud.py. Giver {fejl} eller a
   if (!(firma || T.navn).trim()) return {fejl: T.kundetype === "erhverv" ? "Skriv kundens firma eller navn." : "Skriv kundens navn."};
   const gyldig = ob ? null : plusDage(idag, 14);
   const linjer = [];
-  // Oscar 12/11 (PanzerGlass): rabat står ét sted. En prislinje "Aftalt rabat" (eller et negativt beløb) bliver til Aftalt prisnedslag,
-  // og står den også i feltet, er det en fejl i stedet for dobbelt rabat
+  // Oscar 12/11: Aftalt prisnedslag er en linjetype (beløbet skrives positivt og trækkes fra). Det gamle felt T.rabat flyttes til en linje (tbFlytRabat)
+  tbFlytRabat(T);
   const rabatLinjer = T.linjer.filter(l => (l.tekst.trim() || String(l.beloeb).trim()) && erRabatLinje(l));
-  if (rabatLinjer.length && tbTal(T.rabat)) return {fejl: "Rabatten står både som prislinje og i Aftalt prisnedslag. Brug kun feltet Aftalt prisnedslag."};
+  if (rabatLinjer.some(l => !Number.isFinite(tbTal(l.beloeb)) || !String(l.beloeb).trim())) return {fejl: "Skriv beløbet for prisnedslaget."};
   const linjeRabat = rabatLinjer.reduce((a, l) => a + Math.abs(tbTal(l.beloeb)), 0);
   for (const l of T.linjer) {
     if (!l.tekst.trim() && !String(l.beloeb).trim()) continue;
@@ -4632,7 +4641,7 @@ function tbBeregn(T) {   // samme regler som lav_tilbud.py. Giver {fejl} eller a
   if (!linjer.length) return {fejl: "Skriv mindst én prislinje."};
   const g = (String(T.gaester || "").match(/\d+/g) || []).map(Number);
   const mange = g.length && Math.max(...g) > 100;
-  const brutto = linjer.reduce((a, l) => a + l.beloeb, 0), rabat = tbTal(T.rabat) + linjeRabat;   // rabat som prislinjerne: ekskl. moms på erhverv, inkl. moms på privat (Oscar 6/11)
+  const brutto = linjer.reduce((a, l) => a + l.beloeb, 0), rabat = linjeRabat, rabatTekster = rabatLinjer.map(l => ({tekst: l.tekst.trim() || "Aftalt prisnedslag", beloeb: Math.abs(tbTal(l.beloeb))}));   // rabat som prislinjerne: ekskl. moms på erhverv, inkl. moms på privat (Oscar 6/11)
   if (!Number.isFinite(rabat) || rabat < 0) return {fejl: "Prisnedslaget skal være et beløb i kr."};
   if (rabat > brutto) return {fejl: "Prisnedslaget kan ikke være større end prisen."};
   const s = brutto - rabat;
@@ -4658,7 +4667,7 @@ function tbBeregn(T) {   // samme regler som lav_tilbud.py. Giver {fejl} eller a
   betaling.push(...String(T.vilkaar_ekstra || "").split("\n").map(x => x.replace(/^\s*[-•]\s*/, "").trim()).filter(Boolean));   // særlige betingelser kun for denne kunde (Oscar 6/11), som vilkaar_ekstra i lav_tilbud.py
   const navn = firma || T.navn || "";
   const nr = idag.replace(/-/g, "") + "-" + navn.replace(/[^A-Za-zÆØÅæøå0-9]/g, "").slice(0, 12);
-  return {erhverv, ob, idag, ev, gyldig, linjer, rabat, s, moms, total, dep, betaling, nr, mange, restDato: tbMinus(ev, 14)};
+  return {erhverv, ob, idag, ev, gyldig, linjer, rabat, rabatTekster, s, moms, total, dep, betaling, nr, mange, restDato: tbMinus(ev, 14)};
 }
 
 function tbHtml(T, R) {   // HTML'en fra lav_tilbud.py, linje for linje
@@ -4668,7 +4677,7 @@ function tbHtml(T, R) {   // HTML'en fra lav_tilbud.py, linje for linje
   const evRows = [["Anledning", T.anledning], ["Dato", tbDato(ev)], ["Sted", T.sted], ["Tider", T.tider], ["Gæster", T.gaester]]
     .filter(([, b]) => (b || "").trim()).map(([a, b]) => `<tr><td>${a}</td><td>${tbEsc(b.trim())}</td></tr>`).join("");
   let pris = linjer.map(l => `<tr><td>${tbEsc(l.tekst)}</td><td class="n">${tbKr(l.beloeb)}</td></tr>`).join("");
-  if (rabat) pris += `<tr><td>Aftalt prisnedslag</td><td class="n">−${tbKr(rabat)}</td></tr>`;
+  pris += (R.rabatTekster || []).map(r => `<tr><td>${tbEsc(r.tekst)}</td><td class="n">−${tbKr(r.beloeb)}</td></tr>`).join("");
   pris += erhverv ? `<tr class="sub"><td>I alt ekskl. moms</td><td class="n">${tbKr(s)}</td></tr><tr><td>Moms 25 %</td><td class="n">${tbKr(moms)}</td></tr><tr class="tot"><td>I alt inkl. moms</td><td class="n">${tbKr(total)}</td></tr>`
     : `<tr class="tot"><td>I alt inkl. moms</td><td class="n">${tbKr(total)}</td></tr><tr class="sm"><td>Heraf moms</td><td class="n">${tbKr(moms)}</td></tr>`;
   const egen = T.intro.trim(), intro = egen && !(ob && egen === TB_INTRO_T) ? egen : (ob ? TB_INTRO_OB : TB_INTRO_T);   // tilbuddets standardtekst følger ikke med til bekræftelsen
@@ -4820,7 +4829,7 @@ function tbSendtKnap() {   // tilbud lavet fra en forespørgsel: sæt den til Ti
   }}, "Markér som sendt");
 }
 function visTilbud() {
-  if (!TB) { try { TB = JSON.parse(lager.get(TB_KEY) || "null"); } catch { TB = null; } }
+  if (!TB) { try { TB = tbFlytRabat(JSON.parse(lager.get(TB_KEY) || "null")); } catch { TB = null; } }
   if (!TB) TB = tbNy();
   const sæt = (k, v) => { TB[k] = v; tbGem(); opdater(); };
   const t = (k, attr = {}) => h("input", {class: "input", value: TB[k] ?? "", ...attr, oninput: e => sæt(k, e.target.value)});
@@ -4845,9 +4854,10 @@ function visTilbud() {
           r("Depositum 20 %", tbKr(R.dep)), r(`Rest senest ${tbDato(R.restDato)}`, tbKr(R.total - R.dep))],
       R.gyldig ? h("div", {class: "muted lille", style: "margin-top:8px"}, `Gælder til ${tbDato(R.gyldig)}`) : null));
   }
-  const linjeRk = (l, i) => h("div", {class: "tb-linje"},
-    h("input", {class: "input", placeholder: "DJ til julefrokost, 6 timer inkl. lyd, lys og mikrofon", value: l.tekst, oninput: e => { l.tekst = e.target.value; tbGem(); opdater(); }}),
-    h("input", {class: "input", inputmode: "numeric", placeholder: "19000", value: l.beloeb, oninput: e => { l.beloeb = e.target.value; tbGem(); opdater(); }}),
+  const linjeRk = (l, i) => h("div", {class: "tb-linje" + (l.rabat ? " tb-rabat" : "")},
+    h("input", {class: "input", placeholder: l.rabat ? "Aftalt prisnedslag" : "DJ til julefrokost, 6 timer inkl. lyd, lys og mikrofon", value: l.tekst, oninput: e => { l.tekst = e.target.value; tbGem(); opdater(); }}),
+    h("label", {class: "tb-bel"}, l.rabat ? h("span", {class: "tb-minus"}, "−") : null,
+      h("input", {class: "input", inputmode: "numeric", placeholder: l.rabat ? "2000" : "19000", value: l.beloeb, oninput: e => { l.beloeb = e.target.value.replace(/^-/, ""); tbGem(); opdater(); }})),
     h("button", {class: "btn ghost", type: "button", title: "Fjern linjen", disabled: TB.linjer.length < 2, onclick: () => { TB.linjer.splice(i, 1); tbGem(); tegn(); }}, "✕"));
   const skiftType = v => {
     const std = TB_INDHOLD[TB.kundetype].join("\n");
@@ -4880,12 +4890,13 @@ function visTilbud() {
       h("div", {class: "overskrift", style: "margin-top:18px"}, "Pris"),
       h("div", {class: "etiket"}, TB.kundetype === "erhverv" ? "Beløb i kr. ekskl. moms" : "Beløb i kr. inkl. moms"),
       TB.linjer.map(linjeRk),
-      h("button", {class: "btn ghost lille", type: "button", onclick: () => { TB.linjer.push({tekst: "", beloeb: ""}); tbGem(); tegn(); }}, "+ Prislinje"),
+      h("div", {class: "rk", style: "gap:6px;margin:0"},
+        h("button", {class: "btn ghost lille", type: "button", onclick: () => { TB.linjer.push({tekst: "", beloeb: ""}); tbGem(); tegn(); }}, "+ Prislinje"),
+        h("button", {class: "btn ghost lille", type: "button", onclick: () => { TB.linjer.push({tekst: "Aftalt prisnedslag", beloeb: "", rabat: true}); tbGem(); tegn(); }}, "+ Aftalt prisnedslag")),
       h("div", {class: "felter3"},
         felt("Kørsel uden for 50 km (km tur/retur)", t("km", {inputmode: "numeric", placeholder: "0"})),
         felt("Bro/færge (kr.)", t("bro", {inputmode: "numeric", placeholder: "0"})),
         felt(TB.type === "ordrebekraeftelse" ? "Dato" : "Tilbudsdato", datoInput(TB.dato, iso => sæt("dato", iso || iDag())))),
-      felt(TB.kundetype === "erhverv" ? "Aftalt prisnedslag (kr. ekskl. moms)" : "Aftalt prisnedslag (kr. inkl. moms)", t("rabat", {inputmode: "numeric", placeholder: "0", style: "max-width:200px"})),
       h("div", {class: "overskrift", style: "margin-top:18px"}, "Særlige betingelser"),
       felt("Ét punkt pr. linje", tf("vilkaar_ekstra", 2)),
       h("div", {class: "overskrift", style: "margin-top:18px"}, "Tekst (valgfri)"),
