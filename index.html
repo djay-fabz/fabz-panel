@@ -2698,8 +2698,14 @@ function varmeLinje() {
   const v = D.varme;
   if (!v) return null;
   const s = v.sensor || {}, p = v.pumpe || {}, kø = varmeKø(), arb = kø.find(x => x.aktiv), næste = kø.find(x => !x.aktiv), idag = (v.dage || [])[0] || {};
-  const gammel = (Date.now() - new Date(v.opdateret)) / 60000 > 120;
-  const adv = [...(v.advarsler || []), ...(gammel ? [`Ingen målinger siden ${kortDato(v.opdateret)} kl. ${v.opdateret.slice(11).replace(":", ".")}`] : [])];
+  const gammel = (Date.now() - new Date(v.opdateret)) / 60000 > 26 * 60;   // måles én gang om dagen og ved start og slut på arbejdsdage (Oscar 12/11)
+  const målt = `målt ${v.opdateret.slice(0, 10) === iDag() ? "" : kortDato(v.opdateret) + " "}kl. ${v.opdateret.slice(11, 16).replace(":", ".")}`;
+  const startet = arb && v.tilstand === "arbejdsdag" && v.opdateret.slice(0, 10) === iDag() && v.opdateret.slice(11, 16).replace(":", ".") >= arb.fra;
+  const minut = k => Number(k.slice(0, 2)) * 60 + Number(k.slice(3, 5)), forsinket = arb && !startet && minut(nuHHMM()) - minut(arb.fra) > 15;
+  const slut = (D.varmeStyring?.dage || []).filter(x => x.dato === iDag() && x.til <= nuHHMM()).map(x => x.til).sort().pop();
+  const ikkeSænket = !arb && v.tilstand === "arbejdsdag" && p.taendt && (!slut || minut(nuHHMM()) - minut(slut) > 15);   // slut-kørslen har ikke bekræftet slukket eller 16°
+  const adv = [...(v.advarsler || []), ...(gammel ? [`Ingen målinger siden ${kortDato(v.opdateret)} kl. ${v.opdateret.slice(11).replace(":", ".")}`] : []),
+    ...(forsinket ? ["Arbejdsdagen er ikke bekræftet startet"] : []), ...(ikkeSænket ? ["Arbejdsdagen er slut, men pumpen er ikke bekræftet slukket eller sænket til 16°"] : [])];
   const prik = adv.length ? "rd" : arb ? "bl" : "";
   const dagNavn = x => x.dato === iDag() ? "i dag" : x.dato === plusDage(iDag(), 1) ? "i morgen" : `${DAGE[dag(x.dato).getDay()].slice(0, 3)} ${kortDato(x.dato)}`;
   const sætKø = dage => { D.varmeStyring = {dage}; };
@@ -2713,8 +2719,8 @@ function varmeLinje() {
   const tid = (felt, lbl) => h("input", {class: "input va-tid", type: "time", value: (VA.arb[felt] || "").replace(".", ":"), "aria-label": lbl,
     onchange: e => { VA.arb[felt] = e.target.value.replace(":", "."); }});
   const top = h("div", {class: "va-top"}, h("span", {class: "va-prik " + prik}),
-    arb ? [h("b", {}, "Arbejdsdag 18°"), h("span", {}, `til ${arb.til}`), h("span", {class: "muted va-tal"}, `${grad(s.temp)} · ${s.fugt ?? "–"} %`)]
-      : [h("b", {}, "Varme"), h("span", {class: "va-tal"}, `${grad(s.temp)} · ${s.fugt ?? "–"} % · ${p.taendt ? "tændt" : "slukket"} · ${minTekst(idag.min)} i dag`),
+    arb ? [h("b", {}, "Arbejdsdag 18°"), h("span", {}, `til ${arb.til}`), h("span", {class: "muted va-tal"}, startet ? `startet kl. ${v.opdateret.slice(11, 16).replace(":", ".")} · ${grad(s.temp)} · ${s.fugt ?? "–"} %` : "starter om lidt")]
+      : [h("b", {}, "Varme"), h("span", {class: "va-tal"}, `${grad(s.temp)} · ${s.fugt ?? "–"} % · ${p.taendt ? `tændt ${p.setpunkt ?? ""}°`.replace(" °", "") : "slukket"} · ${målt}`),
         v.tilstand === "manuelt" && v.manuel ? h("span", {class: "pill va-pill gul"}, `Manuelt siden ${v.manuel.fra.slice(11).replace(":", ".")}`)   // tændt med stemmen, i appen eller på fjernbetjeningen (Oscar 10/11)
           : h("span", {class: "pill va-pill " + (næste ? "blå" : "grøn")}, næste ? `Arbejdsdag ${dagNavn(næste)} ${næste.fra}-${næste.til}` : "Automatik 8-12°")],
     h("div", {class: "spacer"}),
@@ -5554,12 +5560,19 @@ function åbnLead(r) {
   salgGemKladde();
   return trækLead(r);
 }
+// Kortet viser aldrig direktøren som kontaktperson (Oscar 12/11, Eurofins viste "Svend Aage Linde"). Han står stadig i data
+const visKontakt = s => { const d = (s.direktoer || "").trim().toLowerCase(), dele = String(s.kontakt || "").split(/\s*·\s*/).filter(x => x && !(d && x.toLowerCase().startsWith(d)));
+  return dele.length && !/^\+?\d[\d ]+$/.test(dele[0]) ? dele.join(" · ") : [PERS_KONTAKT, ...dele].join(" · "); };
+const PERS_KONTAKT = "Personaleforeningen eller dem, der står for personalefesterne";
+const PERS_NAESTE = "Spørg efter personaleforeningen eller dem, der står for jeres personalefester";
 function trækLead(r) {
   const navn = leadNavn(r);
   return kør("salg-traek", [`--id=${r.id}`], {tekst: `Trukket: ${navn}`, efter: ["salg", "leads", "opgaver"], med: () => {
       r.trukket = iDag();
-      const ny = {navn, type: "Ny virksomhed", status: "Ikke kontaktet", naeste: r.direktoer ? `Spørg efter ${r.direktoer}, eller hvem der står for jeres fester` : r.aabner || "",
-        kontakt: [r.direktoer ? [r.direktoer, r.direktoer_stilling].filter(Boolean).join(", ") : r.rolle_navn, r.rolle, r.telefon].filter(Boolean).join(" · "), direktoer: r.direktoer, direktoer_stilling: r.direktoer_stilling,
+      // Oscar 12/11: aldrig direktøren som kontakt eller åbning, "det er jo aldrig ham, der står for festerne". Samme regel som k_salg_traek i fabz_salg.py
+      const rn = !["", "ukendt"].includes((r.rolle_navn || "").trim().toLowerCase()) ? r.rolle_navn : "";
+      const ny = {navn, type: "Ny virksomhed", status: "Ikke kontaktet", naeste: r.aabner || (rn ? `Spørg efter ${rn}` : PERS_NAESTE),
+        kontakt: [rn || PERS_KONTAKT, rn ? r.rolle : "", r.telefon].filter(Boolean).join(" · "), direktoer: r.direktoer, direktoer_stilling: r.direktoer_stilling,
         naeste_opfoelgning: iDag(), telefon: r.telefon || "", linkedin_side: r.linkedin_side || "", kontaktside: r.kontaktside || "",
         historik: `${iDag()}: trukket fra leadlisten (${r.prioritet}). ${[r.by + (r.km ? ", " + r.km + " km" : ""), r.ansatte ? r.ansatte + " ansatte" : "", r.branche, r.personaleforening ? "Personaleforening: " + r.personaleforening : "", r.tegn ? "Tegn: " + r.tegn : ""].filter(Boolean).join(" | ")}`};
       if (!salgKunde(navn)) (D.salg ||= []).push(ny);
@@ -6872,14 +6885,16 @@ function opkaldBlok(s, k) {
   const gemHenvist = () => {
     const navn = o.hNavn.trim(), mail = o.hMail.trim(), tlf = o.hTlf.trim();
     if (!o.fik || !navn) { alert("Vælg hvem du fik fat i, og skriv navnet på den, du blev henvist til."); return; }
-    const fra = (o.rigtig.trim() || (s.kontakt || "").split(/\s*[,·(]\s*/)[0]).replace(/^(via|ingen|ukendt)\b.*$/i, "");
+    // hvem der henviste, er den han talte med (Oscar 12/11): receptionen, den rigtige eller ingen. Samme regel som _opkald_henvist i fabz_salg.py
+    const fra = (o.rigtig.trim() || (o.fik === "reception" ? "receptionen" : o.fik === "rigtig" ? (s.kontakt || "").split(/\s*[,·(]\s*/)[0] : "")).replace(/^(via|ingen|ukendt|personaleforeningen)\b.*$/i, "");
+    const hilsen = fra ? (fra === "receptionen" ? "receptionen" : fra.split(" ")[0]) : "", tilMail = !!mail && (!tlf || o.sagde.includes("send_mail"));
     const args = [`--fik=${o.fik}`, `--sagde=${o.sagde.join(",")}`, `--henvist-navn=${navn}`, ...(mail ? [`--henvist-mail=${mail}`] : []), ...(tlf ? [`--henvist-tlf=${tlf}`] : []),
       ...(o.rigtig.trim() ? [`--rigtig=${o.rigtig.trim()}`] : []), ...målArgs(), ...(o.note.trim() ? [`--note=${o.note.trim()}`] : []), "--", s.navn];
     kør("salg-opkald", args, {tekst: `${s.navn}: henvist til ${navn}`, efter: ["salg", "salgslog", "opgaver"], med: () => {
       (D.salgslog ||= []).push({dato: iDag(), navn: s.navn, kanal: "Telefon", tekst: `Opkald: ${fra || "de"} henviste til ${navn}`, opkald: {fik: o.fik, sagde: o.sagde, skridt: "henvist", henvist: navn}});
       s.historik = ((s.historik || "") + ` ${iDag()}: Opkald: ${fra || "de"} henviste til ${navn}`).trim();
       s.kontakt = [navn, mail, tlf].filter(Boolean).join(" · "); if (tlf) s.telefon = tlf;
-      s.naeste = `Ring til ${navn}` + (tlf ? ` (${tlf})` : "") + (fra ? `. Nævn at ${fra.split(" ")[0]} henviste dig` : "");
+      s.naeste = (tilMail ? `Send mail til ${navn} (${mail})` : `Ring til ${navn}` + (tlf ? ` (${tlf})` : "")) + (hilsen ? `. Nævn at ${hilsen} henviste dig` : "");
       s.senest_kontakt = iDag(); s.naeste_opfoelgning = plusDage(iDag(), 1); if (s.status === "Ikke kontaktet") s.status = "Kontaktet";
       SG.k = {}; gemKladderLager();
     }});
@@ -7118,8 +7133,7 @@ function salgDetalje(s) {
     h("div", {class: "kh"}, h("h2", {}, s.navn), h("span", {class: "muted lille"}, s.type), h("div", {class: "spacer"}),
       h("button", {class: "x", type: "button", title: "Luk (Esc)", onclick: salgLuk}, "×")),
     s.naeste_opfoelgning ? h("div", {class: "muted lille"}, dagNavnLang(s.naeste_opfoelgning)) : null,
-    s.kontakt || s.telefon ? h("div", {class: "info"}, h("div", {class: "etiket"}, "Kontaktperson"), h("div", {class: "pre"}, s.kontakt || ""),
-      s.direktoer && !(s.kontakt || "").includes(s.direktoer) ? h("div", {class: "pre lille"}, [s.direktoer, s.direktoer_stilling].filter(Boolean).join(", ")) : null,
+    s.kontakt || s.telefon ? h("div", {class: "info"}, h("div", {class: "etiket"}, "Kontaktperson"), h("div", {class: "pre"}, visKontakt(s)),
       ringKnap(s)) : null,
     s.naeste ? h("div", {class: "info"}, h("div", {class: "etiket"}, "Næste skridt"), h("div", {class: "pre", style: "font-size:15px"}, s.naeste)) : null,
     h("div", {class: "seg kform", style: "margin-top:14px"}, [["opkald", "Opkald"], ["anden", "Anden kontakt"]].map(([v, t]) =>
