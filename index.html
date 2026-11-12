@@ -268,7 +268,8 @@ input[type=date]{color-scheme:light dark}
 
 /* lager-fanen */
 .lagerside{max-width:1228px;margin:0 auto;padding:28px 24px 130px}
-.mu-tid{font-size:34px;font-weight:700;letter-spacing:.5px;margin-top:10px;font-variant-numeric:tabular-nums}.mu-bar{height:7px;background:var(--linje);border-radius:99px;overflow:hidden;margin:6px 0 14px}.mu-bar div{height:100%;background:var(--ok);border-radius:99px}
+.mu-tid{font-size:34px;font-weight:700;letter-spacing:.5px;margin-top:10px;font-variant-numeric:tabular-nums}.ur-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.ur-tid.pauset{opacity:.5}
+.ur-bar{height:8px;background:var(--linje);border-radius:99px;overflow:hidden;margin:10px 0 14px}.ur-bar div{height:100%;background:var(--pl-brun);border-radius:99px}   /* alle ure: samme brune bjælke (Oscar 12/11) */
 .mu-faerdig{background:var(--faerdig-blid);color:var(--faerdig);border-radius:12px;padding:12px 14px;margin:12px 0 10px}.mu-faerdig b{display:block;font-size:16px;margin-bottom:2px}
 .mu-chip{display:inline-block;font-size:12.5px;background:var(--accent-blid);color:var(--accent);border-radius:99px;padding:2px 10px;margin:8px 0 12px;font-weight:500}
 @media (max-width:700px){.mu-knap .btn{flex:1 1 40%}.mu-start-lang{display:none}}
@@ -305,7 +306,7 @@ input[type=date]{color-scheme:light dark}
 .si-tekst{margin-top:8px;padding:8px 10px;border-left:2px solid var(--linje);font-size:13.5px;white-space:pre-wrap}.si-sp{border-left-color:var(--accent)}.si-sp textarea{display:block;width:100%;margin-top:6px}
 .si-knap{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}@media (max-width:700px){.si-knap .btn{flex:1}}
 .ud{margin-bottom:14px;padding:12px 16px}.ud-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;width:100%;background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}.ud-pil{color:var(--svagere)}
-.ud-bar{height:8px;background:var(--linje);border-radius:99px;overflow:hidden;margin-top:8px}.ud-bar div{height:100%;background:var(--accent);border-radius:99px}.ud-ok .ud-bar div{background:var(--ok)}
+.ud-bar{height:8px;background:var(--linje);border-radius:99px;overflow:hidden;margin-top:8px}.ud-bar div{height:100%;background:var(--pl-brun);border-radius:99px}.ud-ok .ud-bar div{background:var(--pl-brun)}
 .ud-dele{border-top:1px solid var(--linje);margin-top:10px;padding-top:6px;font-size:13.5px}.ud-dele div{display:flex;justify-content:space-between;gap:10px;padding:3px 0}
 .dp{margin-bottom:14px}.dp h2{margin:0 0 10px}.dp-g{display:grid;grid-template-columns:1fr auto;gap:7px 14px;align-items:center}.dp-g>b{text-align:right}
 .dp-anl{background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}.dp-bar{grid-column:1/3;margin-top:-2px}
@@ -3495,7 +3496,7 @@ function muUge() {   // dage denne uge med en gennemført blok (timeren) eller A
   return dage.size;
 }
 // Timeren (Oscar 10/11, skitse panel-mashups-timer): 60 min, uret følger data, så det kører videre på telefon og pc. Når tiden er gået: lyd, og du er færdig
-const muBlokKører = (nu = Date.now()) => (D.mashups?.blokke || []).find(b => b.dato === iDag() && !b.faerdig && !b.stoppet && b.start + b.min * 6e4 > nu);
+const muBlokKører = (nu = Date.now()) => (D.mashups?.blokke || []).find(b => b.dato === iDag() && !b.faerdig && !b.stoppet && urSlut(b, b, nu) > nu);   // pausen står på blokken i data
 const muBlokIDag = () => (D.mashups?.blokke || []).some(b => b.dato === iDag() && b.faerdig);
 const MU_BLOKDAGE = [2, 4];   // tirsdag og torsdag efter frokost (fast opgave "Ableton 60 min", Oscar 8/11)
 function muLyd() { try { const c = new (window.AudioContext || window.webkitAudioContext)(); [0, 0.35, 0.7].forEach(t => { const o = c.createOscillator(), g = c.createGain();
@@ -3504,13 +3505,13 @@ function muUr() {   // hvert sekund: uret og baren; når tiden er gået, tæller
   const m = D?.mashups, nu = Date.now();
   if (!m || Array.isArray(m)) return;
   const b = muBlokKører(nu), el = document.querySelector(".mu-tid");
-  if (b && el) { el.textContent = mmss(b.start + b.min * 6e4 - nu); const bar = document.querySelector(".mu-bar div"); if (bar) bar.style.width = Math.min(100, 100 * (nu - b.start) / (b.min * 6e4)) + "%"; }
-  const slut = (m.blokke || []).find(x => !x.faerdig && !x.stoppet && x.start + x.min * 6e4 <= nu);
+  if (b && el) urTik("mu", b, b);
+  const slut = (m.blokke || []).find(x => !x.faerdig && !x.stoppet && !urPauset(x) && urSlut(x, x, nu) <= nu);
   if (slut && !muUr.lukker) {
     muUr.lukker = true;
     const p = (D.dagsplaner || []).find(x => x.dato === slut.dato), punkt = p && (p.plan_punkter || []).find(erMashupPunkt);
     if (punkt && slut.dato === iDag()) { try { const n = JSON.parse(lager.get(NÅET_KEY(slut.dato)) || "[]"); if (!n.includes(punkt.nr)) lager.set(NÅET_KEY(slut.dato), JSON.stringify([...n, punkt.nr])); } catch {} }
-    if (nu - (slut.start + slut.min * 6e4) < 6e4) muLyd();   // kun lyd, når siden var åben, da tiden gik
+    if (nu - urSlut(slut, slut, nu) < 6e4) muLyd();   // kun lyd, når siden var åben, da tiden gik
     kør("mashup-blok-faerdig", [], {tekst: "Ableton-blokken er færdig", efter: ["mashups"], med: () => { slut.faerdig = true; muUr.lukker = false; }});
   }
 }
@@ -3563,7 +3564,9 @@ function visMashups() {
     : h("div", {class: "mu-fokus"},
         h("div", {class: "mu-uge"}, [...Array(MU_MAAL)].map((_, i) => h("span", {class: "mu-prik" + (i < uge ? " ok" : "")})), h("span", {class: "muted lille"}, `${Math.min(uge, MU_MAAL)} af ${MU_MAAL} blokke denne uge`),
           h("span", {class: "lille", style: "margin-left:auto;color:var(--svagere)"}, `Fase ${fase} af ${faser.length}`)),
-        kører ? [h("div", {class: "mu-tid"}, mmss(kører.start + kører.min * 6e4 - Date.now())), h("div", {class: "mu-bar"}, h("div", {style: `width:${Math.min(100, 100 * (Date.now() - kører.start) / (kører.min * 6e4))}%`}))]
+        kører ? urVis("mu", kører, kører, () => { const tid = Date.now();
+            kør("mashup-blok-pause", [`--tid=${tid}`], {tekst: urPauset(kører) ? "Ableton-blokken fortsætter" : "Ableton-blokken er på pause", efter, med: () => {
+              if (kører.pause_fra) { kører.pause_ms = (kører.pause_ms || 0) + tid - kører.pause_fra; delete kører.pause_fra; } else kører.pause_fra = tid; }}); })
           : færdigIDag ? h("div", {class: "mu-faerdig"}, h("b", {}, "✓ Blokken er færdig. Stop her."), `${Math.min(uge, MU_MAAL)} af ${MU_MAAL} blokke denne uge.${næsteDag ? ` Næste blok er ${næsteDag} efter frokost.` : ""}`) : null,
         h("div", {class: "mu-o"}, f.overskrift || ""),
         m.naeste ? h("div", {class: "mu-opg"}, mdLinks(m.naeste)) : h("div", {class: "mu-opg muted"}, "Næste skridt kommer"),
@@ -5508,15 +5511,33 @@ const SALG_DAG_MAKS = 5, SALG_DAG_OPF = 3, SALG_DAG_COLD = 2, SALG_DAG_NØGLE = 
 // ---------- 30 min salg (Oscar 9/11, skitse panel-salg-30min B): en tid i stedet for "Ring til X", 4 sprints om ugen. Listen er "hvem først", ikke et mål ----------
 // data/salgssprints.json (fabz_salg.py salg-sprint-start): [{dato, start (ms), min}]. Uret regnes fra start, så det tåler lukket fane og låst telefon, og telefon og PC viser det samme.
 const SPRINT_MIN = 30, EKSTRA_MIN = 10, SPRINT_NØGLE = "fabz-salg-sprint";
-// Pause (Oscar 12/11): uret kan sættes på pause og fortsætte. Pausen gemmes i browseren, så den holder ved fanebyt og genindlæsning
+// ---------- Fælles ur (Oscar 12/11: "har vi andre klokker her i systemet?"). Ændres ét ur, ændres alle ure ----------
+// Et ur er {start, min} med en pause {pause_ms, pause_fra}. Salgssprintet gemmer pausen i browseren, Mashup-blokken i data (telefon og pc).
+const urPauseMs = (p, nu = Date.now()) => p ? Number(p.pause_ms ?? p.ms ?? 0) + ((p.pause_fra ?? p.fra) ? nu - (p.pause_fra ?? p.fra) : 0) : 0;
+const urSlut = (x, p, nu = Date.now()) => x.start + x.min * 6e4 + urPauseMs(p, nu);
+const urPct = (x, p, nu = Date.now()) => Math.max(0, Math.min(100, 100 * (nu - x.start - urPauseMs(p, nu)) / (x.min * 6e4)));
+const urPauset = p => !!(p && (p.pause_fra ?? p.fra));
+function urVis(kl, x, p, onPause, ekstra) {   // tiden, Pause/Fortsæt og den brune bjælke. kl: klassen for tid og bjælke, så urTik kan opdatere dem hvert sekund
+  const nu = Date.now();
+  return [h("div", {class: "ur-top"}, h("div", {class: `ur-tid ${kl}-tid` + (urPauset(p) ? " pauset" : "")}, mmss(urSlut(x, p, nu) - nu)),
+      h("button", {class: "btn lille ur-pause", type: "button", onclick: onPause}, urPauset(p) ? "Fortsæt" : "Pause"), ekstra || null),
+    h("div", {class: `ur-bar ${kl}-bar`}, h("div", {style: `width:${urPct(x, p, nu)}%`}))];
+}
+function urTik(kl, x, p) {   // hvert sekund: kun tal og bjælke, ingen ny tegning
+  const nu = Date.now(), t = document.querySelector(`.${kl}-tid`), b = document.querySelector(`.${kl}-bar div`);
+  if (t) t.textContent = mmss(urSlut(x, p, nu) - nu);
+  if (b) b.style.width = urPct(x, p, nu) + "%";
+}
+// Salgssprintets pause i browseren, så den holder ved fanebyt og genindlæsning
 const SP_PAUSE = "fabz-salg-pause";
 function spPause() { try { return JSON.parse(lager.get(SP_PAUSE) || "null") || {}; } catch { return {}; } }
-function pauseMs(s, nu = Date.now()) { const p = spPause(); return p.start === s.start ? (p.ms || 0) + (p.fra ? nu - p.fra : 0) : 0; }
-const sprintSlut = s => s.start + s.min * 60000 + pauseMs(s);
+const spP = s => { const p = spPause(); return p.start === s.start ? p : null; };
+function pauseMs(s, nu = Date.now()) { return urPauseMs(spP(s), nu); }
+const sprintSlut = s => urSlut(s, spP(s));
 function spPauseSkift(s) {
-  let p = spPause(); const nu = Date.now();
-  if (p.start !== s.start) p = {start: s.start, ms: 0, fra: null};
-  if (p.fra) { p.ms += nu - p.fra; p.fra = null; } else p.fra = nu;
+  let p = spP(s) || {start: s.start, pause_ms: 0, pause_fra: null}; const nu = Date.now();
+  p = {start: s.start, pause_ms: Number(p.pause_ms ?? p.ms ?? 0), pause_fra: p.pause_fra ?? p.fra ?? null};
+  if (p.pause_fra) { p.pause_ms += nu - p.pause_fra; p.pause_fra = null; } else p.pause_fra = nu;
   lager.set(SP_PAUSE, JSON.stringify(p)); tegn();
 }
 function salgSprints() {   // + det, der lige er startet i denne browser, indtil det er gemt og hentet igen
@@ -5550,7 +5571,7 @@ const mmss = ms => { const t = Math.max(0, Math.ceil(ms / 1000)); return `${Math
 let sprintSidst = null;
 function sprintUr() {   // hvert sekund: uret og baren, en ny tegning når tiden er gået, og dagens salgsopgave lukkes (også hvis fanen var lukket imens)
   const nu = Date.now(), sp = sprintKører(nu), el = document.querySelector(".sp-tid");
-  if (sp && el) { el.textContent = mmss(sprintSlut(sp) - nu); const b = document.querySelector(".sp-bar div"); if (b) b.style.width = Math.min(100, 100 * (nu - sp.start - pauseMs(sp, nu)) / (sp.min * 6e4)) + "%"; }
+  if (sp && el) urTik("sp", sp, spP(sp));
   const nøgle = sp ? sp.start : null;
   if (sprintSidst !== nøgle) { const før = sprintSidst; sprintSidst = nøgle; if (før !== null && (fane === "salg" || fane === "idag")) tegn(); }
   const idag = iDag(), o = (D.opgaver || []).find(x => x.job_opgave === "salg" && x.deadline === idag && x.status !== "Færdig");
@@ -5606,10 +5627,7 @@ function salgDagKort(påIDag = false) {   // påIDag (Oscar 8/11: "jeg vil se de
   const færdig = (t, knapTekst, min) => h("div", {class: "sd-faerdig"}, h("div", {class: "sd-f-t"}, t), h("button", {class: "btn", type: "button", onclick: () => startSprint(min)}, knapTekst));
   if (kører) {   // mens han ringer: uret tæller ned, listen står
     const nu = Date.now();
-    const pauset = !!(spPause().start === kører.start && spPause().fra);
-    return [h("div", {class: "sd-top"}, h("div", {class: "sp-ur"}, h("div", {class: "sp-tid" + (pauset ? " pauset" : "")}, mmss(sprintSlut(kører) - nu)),
-        h("button", {class: "btn lille sp-pause", type: "button", onclick: () => spPauseSkift(kører)}, pauset ? "Fortsæt" : "Pause")), h("span", {class: "muted"}, `${ringetOp(idag)} ringet op`)),
-      h("div", {class: "sd-bar sp-bar"}, h("div", {style: `width:${Math.min(100, 100 * (nu - kører.start - pauseMs(kører, nu)) / (kører.min * 6e4))}%`})), liste()];
+    return [...urVis("sp", kører, spP(kører), () => spPauseSkift(kører), h("span", {class: "muted", style: "margin-left:auto"}, `${ringetOp(idag)} ringet op`)), liste()];
   }
   if (uge >= mål) return [færdig(`✓ Ugens salg er klaret · ${uge} af ${mål} sprints`, "Ét sprint mere", SPRINT_MIN)];
   // Oscar 12/11: står der flere sprints i dagens plan, siger kortet "1 sprint mere i dag" i stedet for færdig
