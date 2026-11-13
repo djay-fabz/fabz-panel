@@ -3646,8 +3646,8 @@ function dinePenge() {
   // næste flytning: det næste klubjob, der kommer, og hvor resten går hen (samme regel som klubjob-linjen)
   const kj = (D.jobstatus?.jobs || []).filter(j => j.maade === "overfoersel" && j.status === "aaben" && !j.kommet && j.plan && (j.forventet || j.dato) >= iDag()).sort((a, b) => (a.forventet || a.dato).localeCompare(b.forventet || b.dato))[0];
   let næste = null;
-  if (kj) { const rest = kj.plan.til_loen, plads = HB ? Math.max(0, HB.maal - HB.saldo) : rest, hvem = `${kj.navn.split(" (")[0]} ${kortDato(kj.dato)} kommer.`;
-    næste = HB && plads <= 0 && anl ? `${hvem} Buffer er fuld, så resten går til Nyt anlæg.` : rest > plads && anl ? `${hvem} ${krKort(plads)} kr. til Husleje d. 1 + Buffer og ${krKort(rest - plads)} kr. til Nyt anlæg.` : `${hvem} Resten går til Husleje d. 1 + Buffer.`; }
+  if (kj) { const hvem = `${kj.navn.split(" (")[0]} ${kortDato(kj.dato)} kommer.`, dl = klubDele(kj.plan.til_loen, P, mo).filter(d => d[2] > 0);   // samme regel som klubjob-linjen (Varme lager før Buffer, Oscar 13/11)
+    næste = dl.length === 1 ? `${hvem} Resten går til ${dl[0][1]}.` : dl.length ? `${hvem} ${dl.map(d => `${krKort(d[2])} kr. til ${d[1]}`).join(", ").replace(/, ([^,]*)$/, " og $1")}.` : null; }
   const spørg = async () => { const b = Math.round(Number(String(DP.kr).replace(/\./g, "").replace(",", ".")));
     if (!(b > 0)) return alert("Skriv beløbet i kr.");
     DP.venter = true; DP.svar = null; tegn();
@@ -6522,6 +6522,25 @@ function leveAfDj() {   // For at leve af DJ (Oscar 30/10, skitse panel-leve-af-
   return F && L ? {kr: F.kr + L.brutto, F, L, basis: !!ØK.P?.basis} : null;
 }
 const privatFlyt = (beloeb, dato, navn, pulje, tekst) => privatSend({kommando: "opsparing-flyt", beloeb, dato, pulje, ...(tekst ? {tekst} : {})}, `${navn} ${beloeb > 0 ? "+" : "−"}${krKort(Math.abs(beloeb))} kr.${tekst ? " " + tekst : ""}`);
+// klubjobs-overskud efter skat (Oscar 12/11 og 13/11, revision 13/11): 1) Husleje d. 1 op til mærket (det er d. 1-pengene, lønnen må ikke falde),
+// 2) Fabz-puljer med frist (fx Varme lager til 1/1), tidligste frist først, op til målet, 3) Buffer over mærket til målet, 4) Nyt anlæg (uden puljen: Opsparing).
+// f = det, der allerede er fordelt. Samme regel i klubjob-linjen og Dine penge
+function klubDele(rest, P, mo, f = {}) {
+  const HB = P.husbuffer, puljer = mo.overblik?.puljer || [];
+  let over = rest, buf = 0;
+  const plads = HB ? HB.maal - HB.saldo : (P.buffer?.maal || 0) - (P.buffer?.saldo || 0);
+  if (f.buffer) { buf = f.buffer.kr; over -= buf; }
+  else if (HB) { buf = Math.max(0, Math.min(over, HB.maerke - HB.saldo, plads)); over -= buf; }   // 1) op til mærket
+  // over mærket tæller ikke som Saxo-del d. 1, så firmakontoen må give mere. Højst til lønnen d. 1 (revision 13/11: aldrig rød Til d. 1). Resten bliver på Lønkonto+ til d. 1
+  let løn = 0;
+  if (!f.buffer && P.d1 && mo.raad?.loen_dato === P.d1.dato && (mo.raad.loen_d1 ?? mo.raad.loen_naeste) != null) { const A = mo.raad.loen_d1 ?? mo.raad.loen_naeste, F0 = d1Fordeling(P, mo).firma, rum = Math.max(0, A - F0);
+    if (over > rum) { løn = over - rum; over = rum; } }
+  const fristP = puljer.filter(q => q.navn !== "Nyt anlæg" && q.frist && q.frist >= iDag() && ((q.maal || 0) > (q.saldo || 0) || f["pulje:" + q.navn])).sort((a, b) => a.frist.localeCompare(b.frist))
+    .map(q => { const k = f["pulje:" + q.navn]?.kr ?? Math.max(0, Math.min(over, q.maal - q.saldo)); over -= k; return ["pulje:" + q.navn, q.navn, k]; });
+  if (!f.buffer) { const b2 = Math.max(0, Math.min(over, plads - buf)); buf += b2; over -= b2; }   // 3) over mærket til målet
+  const anlæg = puljer.some(q => q.navn === "Nyt anlæg");
+  return Object.assign([["buffer", HB ? "Husleje d. 1 + Buffer" : "Buffer", buf], ...fristP, anlæg ? ["anlaeg", "Nyt anlæg", Math.max(0, over)] : ["opsparing", P.opsparing?.navn || "Opsparing", Math.max(0, over)]], {løn});
+}
 function d1Fordeling(P, mo) {   // det firmakontoen skal give d. 1: regningerne (privat) minus Saxo-delen (Husleje d. 1) og klubjobs på Lønkonto+, plus det Victoria mangler,
   // som Buffer over mærket ikke dækker. Samme tal i lønbjælken og på listen til d. 1 (revision 11/11), i hele kroner som listen
   const rd_ = mo.raad || {}, dato = P.d1?.dato, Y = rd_.loen_dato === dato ? rd_.loen_klub?.kr || 0 : 0;
@@ -7200,19 +7219,16 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     if ((FD.fordelt[x.id]?.brugt || jobNr(x.id)?.fordelt) && !honÅ) return;   // jobstatus: pengene er fordelt eller brugt, intet at flytte (Oscar 5/11). Et usendt honorar holder linjen
     const erFordelt = !!(FD.fordelt[x.id]?.brugt || jobNr(x.id)?.fordelt);
     const jp = jobNr(x.id)?.plan, f = FD.fordelt[x.id] || {}, skat = f.skat ? f.skat.kr : jp ? skatDelKr(jp.skat) : skatDel(x.beloeb), rest = jp ? jp.til_loen + jp.skat - skat : x.beloeb - skat;   // jobbets plan: honoraret er hjælpernes penge og skal ikke til Buffer (revision 5/11)
-    const plads = HB ? HB.maal - HB.saldo : (P.buffer?.maal || 0) - (P.buffer?.saldo || 0);
-    const tilBuf = Math.max(0, Math.min(rest, plads + (f.buffer?.kr || 0))), tilOps = rest - tilBuf;
-    // over Husleje d. 1 + Buffer: Nyt anlæg i Saxo (Oscar 12/11: "først fylde den helt op", så spare op til udstyr). Uden puljen som før: Opsparing
-    const anlæg = (mo.overblik?.puljer || []).some(q => q.navn === "Nyt anlæg");
-    const dele = [["skat", "Skat-puljen", skat], ["buffer", HB ? "Husleje d. 1 + Buffer" : "Buffer", tilBuf], anlæg ? ["anlaeg", "Nyt anlæg", tilOps] : ["opsparing", P.opsparing?.navn || "Opsparing", tilOps]].filter(d => d[2] > 0 && !(skStop && d[0] === "skat"));   // skatten går til Skat-puljen, også når den venter på en kunde (Oscar 12/11: Lønkonto+ skal være tom). Kun ikke-afstemte tal holder den tilbage
+    const kd = klubDele(rest, P, mo, f), dele = [["skat", "Skat-puljen", skat], ...kd].filter(d => d[2] > 0 && !(skStop && d[0] === "skat"));   // skatten går til Skat-puljen, også når den venter på en kunde (Oscar 12/11: Lønkonto+ skal være tom). Kun ikke-afstemte tal holder den tilbage
     if ((!dele.length || dele.every(d => f[d[0]])) && !honÅ) return;
     medLinje.add(x.id);
     const flyt = ([del, n, b]) => { const br = betFor(x); if (br && br.status !== "faerdig") godkend(br, br.dato >= iDag());   // kun én gang, også når flere dele trykkes samlet   // lukker også robottens opgave "Tjek at pengene er kommet"
       if (del === "anlaeg") kør("pulje", ["flyt", "Nyt anlæg", String(b)], {tekst: `Nyt anlæg +${krKort(b)} kr.`, efter: ["mo"], med: () => puljeMed("Nyt anlæg", b)});
+      if (del.startsWith("pulje:")) kør("pulje", ["flyt", n, String(b)], {tekst: `${n} +${krKort(b)} kr.`, efter: ["mo"], med: () => puljeMed(n, b)});
       if (del === "skat") kør("pulje", ["flyt", "Skat", String(b), `--art=B-indkomst`, `--job=${(D.betalinger || []).find(q => q.indtaegt_id === x.id)?.job_noegle || `${x.dato}|${x.fra.toLowerCase()}`}`], {tekst: `Skat-puljen +${krKort(b)} kr.`, efter: ["mo"], med: () => puljeMed("Skat", b)});
       privatSend({kommando: "fordel", id: String(x.id), del, kr: b, job_kr: x.beloeb}, `${x.fra}: ${krKort(b)} kr. til ${n}`); };
     // pengene står på Lønkonto+, til de flyttes: fordelingen står i Overførsler med det samme, med konto og reg.nr. (Oscar 5/11)
-    if (P0.inbox && P0.d1) klubD1.push({x, dele, f: erFordelt ? Object.fromEntries(dele.map(d => [d[0], true])) : f, r: bR, hon, flyt, erFordelt});
+    if (P0.inbox && P0.d1) klubD1.push({x, dele, f: erFordelt ? Object.fromEntries(dele.map(d => [d[0], true])) : f, r: bR, hon, flyt, erFordelt, løn: kd.løn});
     else betLinjer.push(betL("g", [h("b", {}, `${x.fra} har betalt ${krKort(x.beloeb)} kr.`), ` på Lønkonto+ (Danløn).`, ` Læg ${dele.map(([, n, b]) => `${krKort(b)} kr. i ${n}`).join(" og ")}.`],
       knap("✓ Overført", () => dele.filter(d => !f[d[0]]).forEach(flyt), true)));
   });
@@ -7294,7 +7310,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
         h("div", {class: "kj-fold"},
           saxo ? række("Til Saxo", [dele.map(d => `${krKort(d[2])} kr. ${d[1]}`).join(" · "), nrT(P0.kontonr?.Saxo) ? h("span", {class: "ov-n"}, nrT(P0.kontonr?.Saxo)) : null], saxo, saxoÅ ? knap("✓ Overført", kunSaxo, true) : færdig("Overført")) : null,
           hon.map(o => række(`Til ${o.navn}`, "Honorar", o.kr, o.seddel_betalt ? færdig("Sendt") : knap("✓ Sendt", () => kunHon(o)))),
-          bliver ? række("Bliver på Lønkonto+", skStop ? "Skatten venter, til tallene er afstemt" : "Omkostninger på jobbet", bliver, null)
+          bliver ? række("Bliver på Lønkonto+", k.løn ? "Til lønnen d. 1" : skStop ? "Skatten venter, til tallene er afstemt" : "Omkostninger på jobbet", bliver, null)
             : h("div", {class: "kj-l kj-0"}, h("span", {}, "Tilbage på Lønkonto+"), h("span", {}, "0 kr.")),   // Oscar 12/11: Lønkonto+ skal være tom (skitse panel-b-som-firma)
           h("div", {class: "kj-l kj-s"}, h("span", {}, `${x.fra} betalte`), h("span", {}, `${krKort(x.beloeb)} kr.`)),
           r ? h("button", {class: "kj-job", type: "button", onclick: () => visJobNøgle(r.job_noegle)}, "Åbn jobbet ›") : null))));
