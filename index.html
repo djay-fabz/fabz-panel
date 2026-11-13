@@ -371,6 +371,13 @@ body.bar-synlig .beskeder{bottom:84px}
 @keyframes spin{to{transform:rotate(360deg)}}
 /* nye faner */
 .side.bred{max-width:1228px}
+.ml-kort .kh h2{margin:0}.ml-antal{font-size:12.5px;color:var(--svag)}.ml-g{margin-top:6px}.ml-gh{background:none;border:0;padding:6px 0;font:inherit;font-weight:600;color:inherit;cursor:pointer;text-align:left}.ml-gh.lille{font-weight:400;font-size:13px;color:var(--svag)}.ml-n{color:var(--svag);font-weight:400}.ml-liste{border:1px solid var(--linje);border-radius:10px}
+.ml-r{display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid var(--linje);font-size:13.5px;color:var(--svag);cursor:pointer}.ml-r:first-child{border-top:0}.ml-r:hover{background:var(--hover)}.ml-r.valgt{background:var(--hover)}.ml-r.ulaest{color:var(--tekst)}.ml-r.ulaest .ml-t{font-weight:600}.ml-r.graa{cursor:default;border:0;padding:4px 0}.ml-t{flex:1;min-width:0}.ml-t b{font-weight:600}.ml-r:not(.ulaest) .ml-t b{font-weight:500}.ml-sep{color:var(--svagere)}.ml-prik{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:7px;vertical-align:1px}
+.ml-hoejre{display:flex;align-items:center;gap:8px;flex:none}.ml-frist{font-size:12.5px;color:var(--svag);min-width:36px}.ml-frist.rd{color:var(--fejl);font-weight:600}.ml-r .btn.lille{margin:0}.ml-ok{color:var(--ok);border-color:var(--ok)}.pill.lilla{background:#f3edf9;color:#8a5cb5}[data-theme=dark] .pill.lilla{background:#2a2238;color:#c4a6f0}
+.ml-husk{position:relative}.ml-menu{position:absolute;right:0;top:calc(100% + 4px);z-index:30;background:var(--flade);border:1px solid var(--linje);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:4px;min-width:170px;display:flex;flex-direction:column}.ml-menu button{background:none;border:0;text-align:left;padding:8px 10px;border-radius:7px;font:inherit;font-size:13.5px;color:inherit;cursor:pointer}.ml-menu button:hover{background:var(--hover)}
+.ml-husk-fod{margin-top:10px}.ml-laes-kort .ml-emne{margin:4px 0 12px;font-size:19px}.ml-tekst{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.55}.ml-udkast{margin-top:16px;border:1px dashed var(--accent);border-radius:10px;padding:12px 14px;background:var(--accent-blid)}.ml-udkast-ov{font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}.ml-knapper{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}.ml-knapper .btn{margin:0}.ml-tilbage{background:none;border:0;padding:0 0 10px;font:inherit;font-weight:600;color:inherit;cursor:pointer}
+.idag.ml-laes{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr)}.idag>.fokus{margin-top:0}
+@media (max-width:900px){.idag.ml-laes>.ml-kort{display:none}}@media (max-width:700px){.ml-r{flex-wrap:wrap}.ml-hoejre{flex-basis:100%;flex-wrap:wrap}.ml-hoejre .ml-husk{margin-left:auto}}
 .idag{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(300px,1fr);gap:20px;margin-top:20px;align-items:start}
 .stak{display:flex;flex-direction:column;gap:16px}
 .kort2{background:var(--flade);border:1px solid var(--linje);border-radius:14px;padding:18px 20px}
@@ -1109,7 +1116,8 @@ function tegnTop() {
           (mere.find(([v]) => v === fane) || [0, "Mere"])[1] + " ▾"),
         MERE ? h("div", {class: "meremenu", onclick: e => e.stopPropagation()},
           mere.map(([v, t]) => h("button", {type: "button", class: fane === v ? "aktiv" : "", onclick: () => gå(v)}, t)),
-          h("hr"), h("button", {type: "button", onclick: () => { MERE = false; skiftToken(); }}, "Skift token")) : null)),
+          h("hr"), h("button", {type: "button", onclick: () => { MERE = false; skiftToken(); }}, "Skift token"),
+          ML_KONTI.map(([k, t]) => h("button", {type: "button", onclick: () => { MERE = false; tegnTop(); mlForbind(k); }}, t))) : null)),   // Mails i I dag (13/11)
     h("div", {class: "spacer"}));
 }
 let MERE = false;
@@ -3814,6 +3822,186 @@ const fraFejl = o => o.ikke_foer && o.deadline && o.ikke_foer > o.deadline;
 const planOpg = p => p.id != null ? D.opgaver.find(x => x.id === p.id) : null;
 const salgKlaret = p => { const o = planOpg(p); return !!o && o.job_opgave === "salg" && o.status === "Færdig"; };
 const salgRød = p => { const o = planOpg(p); return !!o && o.job_opgave === "salg" && o.status !== "Færdig" && new Date().getHours() >= 12; };
+// ---------- Mails i I dag (Oscar 13/11, skitse panel-mails A + C) ----------
+// Panelet spørger Google-scriptet "Fabz mail" (tools/mail-webapp.gs) i hver konto direkte fra browseren. Mailteksten kommer aldrig i GitHub.
+// Koblingen "<webapp-url>#<nøgle>" ligger kun i browseren (Mere → Forbind firmamail / Forbind privat mail), ligesom GitHub-nøglen.
+const ML_KONTI = [["firma", "Forbind firmamail"], ["privat", "Forbind privat mail"]];
+const ML_KEY = k => "fabz-mail-" + k;
+const ML = {firma: null, privat: null, fejl: {}, gen: {firma: 0, privat: 0}, t: 0, henter: false, åben: null, læs: null, menu: null, vælgDato: null, lukket: new Set(["afventer:tlf"]), huskÅben: false, skjult: new Set()};
+const mlKobling = k => { const s = lager.get(ML_KEY(k)) || "", i = s.lastIndexOf("#"); return i > 0 ? {url: s.slice(0, i), noegle: s.slice(i + 1)} : null; };
+const mlKonti = () => ML_KONTI.map(([k]) => k).filter(mlKobling);
+function mlForbind(konto) {
+  const s = (prompt(konto === "firma" ? "Indsæt linjen fra scriptet Fabz mail (oscar@fabz.dk)" : "Indsæt linjen fra scriptet i den private Gmail") || "").trim();
+  if (!s) return;
+  if (!/^https:\/\/script\.google(usercontent)?\.com\/\S+#\S{16,}$/.test(s)) { alert("Linjen skal starte med https://script.google.com og have et # med nøglen til sidst."); return; }
+  lager.set(ML_KEY(konto), s); ML[konto] = null; ML.t = 0; mlHent(true);
+}
+async function mlKald(konto, krop) {
+  const k = mlKobling(konto);
+  if (!k) throw new Error("ikke forbundet");
+  const ac = new AbortController(), ur = setTimeout(() => ac.abort(), 30000);
+  try {
+    const r = await fetch(k.url, {method: "POST", body: JSON.stringify({noegle: k.noegle, ...krop}), signal: ac.signal});   // text/plain: ingen preflight
+    if (!r.ok || !/json/.test(r.headers.get("content-type") || "")) throw new Error("Mails svarer ikke");   // fx Googles fejlside i HTML (revision 13/11)
+    const sv = await r.json();
+    if (!sv.ok) throw new Error(sv.fejl === "noegle" ? "Nøglen passer ikke. Forbind igen." : sv.fejl || "fejl");
+    return sv;
+  } finally { clearTimeout(ur); }
+}
+async function mlHent(tving) {
+  const konti = mlKonti();
+  if (ML.henter && tving) ML.igen = true;   // fx Forbind midt i en hentning: hent igen bagefter (revision 13/11)
+  if (!konti.length || ML.henter || (!tving && Date.now() - ML.t < 100e3)) return;
+  ML.henter = true; ML.igen = false;
+  await Promise.all(konti.map(async k => {
+    const gen = ML.gen[k];   // en liste, der blev bestilt før Husk mig eller Klaret, smides væk (revision 13/11)
+    try { const sv = await mlKald(k, {h: "liste"}); if (gen === ML.gen[k]) { ML[k] = sv; ML.fejl[k] = null; } }
+    catch (e) { ML.fejl[k] = e.message || "svarer ikke"; }
+  }));
+  ML.henter = false; ML.t = Date.now();
+  mlTegn();
+  if (ML.igen) mlHent(true);
+}
+// Kun Mails-kortet tegnes om (revision 13/11: hele I dag hvert 2. min lukkede "Vis resten" og tog fokus fra felterne). Hele siden kun med en åben mail, eller når kortet mangler
+function mlVis() {
+  const gl = document.querySelector(".ml-kort");
+  if (ML.åben || !gl) { visIDag(); return; }
+  const ny = mlKort();
+  if (ny) gl.replaceWith(ny); else visIDag();
+}
+function mlTegn() {   // fra hentningen: ikke mens Husk mig-menuen er åben. Skrives der et sted på siden, tegnes kun kortet (felterne ligger uden for det)
+  if (fane !== "idag" || ML.menu || !D?.opgaver || !document.querySelector(".side")) return;
+  const a = document.activeElement, skriver = a && a.closest?.("#rod") && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName);
+  if (skriver && (ML.åben || !document.querySelector(".ml-kort") || a.closest(".ml-kort"))) return;
+  try { mlVis(); } catch {}
+}
+setInterval(() => { if (fane === "idag" && !document.hidden) mlHent(); }, 120e3);   // hvert 2. minut, mens I dag er åben
+document.addEventListener("visibilitychange", () => { if (!document.hidden && fane === "idag") mlHent(); });
+document.addEventListener("click", e => { if (ML.menu && !e.target.closest?.(".ml-husk")) { ML.menu = null; ML.vælgDato = null; if (fane === "idag") mlVis(); } });
+setTimeout(() => mlHent(true), 0);   // når panelet åbnes
+
+const mlUdenHvem = (titel, hvem) => { const t = String(titel || "").replace(/\s*\(udkast ligger klar\)$/, "");
+  return hvem && t.toLowerCase().startsWith(hvem.toLowerCase() + ":") ? t.slice(hvem.length + 1).trim() : t.replace(/^[^:]{1,45}:\s*/, ""); };
+function mlSlags(o) {   // samme mærker som mailoversigten (tools/mailoversigt.py slags)
+  const t = String(o.titel || "").replace(/^[^:]{1,45}:\s*/, "").toLowerCase();
+  if (o.pakke || /^hent\b/.test(t)) return "Hent";
+  for (const [n, m] of [["Betal", /^(ind)?betal/], ["Læs", /^(læs|gennemgå|kig|tjek)/], ["Svar", /^(svar|send|skriv|bekræft|tak|spørg|ring|giv)/]]) if (m.test(t)) return n;
+  return "Gør";
+}
+function mlOpgave(id) {
+  const åbne = (D.opgaver || []).filter(o => o.status !== "Færdig");
+  return åbne.find(o => o.mail_traad === id) || åbne.find(o => (o.mail_kendt || {})[id] != null) || null;
+}
+function mlRækker() {
+  const ud = [];
+  for (const konto of mlKonti()) for (const t of ML[konto]?.traade || []) {
+    if (ML.skjult.has(konto + t.id)) continue;
+    const o = konto === "firma" ? mlOpgave(t.id) : null;
+    const gruppe = konto === "privat" ? "privat" : t.gruppe;
+    const tag = gruppe === "afventer" ? "Afventer" : gruppe === "udkast" ? "Svar" : o ? mlSlags(o) : t.tag || null;
+    ud.push({konto, t, o, gruppe, hvem: t.fra || o?.mail_hvem || "Mail", titel: o ? mlUdenHvem(o.titel, o.mail_hvem || t.fra) : t.emne, tag, frist: o?.deadline || t.frist || ""});
+  }
+  return ud.sort((a, b) => (a.frist || "9999").localeCompare(b.frist || "9999") || (b.t.ulaest - a.t.ulaest) || String(b.t.dato).localeCompare(String(a.t.dato)));
+}
+const mlFrist = d => !d ? "" : d <= iDag() ? "i dag" : d === plusDage(iDag(), 1) ? "i morgen" : kortDato(d);
+const ML_TAG = {Svar: "blå", Hent: "gul", Betal: "grøn", Læs: "lilla", Gør: "gr", Afventer: "gr"};
+async function mlHusk(r, dato) {
+  if (ML.skjult.has(r.konto + r.t.id)) return;   // allerede på vej (dobbelt change fra datofeltet)
+  ML.menu = null; ML.vælgDato = null; ML.skjult.add(r.konto + r.t.id); ML.gen[r.konto]++;
+  if (ML.åben?.id === r.t.id) { ML.åben = null; ML.læs = null; }
+  mlVis();
+  try { await mlKald(r.konto, {h: "husk", id: r.t.id, dato}); const l = ML[r.konto]; if (l) { l.traade = l.traade.filter(x => x.id !== r.t.id); (l.husk ||= []).push({id: r.t.id, fra: r.hvem, emne: r.t.emne, dato}); } }
+  catch (e) { besked({id: nytId("x"), klasse: "adv", titel: `Husk mig: ${r.hvem}: ${e.message}`}); }
+  ML.skjult.delete(r.konto + r.t.id); mlVis();
+}
+async function mlKlaret(r) {
+  if (ML.skjult.has(r.konto + r.t.id)) return;
+  ML.menu = null; ML.skjult.add(r.konto + r.t.id); ML.gen[r.konto]++;
+  if (ML.åben?.id === r.t.id) { ML.åben = null; ML.læs = null; }
+  mlVis();
+  try {
+    await mlKald(r.konto, {h: "klaret", id: r.t.id});
+    const l = ML[r.konto]; if (l) l.traade = l.traade.filter(x => x.id !== r.t.id);
+    ML.skjult.delete(r.konto + r.t.id);
+    if (r.o) await kør("faerdig", [String(r.o.id), "--mail-klaret", ...(r.o.konklusion ? [] : ["--konklusion=Mailen er klaret"])], {tekst: `#${r.o.id} færdig`, efter: ["opgaver"], med: () => { r.o.status = "Færdig"; r.o.faerdig_dato = iDag(); }});
+    else mlVis();
+  } catch (e) { ML.skjult.delete(r.konto + r.t.id); besked({id: nytId("x"), klasse: "adv", titel: `Klaret: ${r.hvem}: ${e.message}`}); mlVis(); }
+}
+async function mlÅbn(r) {
+  ML.åben = {konto: r.konto, id: r.t.id}; ML.læs = null; ML.menu = null;
+  visIDag(); window.scrollTo(0, 0);
+  try {
+    const sv = await mlKald(r.konto, {h: "aabn", id: r.t.id});
+    if (ML.åben?.id !== r.t.id) return;
+    ML.læs = sv; r.t.ulaest = false;
+  } catch (e) { if (ML.åben?.id === r.t.id) ML.læs = {fejl: e.message}; }
+  if (fane === "idag" && ML.åben?.id === r.t.id) visIDag();
+}
+function mlHuskKnap(r) {
+  const nøgle = r.konto + r.t.id, åben = ML.menu === nøgle, uge = plusDage(iDag(), 7);
+  return h("span", {class: "ml-husk", onclick: e => e.stopPropagation()},
+    h("button", {class: "btn lille", type: "button", "aria-expanded": åben ? "true" : "false", onclick: () => { ML.menu = åben ? null : nøgle; ML.vælgDato = null; mlVis(); }}, "Husk mig ▾"),
+    åben ? h("div", {class: "ml-menu", role: "menu"},
+      [["I morgen", 1], ["Om 3 dage", 3], [`Om en uge (${kortDato(uge)})`, 7]].map(([t, n]) => h("button", {type: "button", role: "menuitem", onclick: () => mlHusk(r, plusDage(iDag(), n))}, t)),
+      ML.vælgDato ? datoInput("", iso => { if (iso > iDag()) mlHusk(r, iso); }, {"aria-label": "Husk mig til dato", style: "width:100%;margin-top:4px"})
+        : h("button", {type: "button", role: "menuitem", onclick: () => { ML.vælgDato = true; mlVis(); document.querySelector(".ml-menu .dato-felt")?.focus(); }}, "Vælg dato …")) : null);
+}
+function mlKlaretKnap(r) { return h("button", {class: "btn lille ml-ok", type: "button", onclick: e => { e.stopPropagation(); mlKlaret(r); }}, "Klaret"); }
+function mlRække(r) {
+  const fr = mlFrist(r.frist), valgt = ML.åben?.id === r.t.id;
+  return h("div", {class: "ml-r" + (r.t.ulaest ? " ulaest" : "") + (valgt ? " valgt" : ""), role: "button", tabindex: "0", "data-id": r.t.id,
+      onclick: () => mlÅbn(r), onkeydown: e => { if (e.key === "Enter" && e.target === e.currentTarget) mlÅbn(r); }},
+    h("span", {class: "ml-t"}, r.t.ulaest ? h("span", {class: "ml-prik", "aria-label": "ulæst"}) : null, h("b", {}, r.hvem), h("span", {class: "ml-sep"}, " · "), r.titel),
+    h("span", {class: "ml-hoejre"},
+      r.tag ? h("span", {class: "pill " + (ML_TAG[r.tag] || "gr")}, r.tag) : null,
+      fr ? h("span", {class: "ml-frist" + (fr === "i dag" ? " rd" : "")}, fr) : null,
+      ML.åben ? null : [r.gruppe === "udkast" && r.t.udkastLink ? h("a", {class: "btn lille", href: r.t.udkastLink, target: "_blank", rel: "noopener", onclick: e => e.stopPropagation()}, "Åbn udkast ↗") : mlHuskKnap(r), mlKlaretKnap(r)]));
+}
+function mlKort() {
+  const konti = mlKonti();
+  if (!konti.length) return null;
+  const rk = mlRækker(), tlf = window.innerWidth <= 700;
+  const tid = konti.map(k => ML[k]?.tid).filter(Boolean).sort()[0];
+  const fejl = konti.filter(k => ML.fejl[k]);
+  const gammel = !ML.t || Date.now() - ML.t > 5 * 60e3;
+  const mærke = !ML.t && ML.henter ? h("span", {class: "op-mk y"}, "● Henter …") : h("span", {class: "op-mk" + (fejl.length || gammel ? " r" : ""), title: fejl.map(k => `${k}: ${ML.fejl[k]}`).join(" · ") || null},
+    "● " + (fejl.length && !tid ? "Mails svarer ikke" : `${tlf ? "" : "Opdateret "}${tid ? tid.slice(11, 16).replace(":", ".") : ""}`));
+  const antal = konti.map(k => `${rk.filter(r => r.konto === k).length} ${k}`).join(" · ");
+  const grupper = [["venter", "Venter på dig"], ["udkast", "Udkast klar"], ["afventer", "Afventer svar"], ["privat", "Privat"]].map(([g, navn]) => {
+    const rs = rk.filter(r => r.gruppe === g), luk = ML.lukket.has(g) || (tlf && ML.lukket.has(g + ":tlf"));
+    if (!rs.length) return null;
+    return h("div", {class: "ml-g"},
+      h("button", {class: "ml-gh", type: "button", "aria-expanded": luk ? "false" : "true", onclick: () => { ML.lukket.delete(g + ":tlf"); luk ? ML.lukket.delete(g) : ML.lukket.add(g); mlVis(); }},
+        (luk ? "▸ " : "▾ ") + navn, h("span", {class: "ml-n"}, " " + rs.length)),
+      luk ? null : h("div", {class: "ml-liste"}, rs.map(mlRække)));
+  });
+  const husk = konti.flatMap(k => ML[k]?.husk || []);
+  const dage = [...new Set(husk.map(x => x.dato))].sort().map(kortDato);
+  return h("div", {class: "kort2 ml-kort"},
+    h("div", {class: "kh"}, h("h2", {}, "Mails"), mærke, rk.length ? h("span", {class: "ml-antal"}, antal) : null,
+      ML_KONTI.filter(([k]) => !mlKobling(k)).map(([k, t]) => h("button", {class: "btn lille", type: "button", style: "margin-left:auto", onclick: () => mlForbind(k)}, t))),
+    grupper,
+    husk.length ? h("div", {class: "ml-husk-fod"},
+      h("button", {class: "ml-gh lille", type: "button", onclick: () => { ML.huskÅben = !ML.huskÅben; mlVis(); }}, `${ML.huskÅben ? "▾" : "▸"} Husk mig ${husk.length} (kommer tilbage ${dage.join(" og ")})`),
+      ML.huskÅben ? husk.sort((a, b) => a.dato.localeCompare(b.dato)).map(x => h("div", {class: "ml-r graa"}, h("span", {class: "ml-t"}, h("b", {}, x.fra), h("span", {class: "ml-sep"}, " · "), x.emne), h("span", {class: "ml-frist"}, kortDato(x.dato)))) : null) : null);
+}
+function mlLæsKort() {
+  const r = mlRækker().find(x => x.t.id === ML.åben.id && x.konto === ML.åben.konto) || null, l = ML.læs;
+  const luk = () => { ML.åben = null; ML.læs = null; visIDag(); };
+  const dato = l?.dato ? (l.dato.slice(0, 10) === iDag() ? "i dag " : kortDato(l.dato.slice(0, 10)) + " ") + l.dato.slice(11, 16).replace(":", ".") : "";
+  return h("div", {class: "kort2 ml-laes-kort"},
+    h("button", {class: "ml-tilbage", type: "button", onclick: luk}, "‹ Mails"),
+    !l ? h("div", {}, "Henter mailen …")
+      : l.fejl ? h("div", {class: "rd"}, "Mailen kunne ikke hentes: " + l.fejl)
+      : [h("div", {class: "muted lille"}, `${l.fra} · ${dato}`),
+         h("h2", {class: "ml-emne"}, l.emne),
+         h("div", {class: "ml-tekst"}, l.tekst),
+         l.udkast ? h("div", {class: "ml-udkast"}, h("div", {class: "ml-udkast-ov"}, "Udkast i Gmail"), h("div", {class: "ml-tekst"}, l.udkast)) : null,
+         h("div", {class: "ml-knapper"},
+           h("a", {class: "btn lille", href: l.link, target: "_blank", rel: "noopener"}, "Åbn i Gmail ↗"),
+           l.udkastLink ? h("a", {class: "btn lille", href: l.udkastLink, target: "_blank", rel: "noopener"}, "Åbn udkast i Gmail ↗") : null,
+           r ? [mlHuskKnap(r), mlKlaretKnap(r)] : null)]);
+}
 function visIDag() {
   const idag = iDag(), d = dag(idag);
   const dp = (D.dagsplaner || []).find(x => x.dato === idag);
@@ -3940,20 +4128,22 @@ function visIDag() {
             h("span", {class: "prik " + (klar ? "ok" : "adv"), style: "margin-left:auto", title: "Pakkeliste " + (klar ? "færdig" : "mangler")}));
         }) : h("div", {class: "muted lille"}, "Ingen"))];
   const overskrift = h("h1", {}, `${DAGE[d.getDay()][0].toUpperCase() + DAGE[d.getDay()].slice(1)} ${d.getDate()}. ${MDL[d.getMonth()]}`);
+  const mails = mlKort();   // Mails ved siden af planen (Oscar 13/11, skitse panel-mails A); en åben mail står til højre for listen (C)
+  if (mails && ML.åben) { $("rod").replaceChildren(h("div", {class: "side bred"}, overskrift, fejlBjælker(), h("div", {class: "idag ml-laes"}, mails, mlLæsKort()))); return; }
   if (dp?.plan_punkter?.length) {   // dagen er planlagt: kun planen (Oscar 28/10: "fokus skal holdes"); resten bag ét lukket link
     const tal = [[henv.length, "Forespørgsler"], [due.length, "Salg"],
       [ub && (ub.forfaldne || dm.length) ? (ub.forfaldne || 0) + dm.length : 0, "Penge ude"]].filter(([n]) => n).map(([n, t]) => `${t} ${n}`);
-    $("rod").replaceChildren(h("div", {class: "side"}, overskrift, fejlBjælker(),
-      h("div", {class: "fokus"}, planKort, evalueringKort(idag), ...jobKort, vagterKort(idag),   // vagtkort vises kun ved kollision eller nye vagter
+    const fokus = h("div", {class: "fokus"}, planKort, evalueringKort(idag), ...jobKort, vagterKort(idag),   // vagtkort vises kun ved kollision eller nye vagter
         foreDag().ting.some(t => !t.klaret) ? foreIDag() : null,   // planlagt dag: forespørgsler, der skal svares eller følges op, står stadig fremme
         brydIgennem(henv, ub, dm),
         h("details", {class: "resten"}, h("summary", {class: "muted lille"}, "Vis resten" + (tal.length ? ` (${tal.join(" · ")})` : "")),
-          h("div", {class: "stak", style: "margin-top:10px"}, resten)))));
+          h("div", {class: "stak", style: "margin-top:10px"}, resten)));
+    $("rod").replaceChildren(h("div", {class: "side" + (mails ? " bred" : "")}, overskrift, fejlBjælker(), mails ? h("div", {class: "idag"}, fokus, mails) : fokus));
     return;
   }
   const evKort = evalueringKort(idag);
   $("rod").replaceChildren(h("div", {class: "side bred"}, overskrift, fejlBjælker(), evKort ? h("div", {style: "margin-bottom:16px"}, evKort) : null,
-    h("div", {class: "idag"}, planKort, h("div", {class: "stak"}, ...jobKort, resten[0], vagterKort(idag), ...resten.slice(1)))));
+    h("div", {class: "idag"}, planKort, h("div", {class: "stak"}, mails, ...jobKort, resten[0], vagterKort(idag), ...resten.slice(1)))));
 }
 function brydIgennem(henv, ub, dm) {   // planlagt dag: nye forespørgsler og penge ude står over "Vis resten" (skitse panel-opfoelgning, Oscar ja 29/10)
   // forespørgslerne har deres eget dagskort (Oscar 8/11, skitse panel-foresp-dagskort): her står kun penge ude
@@ -5939,11 +6129,12 @@ function mailTilPlan(idag, dp) {   // Planlæg dag venter på mailoversigten, s�
 function mailStatus(idag, dp) {   // Mailoversigten: Mødt ind starter morgenens (Oscar 13/11), Fabz starter eftermiddagens kl. 15.30. Status fra data/mailoversigt.json. Tre tilstande (Oscar 29/10): sendt, sendt men oprydning mangler (Ryd op nu), fejlede (Prøv igen)
   const m = D.mailoversigt, iDagM = m && m.dato === idag;
   if (iDagM && m.status === "sendt") {
+    const sendt = m.mail === false ? "Mails gennemgået" : "Mailoversigt sendt";   // Oscar 13/11: mailen er slukket (data/mail_indstillinger.json), robotten kører stadig
     const mangler = (m.oprydning?.fejlede || []).length;
-    if (!mangler) return h("span", {class: "pill g", title: m.overskrift || ""}, `Mailoversigt sendt kl. ${m.tid} · ` + (m.nye_opgaver != null ? `${m.nye_opgaver} ${m.nye_opgaver === 1 ? "ny opgave" : "nye opgaver"}` : `${m.kraever} kræver dig`));
-    if (m.ryd_koerer) { moPoll(idag, j => (j.oprydning?.ryddet_igen || "") !== (m.oprydning?.ryddet_igen || "")); return h("span", {class: "pill y"}, `Mailoversigt sendt kl. ${m.tid} · rydder op …`); }
-    return h("span", {class: "rk", style: "gap:6px"}, h("span", {class: "pill y", title: "Mailen er sendt. Oprydningen i indbakken (etiketter og arkivering) blev ikke færdig."},
-        `Mailoversigt sendt kl. ${m.tid} · ${mangler} ${mangler === 1 ? "tråd" : "tråde"} ikke ryddet: ${m.oprydning?.grund || "ukendt fejl"}`),
+    if (!mangler) return h("span", {class: "pill g", title: m.overskrift || ""}, `${sendt} kl. ${m.tid} · ` + (m.nye_opgaver != null ? `${m.nye_opgaver} ${m.nye_opgaver === 1 ? "ny opgave" : "nye opgaver"}` : `${m.kraever} kræver dig`));
+    if (m.ryd_koerer) { moPoll(idag, j => (j.oprydning?.ryddet_igen || "") !== (m.oprydning?.ryddet_igen || "")); return h("span", {class: "pill y"}, `${sendt} kl. ${m.tid} · rydder op …`); }
+    return h("span", {class: "rk", style: "gap:6px"}, h("span", {class: "pill y", title: "Oprydningen i indbakken (etiketter og arkivering) blev ikke færdig."},
+        `${sendt} kl. ${m.tid} · ${mangler} ${mangler === 1 ? "tråd" : "tråde"} ikke ryddet: ${m.oprydning?.grund || "ukendt fejl"}`),
       h("button", {class: "btn lille", type: "button", onclick: () => kør("mail-ryd", [], {tekst: "Ryd op", efter: [], med: () => { D.mailoversigt = {...m, ryd_koerer: true}; }})}, "Ryd op nu"));
   }
   if (iDagM && m.status === "fejl") return h("span", {class: "rk", style: "gap:6px"}, h("span", {class: "pill rd", title: m.fejl || ""}, `Mailoversigt fejlede kl. ${m.tid}: ${moGrund(m)}`),
