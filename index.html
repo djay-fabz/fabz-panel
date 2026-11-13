@@ -2775,7 +2775,7 @@ function varmeLinje() {
     arb ? [h("b", {}, "Arbejdsdag 18°"), h("span", {}, `til ${arb.til}`), h("span", {class: "muted va-tal"}, startet ? `startet kl. ${v.opdateret.slice(11, 16).replace(":", ".")} · ${grad(s.temp)} · ${s.fugt ?? "–"} %` : "starter om lidt")]
       : [h("b", {}, "Varme"), h("span", {class: "va-tal"}, `${grad(s.temp)} · ${s.fugt ?? "–"} % · ${p.taendt ? `tændt ${p.setpunkt ?? ""}°`.replace(" °", "") : "slukket"} · ${målt}`),
         v.tilstand === "manuelt" && v.manuel ? h("span", {class: "pill va-pill gul"}, `Manuelt siden ${v.manuel.fra.slice(11).replace(":", ".")}`)   // tændt med stemmen, i appen eller på fjernbetjeningen (Oscar 10/11)
-          : h("span", {class: "pill va-pill " + (næste ? "blå" : "grøn")}, næste ? `Arbejdsdag ${dagNavn(næste)} ${næste.fra}-${næste.til}` : "Automatik 8-12°")],
+          : h("span", {class: "pill va-pill " + (næste ? "blå" : "grøn")}, næste ? `Arbejdsdag ${dagNavn(næste)} ${næste.fra}-${næste.til}` : "Frostsikring under 5°")],
     h("div", {class: "spacer"}),
     arb ? h("button", {class: "btn lille", type: "button", onclick: stop}, "Stop nu") : null,
     h("button", {class: "btn lille", type: "button", onclick: () => { VA.arb = VA.arb ? null : {dag: "idag", dato: "", fra: "07.30", til: "16.00"}; visLager(); }}, "Arbejdsdag"),
