@@ -3239,7 +3239,7 @@ function visIDag() {
       mailStatus(idag, dp),
       dp?.moedt_ind ? h("span", {class: "muted lille"}, `Mødt ind ${dp.moedt_ind}` + (dp.moedetid ? ` · aftalt ${dp.moedetid}` : ""))
         : h("button", {class: "btn lille", type: "button", onclick: () => { startMorgenkørsler(); return kør("moedt-ind", [nuHHMM()], {tekst: "Mødt ind", efter: ["dagsplaner"],
-            med: () => { const x = (D.dagsplaner ||= []).find(x => x.dato === idag); if (x) x.moedt_ind = nuHHMM(); else D.dagsplaner.push({dato: idag, moedt_ind: nuHHMM()}); }}); }}, "Mødt ind nu")),   // Mødt ind starter Dinero og kalender, hvis de ikke er kørt i dag (R1). Ikke mailoversigten: den kører fast kl. 10.30, salg før skærm (Oscar 11/11)
+            med: () => { const x = (D.dagsplaner ||= []).find(x => x.dato === idag); if (x) x.moedt_ind = nuHHMM(); else D.dagsplaner.push({dato: idag, moedt_ind: nuHHMM()}); }}); }}, "Mødt ind nu")),   // Mødt ind starter Dinero og kalender, hvis de ikke er kørt i dag (R1), og morgenens mailoversigt (Oscar 13/11)
     dp?.plan_punkter?.length ? [
       ...[["foer_frokost", dp.plan_punkter.some(p => p.halvdel === "efter_frokost") ? "Før frokost" : "Arbejdstid"], ["efter_frokost", "Efter frokost"], ["hvis_tid", "Hvis der er tid"]].map(([hv, navn]) => {
         const ps = dp.plan_punkter.filter(p => p.halvdel === hv);
@@ -5301,7 +5301,7 @@ function mailTilPlan(idag, dp) {   // Planlæg dag venter på mailoversigten, s�
   const m = D.mailoversigt, iDagM = m && m.dato === idag;
   if (iDagM && m.status === "sendt") return {klar: true};
   if (iDagM && m.status === "fejl") return {klar: true, tekst: `Mailoversigten fejlede (${moGrund(m)}). Nye mails er ikke med i planen.`};
-  const start = iDagM && m.status === "bestilt" && m.tid;   // ikke Mødt ind: oversigten kører fast kl. 10.30 (Oscar 11/11)
+  const start = iDagM && m.status === "bestilt" && m.tid;   // Mødt ind starter morgenens oversigt (Oscar 13/11)
   if (!start) return {klar: true, kør: true, tekst: "Mailoversigten er ikke kørt i dag. Nye mails er ikke med i planen."};
   const hm = String(start).match(/(\d+)[.:](\d+)/), nu = nuHHMM().match(/(\d+)[.:](\d+)/);
   const gået = hm && nu ? (+nu[1] * 60 + +nu[2]) - (+hm[1] * 60 + +hm[2]) : 99;
@@ -5310,7 +5310,7 @@ function mailTilPlan(idag, dp) {   // Planlæg dag venter på mailoversigten, s�
   if (!MO_VENT) MO_VENT = setTimeout(() => { MO_VENT = 0; tegn(); }, Math.max(1, 10 - gået) * 60000);
   return {klar: false, tekst: `Venter på mailoversigten (startet kl. ${start}), så de nye opgaver kommer med i planen.`};
 }
-function mailStatus(idag, dp) {   // Mailoversigten: kører fast kl. 10.30 og 15.30 (Fabz starter), Mødt ind starter den ikke (salg før skærm, Oscar 11/11). Status fra data/mailoversigt.json. Tre tilstande (Oscar 29/10): sendt, sendt men oprydning mangler (Ryd op nu), fejlede (Prøv igen)
+function mailStatus(idag, dp) {   // Mailoversigten: Mødt ind starter morgenens (Oscar 13/11), Fabz starter eftermiddagens kl. 15.30. Status fra data/mailoversigt.json. Tre tilstande (Oscar 29/10): sendt, sendt men oprydning mangler (Ryd op nu), fejlede (Prøv igen)
   const m = D.mailoversigt, iDagM = m && m.dato === idag;
   if (iDagM && m.status === "sendt") {
     const mangler = (m.oprydning?.fejlede || []).length;
@@ -5322,9 +5322,9 @@ function mailStatus(idag, dp) {   // Mailoversigten: kører fast kl. 10.30 og 15
   }
   if (iDagM && m.status === "fejl") return h("span", {class: "rk", style: "gap:6px"}, h("span", {class: "pill rd", title: m.fejl || ""}, `Mailoversigt fejlede kl. ${m.tid}: ${moGrund(m)}`),
     h("button", {class: "btn lille", type: "button", onclick: () => kør("mailoversigt", [], {tekst: "Mailoversigt", efter: [], med: () => { D.mailoversigt = {dato: idag, status: "bestilt", tid: nuHHMM()}; }})}, "Prøv igen"));
-  const start = iDagM && m.status === "bestilt" && m.tid;   // ikke Mødt ind: oversigten kører fast kl. 10.30 (Oscar 11/11)
+  const start = iDagM && m.status === "bestilt" && m.tid;   // Mødt ind starter morgenens oversigt (Oscar 13/11)
   if (start) moPoll(idag, j => j.status !== "bestilt");
-  return start ? h("span", {class: "pill y"}, `Mailoversigt startet kl. ${start}`) : null;   // før kl. 10.30: intet
+  return start ? h("span", {class: "pill y"}, `Mailoversigt startet kl. ${start}`) : null;   // før Mødt ind: intet
 }
 function koerelisteKnap(vedTidsplan) {   // Køreliste (PDF), eget ark (Oscar 26/10: browserens print duede ikke; knappen skal stå ved tidsplanen)
   const r = RU, d = r.svar?.data;
@@ -7383,8 +7383,16 @@ function nySalgForm() {
 
 // ---------- Mødt ind: morgenens Dinero og kalender (R1, 11/11) ----------
 // GitHub starter de planlagte kørsler op til 8 timer for sent. Er Dinero eller kalenderen ikke kørt (eller i gang) i dag, starter Mødt ind dem, som Hent alle jobs gør.
+// Morgenens mailoversigt starter også her (Oscar 13/11: "også firma mailen skal laves ved mødt ind"), ikke længere fast kl. 10.30. mailoversigt.py sender kun én om morgenen
 async function startMorgenkørsler() {
   const midnat = new Date(); midnat.setHours(0, 0, 0, 0);
+  const idag = iDag(), m = D.mailoversigt;
+  if (!(m && m.dato === idag && ["sendt", "bestilt"].includes(m.status))) {
+    try {
+      tjek(await gh(`/repos/${REPO}/actions/workflows/mail.yml/dispatches`, {method: "POST", body: {ref: BRANCH, inputs: {eftermiddag: "false", igen: "false"}}}), "mail.yml");
+      D.mailoversigt = {dato: idag, status: "bestilt", tid: nuHHMM()};   // Planlæg dag venter på den (mailTilPlan)
+    } catch (e) { console.warn("Mødt ind: kunne ikke starte mailoversigten", e); }
+  }
   for (const [wf, inputs] of [["dinero.yml", {}], ["kalender.yml", {opgaver: "true"}]]) {
     try {
       const r = tjek(await gh(`/repos/${REPO}/actions/workflows/${wf}/runs?created=${encodeURIComponent(">=" + midnat.toISOString())}&per_page=30&t=${Date.now()}`), wf);
