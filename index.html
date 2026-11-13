@@ -6730,7 +6730,8 @@ function klubDele(rest, P, mo, f = {}, st = null) {   // st: det, linjerne før 
   else if (HB) { b1 = buf = Math.max(0, Math.min(over, HB.maerke - HB.saldo, plads)); over -= buf; }   // 1) op til mærket
   // tæt på d. 1 (Oscar 13/11): fra den dag, Overfør fra Saxo til Lønkonto+ vises (3 bankdage før, fabz_saxo: Saxo udbetaler næste bankdag), når d. 1-pengene
   // ikke frem og tilbage. Så bliver d. 1-delen på Lønkonto+ til lønnen, og kun det over mærket går til Saxo
-  const sxo = P.d1 && (D.opgaver || []).find(o => o.saxo_d1 === P.d1.dato && o.status !== "Færdig"), tæt = !!(sxo && iDag() >= (sxo.ikke_foer || sxo.deadline) && iDag() < P.d1.dato);
+  // kun datoen tæller, ikke om opgaven er færdig (revision 13/11: efter Saxo-overførslen når et klubjob 28/11-30/11 heller ikke ud før d. 1). Opgaven laves af fabz_saxo; mangler den, bruges lønnens vis_fra (fejler på den sikre side)
+  const sxo = P.d1 && (D.opgaver || []).find(o => o.saxo_d1 === P.d1.dato), fra = sxo?.ikke_foer || sxo?.deadline || (mo.raad?.loen_dato === P.d1?.dato ? mo.raad.loen_vis_fra : null), tæt = !!(P.d1 && fra && iDag() >= fra && iDag() < P.d1.dato);
   let blivD1 = 0;
   if (tæt && b1) { blivD1 = b1; buf -= b1; }
   // over mærket tæller ikke som Saxo-del d. 1, så firmakontoen må give mere. Højst til lønnen d. 1 (revision 13/11: aldrig rød Til d. 1). Resten bliver på Lønkonto+ til d. 1
