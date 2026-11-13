@@ -2242,7 +2242,7 @@ function festkortBlok(j, st, gentegn) {
     if (/·|\d{4}/.test(fk.anledning)) { alert("Skriv kun anledningen, fx Bryllup. Datoen kommer fra jobbet."); return; }
     fk.arbejder = true; fk.svar = {klasse: "", titel: "Laver visitkort og barskilt … typisk 20-30 sekunder"}; gentegn();
     try {
-      const sv = await kørOgVent("festkort", [`--dato=${j.dato}`, `--job=${j.navn}`, `--navne=${fk.navne.trim()}`, `--anledning=${fk.anledning.trim()}`]);
+      const sv = await kørOgVent("festkort", [`--dato=${j.dato}`, `--job=${j.navn}`, `--navne=${fk.navne.trim()}`, `--anledning=${fk.anledning.trim()}`, `--jobtype=${jobtype(j)}`]);
       if (!sv) fk.svar = {klasse: "fejl", titel: "Intet svar efter 4 minutter."};
       else if (sv.status === "FEJL") fk.svar = {klasse: "fejl", titel: "Kortene er ikke lavet", punkter: [sv.fejl]};
       else {
@@ -4976,7 +4976,7 @@ function visSkilteFraJob(j, status, række, js) {
   const navne = (KT.fk?.navne ?? rec?.navne ?? j.navn).trim(), anl = (KT.fk?.anledning ?? rec?.anledning ?? gætAnledning(j)).trim();
   const kort = (sl, navn, billede) => h("button", {type: "button", class: "sv-k" + (valgt === sl ? " valgt" : ""), onclick: () => { KT.slags = sl; tegn(); }}, billede, h("b", {}, navn));
   const klub = h("span", {class: "sv-b"}, h("img", {src: "skilte/klub.png", alt: "Klubskilt"}));
-  const fest = h("span", {class: "sv-b"}, h("img", {src: "skilte/fest.png", alt: "Festskilt"}),
+  const fest = h("span", {class: "sv-b"}, h("img", {src: erKlub(j) ? "skilte/fest-klub.png" : "skilte/fest.png", alt: "Festskilt"}),
     h("span", {class: "sv-navn", style: navne.length > 18 ? `font-size:${(6 * 18 / navne.length).toFixed(2)}cqw` : ""}, navne),
     h("span", {class: "sv-linje"}, `${anl || "…"} · ${d.getDate()}. ${MDL[d.getMonth()]} ${d.getFullYear()}`));
   const andre = js.filter(x => x !== j);
