@@ -1319,6 +1319,11 @@ function printDokBlok(j, st) {
   const print = async () => {
     r.arbejder = true; r.fejl = null; tegn();
     try {
+      let egen = null;   // laves i browseren (Oscar 13/11). Fejler det, laver fabz.py PDF'en som før
+      try { await friskeJobdata(); egen = await jobDokumenterPdf(st.key); }
+      catch (e) { if (e.brugerfejl) { r.fejl = e.message; egen = false; } else console.warn("PDF i browseren fejlede, fabz.py laver den", e); }
+      if (egen) { r.mangler = egen.mangler; hentNed(egen.bytes, egen.fil); }
+      if (egen !== null) { r.arbejder = false; if (JH === st.key) tegn(); return; }
       const sv = await kørOgVent("job-dokumenter", [st.key]);
       if (!sv || sv.status === "FEJL") r.fejl = sv?.fejl || "Intet svar efter 4 minutter.";
       else {
@@ -2606,6 +2611,573 @@ function tegnSvar() {
     s.link ? h("div", {style: "display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"},
       h("a", {class: "btn primaer", href: s.link, target: "_blank", rel: "noopener", style: "margin:0"}, "Åbn PDF og print"),
       h("a", {class: "btn", href: s.link, download: s.filnavn || "Pakkeliste.pdf", style: "margin:0"}, "Hent PDF")) : null) : "");
+}
+// ---------- PDF'er i browseren (Oscar 13/11, planer/egen-server.md punkt 4) ----------
+// Pakkelisten og kørelisten laves her med pdf-lib i stedet for i panel.yml (12-23 sek. pr. kørsel). Layoutet er reportlabs (pakkeliste_pdf.py) mål for mål:
+// A4, margen 14 mm + 6 pt, Helvetica, samme linjeskift, sideskift, streger og QR. tools/panel-test/test_pdf_browser.js sammenligner de to.
+// pdf-lib 1.17.1 ligger i vendor/ og hentes først, når en PDF laves. Fejler noget her, laver fabz.py PDF'en som før
+let PDFLIB = null;
+function hentPdfLib() {
+  if (window.PDFLib) return Promise.resolve(window.PDFLib);
+  return PDFLIB ||= new Promise((ok, nej) => {
+    const s = document.createElement("script");
+    s.src = "vendor/pdf-lib.min.js";
+    s.onload = () => window.PDFLib ? ok(window.PDFLib) : nej(new Error("pdf-lib mangler"));
+    s.onerror = () => { PDFLIB = null; s.remove(); nej(new Error("pdf-lib kunne ikke hentes")); };
+    document.head.append(s);
+  });
+}
+// QR-kode (niveau M, 8-bit) som reportlabs qrencoder.py (port af Kazuhiko Arases bibliotek), linje for linje, så kørelistens QR bliver præcis som før.
+// Giver modulerne som [[true/false]]. Kun det, kørelisten bruger: én 8-bit-blok (UTF-8) og automatisk version
+const QR_RS_M = [[1,26,16],[1,44,28],[1,70,44],[2,50,32],[2,67,43],[4,43,27],[4,49,31],[2,60,38,2,61,39],[3,58,36,2,59,37],[4,69,43,1,70,44],[1,80,50,4,81,51],[6,58,36,2,59,37],[8,59,37,1,60,38],[4,64,40,5,65,41],[5,65,41,5,66,42],[7,73,45,3,74,46],[10,74,46,1,75,47],[9,69,43,4,70,44],[3,70,44,11,71,45],[3,67,41,13,68,42],[17,68,42],[17,74,46],[4,75,47,14,76,48],[6,73,45,14,74,46],[8,75,47,13,76,48],[19,74,46,4,75,47],[22,73,45,3,74,46],[3,73,45,23,74,46],[21,73,45,7,74,46],[19,75,47,10,76,48],[2,74,46,29,75,47],[10,74,46,23,75,47],[14,74,46,21,75,47],[14,74,46,23,75,47],[12,75,47,26,76,48],[6,75,47,34,76,48],[29,74,46,14,75,47],[13,74,46,32,75,47],[40,75,47,7,76,48],[18,75,47,31,76,48]];
+const QR_POS = [[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],[6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],[6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],[6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]];
+function qrModuler(tekst) {
+  const data = [...new TextEncoder().encode(tekst)];
+  const EXP = new Array(256).fill(0), LOG = new Array(256).fill(0);
+  for (let i = 0; i < 8; i++) EXP[i] = 1 << i;
+  for (let i = 8; i < 256; i++) EXP[i] = EXP[i - 4] ^ EXP[i - 5] ^ EXP[i - 6] ^ EXP[i - 8];
+  for (let i = 0; i < 255; i++) LOG[EXP[i]] = i;
+  const gexp = n => { while (n < 0) n += 255; while (n >= 256) n -= 255; return EXP[n]; };
+  const glog = n => { if (n < 1) throw new Error("glog(" + n + ")"); return LOG[n]; };
+  const poly = (num, shift) => { let o = 0; while (o < num.length && num[o] === 0) o++; return [...num.slice(o), ...new Array(shift).fill(0)]; };
+  const mult = (a, b) => { const num = new Array(a.length + b.length - 1).fill(0); for (let i = 0; i < a.length; i++) for (let j = 0; j < b.length; j++) num[i + j] ^= gexp(glog(a[i]) + glog(b[j])); return poly(num, 0); };
+  const mod = (a, e) => { while (a.length >= e.length) { const r = glog(a[0]) - glog(e[0]); a = poly([...a.slice(0, e.length).map((n, i) => n ^ gexp(glog(e[i]) + r)), ...a.slice(e.length)], 0); } return a; };
+  const blokke = v => { const t = QR_RS_M[v - 1], ud = []; for (let i = 0; i < t.length / 3; i++) for (let j = 0; j < t[i * 3]; j++) ud.push({total: t[i * 3 + 1], data: t[i * 3 + 2]}); return ud; };
+  const længdeBits = v => v < 10 ? 8 : 16;
+  let ver = 1;
+  for (ver = 1; ver < 40; ver++) if (4 + længdeBits(ver) + data.length * 8 <= blokke(ver).reduce((a, b) => a + b.data, 0) * 8) break;
+  // data og fejlrettelse
+  const rs = blokke(ver), total = rs.reduce((a, b) => a + b.data, 0);
+  const buf = [], put = (num, len) => { for (let i = 0; i < len; i++) bit(((num >> (len - i - 1)) & 1) === 1); };
+  let blen = 0;
+  function bit(b) { const i = blen >> 3; if (buf.length <= i) buf.push(0); if (b) buf[i] |= 0x80 >> (blen % 8); blen++; }
+  put(0x4, 4); put(data.length, længdeBits(ver)); for (const c of data) put(c, 8);
+  if (blen > total * 8) throw new Error("QR: for meget data");
+  if (blen + 4 <= total * 8) put(0, 4);
+  while (blen % 8) bit(false);
+  while (true) { if (blen >= total * 8) break; put(0xEC, 8); if (blen >= total * 8) break; put(0x11, 8); }
+  let off = 0; const dc = [], ec = [];
+  for (const b of rs) {
+    const d = buf.slice(off, off + b.data); off += b.data; dc.push(d);
+    let rsp = [1]; for (let i = 0; i < b.total - b.data; i++) rsp = mult(rsp, [1, gexp(i)]);
+    const m = mod(poly(d, rsp.length - 1), rsp), rl = rsp.length - 1;
+    ec.push(Array.from({length: rl}, (_, k) => { const i = m.length - rl + k; return i >= 0 ? m[i] : 0; }));
+  }
+  const fletning = a => { const ud = [], mx = Math.max(...a.map(x => x.length)); for (let i = 0; i < mx; i++) for (const x of a) if (i < x.length) ud.push(x[i]); return ud; };
+  const bytes = [...fletning(dc), ...fletning(ec)], bits = [];
+  for (const by of bytes) for (const m of [0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01]) bits.push(!!(by & m));
+  // placering
+  const N = ver * 4 + 17, pos = QR_POS[ver - 1];
+  const MASK = [(i, j) => (i + j) % 2 === 0, (i, j) => i % 2 === 0, (i, j) => j % 3 === 0, (i, j) => (i + j) % 3 === 0,
+    (i, j) => (Math.floor(i / 2) + Math.floor(j / 3)) % 2 === 0, (i, j) => (i * j) % 2 + (i * j) % 3 === 0,
+    (i, j) => ((i * j) % 2 + (i * j) % 3) % 2 === 0, (i, j) => ((i * j) % 3 + (i + j) % 2) % 2 === 0];
+  const bchDigit = d => { let n = 0; while (d !== 0) { n++; d >>>= 1; } return n; };
+  const G15 = 0b10100110111, G18 = 0b1111100100101, G15_MASK = 0b101010000010010;
+  const bchInfo = data => { let d = data << 10; while (bchDigit(d) - bchDigit(G15) >= 0) d ^= G15 << (bchDigit(d) - bchDigit(G15)); return ((data << 10) | d) ^ G15_MASK; };
+  const bchNummer = data => { let d = data << 12; while (bchDigit(d) - bchDigit(G18) >= 0) d ^= G18 << (bchDigit(d) - bchDigit(G18)); return (data << 12) | d; };
+  const ppos = new Set(pos.flatMap(p => [p - 2, p - 1, p, p + 1, p + 2])), maxpos = N - 11;
+  const datapos = [];
+  { const range = (a, b, s = 1) => { const r = []; for (let i = a; s > 0 ? i < b : i > b; i += s) r.push(i); return r; };
+    const cols = [...range(N - 1, 6, -2), ...range(5, 0, -2)];
+    let rows = [range(9, N - 8), [...range(0, 6), ...range(7, N)], range(9, N)], rrows = rows.map(r => [...r].reverse());
+    for (const col of cols) {
+      [rows, rrows] = [rrows, rows];
+      const ri = col <= 8 ? 0 : col >= N - 8 ? 2 : 1;
+      for (const row of rows[ri]) for (let k = 0; k < 2; k++) {
+        const c = col - k;
+        if (ver >= 7) { if (row < 6 && c >= N - 11) continue; else if (col < 6 && row >= N - 11) continue; }
+        if (ppos.has(row) && ppos.has(c) && !(row < 11 && (c < 11 || c > maxpos) || c < 11 && (row < 11 || row > maxpos))) continue;
+        datapos.push([c, row]);
+      }
+    } }
+  const PROBE = ["1111111", "1000001", "1011101", "1011101", "1011101", "1000001", "1111111"].map(r => [...r].map(x => x === "1"));
+  const ADJ = ["11111", "10001", "10101", "10001", "11111"].map(r => [...r].map(x => x === "1"));
+  const lav = (test, mp) => {
+    const M = Array.from({length: N}, () => new Array(N).fill(false));
+    for (const [row, col] of [[0, 0], [N - 7, 0], [0, N - 7]]) {
+      if (row === 0) { for (let i = 0; i < 7; i++) M[row + 7][col + i] = false; if (col === 0) M[row + 7][col + 7] = false; else M[row + 7][col - 1] = false; }
+      else for (let i = 0; i < 8; i++) M[row - 1][col + i] = false;
+      PROBE.forEach((d, r) => { d.forEach((v, i) => { M[row + r][col + i] = v; }); if (col === 0) M[row + r][col + 7] = false; else M[row + r][col - 1] = false; });
+    }
+    for (const row of pos) for (const col of pos) {
+      if (col <= 8 && (row <= 8 || row >= N - 8)) continue; else if (col >= N - 8 && row <= 8) continue;
+      ADJ.forEach((d, r) => d.forEach((v, i) => { M[row + r - 2][col - 2 + i] = v; }));
+    }
+    for (let r = 8; r < N - 8; r++) M[r][6] = r % 2 === 0;
+    for (let i = 0; i < N - 16; i++) M[6][8 + i] = i % 2 === 0;
+    const tb = bchInfo((0 << 3) | mp);   // niveau M = 0
+    for (let i = 0; i < 15; i++) { const m = !test && ((tb >> i) & 1) === 1; if (i < 6) M[i][8] = m; else if (i < 8) M[i + 1][8] = m; else M[N - 15 + i][8] = m; }
+    for (let i = 0; i < 15; i++) { const m = !test && ((tb >> i) & 1) === 1; if (i < 8) M[8][N - i - 1] = m; else if (i < 9) M[8][15 - i - 1 + 1] = m; else M[8][15 - i - 1] = m; }
+    M[N - 8][8] = !test;
+    if (ver >= 7) { const nb = bchNummer(ver);
+      for (let i = 0; i < 18; i++) M[Math.floor(i / 3)][i % 3 + N - 8 - 3] = !test && ((nb >> i) & 1) === 1;
+      for (let i = 0; i < 18; i++) M[i % 3 + N - 8 - 3][Math.floor(i / 3)] = !test && ((nb >> i) & 1) === 1; }
+    const mask = MASK[mp], n = Math.max(datapos.length, bits.length);
+    for (let i = 0; i < n; i++) { const [c, row] = datapos[i]; M[row][c] = (i < bits.length ? bits[i] : false) !== mask(row, c); }
+    return M;
+  };
+  const tabt = M => {   // getLostPoint
+    const T = M[0].map((_, c) => M.map(r => r[c]));
+    const r1 = mods => { let s = 0, last = [0], lr = null;
+      for (const row of mods) { if (lr) { const ch = row.map((a, i) => a !== lr[i]), n = Math.max(ch.length, last.length);
+          for (let i = 0; i < n; i++) { const a = i < ch.length ? ch[i] : 0, b = i < last.length ? last[i] : 0; if (b >= 4) s += a ? b - 1 : 0; }
+          last = Array.from({length: n}, (_, i) => (i < ch.length ? ch[i] : 0) ? 0 : (i < last.length ? last[i] : 0) + 1); }
+        lr = row; }
+      return s + last.filter(b => b >= 4).reduce((a, b) => a + b - 1, 0); };
+    const r2 = mods => { let s = 0, lr = mods[0];
+      for (const row of mods.slice(1)) { let l0 = row[0], l1 = lr[0]; for (let i = 1; i < row.length; i++) { const c0 = row[i], c1 = lr[i]; if (c0 === c1 && c1 === l0 && l0 === l1) s += 3; l0 = c0; l1 = c1; } lr = row; }
+      return s; };
+    const P = [true, false, true, true, true, false, true, false, false, false, false];
+    const r3 = mods => { let s = 0; for (const row of mods) { let j = 0; const mj = row.length - P.length; while (j < mj) { if (P.every((v, k) => row[j + k] === v)) { s += 40; j += P.length; } else j++; } } return s; };
+    // reportlab sammenligner søjlerne (tupler) med en liste i regel 3, så den lodrette del giver altid 0. Det gøres her med vilje også
+    const cnt = M.reduce((a, r) => a + r.filter(Boolean).length, 0), cells = N * N;
+    return r1(M) + r1(T) + r2(M) + r3(M) + 10 * Math.floor(Math.abs(Math.floor(100 * cnt / cells) - 50) / 5);
+  };
+  let bedst = 0, min = 0;
+  for (let i = 0; i < 8; i++) { const p = tabt(lav(true, i)); if (i === 0 || min > p) { min = p; bedst = i; } }
+  return lav(false, bedst);
+}
+
+const PL_ORDEN = ["Lyd", "DJ-udstyr", "Lys", "Scene", "Stativer", "Kabler & strøm", "Transport", "Leje", "Andet", "Løse genstande"];
+const PL_UGEDAGE = ["søndag", "mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag"];
+function plDato(iso, medDag = true) {   // som dansk_dato: 2026-10-23 -> "fredag 23. oktober 2026", ellers det givne
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || "");
+  if (!m) return iso || "";
+  const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+  return (medDag ? PL_UGEDAGE[d.getUTCDay()] + " " : "") + `${d.getUTCDate()}. ${MDL[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+}
+const plTid = iso => plDato(iso, false) + (String(iso).length >= 16 ? " kl. " + String(iso).slice(11, 16).replace(":", ".") : "");   // dansk_tid
+function pakkeRækker(linjer, lager) {   // som raekker() i pakkeliste_pdf.py: faste noter fra lageret, kategori og advarsler
+  const L = new Map(lager.map(x => [(x.navn || "").trim().toLowerCase(), x])), adv = [], R = [];
+  for (const l of linjer) {
+    let n = (l.udstyr || "").trim(), k;
+    const a = Math.trunc(Number(l.antal) || 0), noter = [l.note || ""];
+    if (a <= 0) continue;
+    if (n.toUpperCase().startsWith("LEJE:")) { k = "Leje"; n = n.slice(5).trim() + " (LEJE)"; }
+    else {
+      const x = L.get(n.toLowerCase());
+      if (!x) { k = "Andet"; adv.push(`Findes ikke i lageret: ${n}`); }
+      else {
+        k = x.kategori || "Andet";
+        noter.unshift(x.note || "");
+        if ((x.status || "På lager") !== "På lager") adv.push(`${n}: status er ${x.status}`);
+        if (x.antal != null && a > Math.trunc(Number(x.antal))) adv.push(`${n}: pakker ${a}, lageret har ${Math.trunc(Number(x.antal))}`);
+      }
+    }
+    R.push([k, n, a, noter.filter(Boolean).join(". ")]);
+  }
+  const o = k => { const i = PL_ORDEN.indexOf(k); return i < 0 ? 99 : i; };
+  return {R: R.sort((x, y) => o(x[0]) - o(y[0])), adv};
+}
+function huskFraSidst(job, dato) {   // som husk_fra_sidst i fabz_evaluering.py
+  const PUNKTER = ["ramte", "toemte", "manglede", "husk", "spurgte"], n = (job || "").trim().toLowerCase();
+  const hit = (D.evalueringer || []).filter(r => (r.job || "").trim().toLowerCase() === n && (!dato || r.dato < dato) && PUNKTER.some(k => Array.isArray(r[k]) ? r[k].length : r[k]));
+  const r = hit.reduce((b, x) => !b || x.dato > b.dato ? x : b, null);
+  return r ? [...(r.husk || [])] : [];
+}
+
+// Motoren: sider, skrift, linjeskift og "flowables" som reportlabs SimpleDocTemplate (frame med 6 pt padding). y måles oppefra
+async function pdfMotor() {
+  const L = await hentPdfLib();
+  const doc = await L.PDFDocument.create();
+  const F = await doc.embedFont(L.StandardFonts.Helvetica), FB = await doc.embedFont(L.StandardFonts.HelveticaBold);
+  const mm = 72 / 25.4, PW = 210 * mm, PH = 297 * mm, M = 14 * mm, P = 6;
+  const m = {L, doc, F, FB, mm, PW, PH, X0: M + P, TOP: M + P, BUND: PH - M - P, BR: PW - 2 * M - 2 * P, side: null, y: 0};
+  const ren = m.ren = t => [...String(t ?? "").normalize("NFC")].map(c => { try { F.encodeText(c); return c; } catch { return "?"; } }).join("");   // tegn uden for WinAnsi (emoji) bliver "?"
+  const bredde = m.bredde = (t, font, size) => [...t].reduce((a, c) => a + font.widthOfTextAtSize(c, size), 0);   // uden kerning, som reportlab
+  const linjerAf = (t, font, size, maxW) => {   // som reportlabs Paragraph.breakLines (én skrift): mellemrum samles, mellemrum må presses 5 %, for lange ord knækkes
+    const ord = ren(t).split(/\s+/).filter(Boolean).map(t => ({t, knæk: false})), sp = bredde(" ", font, size), lines = [];
+    let cLine = [], cur = -sp, tvang = false;
+    while (ord.length) {
+      const o = ord.shift();
+      if (!o.t && o.knæk) tvang = true;
+      const ow = bredde(o.t, font, size), nyW = cur + sp + ow, lim = maxW + .05 * sp * cLine.length;
+      if (nyW > lim && !tvang && !o.knæk && ow > maxW) {   // et ord, der er længere end linjen: deles i stykker, der fylder linjerne ud (reportlab _splitWord)
+        const stk = []; let lw = cur + sp, tx = "";
+        for (const c of o.t) { const cw = bredde(c, font, size); if (lw + cw > maxW) { stk.push({t: tx, knæk: true}); lw = cw; tx = c; } else { tx += c; lw += cw; } }
+        stk.push({t: tx, knæk: true});
+        ord.unshift(...stk); tvang = true; continue;
+      }
+      if (nyW <= lim || !cLine.length || tvang) {
+        if (o.t) cLine.push(o.t);
+        if (tvang) { tvang = false; lines.push(cLine); cLine = []; cur = -sp; } else cur = nyW;
+      } else { lines.push(cLine); cLine = [o.t]; cur = ow; }
+    }
+    if (cLine.length) lines.push(cLine);
+    return lines.map(l => l.join(" "));
+  };
+  m.linjerAf = linjerAf;
+  m.nySide = () => { m.side = doc.addPage([PW, PH]); m.y = m.TOP; };
+  m.farve = c => L.rgb(...(c || [0, 0, 0]));
+  m.tekst = (t, x, yOppe, font, size, farve) => m.side.drawText(t, {x, y: PH - yOppe, font, size, color: m.farve(farve)});
+  m.streg = (x1, y1, x2, y2, w, farve, rund = true) => m.side.drawLine({start: {x: x1, y: PH - y1}, end: {x: x2, y: PH - y2}, thickness: w, color: m.farve(farve), ...(rund ? {lineCap: L.LineCapStyle.Round} : {})});
+  m.afsnit = (t, font, size, leading, x = m.X0, maxW = m.BR) => {   // Paragraph: deles over siderne, men aldrig med én enlig første linje nederst
+    let ls = linjerAf(t, font, size, maxW);
+    while (ls.length) {
+      let n = ls.length;
+      if (m.y + n * leading > m.BUND + 1e-6) {
+        const kan = Math.floor((m.BUND - m.y) / leading + 1e-9);
+        if (kan <= 1) { if (m.y > m.TOP) { m.nySide(); continue; } n = 1; } else n = kan;
+      }
+      ls.slice(0, n).forEach((l, i) => m.tekst(l, x, m.y + size + i * leading, font, size));
+      m.y += n * leading;
+      ls = ls.slice(n);
+      if (ls.length) m.nySide();
+    }
+  };
+  m.luft = h => { if (m.y + h > m.BUND + 1e-6) m.nySide(); m.y += h; };   // Spacer: luft, der ikke er plads til, står øverst på næste side
+  m.blok = (h, tegn) => {   // en flowable, der ikke deles: tegn(c) får et lokalt koordinatsystem med (0,0) nederst til venstre, som reportlabs canvas
+    if (m.y + h > m.BUND + 1e-6 && m.y > m.TOP) m.nySide();
+    tegn(lokal(m.X0, PH - (m.y + h)));
+    m.y += h;
+  };
+  const op = L;   // pdf-lib's operatorer til stier
+  const lokal = m.lokal = (ox, oy) => {
+    const c = {
+      tekst: (t, x, y, font, size, farve, just = "v") => { t = ren(t); const w = bredde(t, font, size); m.side.drawText(t, {x: ox + x - (just === "m" ? w / 2 : just === "h" ? w : 0), y: oy + y, font, size, color: m.farve(farve)}); },
+      streg: (x1, y1, x2, y2, w, farve) => m.side.drawLine({start: {x: ox + x1, y: oy + y1}, end: {x: ox + x2, y: oy + y2}, thickness: w, color: m.farve(farve)}),
+      rundRekt: (x, y, w, h, r, lw, kant, fyld) => {   // reportlab canvas.roundRect: bezier med faktor 0,4472, fyldt og/eller med kant
+        const t = .4472 * r, X = ox + x, Y = oy + y;
+        m.side.pushOperators(op.pushGraphicsState(), op.setLineWidth(lw), ...(kant ? [op.setStrokingRgbColor(...kant)] : []), ...(fyld ? [op.setFillingRgbColor(...fyld)] : []),
+          op.moveTo(X + r, Y), op.lineTo(X + w - r, Y), op.appendBezierCurve(X + w - t, Y, X + w, Y + t, X + w, Y + r), op.lineTo(X + w, Y + h - r),
+          op.appendBezierCurve(X + w, Y + h - t, X + w - t, Y + h, X + w - r, Y + h), op.lineTo(X + r, Y + h), op.appendBezierCurve(X + t, Y + h, X, Y + h - t, X, Y + h - r),
+          op.lineTo(X, Y + r), op.appendBezierCurve(X, Y + t, X + t, Y, X + r, Y), op.closePath(), fyld && kant ? op.fillAndStroke() : fyld ? op.fill() : op.stroke(), op.popGraphicsState());
+      },
+      fyldRekt: (x, y, w, h, farve) => m.side.pushOperators(op.pushGraphicsState(), op.setFillingRgbColor(...farve), op.rectangle(ox + x, oy + y, w, h), op.fill(), op.popGraphicsState()),
+      kantRekt: (x, y, w, h, lw, farve) => m.side.pushOperators(op.pushGraphicsState(), op.setLineWidth(lw), op.setStrokingRgbColor(...farve), op.rectangle(ox + x, oy + y, w, h), op.stroke(), op.popGraphicsState()),
+      trekant: (pts, farve) => m.side.pushOperators(op.pushGraphicsState(), op.setFillingRgbColor(...farve), op.moveTo(ox + pts[0][0], oy + pts[0][1]), ...pts.slice(1).map(p => op.lineTo(ox + p[0], oy + p[1])), op.closePath(), op.fill(), op.popGraphicsState()),
+      afsnit: (ls, x, yBund, font, size, leading, farve) => { const h = ls.length * leading; ls.forEach((l, i) => m.side.drawText(l, {x: ox + x, y: oy + yBund + h - size - i * leading, font, size, color: m.farve(farve)})); },
+    };
+    return c;
+  };
+  return m;
+}
+
+// Pakkelisten (pakkeliste_pdf.lav)
+function pakkelisteSider(m, {job, dato, transport, linjer, praktisk}) {
+  const {F, FB, mm} = m, SORT = [0, 0, 0], GRÅ = [0xBB / 255, 0xBB / 255, 0xBB / 255];
+  const {R, adv} = pakkeRækker(linjer, D.udstyr || []);
+  m.nySide();
+  m.afsnit(`Pakkeliste: ${job}`, FB, 16, 20);
+  m.afsnit(`${plDato(dato)} ${transport || ""} ${R.length} linjer`, F, 10, 12);
+  m.luft(5 * mm);
+  const B = [27, 60, 13, 48, 17, 17].map(v => v * mm), TX = m.X0 + (m.BR - B.reduce((a, b) => a + b, 0)) / 2, CX = B.reduce((a, b, i) => [...a, a[i] + b], [TX]);
+  const BOKS = 4.5 * mm;
+  const hoved = {h: 9 * 1.2 + 6, kat: null, celler: ["Kategori", "Udstyr", "Antal", "Note", "Pakket", "Hjem"].map((t, i) => ({str: t, font: FB, size: 9, leading: 10.8, midt: [2, 4, 5].includes(i)}))};
+  const rk = R.map(([k, n, a, t]) => {
+    const p = (s, font, size, leading, i) => ({linjer: m.linjerAf(s, font, size, B[i] - 12), font, size, leading});
+    const c = [p(k, F, 9, 11, 0), p(n, F, 10, 12, 1), {str: String(a), font: FB, size: 11, leading: 13.2, midt: true}, p(t, F, 8, 9.5, 3), {boks: true}, {boks: true}];
+    const hh = Math.max(...c.map(x => x.boks ? BOKS : x.str != null ? x.leading : x.linjer.length * x.leading)) + 6;
+    return {h: hh, kat: k, celler: c};
+  });
+  let forrigeKat = null;   // kategori på sidste række på forrige side
+  const tegnTabel = (rækker, fortsat, næsteKat) => {   // én side af tabellen: celler først, så streger som reportlab. fortsat: side 2 og frem, næsteKat: første række på næste side
+    const top = m.y, pos = rækker.reduce((a, r) => [...a, a[a.length - 1] + r.h], [top]), c0 = m.lokal(0, 0);
+    rækker.forEach((r, ri) => r.celler.forEach((c, ci) => {
+      const rt = pos[ri], x = CX[ci], w = B[ci];
+      if (c.boks) c0.kantRekt(x + (w - BOKS) / 2, m.PH - (rt + (r.h - BOKS) / 2) - BOKS, BOKS, BOKS, .9, SORT);
+      else if (c.str != null) {
+        const by = rt + r.h - ((r.h + c.leading) / 2 - c.size), t = m.ren(c.str);
+        m.tekst(t, c.midt ? x + w / 2 - m.bredde(t, c.font, c.size) / 2 : x + 6, by, c.font, c.size);
+      } else {
+        const pt = rt + (r.h - c.linjer.length * c.leading) / 2;
+        c.linjer.forEach((l, i) => m.tekst(l, x + 6, pt + c.size + i * c.leading, c.font, c.size));
+      }
+    }));
+    const x1 = CX[0], x2 = CX[CX.length - 1], bund = pos[pos.length - 1];
+    m.streg(x1, pos[1], x2, pos[1], 1.2, SORT);   // LINEBELOW under overskriften
+    const lodret = x => fortsat ? (m.streg(x, pos[1], x, top, .4, GRÅ), m.streg(x, bund, x, pos[1], .4, GRÅ)) : m.streg(x, bund, x, top, .4, GRÅ);   // på side 2 og frem deler reportlab dem ved overskriften
+    m.streg(x1, top, x2, top, .4, GRÅ); m.streg(x1, bund, x2, bund, .4, GRÅ); lodret(x1); lodret(x2);   // GRID: kassen
+    for (const p of pos.slice(1, -1)) m.streg(x1, p, x2, p, .4, GRÅ);
+    for (const x of CX.slice(1, -1)) lodret(x);
+    for (let i = 1; i < rækker.length; i++) {   // ny kategori: tyk streg over rækken
+      const før = i === 1 ? forrigeKat : rækker[i - 1].kat;
+      if (før !== null && rækker[i].kat !== før) m.streg(x1, pos[i], x2, pos[i], 1.2, SORT);
+    }
+    forrigeKat = rækker[rækker.length - 1].kat;
+    if (næsteKat != null && næsteKat !== forrigeKat) m.streg(x1, bund, x2, bund, 1.2, SORT);   // kategoriskifte ved sideskiftet: reportlab sætter også stregen i bunden
+    m.y = bund;
+  };
+  let rest = rk, fortsat = false;
+  while (true) {
+    let plads = m.BUND - m.y - hoved.h, n = 0;
+    while (n < rest.length && plads - rest[n].h >= -1e-6) { plads -= rest[n].h; n++; }
+    if (n === rest.length) { tegnTabel([hoved, ...rest], fortsat, null); break; }
+    if (n === 0 && m.y > m.TOP) { m.nySide(); continue; }
+    const n1 = Math.max(n, 1);
+    tegnTabel([hoved, ...rest.slice(0, n1)], fortsat, rest[n1].kat);
+    rest = rest.slice(n1);
+    fortsat = true;
+    m.nySide();
+  }
+  const husk = praktisk ? (typeof praktisk === "string" ? [praktisk] : praktisk) : [];
+  if (husk.length) {
+    m.luft(6 * mm);
+    m.afsnit("Husk fra sidst", FB, 11, 14);
+    for (const x of husk) m.afsnit("• " + x, F, 10, 12);
+  }
+  return {n: R.length, adv};
+}
+async function lavPakkelistePdf(o) {
+  const m = await pdfMotor(), r = pakkelisteSider(m, o);
+  m.doc.setTitle(m.ren(o.titel || "Pakkeliste " + o.job));
+  return {bytes: await m.doc.save(), n: r.n, adv: r.adv};
+}
+
+// Kørelisten (pakkeliste_pdf.lav_koereliste: _tidsplan_side og _koereplan)
+const kortLink = adr => "https://www.google.com/maps/dir/?api=1&destination=" + encodeURIComponent(adr).replace(/[!'()*]/g, c => "%" + c.charCodeAt(0).toString(16).toUpperCase()).replace(/%2F/g, "/");   // som Pythons quote()
+function kørelisteSider(m, job, dato, tp) {
+  const {F, FB, mm} = m, SORT = [0, 0, 0], HVID = [1, 1, 1], GRA = [0x44 / 255, 0x44 / 255, 0x44 / 255];
+  const ce = [];
+  for (const t of tp.tider || []) {
+    const i = t.indexOf(":"), lab0 = (i < 0 ? t : t.slice(0, i)).trim();
+    let v = (i < 0 ? "" : t.slice(i + 1)).replace(/(?<![\p{L}\p{N}_])kl\.\s*/gu, "").replace(/\s*\([^)]*\)/g, "").replace(/ til (?=\d)/g, "-").trim(), lab = lab0;
+    if (lab.toLowerCase() === "mulig ekstra time") { ce.push([lab.toUpperCase(), ""]); continue; }   // kun overskriften (Oscar 29/10)
+    if (!v || lab.toLowerCase().startsWith("nedpakning")) continue;
+    if (lab.toLowerCase() === "spilletid" && /^(til\s|-)/.test(v)) v = "Start: mangler · slut " + v.replace(/^(til\s+|-)/, "");
+    lab = {"ankomst til opstilling": "Load in", "ankomst": "Load in", "spilletid": "Spilletid", "gæster": "Gæster kommer"}[lab.toLowerCase()] || lab;
+    ce.push([lab.toUpperCase(), v]);
+  }
+  const erTid = v => /^[\d.:\-– ]+$/.test(v);
+  m.nySide();
+  // Hoved: KØRELISTE, jobbet og datoen til venstre, nøgletiderne til højre
+  const hh = Math.max(30 * mm, 12 * mm + ce.reduce((a, [, v]) => a + (!v ? 6 * mm : erTid(v) ? 9 * mm : 11 * mm), 0));
+  m.blok(hh, c => {
+    c.rundRekt(0, 0, 178 * mm, hh, 3 * mm, 1.3, SORT, HVID);
+    c.tekst("KØRELISTE", 8 * mm, hh - 8 * mm, FB, 9);
+    let fs = 28;
+    while (m.bredde(m.ren(job), FB, fs) > 92 * mm && fs > 14) fs--;
+    const yj = hh - 8 * mm - fs * .45 - 6.5 * mm;
+    c.tekst(job, 8 * mm, yj, FB, fs);
+    c.tekst(plDato(dato), 8 * mm, Math.min(7 * mm, yj - 7 * mm), F, 12);
+    if (ce.length) {
+      c.streg(108 * mm, 6 * mm, 108 * mm, hh - 6 * mm, .6, SORT);
+      let y = hh - 9 * mm;
+      for (let [lab, v] of ce) {
+        c.tekst(lab, 112 * mm, y, FB, 8);
+        if (!v) y -= 6 * mm;
+        else if (erTid(v)) { c.tekst(v, 172 * mm, y - .5 * mm, FB, 16, SORT, "h"); y -= 9 * mm; }
+        else {   // fri tekst: lille, under mærkatet, klippet så den ikke løber ind i noget
+          v = m.ren(v);
+          while (m.bredde(v, F, 9) > 58 * mm && [...v].length > 4) v = (v.endsWith("…") ? v.slice(0, -3) : v.slice(0, -2)).trimEnd() + "…";
+          c.tekst(v, 112 * mm, y - 4.5 * mm, F, 9); y -= 11 * mm;
+        }
+      }
+    }
+  });
+  m.luft(5 * mm);
+  if ((tp.plan || []).length) køreplan(m, tp.plan, tp.stop);
+  const mf = /højst (\d+) km\/t/.exec((tp.plan || []).join(" ")), fart = mf ? `. Kørselstider regnet med højst ${mf[1]} km/t.` : "";
+  if (tp.rute_gemt) { m.luft(2.5 * mm); m.afsnit("Kørselsplan lavet i panelet " + plTid(tp.rute_gemt) + fart, F, 8, 9.5); }
+  else if (tp.hentet) { m.luft(2.5 * mm); m.afsnit("Hentet fra kalenderen " + plTid(tp.hentet) + fart, F, 8, 9.5); }
+}
+function køreplan(m, plan, stop) {
+  const {F, FB, mm} = m, SORT = [0, 0, 0], HVID = [1, 1, 1], GRA = [0x44 / 255, 0x44 / 255, 0x44 / 255];
+  const T = "(\\d{1,2}\\.\\d{2})(?:\\s*\\(næste dag\\))?";
+  const RK = new RegExp(`^(?:ca\\.\\s*)?${T}\\s*[\\u2013-]\\s*${T}\\s+Kørsel,\\s*([\\d.,]+)\\s*km,\\s*ca\\.\\s*(\\d+)\\s*min`);
+  const RA = new RegExp(`^(?:ca\\.\\s*)?${T}\\s+Ankomst til (.+?)(?:,\\s*ophold (\\d+) min)?$`), RF = new RegExp(`^(?:ca\\.\\s*)?${T}\\s+(?:Afgang fra|Færdig ved) (.+)$`);
+  const items = [];
+  for (let l of plan) {
+    l = l.trim();
+    if (!l) continue;
+    const k = RK.exec(l), a = RA.exec(l), f = RF.exec(l), sidst = items[items.length - 1];
+    if (k) items.push(["koersel", k[1], k[2], k[3], k[4], l.includes("højst 80 km/t")]);
+    else if (a) items.push(["stop", a[2], a[1], null, a[3] ?? null, [], []]);
+    else if (f) { if (sidst && sidst[0] === "stop" && sidst[3] === null && sidst[1] === f[2]) sidst[3] = f[1]; else items.push(["stop", f[2], null, f[1], null, [], []]); }
+    else if (sidst && sidst[0] === "stop" && l.toLowerCase().startsWith("husk")) sidst[5].push(l);
+    else if (sidst && sidst[0] === "stop" && l.toLowerCase().startsWith("tid til overs")) sidst[6].push(l);
+    else items.push(["raa", l]);
+  }
+  const W = 178 * mm, TK = 40 * mm, QK = 36 * mm;
+  const stopliste = [...(stop || [])], antal = items.filter(x => x[0] === "stop").length;
+  const info = (n, k) => stopliste.length === antal ? stopliste[k] : stopliste.find(st => (st.navn || st.adresse) === n) || {};
+  const sidsteStop = Math.max(-1, ...items.map((x, i) => x[0] === "stop" ? i : -1));
+  const deling = items.findIndex((x, i) => x[0] === "stop" && x[6].length && i !== sidsteStop), KOMPAKT = deling >= 0;   // tidlig opsætning (Oscar 10/11): to ture
+  const stopKort = (navn, adr, ank, oph, afg, husk, sidste, forste) => {
+    const iw = W - TK - QK - 12 * mm, qrAdr = adr && !forste ? adr : null;
+    const hp = husk.map(h => m.linjerAf(h.replace(/^husk:?\s*/i, ""), FB, 12.5, iw - 16 * mm)), hhs = hp.map(l => l.length * 15);
+    const ap = adr && adr !== navn ? m.linjerAf(adr, F, 12.5, iw) : null, ah = ap ? ap.length * 15 : 0;
+    const indre = 9 * mm + (ah ? ah + 1.5 * mm : 0) + hhs.reduce((a, h) => a + Math.max(h, 4.5 * mm) + 3 * mm, 0) + (oph || (ank && !forste && !sidste) ? 9 * mm : 0);
+    const h = Math.max(indre + 4 * mm, forste ? 19 * mm : (KOMPAKT ? 27 : 30) * mm);
+    m.blok(h, c => {
+      c.rundRekt(0, 0, W, h, 3 * mm, 1.3, SORT, HVID);
+      c.streg(W - QK - TK, 0, W - QK - TK, h, .8, SORT);
+      if (!forste) c.streg(W - QK, 0, W - QK, h, .8, SORT);
+      const mx = W - QK - TK / 2, [lab, tid] = sidste ? ["FREMME", ank] : forste ? ["START", afg] : ["KØR HERFRA KL.", afg];
+      c.tekst(lab, mx, h / 2 + (forste ? 4.5 : 8) * mm, FB, 8, SORT, "m");
+      if (tid) c.tekst(tid, mx, h / 2 - (forste ? 6 : 4.5) * mm, FB, forste ? 28 : 31, SORT, "m");
+      const x0 = 6 * mm;
+      let y = h - 8 * mm, fs = 19;
+      while (m.bredde(m.ren(navn), FB, fs) > iw && fs > 11) fs--;
+      c.tekst(navn, x0, y, FB, fs);
+      y -= 1.5 * mm;
+      if (ap) { c.afsnit(ap, x0, y - ah, F, 12.5, 15); y -= ah + 1.5 * mm; }
+      hp.forEach((ls, i) => {
+        const bh = Math.max(hhs[i], 4.5 * mm) + 1.5 * mm;
+        c.rundRekt(x0, y - bh - 1.5 * mm, 13 * mm, bh, 1.2 * mm, .8, SORT, HVID);
+        c.tekst("HUSK", x0 + 2 * mm, y - bh / 2 - 2.8 * mm, FB, 8);
+        c.afsnit(ls, x0 + 16 * mm, y - bh - .8 * mm, FB, 12.5, 15);
+        y -= bh + 3 * mm;
+      });
+      if (ank && !forste && !sidste) {   // ophold-stribe nederst
+        c.rundRekt(x0, 3.5 * mm, iw, 7 * mm, 1.5 * mm, .6, SORT, HVID);
+        c.tekst(oph ? `OPHOLD ${oph} MIN` : "OPHOLD", x0 + 3 * mm, 5.9 * mm, FB, 9);
+        c.tekst(`Ankomst ${ank}`, x0 + iw - 3 * mm, 5.9 * mm, F, 9, SORT, "h");
+      }
+      if (qrAdr) {   // som QrCodeWidget (32 mm, kant 4 moduler) skaleret til 24 mm: én sort firkant pr. stribe af mørke moduler
+        const mod = qrModuler(kortLink(qrAdr)), n = mod.length, B32 = 32 * mm, side = 24 * mm, sk = side / B32, box = B32 / (n + 8);
+        const tx = W - QK + (QK - side) / 2, ty = h / 2 - side / 2 + 2 * mm;
+        mod.forEach((row, r) => { let k = 0;
+          while (k < row.length) { let e = k; while (e < row.length && row[e] === row[k]) e++;
+            if (row[k]) c.fyldRekt(tx + sk * (k + 4) * box, ty + sk * (B32 - (r + 5) * box), sk * (e - k) * box, sk * box, SORT);
+            k = e; } });
+        c.tekst("SCAN TIL MAPS", W - QK / 2, 3 * mm, FB, 7, SORT, "m");
+      }
+    });
+  };
+  const vej = (km, mn) => {
+    const h = (KOMPAKT ? 6.5 : 8) * mm, dy = KOMPAKT ? -1.2 * mm : 0;
+    m.blok(h, c => {
+      c.trekant([[6 * mm, 4.8 * mm + dy], [9.4 * mm, 4.8 * mm + dy], [7.7 * mm, 1.8 * mm + dy]], GRA);
+      c.tekst(`${km} km  ·  ${mn} min`, 12 * mm, 2.4 * mm + dy, F, 11, GRA);
+    });
+  };
+  if (KOMPAKT) {   // overblik over alle kørsler øverst
+    const rk = [["", "Kør", "Fra", "Til", "Fremme", "Km"]];
+    items.forEach((x, i) => {
+      if (x[0] !== "koersel") return;
+      const fra = [...items.slice(0, i)].reverse().find(y => y[0] === "stop")[1], til = items.slice(i + 1).find(y => y[0] === "stop")[1];
+      rk.push([`Tur ${i < deling ? 1 : 2}`, x[1], fra, til, x[2], x[3]]);
+    });
+    m.afsnit("DAGENS KØRSLER", FB, 9, 12);
+    const B = [16, 16, 54, 54, 20, 18].map(v => v * mm);
+    const TB = B.reduce((a, b) => a + b, 0), TX = m.X0 + (m.BR - TB) / 2, CX = B.reduce((a, b, i) => [...a, a[i] + b], [0]);
+    const fnt = (r, c) => r === 0 ? [FB, 8] : c === 1 ? [FB, 13] : c === 4 ? [FB, 11] : [F, 11];
+    const rh = rk.map((row, r) => Math.max(...row.map((_, c) => fnt(r, c)[1] * 1.2)) + 5);
+    const th = rh.reduce((a, b) => a + b, 0);
+    if (m.y + th > m.BUND + 1e-6 && m.y > m.TOP) m.nySide();
+    const c = m.lokal(TX, m.PH - (m.y + th));
+    let top = th;
+    rk.forEach((row, r) => {
+      row.forEach((v, ci) => { if (v === "") return; const [f, s] = fnt(r, ci); c.tekst(String(v), CX[ci] + 6, top - rh[r] + (2.5 + rh[r] - 2.5 + s * 1.2) / 2 - s, f, s); });
+      top -= rh[r];
+    });
+    const ys = rh.reduce((a, h) => [...a, a[a.length - 1] - h], [th]);
+    const rs = (x1, y1, x2, y2, w, f) => m.side.drawLine({start: {x: TX + x1, y: m.PH - (m.y + th) + y1}, end: {x: TX + x2, y: m.PH - (m.y + th) + y2}, thickness: w, color: m.farve(f), lineCap: m.L.LineCapStyle.Round});
+    rs(0, ys[1], TB, ys[1], .8, SORT);   // LINEBELOW overskrift
+    for (let r = 2; r < ys.length - 1; r++) rs(0, ys[r], TB, ys[r], .3, GRA);   // LINEBELOW mellem rækkerne
+    rs(0, th, TB, th, 1.3, SORT); rs(0, 0, TB, 0, 1.3, SORT); rs(0, 0, 0, th, 1.3, SORT); rs(TB, 0, TB, th, 1.3, SORT);   // BOX
+    m.y += th;
+    m.luft(3 * mm);
+    m.afsnit("TUR 1 · OPSTILLING", FB, 12, 16);
+  }
+  let k = 0;
+  items.forEach((x, i) => {
+    if (x[0] === "stop") {
+      const [, n, ank, afg, oph, hu] = x, st = info(n, k) || {}, adr = st.adresse || "";
+      if (k === 0 && KOMPAKT) m.afsnit(`Kør fra ${n} kl. ${afg ?? "None"}`, FB, 12, 15);   // "None" som i Python, hvis afgangen mangler   // to ture: startstedet står i overblikket
+      else stopKort(n, adr, ank, oph, afg, hu, i === sidsteStop, k === 0);
+      k++;
+      if (i === deling) { m.luft(2 * mm); m.afsnit("TUR 2 · FESTEN", FB, 12, 16); }
+    } else if (x[0] === "koersel") vej(x[3], x[4]);
+    else m.afsnit(x[1], F, 12, 15);
+  });
+}
+async function lavKørelistePdf(job, dato, tp) {
+  const m = await pdfMotor();
+  kørelisteSider(m, job, dato, tp);
+  m.doc.setTitle(m.ren("Køreliste " + job));
+  return await m.doc.save();
+}
+
+// Tidsplanen fra kalenderen og den gemte kørselsplan (fabz_kerne.job_tidsplan)
+function htmlTekst(s) {   // html.unescape: kun tegnkoder (tags er fjernet før). \r bevares, som i Python
+  const d = new DOMParser().parseFromString("<!doctype html><body>" + s.replace(/\r/g, "\uE000").replace(/</g, "&lt;"), "text/html");
+  return d.body.textContent.replace(/\uE000/g, "\r");
+}
+function kalenderTidsplan(job, dato, navn, j) {
+  const kal = D.kalender || {};
+  const hit = (kal.begivenheder || []).filter(e => e.kalender === "bookinger" && (e.start || "").slice(0, 10) === dato && navn(e.titel) && (j.includes(navn(e.titel)) || navn(e.titel).includes(j)));
+  if (hit.length !== 1) return [null, `tidsplan: fandt ${hit.length} bookinger til '${job}' den ${dato} i kalenderen, så der er ingen køreliste` + (kal.opdateret ? " (kalenderen er hentet " + kal.opdateret + ")" : "")];
+  const tekst = htmlTekst((hit[0].beskrivelse || "").replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, ""));
+  const afsnit = {}; let nu_ = null;
+  for (const l of tekst.split("\n").map(x => x.trim())) {
+    if (l && l === l.toUpperCase() && /^\p{L}+$/u.test(l.replace(/ /g, "")) && [...l].length > 2) { nu_ = l; afsnit[nu_] = []; }
+    else if (l && nu_) afsnit[nu_].push(l);
+  }
+  const tider = (afsnit.TIDER || []).filter(l => !l.endsWith(":")), plan = afsnit.TIDSPLAN || [];
+  if (!plan.length && !tider.length) return [null, `tidsplan: bookingen '${hit[0].titel}' har ingen TIDER eller TIDSPLAN, så der er ingen køreliste`];
+  return [{tider, plan, hentet: kal.opdateret || ""}, null];
+}
+function spilletidTider(tider, nøgle) {   // fabz_kerne.spilletid_tider: spilletiden gemt i panelet erstatter kalenderens
+  const jt = (D.jobtider || {})[nøgle];
+  if (!jt) return tider;
+  const ny = [`Spilletid: ${jt.start} til ${jt.slut || "luk"}`, ...(jt.ekstra_time ? ["Mulig ekstra time: "] : [])];
+  if (jt.opstilling) { const o = jt.opstilling; tider = [`Opstilling: ${o.fra}-${o.til}`, ...tider.filter(t => !/^(ankomst til opstilling|opstilling)/.test(t.toLowerCase()))]; }
+  tider = tider.filter(t => !t.toLowerCase().startsWith("mulig ekstra time"));
+  const i = tider.findIndex(t => t.toLowerCase().startsWith("spilletid"));
+  if (i < 0) { let k = tider.findIndex(t => t.toLowerCase().startsWith("ankomst")); k = k < 0 ? tider.length : k + 1; return [...tider.slice(0, k), ...ny, ...tider.slice(k)]; }
+  return [...tider.slice(0, i), ...ny, ...tider.slice(i + 1)];
+}
+function jobTidsplan(job, dato) {   // [tidsplan eller null, advarsel eller null]
+  if (!dato || !job) return [null, "tidsplan: job eller dato mangler, så der er ingen køreliste"];
+  const navn = t => (t || "").replace(/^\s*dj\s*:\s*/i, "").trim().toLowerCase(), j = navn(job), n = `${dato}|${j}`;
+  const gemt = (D.jobrute || {})[n];
+  if (gemt) {   // kørselsplan lavet i panelet går forud for kalenderens tidsplan; tiderne tages stadig fra kalenderen
+    const [cal] = kalenderTidsplan(job, dato, navn, j);
+    return [{tider: spilletidTider((cal || {}).tider || [], n), plan: gemt.linjer, hentet: (cal || {}).hentet || "", rute_gemt: gemt.gemt,
+      stop: ((gemt.input || {}).stop || []).map(x => ({navn: x.navn ?? "", adresse: x.adresse ?? ""}))}, null];
+  }
+  let [tp, adv] = kalenderTidsplan(job, dato, navn, j);
+  if (tp) tp.tider = spilletidTider(tp.tider, n);
+  else if ((D.jobtider || {})[n]) [tp, adv] = [{tider: spilletidTider([], n), plan: [], hentet: ""}, null];
+  return [tp, adv];
+}
+const pyTitle = s => s.replace(/\p{L}+/gu, w => w[0].toUpperCase() + w.slice(1).toLowerCase());
+function jobNavnAfNøgle(nøgle) {   // som k_job_dokumenter/k_koereliste_pdf: kalenderens titel uden "DJ:" osv.
+  const [dato, navn] = [nøgle.slice(0, 10), nøgle.slice(11)];
+  const titel = ((D.kalender || {}).begivenheder || []).find(e => e.kalender === "bookinger" && (e.start || "").slice(0, 10) === dato && (e.titel || "").toLowerCase().includes(navn))?.titel;
+  return (titel || pyTitle(navn)).replace(/^\s*(DJ|Bryllup|Privat|Erhverv)\s*:\s*/i, "").trim();
+}
+const pdfFilnavn = t => t.replace(/[^\p{L}\p{N}_ .,&()-]+/gu, "");
+const ddmmåå = d => `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}`;
+async function kørelistePdf(nøgle) {   // Kørsel-siden og pakkelisten: kørelisten til et job. Kaster en Error med samme tekst som fabz.py, hvis der ikke er nogen
+  const dato = nøgle.slice(0, 10), job = jobNavnAfNøgle(nøgle), [tp, adv] = jobTidsplan(job, dato);
+  if (!tp || !((tp.plan || []).length || (tp.tider || []).length)) throw Object.assign(new Error(`ingen kørselsplan eller tidsplan på '${nøgle}'. Beregn ruten først (Kørsel i panelet)`), {brugerfejl: true});
+  return {bytes: await lavKørelistePdf(job, dato, tp), fil: pdfFilnavn(`Køreliste ${job} - ${ddmmåå(dato)}.pdf`), adv: adv ? [adv] : []};
+}
+async function jobDokumenterPdf(nøgle) {   // "Print dokumenter" (k_job_dokumenter): kørelisten og den godkendte pakkeliste i én PDF
+  const dato = nøgle.slice(0, 10), job = jobNavnAfNøgle(nøgle), mangler = [];
+  const m = await pdfMotor();
+  const [tp, adv] = jobTidsplan(job, dato);
+  let dele = 0;
+  if (tp && ((tp.plan || []).length || (tp.tider || []).length)) { kørelisteSider(m, job, dato, tp); dele++; }
+  else mangler.push("Kørsel mangler");
+  const jp = (D.jobpl || []).find(r => r.job_noegle === nøgle);
+  if (jp && jp.godkendt && (jp.linjer || []).length) {
+    pakkelisteSider(m, {job: jp.job || job, dato, transport: jp.transport || "Trailer", linjer: jp.linjer, praktisk: huskFraSidst(jp.job || job, dato)});
+    dele++;
+  } else mangler.push(jp ? "Pakkeliste ikke godkendt" : "Pakkeliste mangler");
+  if (!dele) throw Object.assign(new Error("der er intet at printe endnu: " + mangler.map(x => x.toLowerCase()).join(" og ")), {brugerfejl: true});
+  m.doc.setTitle(m.ren(`Dokumenter ${job} - ${ddmmåå(dato)}`));
+  return {bytes: await m.doc.save(), fil: pdfFilnavn(`Dokumenter ${job} - ${ddmmåå(dato)}.pdf`), mangler, adv: adv ? [adv] : []};
+}
+function hentNed(bytes, fil) {
+  const a = h("a", {href: URL.createObjectURL(new Blob([bytes], {type: "application/pdf"})), download: fil});
+  document.body.append(a); a.click(); a.remove();
+}
+const nuIso = () => new Intl.DateTimeFormat("sv-SE", {timeZone: "Europe/Copenhagen", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit"}).format(new Date()).replace(" ", "T");
+async function friskeJobdata() {   // før en PDF: vent på gem, der stadig er i kø (fabz.py tog dem i rækkefølge), og hent jobbets data friske, som fabz.py ville have læst dem
+  if (typeof FRISK_KLAR !== "undefined" && typeof FRISK !== "undefined" && !FRISK) await FRISK_KLAR;
+  const t0 = Date.now(), iKø = () => sender > 0 || beskeder.some(b => b.klasse === "kø" && !b.privat);
+  while (iKø()) {   // står Actions stadig i kø efter 4 min, laver fabz.py PDF'en efter gemmene, som før
+    if (Date.now() - t0 > 240000) throw new Error("gem i kø i over 4 minutter");
+    await sleep(700);
+  }
+  const læs = async (p, std) => { const r = await laesFil(p); return r ? r.json() : std; };
+  const [kalender, jobrute, jobtider, jobpl, evalueringer, udstyr] = await Promise.all([læs("data/kalender.json", {begivenheder: []}), læs("data/jobrute.json", {}),
+    læs("data/jobtider.json", {}), laesJobpl(), læs("data/evalueringer.json", []), læs("data/udstyr.json", D.udstyr || [])]);
+  Object.assign(D, {kalender, jobrute, jobtider, jobpl, evalueringer, udstyr});
 }
 function pakkelisteKrav(navn) {
   const linjer = Object.values(S.l).filter(l => l.antal > 0)
@@ -5385,6 +5957,17 @@ function koerelisteKnap(vedTidsplan) {   // Køreliste (PDF), eget ark (Oscar 26
       const jobNavn = r.job ? (jobs().find(j => jobRuteNøgle(j) === r.job) || {}).navn : "";
       const json = d ? {titel: jobNavn || (r.stop[r.stop.length - 1]?.navn || "").trim() || "Køreliste", ...(r.job ? {dato: r.job.slice(0, 10)} : {}),
         stop: r.stop.filter(x => x.adr.trim()).map(x => ({navn: x.navn.trim(), adresse: x.adr.trim()})), linjer: d.linjer} : null;
+      let egen = null;   // i browseren (Oscar 13/11), som k_koereliste_pdf. Fejler det, laver fabz.py den som før
+      try {
+        if (d) {
+          if (!json.linjer?.length || !json.stop.length) throw Object.assign(new Error("--json skal have stop og linjer fra en beregnet rute"), {brugerfejl: true});
+          const jn = (json.titel || "").trim() || "Køreliste", dato = json.dato || iDag();
+          const tp = {tider: [], plan: json.linjer, stop: json.stop.map(x => ({navn: x.navn || "", adresse: x.adresse || ""})), rute_gemt: nuIso()};
+          egen = {bytes: await lavKørelistePdf(jn, dato, tp), fil: pdfFilnavn(`Køreliste ${jn} - ${ddmmåå(dato)}.pdf`), adv: []};
+        } else { await friskeJobdata(); egen = await kørelistePdf(r.job); }
+      } catch (e) { if (e.brugerfejl) { r.pdf = {fejl: e.message}; egen = false; } else console.warn("PDF i browseren fejlede, fabz.py laver den", e); }
+      if (egen) r.pdf = {link: URL.createObjectURL(new Blob([egen.bytes], {type: "application/pdf"})), navn: egen.fil, adv: egen.adv};
+      if (egen !== null) { r.pdfArbejder = false; if (fane === "rute") tegn(); return; }
       const sv = d ? await kørOgVent("koereliste-pdf", ["--json", "@json"], json) : await kørOgVent("koereliste-pdf", [r.job]);   // uden "--": panelet lægger --mappe bagefter
       if (!sv) r.pdf = {fejl: "Intet svar efter 4 minutter."};
       else if (sv.status === "FEJL") r.pdf = {fejl: sv.fejl};
@@ -5995,7 +6578,7 @@ async function privatSend(anm, tekst) {   // Buffer, Opsparing og egne private p
       body: {message: `Panel: ${tekst}`, branch: "main", content: base64(JSON.stringify(anm))}});
     if (!r.ok) throw new Error(r.status === 403 || r.status === 404 ? "Din token må ikke skrive i privat-data (Contents: Read and write)." : `GitHub svarede ${r.status}`);
   } catch (e) { await hentPrivat(); return sendFejl(tekst, e); }
-  besked({id: bid, klasse: "kø", titel: tekst + " …"});
+  besked({id: bid, klasse: "kø", privat: true, titel: tekst + " …"});   // privat: PDF'er venter ikke på privat-data (friskeJobdata)
   let sv = null;
   const start = Date.now();
   while (!sv && Date.now() - start < 900000) {   // som iBaggrunden: efter 4 min "I kø", efter 15 min en fejl
