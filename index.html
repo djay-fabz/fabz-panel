@@ -495,7 +495,7 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 /* salg: statuskort (uge, måned, vejen) */
 .sk-top{display:grid;gap:14px}
 .fold-frem{display:flex;align-items:center;gap:12px;flex-wrap:wrap;width:100%;text-align:left;cursor:pointer;border:0;font:inherit;color:inherit}.fold-frem:hover{background:var(--hover)}.fold-luk{border:0;background:none;padding:0;cursor:pointer;font-family:inherit;text-align:left}
-.nedtonet{opacity:.55}.opk-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.opk-k{padding:13px 8px;border-radius:12px;border:1px solid var(--linje);background:var(--flade2);font-weight:500}.opk-k.valgt{background:var(--accent-blid);border-color:var(--accent);color:var(--accent)}.opk-c{padding:8px 13px}.opk-gem{width:100%;margin-top:12px;padding:13px;font-size:16px}.kform{display:flex}.kform button{flex:1}.tragt{display:grid;gap:6px;margin-top:10px}.tr{display:flex;align-items:center;gap:10px}.tr-lab{width:120px;flex:none;color:var(--svag);font-size:12.5px}.tr .muted{white-space:nowrap}.tr-bar{background:var(--linje);border-radius:7px;padding:4px 8px;font-weight:600;font-size:13px;min-width:28px}.tr-bar.g{background:var(--ok-blid);color:var(--ok)}.salg-del{margin-top:6px}.s-f2{border-left:3px solid #1f5c41}.s-prik{width:8px;height:8px;border-radius:50%;background:#1f5c41;flex:none;display:inline-block}.s-pers{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:2px}.s-link{color:var(--accent);font-size:13.5px}
+.nedtonet{opacity:.55}.opk-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.opk-k{padding:13px 8px;border-radius:12px;border:1px solid var(--linje);background:var(--flade2);font-weight:500}.opk-k.valgt{background:var(--accent-blid);border-color:var(--accent);color:var(--accent)}.opk-c{padding:8px 13px}.ring-rel{position:relative}.ring-k{width:100%;white-space:nowrap}.ring-menu{position:absolute;left:0;min-width:max(100%,230px);white-space:nowrap;top:calc(100% + 4px);background:var(--flade);border:1px solid var(--linje);border-radius:10px;padding:5px;box-shadow:0 8px 24px rgba(0,0,0,.18);z-index:20}.rm-v{display:flex;align-items:center;width:100%;padding:8px 10px;border:0;border-radius:7px;background:none;color:var(--tekst);font:inherit;font-size:13.5px;text-align:left;cursor:pointer}.rm-v:hover,.rm-v.hl{background:var(--hover)}.rm-d{margin-left:auto;padding-left:16px;color:var(--svag)}.rm-v .rm-dato{margin-left:auto;padding:2px 6px;font-size:12.5px}.opk-gem{width:100%;margin-top:12px;padding:13px;font-size:16px}.kform{display:flex}.kform button{flex:1}.tragt{display:grid;gap:6px;margin-top:10px}.tr{display:flex;align-items:center;gap:10px}.tr-lab{width:120px;flex:none;color:var(--svag);font-size:12.5px}.tr .muted{white-space:nowrap}.tr-bar{background:var(--linje);border-radius:7px;padding:4px 8px;font-weight:600;font-size:13px;min-width:28px}.tr-bar.g{background:var(--ok-blid);color:var(--ok)}.salg-del{margin-top:6px}.s-f2{border-left:3px solid #1f5c41}.s-prik{width:8px;height:8px;border-radius:50%;background:#1f5c41;flex:none;display:inline-block}.s-pers{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:2px}.s-link{color:var(--accent);font-size:13.5px}
 .s-tl{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin-top:18px}.s-st{background:none;border:0;border-top:3px solid var(--linje);padding:8px 0 0;text-align:left;font:inherit;font-size:12px;color:var(--svagere);cursor:pointer;min-width:0}.s-st span{display:block;font-size:11px;color:var(--svagere)}.s-st.ok{border-top-color:#1f5c41;color:var(--tekst)}
 .s-næste{margin-top:20px}.s-h{font-size:18px;font-weight:600;line-height:1.3;letter-spacing:-.01em}.s-d{color:var(--svag);font-size:13.5px;margin-top:3px}.s-svar-m{font-size:12.5px;color:var(--ok);white-space:nowrap}.s-log{margin-top:14px;padding-top:14px;border-top:1px solid var(--linje)}.s-aabner{font-weight:500}
 .s-spm{margin-top:20px;padding-top:16px;border-top:1px solid var(--linje)}.s-q{font-size:15px;font-weight:600;margin-bottom:10px}.s-svarene{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:12px}.s-svar{background:none;border:0;padding:0;font:inherit;font-size:13px;color:var(--svag);cursor:pointer}
@@ -8321,7 +8321,18 @@ function datoKnapper(st, k, felt) {
 // Opkald med tryk (Oscar 31/10): ca. 10 sekunder efter hvert opkald, store knapper til telefonen. fabz.py salg-opkald gemmer det struktureret
 const OPK_FIK = [["svarede_ikke", "Svarede ikke"], ["reception", "Receptionen"], ["forkert", "Forkert person"], ["rigtig", "Den rigtige"]];
 const OPK_SAGDE = [["interesseret", "Interesseret"], ["fast_dj", "Fast DJ"], ["ikke_mig", "Ikke mig"], ["send_mail", "Send mail"], ["ikke_nu", "Ikke nu"], ["budget", "Budget"], ["henviste", "Henviste videre"], ["andet", "Andet"]];
-const OPK_SKRIDT = [["ring_uge", "Ring igen +1 uge", 7], ["ring_md", "Ring igen +1 md.", 30], ["mail", "Send mail", 7, "Kontaktet"], ["moede", "Møde", 7, "Møde aftalt"], ["tilbud", "Tilbud", 7, "Tilbud sendt"], ["nej", "Ikke interesseret", null, "Ikke nu"]];
+// Næste arbejdsdag (Oscar 13/11): næste hverdag. Mandag springes over, hvis han havde job både fredag og lørdag før (bookinger og vagter)
+const harJob = d => jobs(true).some(j => j.dato === d) || (D.vagter?.vagter || []).some(v => v.start.slice(0, 10) === d);
+function næsteArbejdsdag(fra = iDag()) {
+  for (let d = plusDage(fra, 1); ; d = plusDage(d, 1)) {
+    const u = dag(d).getDay();
+    if (u === 0 || u === 6 || (u === 1 && harJob(plusDage(d, -3)) && harJob(plusDage(d, -2)))) continue;
+    return d;
+  }
+}
+const RING_VALG = () => [["Næste arbejdsdag", næsteArbejdsdag()], ["Om 3 dage", plusDage(iDag(), 3)], ["Om en uge", plusDage(iDag(), 7)], ["Om en måned", plusDage(iDag(), 30)]];
+// "Ring igen ▾" (Oscar 13/11, skitse salg-ring-igen-menu) erstatter +1 uge og +1 md. Gamle opkald har stadig ring_uge og ring_md i salgsloggen
+const OPK_SKRIDT = [["ring", "Ring igen", 7], ["mail", "Send mail", 7, "Kontaktet"], ["moede", "Møde", 7, "Møde aftalt"], ["tilbud", "Tilbud", 7, "Tilbud sendt"], ["nej", "Ikke interesseret", null, "Ikke nu"]];
 // Målefelter (Oscar 5/11, skitse 2): Åbning husker den sidst valgte, Titel står på Ved ikke, Pain vises først efter Den rigtige og står på Ikke nået.
 // "Fik fat i" gælder den sidste person i opkaldet. Reception ca. 2 tryk (næste skridt er valgt), rigtigt salgsopkald ca. 5.
 const OPK_ÅBNING = ["30 sekunder?", "Holder I fester?", "Andet"];
@@ -8361,6 +8372,8 @@ const sidsteÅbning = s => { const r = [...(D.salgslog || [])].reverse().find(x 
 function opkaldBlok(s, k) {
   const o = k.opk ||= {fik: null, sagde: [], skridt: null, rigtig: "", rigtigK: "", sender: false, note: "", hNavn: "", hMail: "", hTlf: "",
     aabning: null, aabningT: "", titel: null, titelT: "", pain: null, painT: "", overMin: false};   // Oscar 12/11: tomt for hver ny kunde, intet følger med fra sidste opkald
+  if (o.skridt === "ring_uge" || o.skridt === "ring_md") { o.ringDato = plusDage(iDag(), o.skridt === "ring_md" ? 30 : 7); o.skridt = "ring"; }   // kladder fra før "Ring igen ▾"
+  if (o.ringDato && o.ringDato <= iDag()) o.ringDato = plusDage(iDag(), 7);   // en kladde fra en tidligere dag: dagen er gået
   const henvist = o.sagde.includes("henviste");   // "Henviste videre" (Oscar 3/11): den nye bliver hovedkontakt, ring i morgen
   const knap = (v, t, valgt, fn) => h("button", {type: "button", class: "opk-k" + (valgt ? " valgt" : ""), onclick: fn}, t);
   const målFelter = () => ({...((o.aabningT || "").trim() ? {aabning: o.aabningT.trim()} : {}), ...(o.titel && o.titel !== "ved_ikke" ? {titel: opkMed(o.titel, o.titelT)} : {}),
@@ -8368,13 +8381,20 @@ function opkaldBlok(s, k) {
   const målArgs = () => { const m = målFelter(); return [...(m.aabning ? [`--aabning=${m.aabning}`] : []), ...(m.titel ? [`--titel=${m.titel}`] : []), ...(m.pain ? [`--pain=${m.pain}`] : []), ...(m.over_min ? ["--over-min"] : [])]; };
   const vælgFik = v => {   // Reception m.fl.: næste skridt er valgt på forhånd, så det er to tryk
     o.fik = o.fik === v ? null : v;
-    if (o.fik && o.fik !== "rigtig" && !o.skridt) { o.skridt = "ring_uge"; o.autoSkridt = true; }
+    if (o.fik && o.fik !== "rigtig" && !o.skridt) { o.skridt = "ring"; o.ringDato = plusDage(iDag(), 7); o.autoSkridt = true; }
     else if (o.autoSkridt && (!o.fik || o.fik === "rigtig")) { o.skridt = null; o.autoSkridt = false; }
     tegn();
   };
   const chipRække = (valg, v, sæt, tekst, sætTekst, andet = "andet") => [h("div", {class: "chips"}, valg.map(x => { const [id, t] = Array.isArray(x) ? x : [x, x];
     return h("button", {type: "button", class: "chip opk-c" + (v === id ? " aktiv" : ""), onclick: () => { sæt(id); tegn(); }}, t); })),
     v === andet ? h("input", {class: "input", style: "margin-top:6px", value: tekst, oninput: e => sætTekst(e.target.value)}) : null];
+  const vælgRing = d => { o.skridt = "ring"; o.ringDato = d; o.ringMenu = false; o.autoSkridt = false; tegn(); };
+  const ringKnap = () => h("div", {class: "ring-rel"},
+    h("button", {type: "button", class: "opk-k ring-k" + (o.skridt === "ring" ? " valgt" : ""), "aria-expanded": o.ringMenu ? "true" : "false", onclick: () => { o.ringMenu = !o.ringMenu; tegn(); }},
+      o.skridt === "ring" && o.ringDato ? `Ring igen ${kortDato(o.ringDato)} ▾` : "Ring igen ▾"),
+    o.ringMenu ? h("div", {class: "ring-menu"}, RING_VALG().map(([t, d]) => h("button", {type: "button", class: "rm-v" + (o.skridt === "ring" && o.ringDato === d ? " hl" : ""), onclick: () => vælgRing(d)},
+      h("span", {}, t), h("span", {class: "rm-d"}, kortDato(d)))),
+      h("label", {class: "rm-v"}, h("span", {}, "Vælg dato …"), Object.assign(datoChip(o.ringDato, v => { if (v > iDag()) vælgRing(v); }, "rm-dato"), {min: plusDage(iDag(), 1)}))) : null);
   const gem = () => {
     if (henvist) return gemHenvist();
     if (!o.fik || !o.skridt) { alert("Vælg hvem du fik fat i og næste skridt."); return; }
@@ -8382,9 +8402,11 @@ function opkaldBlok(s, k) {
       ...(o.rigtig.trim() ? [`--rigtig=${o.rigtig.trim()}`] : []), ...(o.rigtigK.trim() ? [`--rigtig-kontakt=${o.rigtigK.trim()}`] : []), ...(o.sender ? ["--sender-videre"] : []),
       ...målArgs(), ...(o.note.trim() ? [`--note=${o.note.trim()}`] : []), "--", s.navn];
     const sk = OPK_SKRIDT.find(x => x[0] === o.skridt), dage = o.sender && (sk[2] == null || sk[2] > 7) ? 7 : sk[2];
+    const ringDato = o.skridt === "ring" ? (o.sender && (o.ringDato || "") > plusDage(iDag(), 7) ? plusDage(iDag(), 7) : o.ringDato || plusDage(iDag(), 7)) : null;   // sender videre: højst en uge
+    if (ringDato) args.splice(args.indexOf("--"), 0, `--opfoelgning=${ringDato}`);
     kør("salg-opkald", args, {tekst: `${s.navn}: opkald`, efter: ["salg", "salgslog", "opgaver"], med: () => {
       (D.salgslog ||= []).push({dato: iDag(), navn: s.navn, kanal: "Telefon", tekst: "Opkald", opkald: {fik: o.fik, sagde: o.sagde, skridt: o.skridt, ...målFelter()}});
-      s.senest_kontakt = iDag(); if (dage != null) s.naeste_opfoelgning = plusDage(iDag(), dage); else delete s.naeste_opfoelgning;
+      s.senest_kontakt = iDag(); if (ringDato) s.naeste_opfoelgning = ringDato; else if (dage != null) s.naeste_opfoelgning = plusDage(iDag(), dage); else delete s.naeste_opfoelgning;
       if (sk[3]) s.status = sk[3]; else if (o.fik !== "svarede_ikke" && s.status === "Ikke kontaktet") s.status = "Kontaktet";
       SG.k = {}; gemKladderLager();
     }});
@@ -8430,7 +8452,7 @@ function opkaldBlok(s, k) {
       h("input", {class: "input", style: "margin-top:6px", type: "email", value: o.hMail, placeholder: "Mail", oninput: e => { o.hMail = e.target.value; }}),
       h("input", {class: "input", style: "margin-top:6px", type: "tel", value: o.hTlf, placeholder: "Tlf", oninput: e => { o.hTlf = e.target.value; }})) : null,
     henvist ? null : [h("div", {class: "etiket", style: "margin-top:10px"}, "Næste skridt"),
-      h("div", {class: "opk-grid"}, OPK_SKRIDT.map(([v, t]) => knap(v, t, o.skridt === v, () => { o.skridt = o.skridt === v ? null : v; o.autoSkridt = false; tegn(); })))]);
+      h("div", {class: "opk-grid"}, OPK_SKRIDT.map(([v, t]) => v === "ring" ? ringKnap() : knap(v, t, o.skridt === v, () => { o.skridt = o.skridt === v ? null : v; o.ringMenu = false; o.autoSkridt = false; tegn(); })))]);
   return h("div", {class: "opkald"}, h("div", {class: "opk-to"}, under, efter),
     h("input", {class: "input", style: "margin-top:8px", value: o.note, placeholder: "Note (valgfri)", oninput: e => { o.note = e.target.value; }}),
     h("button", {class: "btn primaer opk-gem", type: "button", onclick: gem}, "Gem opkald"));
