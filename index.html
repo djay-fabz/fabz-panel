@@ -2722,6 +2722,22 @@ function vælg(valg, v, f) {
 }
 // ---------- Varmepumpen på lageret (Oscar 10/11, skitse panel-lager-varme B "som undertitel"): én linje, der kan foldes ud ----------
 const VA = {åben: false, arb: null, periode: "døgn"};
+const VL = {t: 0, url: null};   // Fabz lager (tools/lager-live.gs, Oscar 13/11): live-tal hvert minut, mens Lager er åben
+async function varmeLive() {
+  if (!token || !D.varme || Date.now() - VL.t < 55e3 || document.visibilityState === "hidden") return;
+  VL.t = Date.now();
+  try {
+    if (VL.url == null) { const r = await laesFil("data/lager_live.json"); VL.url = r && r.ok ? ((await r.json()).url || "") : ""; }
+    if (!VL.url) return;
+    const sv = await (await fetch(VL.url, {method: "POST", body: JSON.stringify({token})})).json();   // text/plain: ingen preflight
+    const l = sv.ok && sv.live;
+    if (!l || !l.opdateret || !D.varme || l.opdateret < D.varme.opdateret) return;
+    // opdateret (filens tid) bevares, så "startet" og "ikke bekræftet" i arbejdsdagen følger robottens rigtige kørsler (revision 13/11)
+    D.varme = {...D.varme, maalt: l.opdateret, live_fejl: l.fejl || null, sensor: {...D.varme.sensor, ...l.sensor}, pumpe: l.pumpe, stik: l.stik};
+    if (fane === "lager") visLager();
+  } catch { /* scriptet svarer ikke: filens tal står som før */ }
+}
+setInterval(() => { if (fane === "lager") varmeLive(); }, 60e3);
 const grad = v => v == null ? "–" : `${String(v.toFixed(1)).replace(".", ",")}°`;
 const minTekst = m => m == null ? "–" : m >= 60 ? `${Math.floor(m / 60)} t ${m % 60} min` : `${m} min`;
 function varmeKø() {   // planlagte arbejdsdage (Oscar 10/11): i dag og frem, sorteret. Det gamle format (én dag) læses også
@@ -2732,14 +2748,16 @@ function varmeKø() {   // planlagte arbejdsdage (Oscar 10/11): i dag og frem, s
 function varmeLinje() {
   const v = D.varme;
   if (!v) return null;
+  varmeLive();
+  const mTid = v.maalt || v.opdateret;   // live-tallet fra Fabz lager, ellers filens
   const s = v.sensor || {}, p = v.pumpe || {}, kø = varmeKø(), arb = kø.find(x => x.aktiv), næste = kø.find(x => !x.aktiv), idag = (v.dage || [])[0] || {};
-  const gammel = (Date.now() - new Date(v.opdateret)) / 60000 > 26 * 60;   // måles én gang om dagen og ved start og slut på arbejdsdage (Oscar 12/11)
-  const målt = `målt ${v.opdateret.slice(0, 10) === iDag() ? "" : kortDato(v.opdateret) + " "}kl. ${v.opdateret.slice(11, 16).replace(":", ".")}`;
+  const gammel = (Date.now() - new Date(mTid)) / 60000 > 26 * 60;   // måles én gang om dagen og ved start og slut på arbejdsdage (Oscar 12/11)
+  const målt = `målt ${mTid.slice(0, 10) === iDag() ? "" : kortDato(mTid) + " "}kl. ${mTid.slice(11, 16).replace(":", ".")}`;
   const startet = arb && v.tilstand === "arbejdsdag" && v.opdateret.slice(0, 10) === iDag() && v.opdateret.slice(11, 16).replace(":", ".") >= arb.fra;
   const minut = k => Number(k.slice(0, 2)) * 60 + Number(k.slice(3, 5)), forsinket = arb && !startet && minut(nuHHMM()) - minut(arb.fra) > 15;
   const slut = (D.varmeStyring?.dage || []).filter(x => x.dato === iDag() && x.til <= nuHHMM()).map(x => x.til).sort().pop();
   const ikkeSænket = !arb && v.tilstand === "arbejdsdag" && p.taendt && (!slut || minut(nuHHMM()) - minut(slut) > 15);   // slut-kørslen har ikke bekræftet slukket eller 16°
-  const adv = [...(v.advarsler || []), ...(gammel ? [`Ingen målinger siden ${kortDato(v.opdateret)} kl. ${v.opdateret.slice(11).replace(":", ".")}`] : []),
+  const adv = [...(v.advarsler || []), ...(v.live_fejl ? [v.live_fejl] : []), ...(gammel ? [`Ingen målinger siden ${kortDato(mTid)} kl. ${mTid.slice(11).replace(":", ".")}`] : []),
     ...(forsinket ? ["Arbejdsdagen er ikke bekræftet startet"] : []), ...(ikkeSænket ? ["Arbejdsdagen er slut, men pumpen er ikke bekræftet slukket eller sænket til 16°"] : [])];
   const prik = adv.length ? "rd" : arb ? "bl" : "";
   const dagNavn = x => x.dato === iDag() ? "i dag" : x.dato === plusDage(iDag(), 1) ? "i morgen" : `${DAGE[dag(x.dato).getDay()].slice(0, 3)} ${kortDato(x.dato)}`;
