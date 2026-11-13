@@ -286,6 +286,8 @@ input[type=date]{color-scheme:light dark}
 .lg .planpunkt>.input:first-child{font-weight:500;color:var(--tekst)}.pl-mins{font-size:12px}.pl-mins .min{font-size:12.5px;color:var(--svagere)}
 .pdf-laast{opacity:.55;pointer-events:none}
 .fast-r{border:1px solid var(--linje);background:var(--flade);border-radius:12px;padding:10px 14px;margin-top:12px}.fast-top{display:flex;align-items:baseline;gap:10px;width:100%;background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}.fast-top b{font-size:15px}.fast-r .planvalg{margin-top:8px}
+.indtil-nu{margin-top:12px;padding:0 2px}.in-nu{display:grid;grid-template-columns:42px 62px minmax(0,1fr);gap:8px;padding:3px 0;font-size:13.5px;line-height:1.4}.in-d{color:var(--svag)}.in-k{color:var(--pl-brun);font-size:12.5px}
+@media (max-width:700px){.in-nu{grid-template-columns:38px minmax(0,1fr)}.in-k{display:none}}
 .pd{margin-top:14px}.pd-k{padding:12px 16px;margin:0}.pd-top{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}.pd-ind{flex:1;min-width:220px}
 .pd-r{display:flex;align-items:center;gap:10px;padding:3px 0}.pd-i{width:14px;color:var(--ok);font-weight:600}.pd-r.pd-mg .pd-i,.pd-r.pd-mg .pd-t{color:var(--adv)}.pd-t{flex:1;min-width:0}
 .pd-kort{display:flex;align-items:center;gap:10px;border-top:1px solid var(--linje);margin-top:10px;padding-top:10px}.pd-kort .pd-r{flex:1}
@@ -7689,6 +7691,23 @@ const OPK_ÅBNING = ["30 sekunder?", "Holder I fester?", "Andet"];
 const OPK_TITEL = [["ved_ikke", "Ved ikke"], ["direktoer", "Direktør"], ["hr", "HR"], ["personaleforening", "Personaleforening"], ["reception", "Reception"], ["andet", "Andet"]];
 const OPK_PAIN = [["ikke_naaet", "Ikke nået"], ["tomt_dansegulv", "Tomt dansegulv"], ["tager_tid", "Tager tid at arrangere"], ["daarlig_erfaring", "Dårlig erfaring"], ["ingen", "Ingen pain"], ["andet", "Andet"]];
 const opkMed = (v, tekst) => v === "andet" || v === "Andet" ? ((tekst || "").trim() ? `Andet: ${tekst.trim()}` : "Andet") : v;
+// "Indtil nu" (Oscar 13/11, skitse salg-resume-kundekort): 2-4 linjer fra salgsloggen, nyeste først, så han kan se, hvad der er sket, før han ringer.
+// Teksten forkortes til ca. 140 tegn ved en hel sætning. "Trukket fra leadlisten" er ikke noget, der er sket med kunden. Hele listen står under Historik
+const INDTIL_NU = 4, INDTIL_TEGN = 140;
+function kortTekst(t) {
+  const ren = String(t || "").replace(/\s+/g, " ").trim();
+  if (ren.length <= INDTIL_TEGN) return ren;
+  let ud = "";
+  for (const sæt of ren.match(/[^.!?]+[.!?]+(\s|$)|[^.!?]+$/g) || [ren]) { if ((ud + sæt).trim().length > INDTIL_TEGN) break; ud += sæt; }
+  return ud.trim() ? ud.trim() + " …" : ren.slice(0, INDTIL_TEGN).replace(/\s+\S*$/, "") + " …";
+}
+function indtilNu(s) {
+  const l = (D.salgslog || []).map((x, i) => ({...x, i})).filter(x => x.navn === s.navn && (x.tekst || "").trim() && !/trukket fra leadlisten/i.test(x.tekst))
+    .sort((a, b) => (b.dato || "").localeCompare(a.dato || "") || b.i - a.i).slice(0, INDTIL_NU);
+  if (!l.length) return null;
+  return h("div", {class: "indtil-nu"}, h("div", {class: "etiket"}, "Indtil nu"),
+    l.map(x => h("div", {class: "in-nu"}, h("span", {class: "in-d"}, x.dato ? kortDato(x.dato) : ""), h("span", {class: "in-k"}, x.kanal || ""), h("span", {}, mdLinks(kortTekst(x.tekst))))));
+}
 const sidsteÅbning = s => { const r = [...(D.salgslog || [])].reverse().find(x => x.navn === s.navn && x.opkald?.aabning); return r ? {dato: r.dato, tekst: r.opkald.aabning.replace(/^Andet: /, "")} : null; };
 function opkaldBlok(s, k) {
   const o = k.opk ||= {fik: null, sagde: [], skridt: null, rigtig: "", rigtigK: "", sender: false, note: "", hNavn: "", hMail: "", hTlf: "",
@@ -7974,6 +7993,7 @@ function salgDetalje(s) {
     s.naeste_opfoelgning ? h("div", {class: "muted lille"}, dagNavnLang(s.naeste_opfoelgning)) : null,
     s.kontakt || s.telefon ? h("div", {class: "info"}, h("div", {class: "etiket"}, "Kontaktperson"), h("div", {class: "pre"}, visKontakt(s)),
       ringKnap(s)) : null,
+    indtilNu(s),
     s.naeste ? h("div", {class: "info"}, h("div", {class: "etiket"}, "Næste skridt"), h("div", {class: "pre", style: "font-size:15px"}, mdLinks(s.naeste))) : null,
     h("div", {class: "seg kform", style: "margin-top:14px"}, [["opkald", "Opkald"], ["anden", "Anden kontakt"]].map(([v, t]) =>
       h("button", {type: "button", class: (SG.kform || "opkald") === v ? "aktiv" : "", onclick: () => { SG.kform = v; tegn(); }}, t))),
