@@ -3641,7 +3641,7 @@ function dinePenge() {
   // Samme regnestykke som Til d. 1-bjælken (B − Husleje d. 1 − det firmaet kan give − klubjobs på vej) og samme beløb, som Spørg sender med (--d1)
   if (F && F.B && RD.loen_dato && RD.loen_dato === P.d1.dato) { const M = Math.ceil((F.B - F.saxo - (RD.loen_d1 ?? RD.loen_naeste ?? 0) - F.Y) / 100) * 100;
     rk.push(h("span", {}, `Løn d. ${kortDato(RD.loen_dato)}`), h("b", {class: "dp-loen"}, `${krKort(F.B)} kr.`, M > 0 ? h("span", {class: "dp-mk"}, `mangler ${krKort(M)}`) : " ✓"), h("div", {class: "dp-lin"})); }
-  rk.push(...r("Firmakontoen, frit efter løn d. 1", `${krKort(frit)} kr.`, frit < 0));
+  rk.push(...r("Firmakontoen, frit efter d. 1", `${krKort(frit)} kr.`, frit < 0));   // "løn" er kun hele lønnen (Oscar 13/11)
   if (HB) rk.push(...r("Husleje d. 1 + Buffer", HB.saldo >= HB.maal ? `${krKort(HB.maal)} af ${krKort(HB.maal)} kr. ✓` : `${krKort(HB.saldo)} af ${krKort(HB.maal)} kr.`));
   if (anl) {   // Nyt anlæg: tryk for delene og det, der mangler pr. md. (samme tal som den gamle udstyrslinje, Oscar 10/11)
     const mdr = anl.frist ? Math.max(1, (dag(anl.frist).getFullYear() - dag(iDag()).getFullYear()) * 12 + dag(anl.frist).getMonth() - dag(iDag()).getMonth()) : 0, mangler = Math.max(0, (anl.maal || 0) - (anl.saldo || 0));
@@ -6728,6 +6728,11 @@ function klubDele(rest, P, mo, f = {}, st = null) {   // st: det, linjerne før 
   const plads = HB ? HB.maal - HB.saldo : (P.buffer?.maal || 0) - (P.buffer?.saldo || 0);
   if (f.buffer) { buf = f.buffer.kr; over -= buf; }
   else if (HB) { b1 = buf = Math.max(0, Math.min(over, HB.maerke - HB.saldo, plads)); over -= buf; }   // 1) op til mærket
+  // tæt på d. 1 (Oscar 13/11): fra den dag, Overfør fra Saxo til Lønkonto+ vises (3 bankdage før, fabz_saxo: Saxo udbetaler næste bankdag), når d. 1-pengene
+  // ikke frem og tilbage. Så bliver d. 1-delen på Lønkonto+ til lønnen, og kun det over mærket går til Saxo
+  const sxo = P.d1 && (D.opgaver || []).find(o => o.saxo_d1 === P.d1.dato && o.status !== "Færdig"), tæt = !!(sxo && iDag() >= (sxo.ikke_foer || sxo.deadline) && iDag() < P.d1.dato);
+  let blivD1 = 0;
+  if (tæt && b1) { blivD1 = b1; buf -= b1; }
   // over mærket tæller ikke som Saxo-del d. 1, så firmakontoen må give mere. Højst til lønnen d. 1 (revision 13/11: aldrig rød Til d. 1). Resten bliver på Lønkonto+ til d. 1
   let løn = 0;
   const vedFør = over;
@@ -6737,8 +6742,8 @@ function klubDele(rest, P, mo, f = {}, st = null) {   // st: det, linjerne før 
     .map(q => { const k = f["pulje:" + q.navn]?.kr ?? Math.max(0, Math.min(over, q.maal - q.saldo)); over -= k; return ["pulje:" + q.navn, q.navn, k]; });
   if (!f.buffer) { const b2 = Math.max(0, Math.min(over, plads - buf)); buf += b2; over -= b2; }   // 3) over mærket til målet
   const anlæg = puljer.some(q => q.navn === "Nyt anlæg");
-  if (st && !f.buffer) { st.hb += buf; fristP.forEach(d => { if (!f[d[0]]) st.p[d[1]] = (st.p[d[1]] || 0) + d[2]; }); st.firma += vedFør - løn; }   // det over mærket, der flyttes, hæver firmakontoens del
-  return Object.assign([["buffer", HB ? "Husleje d. 1 + Buffer" : "Buffer", buf], ...fristP, anlæg ? ["anlaeg", "Nyt anlæg", Math.max(0, over)] : ["opsparing", P.opsparing?.navn || "Opsparing", Math.max(0, over)]], {løn});
+  if (st && !f.buffer) { st.hb += buf + blivD1; fristP.forEach(d => { if (!f[d[0]]) st.p[d[1]] = (st.p[d[1]] || 0) + d[2]; }); st.firma += vedFør - løn; }   // det over mærket, der flyttes, hæver firmakontoens del
+  return Object.assign([["buffer", HB ? "Husleje d. 1 + Buffer" : "Buffer", buf], ...fristP, anlæg ? ["anlaeg", "Nyt anlæg", Math.max(0, over)] : ["opsparing", P.opsparing?.navn || "Opsparing", Math.max(0, over)]], {løn: løn + blivD1});
 }
 function d1Fordeling(P, mo) {   // det firmakontoen skal give d. 1: regningerne (privat) minus Saxo-delen (Husleje d. 1) og klubjobs på Lønkonto+, plus det Victoria mangler,
   // som Buffer over mærket ikke dækker. Samme tal i lønbjælken og på listen til d. 1 (revision 11/11), i hele kroner som listen
@@ -6984,7 +6989,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     () => privatSend({kommando: "overfoert", id: o.id}, `Overført ${krKort(o.kr)} kr. til ${tilN(o)}`), o.frist && iDag() >= o.frist)));
   // listen til d. 1 (Oscar 3/11, skitse panel-d1-liste): fra 2 bankdage før, i den rækkefølge det skal gøres; Saxo-linjen hører til gruppe 1
   const F1 = d1Fordeling(P0, D.mo || {}), d1Kr = o => /-loen$/.test(o.id) && F1.B ? F1.firma : /-saxo$/.test(o.id) ? Math.min(F1.saxo + F1.Y, F1.B) : o.kr;   // aldrig mere end regningerne (revision 11/11)   // samme tal som lønbjælken: klubjobs og Victoria (revision 11/11)
-  const d1Tekst = o => /-saxo$/.test(o.id) && F1.Y ? `fra Saxo og klubjobs ${krKort(F1.Y)}` : /-loen$/.test(o.id) && F1.vU ? `løn, ${krKort(F1.vU)} kr. mere, fordi ${P0.victoria.navn} har sendt mindre` : o.tekst;
+  const d1Tekst = o => /-saxo$/.test(o.id) && F1.Y ? `fra Saxo og klubjobs ${krKort(F1.Y)}` : /-loen$/.test(o.id) ? (F1.vU ? `${krKort(F1.vU)} kr. mere, fordi ${P0.victoria.navn} har sendt mindre` : null) : o.tekst;   // firmakontoens del hedder ikke løn (Oscar 13/11: "løn" er hele beløbet)
   const d1R = o => ovR(o.id, o.gruppe === 1 ? `Overfør ${krKort(d1Kr(o))} kr. fra ${o.fra} til ${tilN(o)}` : `Overfør ${krKort(o.kr)} kr. til ${tilN(o)}`, nrT(o),
     () => privatSend({kommando: "overfoert", id: o.id}, `Overført ${krKort(d1Kr(o))} kr. til ${tilN(o)}`), false, d1Tekst(o) ? ` (${d1Tekst(o)})` : "");
   const klubD1 = [];   // klubjobs' fordeling, der ikke er flyttet endnu (fyldes længere nede, hvor fordelingen regnes): står i Overførsler med det samme, ikke på kortet til d. 1
@@ -7260,7 +7265,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
         h("div", {class: "s"}, st_ === "rod" ? `Mangler ${krKort(E_.mangler)}` : st_ === "gul" ? "Kommer" : x.mangler > 0 ? `Mangler ${krKort(x.mangler)}` : "✓ Dækket"),
         st_ === "ok" ? h("div", {class: "f gem"}, `Gem ${krKort(E_.gem)} kr. på kontoen`) : st_ === "gul" ? h("div", {class: "f gem"}, `Mangler ${krKort(E_.mangler_i_dag)} kr., kommer inden ${til_}`) : st_ === "rod" ? h("div", {class: "f gem"}, `Mangler ${krKort(E_.mangler)} kr. til ${til_}`) : null,
         x.buf && !x.mangler ? h("div", {class: "f"}, "af bufferen") : x.af ? h("div", {class: "f"}, `af ${x.af}`) : null); })),
-    rRække("leve", ["Basis pr. måned ", h("span", {class: "muted sg-m"}, `firmaets faste ${krKort(LV.F.kr)} + din løn med skat ${krKort(basisVis - LV.F.kr)}`), lønVis.satser_mangler && !sk.satser_mangler ? ` · ${lønVis.skat_aar}-satser mangler, regnet med ${lønVis.satser_aar}` : null], `${krKort(basisVis)} kr.`,
+    rRække("leve", ["Basis pr. måned ", h("span", {class: "muted sg-m"}, `firmaets faste ${krKort(LV.F.kr)} + din løn ${krKort(lønVis.netto)}` + (basisVis - LV.F.kr - lønVis.netto > 0 ? ` + skat til Saxo ${krKort(basisVis - LV.F.kr - lønVis.netto)}` : "")), lønVis.satser_mangler && !sk.satser_mangler ? ` · ${lønVis.skat_aar}-satser mangler, regnet med ${lønVis.satser_aar}` : null], `${krKort(basisVis)} kr.`,
       h("div", {class: "rd-l"}, h("span", {}, "Firmaets faste udgifter ", h("span", {class: "muted"}, LV.F.linjer.slice(0, 4).map(x => `${x.navn} ${krKort(x.kr)}`).join(" · ") + (LV.F.linjer.length > 4 ? ` · ${LV.F.linjer.length - 4} andre ${krKort(LV.F.linjer.slice(4).reduce((t, x) => t + x.kr, 0))}` : "")), kilde("kontoudtog", LV.F.dato)), h("b", {}, krKort(LV.F.kr))),
       h("div", {class: "rd-l"}, h("span", {}, "Til dig privat ", priv(), h("span", {class: "muted"}, " " + LV.L.linjer.map(x => `${x.navn} ${krKort(x.kr)}`).join(" · ")), kilde("privat-data", LV.L.dato)), h("b", {}, krKort(LV.L.netto))),
       h("div", {class: "rd-l"}, h("span", {}, "Skat af lønnen ", h("span", {class: "muted"}, `AM-bidrag 8 % ${krKort(LV.L.am)} · skat regnet fra bunden ${krKort(LV.L.skat)}`), kilde("satser", LV.L.dato)), h("b", {}, krKort(LV.L.brutto - LV.L.netto))),
@@ -7498,15 +7503,16 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
       kør("betaling-omk", [`--job=${r.navn}`, `--dato=${r.dato}`, `--omk=${JSON.stringify(omk)}`], {tekst: `${hvem}: sendt til ${navne.join(" og ")}`, efter: ["betalinger", "jobstatus"],
         med: () => { (r.omk || []).forEach(o => { if (o.type === "honorar" && navne.includes(o.navn)) o.seddel_betalt = iDag(); }); }}); };
     // jobbet markeres fordelt med det samme, når Saxo-delen er flyttet: så tæller lønnen fra klubjobs det ikke også (revision 11/11: Ranum talt to gange). Honoraret holder linjen åben
-    const gørSaxo = () => { åben.forEach(k.flyt); if (!k.erFordelt) fordelt(); }, alt = () => { if (saxoÅ) gørSaxo(); if (hÅ.length) sendt(hÅ.map(o => o.navn)); };
+    const gørSaxo = () => { åben.forEach(k.flyt); if (!k.erFordelt) fordelt(); }, alt = () => { if (saxoÅ) gørSaxo(); if (hÅ.length) sendt(hÅ.map(o => o.navn)); if (!saxoÅ && !hÅ.length && !k.erFordelt) fordelt(); };
     const kunSaxo = gørSaxo, kunHon = o => sendt([o.navn]);
     const dele_ = [saxoÅ ? `${krKort(saxoÅ)} kr. til Saxo` : null, ...hÅ.map(o => `${krKort(o.kr)} kr. til ${o.navn}`)].filter(Boolean), n = dele_.length;
+    const titel = `${hvem}: ` + [n ? `overfør ${dele_.join(" og ")}` : null, k.løn && !k.erFordelt ? `${n ? "lad" : "Lad"} ${krKort(k.løn)} kr. blive på Lønkonto+ til lønnen d. ${kortDato(P0.d1.dato)}` : null].filter(Boolean).join(", og ");   // Oscar 13/11: "Gem de her penge på lønkonto"
     const pil = h("span", {class: "kj-pil"});
     const række = (navn, under, kr_, handling) => h("div", {class: "kj-l"}, h("span", {class: "kj-t"}, h("b", {}, navn), under ? h("span", {class: "kj-u"}, under) : null), h("span", {class: "kj-h"}, h("b", {}, `${krKort(kr_)} kr.`), handling));
     const færdig = t => h("span", {class: "muted lille"}, t);
     ovL.unshift(h("div", {class: "ov-r kj", "data-ov": "klub-saxo", "data-job": String(x.id)},
-      knap(n > 2 ? "✓ Overført alle" : n === 2 ? "✓ Overført begge" : saxoÅ ? "✓ Overført" : "✓ Sendt", alt, !ovL.length),
-      h("details", rdFold(id, {class: "kj-f"}), h("summary", {}, h("b", {}, `${hvem}: overfør ${dele_.join(" og ")}`), h("span", {class: "kj-se"}, "Se mere", pil)),
+      knap(n > 2 ? "✓ Overført alle" : n === 2 ? "✓ Overført begge" : saxoÅ ? "✓ Overført" : hÅ.length ? "✓ Sendt" : "✓ Set", alt, !ovL.length),
+      h("details", rdFold(id, {class: "kj-f"}), h("summary", {}, h("b", {}, titel), h("span", {class: "kj-se"}, "Se mere", pil)),
         h("div", {class: "kj-fold"},
           saxo ? række("Til Saxo", [dele.map(d => `${krKort(d[2])} kr. ${d[1]}`).join(" · "), nrT(P0.kontonr?.Saxo) ? h("span", {class: "ov-n"}, nrT(P0.kontonr?.Saxo)) : null], saxo, saxoÅ ? knap("✓ Overført", kunSaxo, true) : færdig("Overført")) : null,
           hon.map(o => række(`Til ${o.navn}`, "Honorar", o.kr, o.seddel_betalt ? færdig("Sendt") : knap("✓ Sendt", () => kunHon(o)))),
