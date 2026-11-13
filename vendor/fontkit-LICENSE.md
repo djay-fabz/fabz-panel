@@ -1,0 +1,1 @@
+fontkit.umd.min.js er @pdf-lib/fontkit 1.1.1 fra npm (https://github.com/Hopding/fontkit), MIT-licens som fontkit (Devon Govett). Bruges af pdf-lib til at indlejre festkortenes og klubkortenes skrifter (Oscar 13/11).
