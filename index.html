@@ -3830,11 +3830,15 @@ const ML_KEY = k => "fabz-mail-" + k;
 const ML = {firma: null, privat: null, fejl: {}, gen: {firma: 0, privat: 0}, t: 0, henter: false, åben: null, læs: null, menu: null, vælgDato: null, lukket: new Set(["afventer:tlf"]), huskÅben: false, skjult: new Set()};
 const mlKobling = k => { const s = lager.get(ML_KEY(k)) || "", i = s.lastIndexOf("#"); return i > 0 ? {url: s.slice(0, i), noegle: s.slice(i + 1)} : null; };
 const mlKonti = () => ML_KONTI.map(([k]) => k).filter(mlKobling);
-function mlForbind(konto) {
-  const s = (prompt(konto === "firma" ? "Indsæt linjen fra scriptet Fabz mail (oscar@fabz.dk)" : "Indsæt linjen fra scriptet i den private Gmail") || "").trim();
-  if (!s) return;
-  if (!/^https:\/\/script\.google(usercontent)?\.com\/\S+#\S{16,}$/.test(s)) { alert("Linjen skal starte med https://script.google.com og have et # med nøglen til sidst."); return; }
-  lager.set(ML_KEY(konto), s); ML[konto] = null; ML.t = 0; mlHent(true);
+function mlForbind(konto) {   // to felter (Oscar 13/11: ét felt med adresse#nøgle var for svært): webadressen fra Administrer implementeringer, så nøglen fra loggen
+  const hvor = konto === "firma" ? "Fabz mail (oscar@fabz.dk)" : "den private Gmail";
+  const url = (prompt(`1 af 2: Webadressen fra ${hvor}. Implementér → Administrer implementeringer → Webapp → Kopiér`) || "").trim().split("#")[0];
+  if (!url) return;
+  if (!/^https:\/\/script\.google\.com\/\S+\/exec$/.test(url)) { alert(/\/dev$/.test(url) ? "Det er testadressen (/dev). Brug Webadressen under Implementér → Administrer implementeringer." : "Webadressen skal starte med https://script.google.com og slutte på /exec."); return; }
+  const n = (prompt("2 af 2: Nøglen fra loggen efter waOpsaet") || "").trim().split("#").pop().trim();   // hele loglinjen virker også: nøglen er det sidste efter #
+  if (!n) return;
+  if (!/^[0-9a-f]{32,}$/i.test(n)) { alert("Nøglen er en lang række tal og bogstaver (a-f). Kopiér den fra loggen."); return; }
+  lager.set(ML_KEY(konto), url + "#" + n); ML[konto] = null; ML.t = 0; mlHent(true);
 }
 async function mlKald(konto, krop) {
   const k = mlKobling(konto);
