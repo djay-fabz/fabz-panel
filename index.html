@@ -2775,7 +2775,7 @@ function varmeLinje() {
     arb ? [h("b", {}, "Arbejdsdag 18°"), h("span", {}, `til ${arb.til}`), h("span", {class: "muted va-tal"}, startet ? `startet kl. ${v.opdateret.slice(11, 16).replace(":", ".")} · ${grad(s.temp)} · ${s.fugt ?? "–"} %` : "starter om lidt")]
       : [h("b", {}, "Varme"), h("span", {class: "va-tal"}, `${grad(s.temp)} · ${s.fugt ?? "–"} % · ${p.taendt ? `tændt ${p.setpunkt ?? ""}°`.replace(" °", "") : "slukket"} · ${målt}`),
         v.tilstand === "manuelt" && v.manuel ? h("span", {class: "pill va-pill gul"}, `Manuelt siden ${v.manuel.fra.slice(11).replace(":", ".")}`)   // tændt med stemmen, i appen eller på fjernbetjeningen (Oscar 10/11)
-          : h("span", {class: "pill va-pill " + (næste ? "blå" : "grøn")}, næste ? `Arbejdsdag ${dagNavn(næste)} ${næste.fra}-${næste.til}` : "Frostsikring under 5°")],
+          : h("span", {class: "pill va-pill " + (næste ? "blå" : "grøn")}, næste ? `Arbejdsdag ${dagNavn(næste)} ${næste.fra}-${næste.til}` : "Frostsikring under 8°")],
     h("div", {class: "spacer"}),
     arb ? h("button", {class: "btn lille", type: "button", onclick: stop}, "Stop nu") : null,
     h("button", {class: "btn lille", type: "button", onclick: () => { VA.arb = VA.arb ? null : {dag: "idag", dato: "", fra: "07.30", til: "16.00"}; visLager(); }}, "Arbejdsdag"),
@@ -2840,7 +2840,7 @@ function varmeDetaljer(v) {   // Oscar 10/11: temperatur og fugt som to tydeligt
       dage.map(d => h("tr", {}, h("td", {}, `${DAGE[dag(d.dato).getDay()].slice(0, 2)} ${kortDato(d.dato)}`), h("td", {}, minTekst(d.min)), h("td", {}, grad(d.lavest)), h("td", {}, d.hoejest_fugt == null ? "–" : `${d.hoejest_fugt} %`)))) : null) : null;
   if (per !== "døgn") return h("div", {class: "va-mere"}, valg, varmeDagsgrafer(v, alleDage.filter(d => d.dato >= periodeStart(per)).reverse(), per, W, x0, x1, el), tabel);
   return h("div", {class: "va-mere"}, valg,
-    graf({titel: "Temperatur", nu: `nu ${grad(s.temp)}`, lo: tLo, hi: tHi, trin: tHi - tLo > 12 ? 4 : 2, enhed: "°", kol: 1, kl: "va-temp", band: [8, 12], pumpe: true}),
+    graf({titel: "Temperatur", nu: `nu ${grad(s.temp)}`, lo: tLo, hi: tHi, trin: tHi - tLo > 12 ? 4 : 2, enhed: "°", kol: 1, kl: "va-temp", grænse: 8, pumpe: true}),   // frostsikring under 8° (Oscar 13/11), ikke længere et mål-bånd
     graf({titel: "Luftfugtighed", nu: `nu ${s.fugt ?? "–"} %`, lo: fLo, hi: fHi, trin: 10, enhed: " %", kol: 2, kl: "va-fugt", grænse: 60, fyld: true}),
     tabel);
 }
@@ -2882,7 +2882,7 @@ function varmeDagsgrafer(v, dage, per, W, x0, x1, el) {
   const fLo = Math.min(40, Math.floor((Math.min(...fl, 60) - 5) / 10) * 10), fHi = Math.max(70, Math.ceil((Math.max(...fh, 60) + 5) / 10) * 10);
   const kørt = dage.filter(d => d.min != null), maxT = Math.max(1, Math.ceil(Math.max(0, ...kørt.map(d => d.min)) / 60)), ialt = kørt.reduce((a, d) => a + d.min, 0);
   return [
-    boks("Temperatur", `nu ${grad(s.temp)}`, "va-temp", tLo, tHi, tHi - tLo > 12 ? 4 : 2, "°", søjler("lavest", "hoejest", "va-temp"), null, [8, 12]),
+    boks("Temperatur", `nu ${grad(s.temp)}`, "va-temp", tLo, tHi, tHi - tLo > 12 ? 4 : 2, "°", søjler("lavest", "hoejest", "va-temp"), 8, null),
     boks("Luftfugtighed", `nu ${s.fugt ?? "–"} %`, "va-fugt", fLo, fHi, 10, " %", søjler("laveste_fugt", "hoejest_fugt", "va-fugt"), 60),
     boks("Pumpen", `kørt ${minTekst(ialt)} i perioden`, "va-pumpe", 0, maxT, Math.max(1, Math.ceil(maxT / 4)), " t", (svg, y) => { for (const d of kørt)
       svg.append(el("rect", {x: xd(d.dato) - sw / 2, y: y(d.min / 60), width: sw, height: Math.max(d.min ? 2 : 0, y(0) - y(d.min / 60)), rx: Math.min(3, sw / 3), class: "va-kort"})); })];
