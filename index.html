@@ -288,6 +288,8 @@ input[type=date]{color-scheme:light dark}
 .fast-r{border:1px solid var(--linje);background:var(--flade);border-radius:12px;padding:10px 14px;margin-top:12px}.fast-top{display:flex;align-items:baseline;gap:10px;width:100%;background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}.fast-top b{font-size:15px}.fast-r .planvalg{margin-top:8px}
 .indtil-nu{margin-top:12px;padding:0 2px}.in-nu{display:grid;grid-template-columns:42px 62px minmax(0,1fr);gap:8px;padding:3px 0;font-size:13.5px;line-height:1.4}.in-d{color:var(--svag)}.in-k{color:var(--pl-brun);font-size:12.5px}
 @media (max-width:700px){.in-nu{grid-template-columns:38px minmax(0,1fr)}.in-k{display:none}}
+.forloeb{margin-top:10px;padding:0 2px}.fo-r{display:flex;gap:6px;flex-wrap:wrap}.fo-r>span{background:color-mix(in srgb,var(--pl-brun) 14%,transparent);border-radius:8px;padding:4px 10px;font-size:13px}.fo-r b{font-weight:600}
+@media (max-width:700px){.fo-l{display:none}}
 .pd{margin-top:14px}.pd-k{padding:12px 16px;margin:0}.pd-top{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}.pd-ind{flex:1;min-width:220px}
 .pd-r{display:flex;align-items:center;gap:10px;padding:3px 0}.pd-i{width:14px;color:var(--ok);font-weight:600}.pd-r.pd-mg .pd-i,.pd-r.pd-mg .pd-t{color:var(--adv)}.pd-t{flex:1;min-width:0}
 .pd-kort{display:flex;align-items:center;gap:10px;border-top:1px solid var(--linje);margin-top:10px;padding-top:10px}.pd-kort .pd-r{flex:1}
@@ -7724,6 +7726,18 @@ function indtilNu(s) {
   return h("div", {class: "indtil-nu"}, h("div", {class: "etiket"}, "Indtil nu"),
     l.map(x => h("div", {class: "in-nu"}, h("span", {class: "in-d"}, x.dato ? kortDato(x.dato) : ""), h("span", {class: "in-k"}, x.kanal || ""), h("span", {}, mdLinks(kortTekst(x.tekst))))));
 }
+// Forløb (Oscar 13/11, skitse salg-forloeb-tal): mails, opkald og møder fra første kontakt til ja. Tallene tælles af mailrobotten, kun tal, aldrig mailtekster
+const flTal = f => f && ["mails_sendt", "mails_modtaget", "opkald", "moeder_antal"].some(k => Number.isFinite(f[k]));
+const flDage = f => Number.isFinite(f.dage_til_ja) ? f.dage_til_ja : f.foerste_kontakt ? Math.round((dag(iDag()) - dag(f.foerste_kontakt)) / 864e5) : null;
+function forløbBlok(s) {
+  const f = s.forloeb;
+  if (!flTal(f)) return null;
+  const n = (v, lang, kort) => Number.isFinite(v) ? h("span", {}, h("b", {}, v), " ", lang ? h("span", {class: "fo-l"}, lang + " ") : null, kort) : null;
+  const d = flDage(f);
+  return h("div", {class: "forloeb"}, h("div", {class: "etiket"}, "Forløb"),
+    h("div", {class: "fo-r"}, n(f.mails_sendt, "mails", "sendt"), n(f.mails_modtaget, "", "modtaget"), n(f.opkald, "", "opkald"), n(f.moeder_antal, "", f.moeder_antal === 1 ? "møde" : "møder"),
+      d === null ? null : h("span", {}, h("b", {}, d), " dage", h("span", {class: "fo-l"}, f.ja || Number.isFinite(f.dage_til_ja) ? " til ja" : " indtil nu"))));
+}
 const sidsteÅbning = s => { const r = [...(D.salgslog || [])].reverse().find(x => x.navn === s.navn && x.opkald?.aabning); return r ? {dato: r.dato, tekst: r.opkald.aabning.replace(/^Andet: /, "")} : null; };
 function opkaldBlok(s, k) {
   const o = k.opk ||= {fik: null, sagde: [], skridt: null, rigtig: "", rigtigK: "", sender: false, note: "", hNavn: "", hMail: "", hTlf: "",
@@ -7827,7 +7841,18 @@ function lukkeBlok(alle) {
       h("div", {class: "sk-k b"}, h("b", {}, t.opk ? kr(t.kr / t.opk) + " kr." : "–"), h("span", {}, "pr. opkald (ekskl. moms)"))),
     t.md.length ? h("table", {class: "tal-md"}, h("tr", {}, ["Måned", "Opkald", "Bookinger", "Kr."].map(x => h("th", {}, x))),
       t.md.map(([m, v]) => h("tr", {}, h("td", {}, MDL[Number(m.slice(5)) - 1].replace(/^./, c => c.toUpperCase()) + " " + m.slice(0, 4)), h("td", {}, v.opk),
-        v.opk < 20 && !v.book ? h("td", {colspan: 2, class: "muted lille"}, "for få data endnu") : [h("td", {}, v.book), h("td", {}, kr(v.kr))]))) : null);
+        v.opk < 20 && !v.book ? h("td", {colspan: 2, class: "muted lille"}, "for få data endnu") : [h("td", {}, v.book), h("td", {}, kr(v.kr))]))) : null,
+    lukketSnit());
+}
+// Lukket kunde i snit (Oscar 13/11): forløbet for alle kunder med status Booket, hvor tallene er talt
+function lukketSnit() {
+  const l = (D.salg || []).filter(s => s.status === "Booket" && flTal(s.forloeb)).map(s => s.forloeb);
+  if (!l.length) return null;
+  const snit = k => { const v = l.map(f => k === "dage" ? flDage(f) : f[k]).filter(Number.isFinite); return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : null; };
+  const kort = (v, t, ca) => h("div", {class: "sk-k b"}, h("b", {}, v === null ? "–" : (ca ? "ca. " : "") + v), h("span", {}, t));
+  return [h("div", {class: "overskrift", style: "margin-top:14px"}, `Lukket kunde i snit · ${l.length} ${l.length === 1 ? "kunde" : "kunder"}`),
+    h("div", {class: "sk-k4"}, kort(snit("mails_sendt"), "mails sendt", true), kort(snit("mails_modtaget"), "mails modtaget", true), kort(snit("moeder_antal"), "møder"),
+      kort(snit("dage"), "dage fra første kontakt til ja"))];
 }
 // Tal (Oscar 31/10): tragten fra opkald til booket, varm mod kold, det der oftest siges, åbning A mod B og forslag til salgslæringen
 const LÆR_FORSLAG = {fast_dj: ["fast dj", "Vi bruger allerede en fast DJ", "Tilbyd at være backup, når den faste DJ er optaget eller syg."],
@@ -7972,6 +7997,7 @@ function fase2Kort(s) {
     h("div", {class: "kh"}, h("h2", {}, s.navn), h("div", {class: "spacer"}), h("button", {class: "x", type: "button", title: "Luk (Esc)", onclick: salgLuk}, "×")),
     h("div", {class: "s-pers"}, person ? h("span", {}, person) : null, nr ? h("a", {class: "s-link", href: "tel:" + nr.replace(/\s+/g, "")}, "Ring") : null, mail ? h("a", {class: "s-link", href: "mailto:" + mail}, "Mail") : null),
     tl,
+    forløbBlok(s),
     lukket ? h("div", {class: "s-næste"}, s.aldrig ? h("div", {class: "s-h"}, "Ring aldrig igen") : [h("div", {class: "s-h"}, "Lukket"), h("div", {class: "s-d"}, s.naeste_opfoelgning ? "Åbner igen " + dagNavnLang(s.naeste_opfoelgning) : "")],
       h("button", {class: "btn", type: "button", style: "margin-top:12px", onclick: () => kør("salg-aabn", ["--", s.navn], {tekst: `${s.navn}: åbnet igen`, efter, med: () => { s.status = "Kontaktet"; s.naeste_opfoelgning = iDag(); delete s.aldrig; delete s.lukket; }})}, "Åbn igen"))
     : h("div", {class: "s-næste"}, s.svar ? h("div", {class: "s-svar-m"}, `${s.svar.person} har svaret`) : s.kom_igen ? h("div", {class: "s-svar-m"}, s.kom_igen.grund) : null,
@@ -8010,6 +8036,7 @@ function salgDetalje(s) {
     s.kontakt || s.telefon ? h("div", {class: "info"}, h("div", {class: "etiket"}, "Kontaktperson"), h("div", {class: "pre"}, visKontakt(s)),
       ringKnap(s)) : null,
     indtilNu(s),
+    forløbBlok(s),
     s.naeste ? h("div", {class: "info"}, h("div", {class: "etiket"}, "Næste skridt"), h("div", {class: "pre", style: "font-size:15px"}, mdLinks(s.naeste))) : null,
     h("div", {class: "seg kform", style: "margin-top:14px"}, [["opkald", "Opkald"], ["anden", "Anden kontakt"]].map(([v, t]) =>
       h("button", {type: "button", class: (SG.kform || "opkald") === v ? "aktiv" : "", onclick: () => { SG.kform = v; tegn(); }}, t))),
