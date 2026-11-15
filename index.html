@@ -373,7 +373,7 @@ body.bar-synlig .beskeder{bottom:84px}
 .side.bred{max-width:1228px}
 .ml-kort .kh h2{margin:0}.ml-antal{font-size:12.5px;color:var(--svag)}.ml-g{margin-top:6px}.ml-gh{background:none;border:0;padding:6px 0;font:inherit;font-weight:600;color:inherit;cursor:pointer;text-align:left}.ml-gh.lille{font-weight:400;font-size:13px;color:var(--svag)}.ml-n{color:var(--svag);font-weight:400}.ml-liste{border:1px solid var(--linje);border-radius:10px}
 .ml-r{display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid var(--linje);font-size:13.5px;color:var(--svag);cursor:pointer}.ml-r:first-child{border-top:0}.ml-r:hover{background:var(--hover)}.ml-r.valgt{background:var(--hover)}.ml-r.ulaest{color:var(--tekst)}.ml-r.ulaest .ml-t{font-weight:600}.ml-r.graa{cursor:default;border:0;padding:4px 0}.ml-t{flex:1;min-width:0}.ml-t b{font-weight:600}.ml-r:not(.ulaest) .ml-t b{font-weight:500}.ml-sep{color:var(--svagere)}.ml-prik{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:7px;vertical-align:1px}
-.ml-hoejre{display:flex;align-items:center;gap:8px;flex:none}.ml-frist{font-size:12.5px;color:var(--svag);min-width:36px}.ml-frist.rd{color:var(--fejl);font-weight:600}.ml-r .btn.lille{margin:0}.ml-ok{color:var(--ok);border-color:var(--ok)}.pill.lilla{background:#f3edf9;color:#8a5cb5}[data-theme=dark] .pill.lilla{background:#2a2238;color:#c4a6f0}
+.ml-hoejre{display:flex;align-items:center;gap:8px;flex:none}.ml-frist{font-size:12.5px;color:var(--svag);min-width:36px}.ml-frist.rd{color:var(--fejl);font-weight:600}.ml-r .btn.lille{margin:0}.ml-ok{color:var(--ok);border-color:var(--ok)}.ml-af{color:var(--svag)}.pill.lilla{background:#f3edf9;color:#8a5cb5}[data-theme=dark] .pill.lilla{background:#2a2238;color:#c4a6f0}
 .ml-husk{position:relative}.ml-menu{position:absolute;right:0;top:calc(100% + 4px);z-index:30;background:var(--flade);border:1px solid var(--linje);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:4px;min-width:170px;display:flex;flex-direction:column}.ml-menu button{background:none;border:0;text-align:left;padding:8px 10px;border-radius:7px;font:inherit;font-size:13.5px;color:inherit;cursor:pointer}.ml-menu button:hover{background:var(--hover)}
 .ml-husk-fod{margin-top:10px}.ml-laes-kort .ml-emne{margin:4px 0 12px;font-size:19px}.ml-tekst{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.55}.ml-udkast{margin-top:16px;border:1px dashed var(--accent);border-radius:10px;padding:12px 14px;background:var(--accent-blid)}.ml-udkast-ov{font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}.ml-knapper{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}.ml-knapper .btn{margin:0}.ml-tilbage{background:none;border:0;padding:0 0 10px;font:inherit;font-weight:600;color:inherit;cursor:pointer}
 .idag.ml-laes{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr)}.idag>.fokus{margin-top:0}
@@ -4364,6 +4364,36 @@ function mlHuskKnap(r) {
       ML.vælgDato ? datoInput("", iso => { if (iso > iDag()) mlHusk(r, iso); }, {"aria-label": "Husk mig til dato", style: "width:100%;margin-top:4px"})
         : h("button", {type: "button", role: "menuitem", onclick: () => { ML.vælgDato = true; mlVis(); document.querySelector(".ml-menu .dato-felt")?.focus(); }}, "Vælg dato …")) : null);
 }
+// Afmeld (Oscar 15/11, skitse panel-mails-afmeld): kun når afsenderen selv har lagt et afmeld-link i mailen. "et": scriptet afmelder og arkiverer; "link": afsenderens side åbnes
+async function mlAfmeld(r) {
+  if (ML.skjult.has(r.konto + r.t.id)) return;
+  ML.menu = null; ML.skjult.add(r.konto + r.t.id); ML.gen[r.konto]++;
+  if (ML.åben?.id === r.t.id) { ML.åben = null; ML.læs = null; }
+  mlVis();
+  try {
+    await mlKald(r.konto, {h: "afmeld", id: r.t.id, mid: r.t.afmeldMid});
+    const l = ML[r.konto]; if (l) l.traade = l.traade.filter(x => x.id !== r.t.id);
+    besked({id: nytId("x"), klasse: "ok", titel: `Afmeldt: ${r.hvem} (mailen er arkiveret)`});
+  } catch (e) { besked({id: nytId("x"), klasse: "adv", titel: `Afmeld: ${r.hvem}: ${e.message}`}); }
+  ML.skjult.delete(r.konto + r.t.id); mlVis();
+}
+function mlAfmeldKnap(r) {
+  if (r.t.afmeld === "et") return h("button", {class: "btn lille ml-af", type: "button", onclick: e => { e.stopPropagation(); mlAfmeld(r); }}, "Afmeld");
+  if (r.t.afmeld === "link" && /^https:\/\//i.test(r.t.afmeldLink || "")) return h("a", {class: "btn lille ml-af", href: r.t.afmeldLink, target: "_blank", rel: "noopener noreferrer", onclick: e => e.stopPropagation()}, "Afmeld ↗");
+  return null;
+}
+// Brevet fra e-Boks (Oscar 15/11): PDF'en hentes fra scriptet og vises i en ny fane. Den går kun fra Gmail til browseren
+async function mlFil(konto, id, nr, navn, mid) {
+  const w = window.open("", "_blank");   // åbnes med det samme, ellers blokerer browseren den
+  try {
+    if (!w) throw new Error("browseren blokerede den nye fane. Tillad pop op-vinduer for panelet");
+    const sv = await mlKald(konto, {h: "fil", id, nr, mid});
+    const b = new Blob([Uint8Array.from(atob(sv.data), c => c.charCodeAt(0))], {type: sv.type || "application/pdf"});
+    const u = URL.createObjectURL(b);
+    w.location = u;
+    setTimeout(() => URL.revokeObjectURL(u), 60e3);
+  } catch (e) { if (w) w.close(); besked({id: nytId("x"), klasse: "adv", titel: `${navn || "Brevet"}: ${e.message}`}); }
+}
 function mlKlaretKnap(r) { return h("button", {class: "btn lille ml-ok", type: "button", onclick: e => { e.stopPropagation(); mlKlaret(r); }}, "Klaret"); }
 function mlRække(r) {
   const fr = mlFrist(r.frist), valgt = ML.åben?.id === r.t.id;
@@ -4373,7 +4403,7 @@ function mlRække(r) {
     h("span", {class: "ml-hoejre"},
       r.tag ? h("span", {class: "pill " + (ML_TAG[r.tag] || "gr")}, r.tag) : null,
       fr ? h("span", {class: "ml-frist" + (fr === "i dag" ? " rd" : "")}, fr) : null,
-      ML.åben ? null : [r.gruppe === "udkast" && r.t.udkastLink ? h("a", {class: "btn lille", href: r.t.udkastLink, target: "_blank", rel: "noopener", onclick: e => e.stopPropagation()}, "Åbn udkast ↗") : mlHuskKnap(r), mlKlaretKnap(r)]));
+      ML.åben ? null : [r.gruppe === "udkast" && r.t.udkastLink ? h("a", {class: "btn lille", href: r.t.udkastLink, target: "_blank", rel: "noopener", onclick: e => e.stopPropagation()}, "Åbn udkast ↗") : [mlAfmeldKnap(r), mlHuskKnap(r)], mlKlaretKnap(r)]));
 }
 function mlKort() {
   const konti = mlKonti();
@@ -4416,9 +4446,11 @@ function mlLæsKort() {
          h("div", {class: "ml-tekst"}, l.tekst),
          l.udkast ? h("div", {class: "ml-udkast"}, h("div", {class: "ml-udkast-ov"}, "Udkast i Gmail"), h("div", {class: "ml-tekst"}, l.udkast)) : null,
          h("div", {class: "ml-knapper"},
+           (() => { const f = l.fraMail === "noreply@e-boks.dk" && (l.filer || []).find(x => /pdf/i.test(x.type || "") || /\.pdf$/i.test(x.navn || ""));   // brev fra e-Boks Erhverv (tools/eboks-webapp.gs)
+             return f ? h("button", {class: "btn lille", type: "button", onclick: () => mlFil(ML.åben.konto, l.id, f.nr, f.navn, l.mid)}, "Brevet (PDF) ↗") : null; })(),
            h("a", {class: "btn lille", href: l.link, target: "_blank", rel: "noopener"}, "Åbn i Gmail ↗"),
            l.udkastLink ? h("a", {class: "btn lille", href: l.udkastLink, target: "_blank", rel: "noopener"}, "Åbn udkast i Gmail ↗") : null,
-           r ? [mlHuskKnap(r), mlKlaretKnap(r)] : null)]);
+           r ? [mlHuskKnap(r), mlAfmeldKnap(r), mlKlaretKnap(r)] : null)]);
 }
 function visIDag() {
   const idag = iDag(), d = dag(idag);
