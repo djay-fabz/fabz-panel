@@ -7648,7 +7648,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   const bUkendt = (sk.b_linjer || []).filter(x => x.kr == null);
   bUkendt.forEach(x => gør.push(trin("y", [h("b", {}, `Skriv beløbet for ${x.navn} ${kortDato(x.dato)}.`), " Prisen stod ikke i kalenderen. Brug Registrér B-indkomst herunder."])));
   if (bt.id && !bt.faerdig && bt.deadline && bt.deadline <= plusDage(iDag(), 2)) gør.push(trin(bt.deadline < iDag() ? "rd" : "y",
-    [h("b", {}, "Tal-dag: hent månedens tal."), ` eIndkomst, kontoudtog, Saxo og Bliss. Ca. 15 minutter${bt.deadline < iDag() ? ", fristen var " + kortDato(bt.deadline) : ""}.`],
+    [h("b", {}, "Tal-dag: hent månedens tal."), ` eIndkomst, mobilbanken og Bliss. Ca. 10 minutter${bt.deadline < iDag() ? ", fristen var " + kortDato(bt.deadline) : ""}.`],
     knap("Start →", mål("guide:taldag"), true)));
   // advarslen om det låste vises ikke som kort: den røde måned ved Basis siger det samme (Oscar 2/11)
   const l = (tx, v, ekstra) => h("div", {class: "l"}, h("span", {}, tx, ekstra ? h("span", {class: "muted lille", style: "margin-left:6px"}, ekstra) : null), h("b", {style: "white-space:nowrap"}, v));
@@ -8265,16 +8265,20 @@ function visGuide(navn) {
     const bt = sk.b_tjek || {}, mdNavn = ym => ym ? MDL[Number(ym.slice(5, 7)) - 1] : "";
     const bLinjer = (sk.b_linjer || []).filter(x => x.dato.slice(0, 7) === bt.maaned);
     const til = g => () => { ØK.guide = g; ØK.efterGuide = "taldag"; tegn(); window.scrollTo(0, 0); };
-    return side(`Tal-dag: ${mdNavn(bt.maaned)}`, "Ca. 15 minutter. Gør trinene i rækkefølge.",
-      h("div", {class: "overskrift", style: "margin-top:14px"}, "1. eIndkomst på skat.dk"),
-      trin("a", "Log på ", h("b", {}, "skat.dk"), " med MitID, og åbn ", h("b", {}, "eIndkomst"), ` for ${mdNavn(bt.maaned)}.`),
-      trin("b", "Passer B-indkomsten med listen? ", bLinjer.length ? bLinjer.map(x => `${x.navn} ${kortDato(x.dato)}: ${x.kr == null ? "?" : krKort(x.kr)} kr.`).join(", ") : "Panelet har ingen B-indkomst i måneden.",
-        " Afviger et beløb, så ret det under Registrér B-indkomst. Løn (Delulu, Zwei) skal ikke med."),
-      trin("c", "Tag et skærmbillede af lønnen før skat, og send det til Claude, så forskuddet kan tjekkes."),
-      h("div", {class: "overskrift", style: "margin-top:14px"}, "2. Kontoudtog fra Danske Bank Erhverv"),
-      h("button", {class: "btn", type: "button", onclick: til("bank")}, `Åbn guiden →${E.dato ? " (sidste " + kortDato(E.dato) + ")" : ""}`),
-      h("div", {class: "overskrift", style: "margin-top:14px"}, "3. Saldo i Saxo"),
-      h("button", {class: "btn", type: "button", onclick: til("saxo")}, "Åbn guiden →"),
+    // Oscar 16/11: "jeg forstår ikke lige helt guiden". Firmakontoen hentes selv fra banken, pengene er flyttet fra Saxo til mobilbanken,
+    // og hvert trin slutter med et skærmbillede til Claude, der tjekker tallene (doven version, ingen API)
+    const bankGl = !E.dato || (dag(iDag()) - dag(E.dato)) / 864e5 > 3;
+    return side(`Tal-dag: ${mdNavn(bt.maaned)}`, "Ca. 10 minutter. Gør trinene i rækkefølge.",
+      h("div", {class: "overskrift", style: "margin-top:14px"}, `1. eIndkomst for ${mdNavn(bt.maaned)}`),
+      trin(1, "Gå til ", h("a", {href: "https://skat.dk", target: "_blank", rel: "noopener"}, "skat.dk"), ", og tryk ", h("b", {}, "Log på"), " øverst til højre med MitID."),
+      trin(2, "Tryk ", h("b", {}, "Indkomstoplysninger fra eIndkomst"), `, og vælg ${mdNavn(bt.maaned)}.`),
+      trin(3, "Tag et skærmbillede, og send det til Claude. Claude tjekker B-indkomsten og lønnen mod panelet."),
+      h("div", {class: "overskrift", style: "margin-top:14px"}, "2. Firmakontoen"),
+      bankGl ? [trin(1, `Banken har ikke sendt tal siden ${E.dato ? kortDato(E.dato) : "start"}. Hent kontoudtoget i hånden:`), h("button", {class: "btn", type: "button", onclick: til("bank")}, "Åbn guiden →")]
+        : trin("✓", `Hentes selv fra banken. Sidst ${kortDato(E.dato)}.`),
+      h("div", {class: "overskrift", style: "margin-top:14px"}, "3. Dine konti i mobilbanken"),
+      trin(1, "Åbn Danske Bank-appen på forsiden med alle konti."),
+      trin(2, "Tag et skærmbillede, og send det til Claude. Claude sætter Skat, Månedskassen og Panel opsparinger efter det."),
       h("div", {class: "overskrift", style: "margin-top:14px"}, "4. Bliss til månedsrapporten"),
       trin(1, "Åbn Bliss, og tryk Indstillinger øverst i højre hjørne"),
       trin(2, "Rul ned i bunden, og tryk Eksportér transaktioner"),
