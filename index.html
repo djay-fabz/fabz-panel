@@ -4279,6 +4279,7 @@ async function mlHent(tving) {
   ML.henter = false; ML.t = Date.now();
   mlTegn();
   if (ML.igen) mlHent(true);
+  else mlForhent();
 }
 // Kun Mails-kortet tegnes om (revision 13/11: hele I dag hvert 2. min lukkede "Vis resten" og tog fokus fra felterne). Hele siden kun med en åben mail, eller når kortet mangler
 function mlVis() {
@@ -4345,11 +4346,46 @@ async function mlKlaret(r) {
     else mlVis();
   } catch (e) { ML.skjult.delete(r.konto + r.t.id); besked({id: nytId("x"), klasse: "adv", titel: `Klaret: ${r.hvem}: ${e.message}`}); mlVis(); }
 }
-async function mlÅbn(r) {
-  ML.åben = {konto: r.konto, id: r.t.id}; ML.læs = null; ML.menu = null;
-  visIDag(); window.scrollTo(0, 0);
+// Hurtig åbning (Oscar 16/11: "virkelig langsom", åbn tog 10-12 sek.): efter hver liste hentes mailene i baggrunden ("hent" sætter ikke læst),
+// så et tryk viser mailen med det samme. Læst sendes bagefter i baggrunden. Teksten ligger kun i browserens hukommelse, aldrig i GitHub eller lager
+const ML_INDHOLD = new Map(), ML_GAMMEL = {};   // ML_GAMMEL[konto]: scriptet kender ikke "hent" endnu (gammel version), så bruges "aabn" ved tryk
+const mlNøgle = (konto, t) => [konto, t.id, t.dato, t.udkast ? 1 : 0, t.udkastLink || ""].join("|");   // et nyt eller ændret udkast hentes igen
+const ML_FORHENT_MAKS = 15;   // pr. konto og runde: de øverste (frist og ulæst først), resten ved tryk (kvoten)
+async function mlForhent() {
+  if (ML.forhenter) { ML.forhentIgen = true; return; }
+  ML.forhenter = true; ML.forhentIgen = false;
   try {
-    const sv = await mlKald(r.konto, {h: "aabn", id: r.t.id});
+    const rk = mlRækker(), behold = new Set(rk.map(r => mlNøgle(r.konto, r.t)));
+    for (const n of [...ML_INDHOLD.keys()]) if (!behold.has(n)) ML_INDHOLD.delete(n);   // kun det, der står i listen nu
+    const antal = {};
+    for (const r of rk) {
+      antal[r.konto] = (antal[r.konto] || 0) + 1;
+      if (antal[r.konto] > ML_FORHENT_MAKS || document.hidden || ML_GAMMEL[r.konto] || ML_INDHOLD.has(mlNøgle(r.konto, r.t))) continue;
+      try { ML_INDHOLD.set(mlNøgle(r.konto, r.t), await mlKald(r.konto, {h: "hent", id: r.t.id})); }
+      catch (e) { if (/ukendt handling/.test(e.message)) ML_GAMMEL[r.konto] = true; }
+    }
+  } finally { ML.forhenter = false; }
+  if (ML.forhentIgen) mlForhent();
+}
+function mlLæst(r) {   // læst i Gmail i baggrunden; fejler det, står den som ulæst igen
+  mlKald(r.konto, {h: ML_GAMMEL[r.konto] ? "aabn" : "laest", id: r.t.id}).catch(() => { r.t.ulaest = true; if (fane === "idag" && !ML.åben) mlVis(); });
+}
+async function mlÅbn(r) {
+  const n = mlNøgle(r.konto, r.t), gemt = ML_INDHOLD.get(n);
+  ML.åben = {konto: r.konto, id: r.t.id}; ML.læs = gemt || null; ML.menu = null;
+  const varUlæst = r.t.ulaest;
+  if (gemt) r.t.ulaest = false;
+  visIDag(); window.scrollTo(0, 0);
+  if (gemt) {   // vist med det samme; læst i Gmail i baggrunden
+    if (varUlæst) mlLæst(r);
+    return;
+  }
+  try {
+    const sv = await mlKald(r.konto, {h: ML_GAMMEL[r.konto] ? "aabn" : "hent", id: r.t.id}).catch(e => {
+      if (!/ukendt handling/.test(e.message)) throw e;
+      ML_GAMMEL[r.konto] = true; return mlKald(r.konto, {h: "aabn", id: r.t.id}); });
+    ML_INDHOLD.set(n, sv);
+    if (!ML_GAMMEL[r.konto]) mlLæst(r);
     if (ML.åben?.id !== r.t.id) return;
     ML.læs = sv; r.t.ulaest = false;
   } catch (e) { if (ML.åben?.id === r.t.id) ML.læs = {fejl: e.message}; }
@@ -4449,7 +4485,7 @@ function mlLæsKort() {
            (() => { const f = l.fraMail === "noreply@e-boks.dk" && (l.filer || []).find(x => /pdf/i.test(x.type || "") || /\.pdf$/i.test(x.navn || ""));   // brev fra e-Boks Erhverv (tools/eboks-webapp.gs)
              return f ? h("button", {class: "btn lille", type: "button", onclick: () => mlFil(ML.åben.konto, l.id, f.nr, f.navn, l.mid)}, "Brevet (PDF) ↗") : null; })(),
            h("a", {class: "btn lille", href: l.link, target: "_blank", rel: "noopener"}, "Åbn i Gmail ↗"),
-           l.udkastLink ? h("a", {class: "btn lille", href: l.udkastLink, target: "_blank", rel: "noopener"}, "Åbn udkast i Gmail ↗") : null,
+           (l.udkastLink || r?.t.udkastLink) ? h("a", {class: "btn lille", href: l.udkastLink || r.t.udkastLink, target: "_blank", rel: "noopener"}, "Åbn udkast i Gmail ↗") : null,
            r ? [mlHuskKnap(r), mlAfmeldKnap(r), mlKlaretKnap(r)] : null)]);
 }
 function visIDag() {
