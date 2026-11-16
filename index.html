@@ -8281,7 +8281,7 @@ function visGuide(navn) {
       trin(2, "Tag et skærmbillede, og send det til Claude. Claude sætter Skat, Månedskassen og Panel opsparinger efter det."),
       h("div", {class: "overskrift", style: "margin-top:14px"}, "4. Bliss til månedsrapporten"),
       trin(1, "Åbn Bliss, og tryk Indstillinger øverst i højre hjørne"),
-      trin(2, "Rul ned i bunden, og tryk Eksportér transaktioner"),
+      trin(2, "Tryk Data og privatliv, og så Eksportér transaktioner"),   // Oscar 16/11: Indstillinger → Data og privatliv → Eksportér transaktioner
       trin(3, "Vælg alle konti og perioden fra 1. i forrige måned til i dag"),
       trin(4, "Del filen som mail til oscar@fabz.dk (filnavnet starter med bliss)"),
       bt.id ? h("button", {class: "btn primaer", type: "button", style: "margin-top:18px", onclick: () => kør("faerdig", [String(bt.id)], {tekst: "Tal-dag færdig", efter: ["mo", "opgaver"], med: () => { ØK.guide = null; }})}, "✓ Tal-dag færdig") : null);
