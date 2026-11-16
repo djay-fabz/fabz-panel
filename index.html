@@ -6934,24 +6934,42 @@ function urTik(kl, x, p) {   // hvert sekund: kun tal og bjælke, ingen ny tegni
 // Salgssprintets pause i browseren, så den holder ved fanebyt og genindlæsning
 const SP_PAUSE = "fabz-salg-pause";
 function spPause() { try { return JSON.parse(lager.get(SP_PAUSE) || "null") || {}; } catch { return {}; } }
-const spP = s => { const p = spPause(); return p.start === s.start ? p : null; };
+// Fra 16/11 står pausen på sprintet i data (salg-sprint-pause), så natkørslen kan lukke et sprint på pause som ikke færdiggjort. Browserens pause bruges kun til gamle sprints
+const spP = s => { if ("pause_ms" in s || "pause_fra" in s) return {start: s.start, pause_ms: s.pause_ms || 0, pause_fra: s.pause_fra || null}; const p = spPause(); return p.start === s.start ? p : null; };
 function pauseMs(s, nu = Date.now()) { return urPauseMs(spP(s), nu); }
 const sprintSlut = s => urSlut(s, spP(s));
 function spPauseSkift(s) {
-  let p = spP(s) || {start: s.start, pause_ms: 0, pause_fra: null}; const nu = Date.now();
+  const række = (D.salgssprints || []).find(x => x.start === s.start), nu = Date.now(), før = spP(s) || {pause_ms: 0, pause_fra: null};
+  const frabrowser = række && !("pause_ms" in række || "pause_fra" in række) ? [`--pause-ms=${Math.round(urPauseMs(før, nu))}`] : [];   // pause fra før 16/11, der kun stod i browseren
+  kør("salg-sprint-pause", [`--start=${s.start}`, `--tid=${nu}`, `--til=${før.pause_fra ? "fortsaet" : "pause"}`, ...frabrowser], {tekst: før.pause_fra ? "Salget fortsætter" : "Salget er på pause", efter: ["salgssprints"], med: () => { if (række) {
+    række.pause_ms = Math.round(urPauseMs(før, nu)); række.pause_fra = før.pause_fra ? null : nu; } }});
+  if (række) return;   // lige startet og endnu ikke hentet: også i browseren, til data er hentet igen
+  let p = spP(s) || {start: s.start, pause_ms: 0, pause_fra: null};
   p = {start: s.start, pause_ms: Number(p.pause_ms ?? p.ms ?? 0), pause_fra: p.pause_fra ?? p.fra ?? null};
-  if (p.pause_fra) { p.pause_ms += nu - p.pause_fra; p.pause_fra = null; } else p.pause_fra = nu;
+  if (p.pause_fra) { p.pause_ms += nu - p.pause_fra; p.pause_fra = null; } else p.pause_fra = nu;   // samme tid som i data
   lager.set(SP_PAUSE, JSON.stringify(p)); tegn();
 }
 function salgSprints() {   // + det, der lige er startet i denne browser, indtil det er gemt og hentet igen
   const l = [...(D.salgssprints || [])];
   let lok = null;
   try { lok = JSON.parse(lager.get(SPRINT_NØGLE) || "null"); } catch {}
-  if (lok && lok.start && sprintSlut(lok) > Date.now() - 864e5 && !l.some(s => s.start === lok.start)) l.push(lok);
+  if (lok && lok.start && lok.dato === iDag() && !l.some(s => s.start === lok.start)) l.push(lok);
   return l;
 }
-const sprintKlaret = (s, nu = Date.now()) => s.min >= SPRINT_MIN && sprintSlut(s) <= nu;
-const sprintKører = (nu = Date.now()) => salgSprints().find(s => s.start <= nu && nu < sprintSlut(s)) || null;
+// Samme regel som sprint_klaret i fabz_salg.py: et sprint på pause eller lukket som ikke færdiggjort tæller aldrig (Oscar 16/11)
+const sprintKlaret = (s, nu = Date.now()) => s.min >= SPRINT_MIN && !s.ikke_faerdig && !urPauset(spP(s)) && sprintSlut(s) <= nu;
+const sprintKører = (nu = Date.now()) => salgSprints().find(s => s.dato === iDag() && !s.ikke_faerdig && s.start <= nu && nu < sprintSlut(s)) || null;
+// Oscar 16/11: "når dagen slutter skal den lukke som ikke færdiggjort". Et sprint fra en tidligere dag, der stod på pause eller ikke blev færdigt, lukkes her (natkørslen gør det samme)
+function lukGamleSprints() {
+  const idag = iDag(), lukket = lukGamleSprints.sendt ||= new Set();
+  for (const s of D.salgssprints || []) {
+    if (!(s.dato < idag) || s.ikke_faerdig || lukket.has(s.start)) continue;
+    const slut = new Date(s.start + 864e5).setHours(3, 0, 0, 0), p = spP(s);   // dagens slut = kl. 3 natten efter startdagen, som i fabz_salg.py
+    if (!(urPauset(p) || slut <= Date.now() && urSlut(s, p, slut) > slut)) continue;
+    lukket.add(s.start);
+    kør("salg-sprint-pause", [`--start=${s.start}`, "--ikke-faerdig"], {tekst: "Gammelt salg lukket som ikke færdiggjort", efter: ["salgssprints"], med: () => { s.ikke_faerdig = true; delete s.pause_fra; }});
+  }
+}
 const ugeMandag = dato => plusDage(dato, -((dag(dato).getDay() + 6) % 7));
 function ugeSprints(dato = iDag(), kunFør = false, nu = Date.now()) {
   const mandag = ugeMandag(dato), slut = kunFør ? dato : plusDage(mandag, 7);
@@ -6974,6 +6992,7 @@ const mmss = ms => { const t = Math.max(0, Math.ceil(ms / 1000)); return `${Math
 let sprintSidst = null;
 function sprintUr() {   // hvert sekund: uret og baren, en ny tegning når tiden er gået, og dagens salgsopgave lukkes (også hvis fanen var lukket imens)
   if (!FRISK) return;   // intet afgøres på gemte data (13/11)
+  lukGamleSprints();
   const nu = Date.now(), sp = sprintKører(nu), el = document.querySelector(".sp-tid");
   if (sp && el) urTik("sp", sp, spP(sp));
   const nøgle = sp ? sp.start : null;
