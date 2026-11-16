@@ -408,6 +408,14 @@ body.bar-synlig .beskeder{bottom:84px}
 .cb .t{flex:1}
 .cb.gjort .t{color:var(--svagere);text-decoration:line-through}
 /* Robotten slår selv op (Oscar 12/11, skitse opgaver-klogere 1-2): stille, brun markering, ingen trafiklys */
+/* Planlæg dag: én liste (skitse opgaver-plan-C) */
+.pl-lr{display:flex;align-items:center;gap:8px;padding:7px 14px;border-top:1px solid var(--linje)}.pl-lr:first-child{border-top:0}.pl-lr.i .pl-lt{color:var(--svag)}
+.pl-lt{flex:1;min-width:0;background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.pl-prio{width:7px;height:7px;border-radius:50%;flex:none;border:1.3px solid var(--svagere)}.pl-prio.h{background:var(--pl-brun);border-color:var(--pl-brun)}
+.pl-fr{font-size:12px;color:var(--pl-brun);border:1px solid var(--pl-brun);border-radius:99px;padding:0 8px;white-space:nowrap}.pl-lmin{white-space:nowrap}
+.pl-lb{font:inherit;font-size:12px;border:1px solid var(--linje);background:var(--flade);color:var(--tekst);border-radius:7px;padding:2px 9px;white-space:nowrap;cursor:pointer}.pl-lb.on{border-color:var(--pl-brun);color:var(--pl-brun)}
+.pl-hvs{display:inline-flex;gap:4px;flex-wrap:wrap;align-self:center}.pl-hv{font-size:11.5px;color:var(--pl-brun);border:1px solid var(--pl-brun);border-radius:99px;padding:0 7px;white-space:nowrap}
+@media (max-width:600px){.pl-lmin{display:none}.pl-lr{padding:7px 10px}.lg .pl-tl .planpunkt .pl-hvs{grid-column:1/-1;order:5;margin:-2px 0 2px}}
 .robot-boks{margin-top:14px;padding:12px 16px}.rb-ov{font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--svagere);margin:10px 0 2px}.rb-ov:first-child{margin-top:0}.rb-r{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:7px 0;border-top:1px solid var(--linje)}.rb-ov+.rb-r{border-top:0}.rb-t{flex:1;min-width:0}.rb-r.gjort .rb-t{color:var(--svag);text-decoration:line-through;text-decoration-color:var(--svagere)}.rb-flu{color:var(--pl-brun);width:12px}.rb-r button.rb-t{background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}.pill.fri{background:none;border:1px dashed var(--svagere);color:var(--svag)}.pill.brun{background:none;border:1px solid var(--pl-brun);color:var(--pl-brun)}.et-tryk{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 10px}.et-boks{border:1px solid var(--linje);background:var(--bg);border-radius:12px;padding:10px 12px;margin:0 0 12px}.et-boks .rk{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px}.et-boks .rk:first-child{margin-top:0}.btn.valgt-brun{border-color:var(--pl-brun);color:var(--pl-brun)}
 .luk-boks{margin-top:14px;padding:14px 16px}.luk-boks .kh{margin-bottom:4px}.luk-r{display:flex;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--linje)}.luk-r:first-of-type{border-top:0}.luk-t{flex:1;min-width:0}
 .smaa-blok{border:1px solid var(--linje);border-radius:10px;margin:6px 0;background:var(--flade2)}.smaa-blok>.cb{border-top:0;padding:8px 10px;align-items:center}.smaa-blok>.cb input{margin-top:0}
@@ -5197,8 +5205,9 @@ function visOpgaver() {
   const idag = iDag();
   // under planlægning: salget er ét punkt, Salg 30 min (sprint N af 4). De enkelte salgsopgaver står stadig her, når der ikke planlægges (Oscar 6/11)
   const erSalgRing = o => !!(o.salg_auto || o.salg_lead || o.job_opgave === "salg" || ((o.titel || "").startsWith("Ring til") && o.type === "Salg og opfølgning"));
+  const prioNr = o => ({"Høj": 0, "Mellem": 1, "Lav": 2})[o.prioritet] ?? 3;
   const liste = D.opgaver.filter(opgaveFiltre).filter(o => !(OP.vis === "plan" && erSalgRing(o))).sort((a, b) => OP.filter === "Færdige"
-    ? (b.faerdig_dato || "").localeCompare(a.faerdig_dato || "") : salgFørst(a, b) || (a.deadline || "9999").localeCompare(b.deadline || "9999") || a.id - b.id);
+    ? (b.faerdig_dato || "").localeCompare(a.faerdig_dato || "") : (OP.vis === "plan" ? 0 : salgFørst(a, b)) || (a.deadline || "9999").localeCompare(b.deadline || "9999") || (OP.vis === "plan" ? prioNr(a) - prioNr(b) : 0) || a.id - b.id);
   const venstre = h("div", {class: "liste-kol"},
     h("div", {class: "kh"}, h("h1", {}, "Opgaver"), h("div", {class: "spacer"}),
       h("button", {class: "btn", type: "button", onclick: () => { OP.vis = "plan"; tegn(); }}, "Planlæg dag"),
@@ -5211,6 +5220,7 @@ function visOpgaver() {
     h("div", {class: "kort", style: "margin-top:14px"}, liste.length ? liste.map(o => {
       const krav = o.faerdig_naar || [], ok = krav.filter(k => k.ok).length;
       const planlægger = OP.vis === "plan" && !!OP.plan && o.status !== "Færdig" && o.id !== "…";
+      if (planlægger) return planListeRække(o);   // skitse opgaver-plan-C (Oscar 16/11): én liste, + Før / + Efter på linjen
       const iPlanen = planlægger && ["foer_frokost", "efter_frokost", "hvis_tid"].some(k => OP.plan[k].some(x => x.id === o.id || x.smaating?.some(y => y.id === o.id)));
       const række = h("button", {type: "button", class: "r række" + (OP.vis === "opgave" && OP.valgt === o.id ? " valgt" : "") + (planlægger ? " plantræk" : "") + (iPlanen ? " iplan" : "") + (senere(o, planlægger ? OP.planDato : iDag()) ? " nedtonet" : ""), disabled: o.id === "…",
         ...(planlægger && !iPlanen ? {draggable: "true", ondragstart: e => { e.dataTransfer.setData("text/plain", String(o.id)); e.dataTransfer.effectAllowed = "copy"; }} : {}),
@@ -5238,6 +5248,28 @@ function visOpgaver() {
     OP.vis === "ny" ? nyOpgaveForm() : OP.vis === "plan" ? planlægPanel() : OP.vis === "opgave" ? opgaveDetalje(D.opgaver.find(o => o.id === OP.valgt))
       : tom("Vælg en opgave, lav en ny, eller planlæg dagen."));
   $("rod").replaceChildren(h("div", {class: "to"}, venstre, højre));
+}
+// ---------- Planlæg dag: én samlet liste med + Før / + Efter (Oscar 15/11-16/11, skitse opgaver-plan-C) ----------
+// "Det lidt uoverskueligt med alle de opgaver i kategorier som er gemt væk": alle åbne opgaver i én liste, frist først, Høj med brun prik.
+// Er opgaven i planen, står halvdelen med ✓, og et tryk tager den ud igen
+const PL_HALV = {foer_frokost: "Før", efter_frokost: "Efter", hvis_tid: "Hvis tid"};
+function planHalvdel(p, id) { return Object.keys(PL_HALV).find(k => p[k].some(x => x.id === id || x.smaating?.some(y => y.id === id))) || null; }
+function planFjern(p, id) {
+  for (const k of Object.keys(PL_HALV)) p[k] = p[k].flatMap(x => x.id === id ? [] : x.smaating?.some(y => y.id === id)
+    ? (x.smaating.length > 2 || (x.smaating.length === 2 && /^30 min: småting/.test(x.tekst || "")) ? [{...x, smaating: x.smaating.filter(y => y.id !== id), min: Math.max(0, (Number(x.min) || 0) - (Number(x.smaating.find(y => y.id === id).min) || 0))}]
+      : x.smaating.filter(y => y.id !== id).map(y => ({tekst: y.tekst, min: y.min ?? null, id: y.id}))) : [x]);   // pakke + lager: det, der er tilbage, står for sig selv
+}
+function planListeRække(o) {
+  const p = OP.plan, hv = planHalvdel(p, o.id);
+  const valg = p.enkelt ? [["foer_frokost", "+ Plan"]] : [["foer_frokost", "+ Før"], ["efter_frokost", "+ Efter"]];
+  return h("div", {class: "pl-lr" + (hv ? " i" : "") + (senere(o, OP.planDato) ? " nedtonet" : ""), "data-id": o.id,
+      ...(!hv ? {draggable: "true", ondragstart: e => { e.dataTransfer.setData("text/plain", String(o.id)); e.dataTransfer.effectAllowed = "copy"; }} : {})},
+    h("span", {class: "pl-prio" + (o.prioritet === "Høj" ? " h" : "")}),
+    h("button", {class: "pl-lt", type: "button", onclick: () => { if (!hv && planTilføj(o)) tegn(); }}, o.titel),   // som før: et klik lægger den i planen
+    o.deadline ? h("span", {class: "pl-fr"}, kortDato(o.deadline)) : h("span", {class: "pill fri"}, "ingen frist"),
+    o.estimat != null ? h("span", {class: "muted lille pl-lmin"}, o.estimat + " min") : null,
+    hv ? h("button", {class: "pl-lb on", type: "button", title: "Tag ud af planen", onclick: () => { planFjern(p, o.id); tegn(); }}, (p.enkelt && hv !== "hvis_tid" ? "Plan" : PL_HALV[hv]) + " ✓")
+      : valg.map(([k, t]) => h("button", {class: "pl-lb", type: "button", onclick: () => { planTilføj(o, k); tegn(); }}, t)));
 }
 // ---------- Salg som fast række øverst i Opgaver, og sprint 2-4 samme dag (Oscar 12/11, skitse panel-opgaver-faste-haster) ----------
 // Under planlægning: + Før frokost / + Efter frokost / + Hvis der er tid lægger næste sprint i planen (ekstra_sprint). Salg-kortet siger så "1 sprint mere i dag"
@@ -5544,6 +5576,7 @@ function planlægPanel() {
             onclick: e => { if (e.target.closest(".pl-handl,.pl-salg")) return; OP.plAktiv = nøgle; document.querySelectorAll(".planpunkt.aktiv").forEach(r => r.classList.remove("aktiv")); e.currentTarget.classList.add("aktiv"); }},
           h("input", {class: "input", value: x.tekst, oninput: e => { x.tekst = e.target.value; e.target.parentElement.classList.toggle("mangler", /VÆLG/.test(x.tekst)); }}),
           x.foerst ? h("span", {class: "pl-foerst"}, "Først") : null,
+          x.hvorfor?.length ? h("span", {class: "pl-hvs"}, x.hvorfor.map(t => h("span", {class: "pl-hv"}, t))) : null,   // hvorfor Foreslå plan valgte punktet (skitse opgaver-plan-C)
           h("label", {class: "pl-mins"}, h("input", {class: "input min", type: "number", min: "0", value: x.min ?? "", placeholder: "–", "aria-label": "Minutter", oninput: e => { x.min = e.target.value === "" ? null : Number(e.target.value); }}), "min"),
           x.smaating?.length ? h("div", {class: "smaa-meta"},   // Oscar 11/11: én pr. linje, aldrig afskåret
             h("ul", {class: "smaa-liste"}, x.smaating.map(y => h("li", {}, y.tekst)))) : null,
