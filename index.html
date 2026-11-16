@@ -549,7 +549,7 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .kh-hist{padding:0 14px 10px;font-size:12.5px;color:var(--svag)}.kh-hist div{display:flex;justify-content:space-between;gap:10px;padding:3px 0}.kh-hist b{font-weight:600}
 .sx-g{font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--svagere);padding:12px 14px 0;border-top:1px solid var(--linje)}.sx-g:first-child{border-top:0}
 .sx-mk{font-size:10px;font-weight:700;border-radius:99px;padding:1px 6px;margin-left:6px;vertical-align:middle}.sx-mk.s{color:#b91c1c;background:#fdeeee}.sx-mk.f{color:#b45309;background:#fff1dc}
-.guide{max-width:760px}.g-trin{display:flex;gap:12px;align-items:flex-start;background:var(--flade);border:1px solid var(--linje);border-radius:12px;padding:12px 14px;margin-top:8px}.g-nr{min-width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none}.g-op{margin-top:14px;border:2px dashed var(--accent);border-radius:14px;padding:16px;background:var(--accent-blid);text-align:center}.g-fund{margin-top:10px;background:var(--flade);border-radius:10px;padding:10px 14px;text-align:left}.tilbage{background:none;border:0;color:var(--accent);font-weight:600;cursor:pointer;padding:0}
+.guide{max-width:760px}.guide a{color:var(--accent);text-decoration:none;font-weight:600}.guide a:hover{text-decoration:underline}.g-trin{display:flex;gap:12px;align-items:flex-start;background:var(--flade);border:1px solid var(--linje);border-radius:12px;padding:12px 14px;margin-top:8px}.g-nr{min-width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none}.g-op{margin-top:14px;border:2px dashed var(--accent);border-radius:14px;padding:16px;background:var(--accent-blid);text-align:center}.g-fund{margin-top:10px;background:var(--flade);border-radius:10px;padding:10px 14px;text-align:left}.tilbage{background:none;border:0;color:var(--accent);font-weight:600;cursor:pointer;padding:0}
 @media (max-width:700px){.ob-kilde{display:none}.ob-ud{padding:4px 12px 12px 12px}.ob-l>summary{padding:10px 12px}}
 .skat-konto{margin-top:14px;padding:14px 16px;border-radius:14px;background:var(--flade);border:1px solid var(--linje);border-left:6px solid var(--adv);display:grid;gap:10px}.skat-konto.rd{border-left-color:var(--fejl)}.skat-konto.g{border-left-color:var(--ok)}
 .kt-raekke{display:flex;gap:28px;flex-wrap:wrap}.kt b{display:block;font-size:24px;letter-spacing:-.02em;line-height:1.15}.kt span{font-size:12px;color:var(--svag)}.kt.rd b{color:var(--fejl)}.kt.g b{color:var(--ok)}
@@ -8267,19 +8267,15 @@ function visGuide(navn) {
     const til = g => () => { ØK.guide = g; ØK.efterGuide = "taldag"; tegn(); window.scrollTo(0, 0); };
     // Oscar 16/11: "jeg forstår ikke lige helt guiden". Firmakontoen hentes selv fra banken, pengene er flyttet fra Saxo til mobilbanken,
     // og hvert trin slutter med et skærmbillede til Claude, der tjekker tallene (doven version, ingen API)
-    const bankGl = !E.dato || (dag(iDag()) - dag(E.dato)) / 864e5 > 3;
     return side(`Tal-dag: ${mdNavn(bt.maaned)}`, "Ca. 10 minutter. Gør trinene i rækkefølge.",
       h("div", {class: "overskrift", style: "margin-top:14px"}, `1. eIndkomst for ${mdNavn(bt.maaned)}`),
       trin(1, "Gå til ", h("a", {href: "https://skat.dk", target: "_blank", rel: "noopener"}, "skat.dk"), ", og tryk ", h("b", {}, "Log på"), " øverst til højre med MitID."),
       trin(2, "Tryk ", h("b", {}, "Indkomstoplysninger fra eIndkomst"), `, og vælg ${mdNavn(bt.maaned)}.`),
       trin(3, "Tag et skærmbillede, og send det til Claude. Claude tjekker B-indkomsten og lønnen mod panelet."),
-      h("div", {class: "overskrift", style: "margin-top:14px"}, "2. Firmakontoen"),
-      bankGl ? [trin(1, `Banken har ikke sendt tal siden ${E.dato ? kortDato(E.dato) : "start"}. Hent kontoudtoget i hånden:`), h("button", {class: "btn", type: "button", onclick: til("bank")}, "Åbn guiden →")]
-        : trin("✓", `Hentes selv fra banken. Sidst ${kortDato(E.dato)}.`),
-      h("div", {class: "overskrift", style: "margin-top:14px"}, "3. Dine konti i mobilbanken"),
+      h("div", {class: "overskrift", style: "margin-top:14px"}, "2. Dine konti i mobilbanken"),
       trin(1, "Åbn Danske Bank-appen på forsiden med alle konti."),
       trin(2, "Tag et skærmbillede, og send det til Claude. Claude sætter Skat, Månedskassen og Panel opsparinger efter det."),
-      h("div", {class: "overskrift", style: "margin-top:14px"}, "4. Bliss til månedsrapporten"),
+      h("div", {class: "overskrift", style: "margin-top:14px"}, "3. Bliss til månedsrapporten"),
       trin(1, "Åbn Bliss, og tryk Indstillinger øverst i højre hjørne"),
       trin(2, "Tryk Data og privatliv, og så Eksportér transaktioner"),   // Oscar 16/11: Indstillinger → Data og privatliv → Eksportér transaktioner
       trin(3, "Vælg alle konti og perioden fra 1. i forrige måned til i dag"),
