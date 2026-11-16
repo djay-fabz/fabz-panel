@@ -4365,6 +4365,7 @@ async function mlForhent() {
       catch (e) { if (/ukendt handling/.test(e.message)) ML_GAMMEL[r.konto] = true; }
     }
   } finally { ML.forhenter = false; }
+  mlTegn();   // Afmeld-knapper fra det hentede
   if (ML.forhentIgen) mlForhent();
 }
 function mlLæst(r) {   // læst i Gmail i baggrunden; fejler det, står den som ulæst igen
@@ -4407,15 +4408,18 @@ async function mlAfmeld(r) {
   if (ML.åben?.id === r.t.id) { ML.åben = null; ML.læs = null; }
   mlVis();
   try {
-    await mlKald(r.konto, {h: "afmeld", id: r.t.id, mid: r.t.afmeldMid});
+    await mlKald(r.konto, {h: "afmeld", id: r.t.id, mid: mlAf(r).afmeldMid});
     const l = ML[r.konto]; if (l) l.traade = l.traade.filter(x => x.id !== r.t.id);
     besked({id: nytId("x"), klasse: "ok", titel: `Afmeldt: ${r.hvem} (mailen er arkiveret)`});
   } catch (e) { besked({id: nytId("x"), klasse: "adv", titel: `Afmeld: ${r.hvem}: ${e.message}`}); }
   ML.skjult.delete(r.konto + r.t.id); mlVis();
 }
+// Afmeld-oplysningen kommer fra listen, hvis scriptet allerede kender den, ellers fra baggrundshentningen af mailen (16/11)
+function mlAf(r) { const t = r.t.afmeld ? r.t : ML_INDHOLD.get(mlNøgle(r.konto, r.t)) || {}; return {afmeld: t.afmeld, afmeldLink: t.afmeldLink, afmeldMid: t.afmeldMid}; }
 function mlAfmeldKnap(r) {
-  if (r.t.afmeld === "et") return h("button", {class: "btn lille ml-af", type: "button", onclick: e => { e.stopPropagation(); mlAfmeld(r); }}, "Afmeld");
-  if (r.t.afmeld === "link" && /^https:\/\//i.test(r.t.afmeldLink || "")) return h("a", {class: "btn lille ml-af", href: r.t.afmeldLink, target: "_blank", rel: "noopener noreferrer", onclick: e => e.stopPropagation()}, "Afmeld ↗");
+  const af = mlAf(r);
+  if (af.afmeld === "et") return h("button", {class: "btn lille ml-af", type: "button", onclick: e => { e.stopPropagation(); mlAfmeld(r); }}, "Afmeld");
+  if (af.afmeld === "link" && /^https:\/\//i.test(af.afmeldLink || "")) return h("a", {class: "btn lille ml-af", href: af.afmeldLink, target: "_blank", rel: "noopener noreferrer", onclick: e => e.stopPropagation()}, "Afmeld ↗");
   return null;
 }
 // Brevet fra e-Boks (Oscar 15/11): PDF'en hentes fra scriptet og vises i en ny fane. Den går kun fra Gmail til browseren
