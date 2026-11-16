@@ -4224,6 +4224,25 @@ function tidInput(værdi, ved, attr = {}) {   // 24-timers tid, skrevet som 17.2
 // ---------- I dag ----------
 const NÅET_KEY = dato => "fabz-naaet-" + dato;
 const BRUGT_KEY = dato => "fabz-brugt-" + dato;
+// Oscar 16/11 ("ret begge"): krydsene gemmes også i dagsplanen (fabz.py dag-kryds), så telefon og pc ser det samme, og natkørslen kan afslutte dagen
+// med dem, hvis Afslut dagen ikke blev trykket. Det nyeste vinder: browserens kryds (KRYDS_T) eller dem i data (kryds.t)
+const KRYDS_T = dato => "fabz-kryds-t-" + dato;
+function krydsHent(dato) {
+  const k = (D.dagsplaner || []).find(x => x.dato === dato)?.kryds, læs = (n, std) => { try { return JSON.parse(lager.get(n) || "null") ?? std; } catch { return std; } };
+  if (k && Number(k.t || 0) > Number(lager.get(KRYDS_T(dato)) || 0)) return {nået: [...(k.naaet || [])], brugt: {...(k.brugt || {})}, småK: [...(k.smaating || [])]};
+  return {nået: læs(NÅET_KEY(dato), []), brugt: læs(BRUGT_KEY(dato), {}), småK: læs(SMÅ_KEY(dato), [])};
+}
+function krydsGem(dato, {nået, brugt, småK}) {
+  const t = Date.now();
+  lager.set(NÅET_KEY(dato), JSON.stringify(nået)); lager.set(BRUGT_KEY(dato), JSON.stringify(brugt)); lager.set(SMÅ_KEY(dato), JSON.stringify(småK)); lager.set(KRYDS_T(dato), String(t));
+  const ur = krydsGem.ur ||= {};
+  clearTimeout(ur[dato]);
+  ur[dato] = setTimeout(() => {   // samlet efter 4 sek., så flere kryds i træk bliver til én gemning
+    const b = Object.entries(brugt).filter(([, m]) => Number.isFinite(Number(m)) && m !== "").map(([nr, m]) => `${nr}=${Math.round(Number(m))}`);
+    kør("dag-kryds", [dato, "--naaet", ...nået.map(String), "--smaating", ...småK.map(String), ...(b.length ? ["--brugt", ...b] : []), `--t=${t}`],
+      {tekst: "Kryds gemt", efter: ["dagsplaner"], med: () => { const x = (D.dagsplaner || []).find(x => x.dato === dato); if (x && x.status !== "Fulgt op") x.kryds = {naaet: nået, smaating: småK, brugt, t}; }});
+  }, 4000);
+}
 // "30 min: småting" (Oscar 8/11, skitse panel-smaating-ableton): blokken krydses af samlet, eller hver småting for sig inde i blokken. Krydsene gemmes lokalt til Afslut dagen
 const SMÅ_KEY = dato => "fabz-smaa-" + dato, SMÅÅ = new Set();   // SMÅÅ: foldede blokke (dato|nr)
 const SMAATING_MAKS = 10;   // samme grænse som SMAATING_MAKS i fabz_dagsplan.py
@@ -4502,18 +4521,13 @@ function visIDag() {
   const næste = jobs().slice(0, 4);
 
   // dagens plan
-  let nået = [];
-  try { nået = JSON.parse(lager.get(NÅET_KEY(idag)) || "[]"); } catch {}
+  let {nået, brugt, småK} = krydsHent(idag);
   const fulgtOp = dp?.status === "Fulgt op";
   if (fulgtOp) nået = dp.naaede_punkter || [];
-  let brugt = {};
-  try { brugt = JSON.parse(lager.get(BRUGT_KEY(idag)) || "{}"); } catch {}
-  let småK = [];
-  try { småK = JSON.parse(lager.get(SMÅ_KEY(idag)) || "[]"); } catch {}
   const småBlok = p => {
     const alle = p.smaating, gjort = x => fulgtOp ? D.opgaver.find(o => o.id === x.id)?.status === "Færdig" : nået.includes(p.nr) || småK.includes(x.id);
     const n = alle.filter(gjort).length, helt = fulgtOp ? n === alle.length : nået.includes(p.nr), nøgle = idag + "|" + p.nr, åben = SMÅÅ.has(nøgle);
-    const gem = () => { lager.set(NÅET_KEY(idag), JSON.stringify(nået)); lager.set(SMÅ_KEY(idag), JSON.stringify(småK)); tegn(); };
+    const gem = () => { krydsGem(idag, {nået, brugt, småK}); tegn(); };
     return h("div", {class: "smaa-blok"},
       h("div", {class: "cb" + (helt ? " gjort" : "")},
         h("input", {type: "checkbox", checked: helt, disabled: fulgtOp, "aria-label": p.tekst, onchange: e => { const ids = alle.map(x => x.id);
@@ -4553,7 +4567,7 @@ function visIDag() {
           h("label", {class: "cb" + (nået.includes(p.nr) || salgKlaret(p) ? " gjort" : "")},
             h("input", {type: "checkbox", checked: nået.includes(p.nr), disabled: fulgtOp, onchange: e => {
               nået = e.target.checked ? [...new Set([...nået, p.nr])] : nået.filter(n => n !== p.nr);
-              lager.set(NÅET_KEY(idag), JSON.stringify(nået));
+              krydsGem(idag, {nået, brugt, småK});
               e.target.closest(".cb").classList.toggle("gjort", e.target.checked);
             }}),
             h("span", {class: "t" + (salgRød(p) ? " rød" : "")},
@@ -4562,7 +4576,7 @@ function visIDag() {
             p.min ? h("span", {class: "muted lille"}, p.min + " min") : null,
             fulgtOp ? (p.brugt != null ? h("span", {class: "muted lille"}, "brugt " + p.brugt + " min") : null)
               : h("input", {class: "input", type: "number", min: "0", max: "720", placeholder: "brugt, min", style: "width:112px;padding:4px 8px;margin-left:8px", value: brugt[p.nr] ?? "",
-                  oninput: e => { if (e.target.value === "") delete brugt[p.nr]; else brugt[p.nr] = Number(e.target.value); lager.set(BRUGT_KEY(idag), JSON.stringify(brugt)); },
+                  oninput: e => { if (e.target.value === "") delete brugt[p.nr]; else brugt[p.nr] = Number(e.target.value); krydsGem(idag, {nået, brugt, småK}); },
                   onclick: e => e.stopPropagation()}))),
           nye.map(o => h("div", {class: "cb ny-r"}, h("span", {class: "t"}, o.titel, h("span", {class: "pl-ny"}, "ny")), o.estimat ? h("span", {class: "muted lille"}, o.estimat + " min") : null))) : null;
       }),
@@ -4807,7 +4821,7 @@ function muUge() {   // dage denne uge med en gennemført blok (timeren) eller A
   for (const p of D.dagsplaner || []) {
     if (!p.dato || p.dato < man || p.dato > idag) continue;
     let nåede = p.naaede_punkter || [];
-    if (p.dato === idag && p.status !== "Fulgt op") { try { nåede = JSON.parse(lager.get(NÅET_KEY(idag)) || "[]"); } catch {} }
+    if (p.dato === idag && p.status !== "Fulgt op") nåede = krydsHent(idag).nået;
     if ((p.plan_punkter || []).some(x => erMashupPunkt(x) && nåede.includes(x.nr))) dage.add(p.dato);
   }
   for (const b of D.mashups?.blokke || []) if (b.faerdig && b.dato >= man && b.dato <= idag) dage.add(b.dato);
@@ -4829,7 +4843,7 @@ function muUr() {   // hvert sekund: uret og baren; når tiden er gået, tæller
   if (slut && !muUr.lukker) {
     muUr.lukker = true;
     const p = (D.dagsplaner || []).find(x => x.dato === slut.dato), punkt = p && (p.plan_punkter || []).find(erMashupPunkt);
-    if (punkt && slut.dato === iDag()) { try { const n = JSON.parse(lager.get(NÅET_KEY(slut.dato)) || "[]"); if (!n.includes(punkt.nr)) lager.set(NÅET_KEY(slut.dato), JSON.stringify([...n, punkt.nr])); } catch {} }
+    if (punkt && slut.dato === iDag() && p.status !== "Fulgt op") { const k = krydsHent(slut.dato); if (!k.nået.includes(punkt.nr)) krydsGem(slut.dato, {...k, nået: [...k.nået, punkt.nr]}); }
     if (nu - urSlut(slut, slut, nu) < 6e4) muLyd();   // kun lyd, når siden var åben, da tiden gik
     kør("mashup-blok-faerdig", [], {tekst: "Ableton-blokken er færdig", efter: ["mashups"], med: () => { slut.faerdig = true; muUr.lukker = false; }});
   }
@@ -6915,7 +6929,7 @@ const SALG_DAG_MAKS = 5, SALG_DAG_OPF = 3, SALG_DAG_COLD = 2, SALG_DAG_NØGLE = 
 // data/salgssprints.json (fabz_salg.py salg-sprint-start): [{dato, start (ms), min}]. Uret regnes fra start, så det tåler lukket fane og låst telefon, og telefon og PC viser det samme.
 const SPRINT_MIN = 30, EKSTRA_MIN = 10, SPRINT_NØGLE = "fabz-salg-sprint";
 // ---------- Fælles ur (Oscar 12/11: "har vi andre klokker her i systemet?"). Ændres ét ur, ændres alle ure ----------
-// Et ur er {start, min} med en pause {pause_ms, pause_fra}. Salgssprintet gemmer pausen i browseren, Mashup-blokken i data (telefon og pc).
+// Et ur er {start, min} med en pause {pause_ms, pause_fra}. Begge gemmer pausen i data (telefon og pc), og natkørslen lukker et gammelt ur på pause som ikke færdiggjort (16/11).
 const urPauseMs = (p, nu = Date.now()) => p ? Number(p.pause_ms ?? p.ms ?? 0) + ((p.pause_fra ?? p.fra) ? nu - (p.pause_fra ?? p.fra) : 0) : 0;
 const urSlut = (x, p, nu = Date.now()) => x.start + x.min * 6e4 + urPauseMs(p, nu);
 const urPct = (x, p, nu = Date.now()) => Math.max(0, Math.min(100, 100 * (nu - x.start - urPauseMs(p, nu)) / (x.min * 6e4)));
