@@ -5586,7 +5586,9 @@ function planlægPanel() {
             h("button", {class: "btn lille", type: "button", disabled: i === p[hv].length - 1, onclick: () => { p[hv].splice(i + 1, 0, ...p[hv].splice(i, 1)); OP.plAktiv = `${hv}|${i + 1}`; tegn(); }}, "↓ Ned"),
             halvdele.filter(([v]) => v !== hv).map(([v, t]) =>
               h("button", {class: "btn lille", type: "button", onclick: () => { p[hv].splice(i, 1); p[v].push(x); OP.plAktiv = null; tegn(); }}, "Flyt til " + t.toLowerCase())),
-            h("button", {class: "btn lille", type: "button", onclick: () => { p[hv].splice(i, 1); OP.plAktiv = null; tegn(); }}, "Fjern"))); })),
+            h("button", {class: "btn lille", type: "button", onclick: () => {   // dagens salg kan ikke bare fjernes (fabz.py plan sætter det ind igen): Fjern åbner "Ikke i dag" med en grund (Oscar 16/11)
+              if (erSalgPunkt(x) && !p.salg_fravalg) { OP.salgGrund = ""; tegn(); return; }
+              p[hv].splice(i, 1); OP.plAktiv = null; tegn(); }}, "Fjern"))); })),
         h("button", {class: "btn ghost lille", type: "button", onclick: () => { p[hv].push({tekst: "", min: 15}); tegn(); }}, "+ Punkt")); }),
       felt("Noter til planen (valgfrit)", tekstfelt(p, "noter", {rows: 2})),
       p.stop_krav ? h("div", {class: "pl-stop"}, h("b", {}, "Stop i dag:"),   // stoptiden skal bekræftes med ét tryk, før planen kan godkendes (Oscar 11/11)
