@@ -7648,7 +7648,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   const bUkendt = (sk.b_linjer || []).filter(x => x.kr == null);
   bUkendt.forEach(x => gør.push(trin("y", [h("b", {}, `Skriv beløbet for ${x.navn} ${kortDato(x.dato)}.`), " Prisen stod ikke i kalenderen. Brug Registrér B-indkomst herunder."])));
   if (bt.id && !bt.faerdig && bt.deadline && bt.deadline <= plusDage(iDag(), 2)) gør.push(trin(bt.deadline < iDag() ? "rd" : "y",
-    [h("b", {}, "Tal-dag: hent månedens tal."), ` eIndkomst, mobilbanken og Bliss. Ca. 10 minutter${bt.deadline < iDag() ? ", fristen var " + kortDato(bt.deadline) : ""}.`],
+    [h("b", {}, "Tal-dag: hent månedens tal."), ` eIndkomst og Bliss. Ca. 5 minutter${bt.deadline < iDag() ? ", fristen var " + kortDato(bt.deadline) : ""}.`],
     knap("Start →", mål("guide:taldag"), true)));
   // advarslen om det låste vises ikke som kort: den røde måned ved Basis siger det samme (Oscar 2/11)
   const l = (tx, v, ekstra) => h("div", {class: "l"}, h("span", {}, tx, ekstra ? h("span", {class: "muted lille", style: "margin-left:6px"}, ekstra) : null), h("b", {style: "white-space:nowrap"}, v));
@@ -8267,15 +8267,12 @@ function visGuide(navn) {
     const til = g => () => { ØK.guide = g; ØK.efterGuide = "taldag"; tegn(); window.scrollTo(0, 0); };
     // Oscar 16/11: "jeg forstår ikke lige helt guiden". Firmakontoen hentes selv fra banken, pengene er flyttet fra Saxo til mobilbanken,
     // og hvert trin slutter med et skærmbillede til Claude, der tjekker tallene (doven version, ingen API)
-    return side(`Tal-dag: ${mdNavn(bt.maaned)}`, "Ca. 10 minutter. Gør trinene i rækkefølge.",
+    return side(`Tal-dag: ${mdNavn(bt.maaned)}`, "Ca. 5 minutter. Gør trinene i rækkefølge.",
       h("div", {class: "overskrift", style: "margin-top:14px"}, `1. eIndkomst for ${mdNavn(bt.maaned)}`),
       trin(1, "Gå til ", h("a", {href: "https://skat.dk", target: "_blank", rel: "noopener"}, "skat.dk"), ", og tryk ", h("b", {}, "Log på"), " øverst til højre med MitID."),
       trin(2, "Tryk ", h("b", {}, "Indkomstoplysninger fra eIndkomst"), `, og vælg ${mdNavn(bt.maaned)}.`),
       trin(3, "Tag et skærmbillede, og send det til Claude. Claude tjekker B-indkomsten og lønnen mod panelet."),
-      h("div", {class: "overskrift", style: "margin-top:14px"}, "2. Dine konti i mobilbanken"),
-      trin(1, "Åbn Danske Bank-appen på forsiden med alle konti."),
-      trin(2, "Tag et skærmbillede, og send det til Claude. Claude sætter Skat, Månedskassen og Panel opsparinger efter det."),
-      h("div", {class: "overskrift", style: "margin-top:14px"}, "3. Bliss til månedsrapporten"),
+      h("div", {class: "overskrift", style: "margin-top:14px"}, "2. Bliss"),   // alle konti er i Bliss (Oscar 16/11): saldi = startsaldo + Bliss, så intet mobilbank-trin
       trin(1, "Åbn Bliss, og tryk Indstillinger øverst i højre hjørne"),
       trin(2, "Tryk Data og privatliv, og så Eksportér transaktioner"),   // Oscar 16/11: Indstillinger → Data og privatliv → Eksportér transaktioner
       trin(3, "Vælg alle konti og perioden fra 1. i forrige måned til i dag"),
