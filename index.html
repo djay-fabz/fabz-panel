@@ -408,6 +408,10 @@ body.bar-synlig .beskeder{bottom:84px}
 .cb .t{flex:1}
 .cb.gjort .t{color:var(--svagere);text-decoration:line-through}
 /* Robotten slår selv op (Oscar 12/11, skitse opgaver-klogere 1-2): stille, brun markering, ingen trafiklys */
+/* Over frist med forslag (klogere-forslag 17/11) */
+.over-kort{border:1px solid var(--linje);background:var(--flade);border-radius:12px;padding:10px 14px;margin-top:10px}.of-h{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
+.of-r{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--linje)}.of-t{flex:1;min-width:0;background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.of-r.aktiv .of-t{font-weight:600}.of-f{font-size:12.5px;color:var(--adv);white-space:nowrap}.over-kort .skub{margin-top:4px}
 /* Planlæg dag: én liste (skitse opgaver-plan-C) */
 .pl-lr{display:flex;align-items:center;gap:8px;padding:7px 14px;border-top:1px solid var(--linje)}.pl-lr:first-child{border-top:0}.pl-lr.i .pl-lt{color:var(--svag)}
 .pl-lt{flex:1;min-width:0;background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}
@@ -5562,7 +5566,7 @@ function planlægPanel() {
     !p ? h("div", {class: "muted lille", style: "margin-top:8px"}, "Foreslå en plan: panelet foreslår opgaver til tiden, og du kan rette bagefter. Lav selv: tom plan, du vælger opgaverne.") : null,
     p ? [
       p.dato > idag ? ikkeNåetBoks(p, idag) : null,
-      skubBoks(p),
+      overFristKort(p),
       ...halvdele.map(([hv, navn]) => { const sum = p[hv].reduce((s, x) => s + (p.salg_fravalg && erSalgPunkt(x) ? 0 : Number(x.min) || 0), 0), led = hv === "foer_frokost" ? p.ledig_foer : hv === "efter_frokost" ? p.ledig_efter : null;
         return h("div", {class: "lg slip",
           ondragover: e => { e.preventDefault(); e.currentTarget.classList.add("over"); },
@@ -5679,9 +5683,56 @@ function hængerKø(dato) {
       || (b.o.planlagt_historik || []).length - (a.o.planlagt_historik || []).length || a.o.id - b.o.id);
 }
 const skubbet = () => hængerKø(OP.planDato).map(x => x.o);
+// ---------- Over frist med ét forslag pr. opgave (Oscar 17/11 "5 ja", planer/klogere-forslag-regler.md, skitse klogere-forslag) ----------
+// Samme kø som før, men som en liste: hver opgave har robottens forslag på knappen (Gør i dag / Ny frist / Luk). Den valgte række har de fire faste knapper.
+// Samme regler som kraever_dig og er_penge i Python. Penge lukkes aldrig, og intet sker, før Oscar trykker
+const OF_PENGE = /faktura|betal|moms|skat|honorar|pengene|bilag|dinero|indbetal|overfør|kontoudtog|regning/i;
+const OF_KRAEVER = /^Skriv\s+(?:en\s+)?(?:mail|besked|svar|til)\b|^(?:Ring|Svar|Bed|Spørg|Kontakt|Beslut|Reflektér|Følg op|Tak|Fuld pris|Aftal|Forhandl)\b|\bafklar\b|^Send (?!sangene|faktura)|\bgiv .+ svar\b/i;
+function næsteArbejdsdag(iso) { let d = plusDage(iso, 1); while ([0, 6].includes(dag(d).getDay())) d = plusDage(d, 1); return d; }
+function overForslag(o, p) {
+  const t = (o.titel || "").replace(/^\d+\s*min:\s*/, ""), jd = /^\d{4}-\d{2}-\d{2}\|/.test(o.job_noegle || "") ? o.job_noegle.slice(0, 10) : null;
+  const penge = OF_PENGE.test(t) || ["betaling", "honorar", "maaned", "formoede", "ugepakke", "bankafstem"].includes(o.job_opgave);
+  if (jd && jd < p.dato && !penge) return {valg: "drop", tekst: "Luk", grund: "jobbet er gået"};
+  if (penge || OF_KRAEVER.test(t) || (jd && jd >= p.dato) || o.prioritet === "Høj") return {valg: "idag", tekst: "Gør i dag"};
+  const d = næsteArbejdsdag(p.dato > iDag() ? p.dato : iDag());
+  return {valg: "ryk", tekst: "Ny frist " + kortDato(d), deadline: d};
+}
+function brugForslag(o, f, p) {
+  const n = (o.planlagt_historik || []).length;
+  const ekstra = f.valg === "ryk" ? [`--deadline=${f.deadline}`] : f.valg === "drop" ? [`--grund=${f.grund}`] : [];
+  kør("opgave-skub", [`--id=${o.id}`, `--valg=${f.valg}`, ...ekstra], {tekst: `#${o.id}: ${f.tekst.toLowerCase()}`, efter: ["opgaver"], med: () => {
+    (o.skub_svar ||= []).push({dato: iDag(), valg: f.valg, grund: f.grund || "", antal: n});
+    if (f.valg === "idag") planTilføj(o, OF_KRAEVER.test(o.titel || "") ? "foer_frokost" : "efter_frokost");
+    if (f.valg === "ryk") o.deadline = f.deadline;
+    if (f.valg === "drop") { o.status = "Færdig"; o.droppet = true; o.faerdig_dato = iDag(); }
+    if (OP.overAktiv === o.id) OP.overAktiv = null;
+  }});
+}
+function overFristKort(p) {
+  const kø = hængerKø(p.dato);
+  if (!kø.length) return skubBoks(p);   // tom: kun "✓ … er færdig"
+  const aktiv = kø.some(x => x.o.id === OP.overAktiv) ? OP.overAktiv : kø[0].o.id;
+  const iPlan = o => ["foer_frokost", "efter_frokost", "hvis_tid"].some(k => p[k].some(x => x.id === o.id || x.smaating?.some(y => y.id === o.id)));
+  const frist = x => x.over ? fristOrd(x.o.deadline, p.dato) : `planlagt ${kortDato(x.o.planlagt || (x.o.planlagt_historik || []).at(-1) || p.dato)}`;
+  const åbne = kø.filter(x => !iPlan(x.o));
+  return h("div", {class: "over-kort"},
+    h("div", {class: "of-h"}, h("b", {}, "Over frist"), h("span", {class: "muted lille"}, String(kø.length)), h("span", {class: "spacer"}),
+      åbne.length > 1 ? h("button", {class: "pl-lb on", type: "button", onclick: () => { åbne.forEach(x => brugForslag(x.o, overForslag(x.o, p), p)); }}, "Brug alle") : null),
+    kø.map(x => { const o = x.o, f = overForslag(o, p), er = o.id === aktiv;
+      return [h("div", {class: "of-r" + (er ? " aktiv" : ""), "data-id": o.id},
+          h("button", {class: "of-t", type: "button", onclick: () => { OP.overAktiv = er ? -1 : o.id; tegn(); }}, o.titel),
+          h("span", {class: "of-f"}, frist(x)),
+          iPlan(o) ? h("span", {class: "muted lille"}, "I planen ✓") : h("button", {class: "pl-lb on", type: "button", onclick: () => brugForslag(o, f, p)}, f.tekst)),
+        er ? skubBoks(p, o.id) : null]; }));
+}
+function fristOrd(d, ref) {
+  if (!d) return "";
+  const a = Math.round((dag(d) - dag(ref || iDag())) / 864e5);
+  return a === -1 ? "frist i går" : a === 0 ? "frist i dag" : a === 1 ? "frist i morgen" : a < -1 ? "over frist " + kortDato(d) : kortDato(d);
+}
 const SKUB_TEKST = {idag: "tag den i dag", kritisk: "kritisk, i dag", ryk: "deadline rykket", gjort: "allerede gjort", drop: "opgivet"};
-function skubBoks(p) {
-  const kø = hængerKø(p.dato), x = kø[0];
+function skubBoks(p, valgt) {
+  const kø = hængerKø(p.dato), x = (valgt != null && kø.find(y => y.o.id === valgt)) || kø[0];
   const ok = OP.skubOk ? h("div", {class: "skub-ok"}, `✓ ${OP.skubOk} er færdig`) : null;
   if (!x) return ok ? h("div", {class: "skub"}, ok) : null;
   const o = x.o, krav = o.faerdig_naar || [], efter = ["opgaver"];
