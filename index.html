@@ -102,8 +102,7 @@ a.btn{display:inline-block;text-decoration:none}
 .bryd{display:block;width:100%;text-align:left;border:0;border-radius:8px;padding:9px 12px;font-weight:600;margin-top:6px}
 .bryd.adv{background:var(--adv-blid);color:var(--adv)}.bryd.fejl{background:var(--fejl-blid);color:var(--fejl)}
 .dato-adv{margin-top:8px;border-radius:8px;padding:8px 11px;font-weight:600}.dato-adv.adv{background:var(--adv-blid);color:var(--adv)}.dato-adv.fejl{background:var(--fejl-blid);color:var(--fejl)}
-.bryd .kun-tlf{display:none}
-@media (max-width:700px){.bryd .navne{display:none}.bryd .kun-tlf{display:inline}}
+@media (max-width:700px){.bryd .navne{display:none}}
 .agr.markeret{outline:2px solid var(--adv);outline-offset:6px;border-radius:10px}
 .vaelg.låst,.liste.låst .lkrop .step,.liste.låst .lkrop .ekstra,.liste.låst .lkrop .notefelt,.liste.låst .lhoved .felter,.liste.låst .lhoved .startfra,.liste.låst .anlaeg{pointer-events:none}
 .vaelg.låst{opacity:.45}.liste.låst .lkrop .step,.liste.låst .lkrop .ekstra{opacity:.4}
@@ -137,8 +136,7 @@ a.btn{display:inline-block;text-decoration:none}
 input[type=date]{color-scheme:light dark}
 .dato-felt{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%238a8f98' stroke-width='1.4'%3E%3Crect x='2' y='3' width='12' height='11' rx='2'/%3E%3Cpath d='M2 7h12M5.5 1.5v3M10.5 1.5v3'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;background-size:14px;padding-right:26px;cursor:pointer}
 .dato-skjult{position:fixed;opacity:0;pointer-events:none;padding:0;border:0;margin:0}
-.sd-side{max-width:980px;padding-bottom:0}.idag-salg{display:flex;flex-direction:column;gap:8px}.sd-valg{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}@media (max-width:700px){.sd-r:has(.sd-valg){flex-wrap:wrap}.sd-valg{flex-basis:100%;justify-content:flex-start;padding-left:30px}}.idag-salg .sd-top h1{font-size:19px}.sd-link{display:flex;justify-content:space-between;align-items:center;width:100%;padding:12px 16px;font:inherit;font-weight:500;color:inherit;text-align:left;cursor:pointer;margin-top:0}.sd-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}.sd-top h1{margin:0}.sd-bar{height:8px;border-radius:99px;background:var(--linje);margin:12px 0 14px;overflow:hidden}.sd-bar div{height:100%;background:var(--pl-brun);border-radius:99px}   /* Oscar 12/11: brun som i Planlæg dag, ikke grøn */
-.sp-ur{display:flex;align-items:center;gap:12px}.sp-tid.pauset{opacity:.5}.opk-sagde{width:100%;resize:vertical;font:inherit}.opk-sidst{margin:0 0 6px}
+.sd-side{max-width:980px;padding-bottom:0}.idag-salg{display:flex;flex-direction:column;gap:8px}.sd-valg{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}@media (max-width:700px){.sd-r:has(.sd-valg){flex-wrap:wrap}.sd-valg{flex-basis:100%;justify-content:flex-start;padding-left:30px}}.idag-salg .sd-top h1{font-size:19px}.sd-link{display:flex;justify-content:space-between;align-items:center;width:100%;padding:12px 16px;font:inherit;font-weight:500;color:inherit;text-align:left;cursor:pointer;margin-top:0}.sd-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}.sd-top h1{margin:0}.sd-bar{height:8px;border-radius:99px;background:var(--linje);margin:12px 0 14px;overflow:hidden}.sd-bar div{height:100%;background:var(--pl-brun);border-radius:99px}.sp-tid.pauset{opacity:.5}.opk-sagde{width:100%;resize:vertical;font:inherit}.opk-sidst{margin:0 0 6px}
 .sd-liste{background:var(--flade);border:1px solid var(--linje);border-radius:14px;overflow:hidden}.sd-r{display:flex;align-items:center;gap:14px;padding:12px 16px}.sd-r+.sd-r{border-top:1px solid var(--linje)}.sd-mk{flex:none;width:20px;height:20px;border-radius:50%;border:2px solid var(--svagere)}.sd-r.ok .sd-mk{background:var(--faerdig);border-color:var(--faerdig)}.sd-t{flex:1;min-width:0;display:block;text-align:left;background:none;border:0;padding:0;color:inherit;font:inherit}.sd-t b{display:block;font-weight:600}.sd-t span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sd-r.ok b{text-decoration:line-through;font-weight:500;color:var(--svag)}.sd-r .btn{flex:none;margin:0}
 .sp-start{background:var(--flade);border:1px solid var(--linje);border-radius:14px;padding:18px 20px;display:flex;justify-content:space-between;align-items:center;gap:14px}.sp-start h1{margin:0 0 2px;font-size:21px}.sp-start .btn{margin:0;padding:11px 22px;font-size:15px;border-radius:10px}.sp-uge{display:flex;gap:8px;margin:10px 0}.sp-uge div{flex:1;background:var(--flade);border:1px solid var(--linje);border-radius:8px;padding:8px 4px;text-align:center;font-size:13px;color:var(--svag)}.sp-uge .ok{background:var(--faerdig-blid);border-color:transparent;color:var(--faerdig);font-weight:var(--faerdig-vaegt)}.sp-uge .nu{border-color:var(--accent);color:var(--accent);font-weight:600}.sp-uge .graa{opacity:.45}.sp-tid{font-size:34px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}.idag-salg .sp-start h1{font-size:19px}@media (max-width:700px){.sp-start{flex-direction:column;align-items:stretch}.sp-start .btn{width:100%}.sp-lang{display:none}}
 .pl-salg{display:flex;gap:8px;align-items:center;grid-column:1/-1;font-size:13px}.pl-salg .input{flex:1}.pl-lnk{background:none;border:0;padding:0;color:var(--accent);font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}.planpunkt.fravalgt>.input:first-child{text-decoration:line-through;opacity:.55}.planpunkt.fravalgt .min{opacity:.55}.skub{background:var(--adv-blid);border:1px solid var(--adv);border-radius:10px;padding:12px 14px;margin-top:10px}.skub-top{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px}.skub-top b{flex:1;min-width:0}.skub-krav{background:var(--flade);border:1px solid var(--linje);border-radius:8px;margin-top:8px}.skub-krav label{display:flex;gap:10px;align-items:flex-start;padding:9px 12px;cursor:pointer}.skub-krav label+label{border-top:1px solid var(--linje)}.skub-krav input{width:18px;height:18px;margin:1px 0 0;flex:none}.skub-ok{background:var(--faerdig-blid);color:var(--faerdig);font-weight:var(--faerdig-vaegt);border-radius:10px;padding:10px 14px;margin-bottom:10px}.skub-ryk{flex-wrap:wrap;align-items:center}.skub-ryk .dato-felt{max-width:170px}.skub-valg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.skub-valg .btn{min-width:0;white-space:normal}   /* fire faste pladser med samme bredde (Oscar 11/11) */.skub-valg .valgt{border-color:var(--accent);color:var(--accent)}.skub .r1{display:flex;gap:8px;margin-top:8px}.skub .r1 .input{flex:1}.sk-kort{display:none}@media (max-width:700px){.skub-valg{grid-template-columns:repeat(2,minmax(0,1fr))}.skub-ryk .btn:not(.primaer){flex:1 1 40%;white-space:nowrap}.skub-ryk .dato-felt{flex:1 1 50%;max-width:none;min-width:0}.sk-lang{display:none}.sk-kort{display:inline}}
@@ -210,7 +208,6 @@ input[type=date]{color-scheme:light dark}
 .kk-ta{width:100%;font:inherit;font-size:14px;background:var(--bg);color:var(--tekst);border:1px solid var(--linje);border-radius:8px;padding:7px 9px;resize:vertical}
 .kk-in{font:inherit;font-size:13px;background:var(--bg);color:var(--tekst);border:1px solid var(--linje);border-radius:8px;padding:5px 9px}
 .kk-mr{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.kk-mk{font:inherit;font-size:12px;border:1px solid #c4b5fd;color:#6d28d9;background:#f3e8ff;border-radius:99px;padding:2px 10px;width:150px}
 .kk-link{border:0;background:none;padding:0;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer}
 .kk-step{display:flex;align-items:center;border:1px solid var(--linje);border-radius:8px;overflow:hidden;flex:none}
 .kk-step button{border:0;background:none;width:28px;height:28px;color:var(--svag);font-size:16px;cursor:pointer}
@@ -227,7 +224,7 @@ input[type=date]{color-scheme:light dark}
 .kk-tl{display:flex;gap:10px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--linje);font-size:13px}.kk-tl:last-child{border:0}
 .kk-bp{width:8px;height:8px;border-radius:50%;flex:none}.kk-bp.b{background:var(--accent)}
 @media (max-width:700px){.kk-kol{grid-template-columns:1fr}}
-@media (prefers-color-scheme:dark){.kk-mk{background:#221a3a;border-color:#4a3a7a;color:#c4b5fd}}
+@media (prefers-color-scheme:dark){}
 @media (prefers-color-scheme:dark){.sx-mk.s{background:#3a1717;color:#fca5a5}.sx-mk.f{background:#3a2a12;color:#fcd34d}}
 .godk{display:flex;align-items:center;gap:10px;margin-top:14px;padding:10px 12px;border-radius:10px;background:var(--flade2);font-size:13px}
 .godk.ok{background:var(--faerdig-blid);color:var(--faerdig);font-weight:600}
@@ -245,12 +242,6 @@ input[type=date]{color-scheme:light dark}
 .rtid.lille{font-size:14px;font-weight:600;color:var(--svag)}
 .rnote{margin-top:6px;color:var(--svag)}
 .subnav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
-.jobkort{border:1px solid var(--linje);background:var(--flade);border-radius:12px;overflow:hidden}
-.jobkort .job{border:0;border-radius:0;background:transparent}
-.jobkort .del{border-top:1px solid var(--linje);padding:10px 16px;display:grid;gap:6px;font-size:13.5px}
-.jobkort .del div{display:flex;gap:8px;align-items:baseline}
-.jobkort .del b{min-width:92px;font-weight:600}
-.jobkort .del .g{color:var(--svag)}
 .rkoer{margin:6px 0 0 18px;padding:10px 16px;border-left:4px solid var(--accent);background:var(--accent-blid);border-radius:0 12px 12px 0}
 .rkoer h2{margin:0;font-size:28px;line-height:1.15;letter-spacing:-.01em}
 @media print{.top,#beskeder,.ikke-print{display:none!important}.side>*:not(.rute-resultat){display:none!important}body{background:#fff}.rkort{box-shadow:none}
@@ -401,7 +392,7 @@ body.bar-synlig .beskeder{bottom:84px}
 .kh + .mini,.mini:first-of-type{border-top:0}
 .mini.link:hover{color:var(--accent)}
 .tid{min-width:52px;flex:none}
-.rød{color:var(--fejl)}.gul-t{color:var(--adv)}.fed{font-weight:600}
+.rød{color:var(--fejl)}.gul-t{color:var(--adv)}
 .cb{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-top:1px solid var(--linje);cursor:pointer}
 .lg .cb:first-of-type{border-top:0}
 .cb input{margin-top:3px;width:16px;height:16px;accent-color:var(--accent);flex:none}
@@ -425,7 +416,7 @@ body.bar-synlig .beskeder{bottom:84px}
 .smaa-blok{border:1px solid var(--linje);border-radius:10px;margin:6px 0;background:var(--flade2)}.smaa-blok>.cb{border-top:0;padding:8px 10px;align-items:center}.smaa-blok>.cb input{margin-top:0}
 .smaa-ind{border-top:1px solid var(--linje);padding:2px 10px 6px 36px}.smaa-ind .cb{font-size:14px;padding:6px 0}.smaa-ind .cb:first-child{border-top:0}
 .smaa-fold{background:none;border:0;color:var(--svag);font-size:15px;cursor:pointer;padding:0 4px}
-.planpunkt .smaa-meta{grid-column:1/-1}.smaa-liste{flex-basis:100%;margin:2px 0 0;padding-left:16px}.smaa-liste{list-style:none;padding-left:2px}.smaa-liste li{padding:1px 0}.smaa-liste li:before{content:"·";color:var(--svagere);margin-right:7px}.smaa-meta{flex-basis:100%;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12.5px;color:var(--svag);padding:2px 2px 0}.smaa-navne{flex-basis:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.planpunkt .smaa-meta{grid-column:1/-1}.smaa-liste{flex-basis:100%;margin:2px 0 0;padding-left:16px}.smaa-liste{list-style:none;padding-left:2px}.smaa-liste li{padding:1px 0}.smaa-liste li:before{content:"·";color:var(--svagere);margin-right:7px}.smaa-meta{flex-basis:100%;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12.5px;color:var(--svag);padding:2px 2px 0}
 .afslut{margin-top:16px;padding:12px;border-radius:10px;background:var(--flade2)}
 .to{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:24px;max-width:1228px;margin:0 auto;padding:28px 24px}
 .detalje-kol{position:sticky;top:calc(var(--top) + 16px);align-self:start;max-height:calc(100vh - var(--top) - 32px);overflow:auto}
@@ -436,19 +427,9 @@ button.r:disabled{cursor:default;opacity:.7}
 .r.valgt{background:var(--accent-blid)}
 .r .titel{color:var(--tekst);font-weight:500}
 .meta{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12.5px;color:var(--svag);margin-top:2px}
-.dash{background:var(--flade);border:1px solid var(--linje);border-radius:12px;padding:16px 16px 12px;margin-bottom:16px}
-.dash .tal{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
-.dash .t{background:var(--bg);border-radius:10px;padding:10px 12px}.dash .t b{display:block;font-size:26px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
-.dash .t span{font-size:11.5px;color:var(--svag);text-transform:uppercase;letter-spacing:.06em}
-.pb{margin:8px 0}.pb .l{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px}.pb .l b{font-weight:600}
-.pb .s{height:10px;background:var(--bg);border-radius:99px;overflow:hidden}.pb .s i{display:block;height:100%;border-radius:99px;background:var(--accent);transition:width .6s ease}
-.pb.ok .s i{background:var(--ok)}.pb.tom .s i{background:var(--fejl)}
-.funnel{display:flex;gap:4px;margin-top:10px}.funnel div{flex:1;text-align:center;font-size:11.5px;color:var(--svag)}.funnel div b{display:block;font-size:17px;color:var(--tekst)}
-.funnel div i{display:block;height:5px;border-radius:99px;background:var(--accent-blid);margin-top:5px}.funnel div i.f{background:var(--accent)}
 .mdr{display:flex;gap:6px;align-items:flex-end;height:64px;margin-top:8px}.mdr div{flex:1;text-align:center;font-size:11px;color:var(--svag)}
 .mdr div i{display:block;background:var(--accent);border-radius:4px 4px 0 0;margin:0 auto 4px;width:70%}.mdr div i.ingen{background:var(--fejl-blid);border:1px dashed var(--fejl)}
-.streak{font-size:12.5px;color:var(--svag);margin-top:10px}.streak b{color:var(--tekst)}
-@media (max-width:700px){.dash .tal{grid-template-columns:repeat(2,1fr)}.dash .t b{font-size:22px}}
+@media (max-width:700px){}
 .pill{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:99px;background:var(--bg);color:var(--svag);white-space:nowrap;font-weight:500}
 .pill.blå{background:var(--accent-blid);color:var(--accent)}.pill.gul{background:var(--adv-blid);color:var(--adv)}
 .pill.grøn{background:var(--ok-blid);color:var(--ok)}.pill.rød-pill{background:var(--fejl-blid);color:var(--fejl)}
@@ -493,13 +474,11 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .planvalg{display:flex;flex-wrap:wrap;gap:4px;padding:0 14px 8px 14px;margin-top:-4px}
 .række.plantræk{cursor:grab}.række.iplan{opacity:.5;cursor:default}
 .lg.slip{border:1.5px dashed transparent;border-radius:10px;padding:6px 8px;margin-left:-8px;margin-right:-8px}.lg.slip.over{border-color:var(--accent);background:var(--accent-blid)}
-.idé-krop{padding:4px 16px 16px}
 .idé.åben{background:var(--flade2)}
 .idé + .idé{border-top:1px solid var(--linje)}
 .idé button.r{border-top:0}
-.tal3{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
 .stort{font-size:26px;font-weight:700;margin:4px 0}
-@media (max-width:900px){.idag,.to,.tal3{grid-template-columns:minmax(0,1fr)}.liste-kol,.detalje-kol{min-width:0}.detalje-kol{position:static;max-height:none;order:-1}.detalje-kol:has(>.tom){display:none}}
+@media (max-width:900px){.idag,.to{grid-template-columns:minmax(0,1fr)}.liste-kol,.detalje-kol{min-width:0}.detalje-kol{position:static;max-height:none;order:-1}.detalje-kol:has(>.tom){display:none}}
 .opsaet{max-width:520px;margin:60px auto;background:var(--flade);border:1px solid var(--linje);border-radius:14px;padding:24px}
 .opsaet h2{margin-top:0}
 .fejltekst{color:var(--fejl)}
@@ -518,11 +497,10 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 @media (max-width:700px){.kompakt-r{flex-wrap:wrap;row-gap:0}.k-naeste{flex-basis:100%;padding-left:20px}}
 .cc-dele{display:flex;gap:8px;margin-top:10px}.cc-dele span{flex:1;text-align:center;padding:8px 0;border-radius:10px;background:var(--flade2);border:1px solid var(--linje);font-size:12.5px;color:var(--svag)}.cc-dele span.ok{background:var(--ok-blid);color:var(--ok);border-color:var(--ok)}
 .cc-træk{margin-top:12px}.cc-træk .btn{width:100%;padding:14px;font-size:16px;font-weight:700}.cc-kort{display:block;width:100%;text-align:left;margin-top:12px;cursor:pointer}.cc-kort.valgt{outline:2px solid var(--accent)}.cc-navn{font-size:17px;font-weight:700}.cc-tal{font-size:20px;font-weight:700;margin-top:4px}.humoer{display:flex;gap:8px}.humoer button{flex:1;font-size:22px;padding:8px 0;border-radius:10px;border:1px solid var(--linje);background:var(--flade2)}.humoer button.valgt{border-color:var(--accent);background:var(--accent-blid)}.tolk{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.tolk-sum{width:100%;font-size:12.5px;font-weight:600;color:var(--ok)}.input.mangler{border-color:var(--adv)}
-.rk.spilletid .seg{display:inline-flex;width:auto}@media (max-width:600px){.rk.spilletid{display:grid!important;grid-template-columns:1fr 1fr}.rk.spilletid input{width:100%!important}.rk.spilletid>:nth-child(3),.rk.spilletid>:nth-child(4){grid-column:1/-1}.rk.spilletid>:nth-child(4){width:100%}}.fra-mærke{margin-left:6px;font-size:11.5px;color:var(--svag);white-space:nowrap}
+.rk.spilletid .seg{display:inline-flex;width:auto}@media (max-width:600px){.rk.spilletid{display:grid!important;grid-template-columns:1fr 1fr}.rk.spilletid input{width:100%!important}.rk.spilletid>:nth-child(3),.rk.spilletid>:nth-child(4){grid-column:1/-1}.rk.spilletid>:nth-child(4){width:100%}}
 .skat-status{margin-top:16px;padding:16px 18px;border-radius:14px;border:1px solid var(--linje);display:grid;gap:10px}.skat-status.g{background:var(--ok-blid);border-color:var(--ok)}.skat-status.y{background:var(--adv-blid);border-color:var(--adv)}.skat-status.rd{background:var(--fejl-blid);border-color:var(--fejl)}
 .skat-titel{font-size:20px;font-weight:700}.skat-status.g .skat-titel{color:var(--ok)}.skat-status.y .skat-titel{color:var(--adv)}.skat-status.rd .skat-titel{color:var(--fejl)}
-.skat-gør{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:10px 12px;background:var(--flade);border-radius:10px;border-left:4px solid var(--adv)}.skat-gør.rd{border-left-color:var(--fejl)}.skat-gør.g{border-left-color:var(--ok)}.bj.bet-l{flex-wrap:nowrap}.bj.bet-l .bj-t{flex:1 1 auto}.bj.bet-l .btn{flex:0 0 auto}
-.skat-trin{display:grid;gap:8px}.skat-tekst{flex:1 1 320px;min-width:0}.skat-tal{margin-top:16px}.skat-tal>summary{cursor:pointer;padding:6px 2px}
+.skat-gør{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:10px 12px;background:var(--flade);border-radius:10px;border-left:4px solid var(--adv)}.skat-gør.rd{border-left-color:var(--fejl)}.skat-gør.g{border-left-color:var(--ok)}.bj.bet-l{flex-wrap:nowrap}.bj.bet-l .bj-t{flex:1 1 auto}.bj.bet-l .btn{flex:0 0 auto}.skat-tekst{flex:1 1 320px;min-width:0}
 .bjaelker{margin-top:14px;display:grid;gap:8px}.bj{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;border-radius:10px;border-left:6px solid var(--linje);background:var(--flade)}.bj.rd{background:var(--fejl-blid);border-left-color:var(--fejl)}.bj.y{background:var(--adv-blid);border-left-color:#d97706}.bj.g{background:var(--ok-blid);border-left-color:var(--ok)}.bj-t{flex:1 1 280px;min-width:0}.mere-link{background:none;border:0;padding:2px 0;color:var(--accent);font-weight:600;font-size:13px;text-align:left;cursor:pointer}
 .ob{margin-top:14px;background:var(--flade);border:1px solid var(--linje);border-radius:14px;overflow:hidden}.ob-l{border-top:1px solid var(--linje)}.ob-l:first-child{border-top:0}.ob-l>summary{display:flex;align-items:center;gap:10px;padding:11px 16px;cursor:pointer;list-style:none}.ob-l>summary::-webkit-details-marker{display:none}.ob-l>summary::after{content:"▸";color:var(--svag)}.ob-l[open]>summary::after{content:"▾"}
 .pr{width:11px;height:11px;border-radius:50%;flex:none;background:var(--svagere)}.pr.g{background:var(--ok)}.pr.y{background:#d97706}.pr.rd{background:var(--fejl)}.ob-n{flex:1;font-weight:600;min-width:0}.ob-v{font-weight:700;white-space:nowrap}.ob-kilde{font-size:11px;color:var(--svagere);font-weight:400;margin-left:8px}.ob-kilde.gammel{color:var(--adv);font-weight:600}
@@ -546,8 +524,8 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 @media(max-width:700px){.fb-to.tre{grid-template-columns:1fr 1fr}.fb-to.tre .st{grid-column:1/-1}}.fb-s{font-weight:600;margin:4px 0 10px}.fb-s.ok{color:var(--ok)}.fb-s.neg{color:var(--fejl)}.fb-g{margin-top:12px}.fb-a{font-size:13px;font-weight:600;margin-bottom:6px}
 .fb-bars{display:flex;align-items:flex-end;gap:3px;height:60px}.fb-bars span{flex:1;display:flex;gap:1px;align-items:flex-end;height:100%}.fb-bars i{flex:1;border-radius:2px 2px 0 0;min-height:1px}.fb-bars i.a,.fb-leg i.a{background:#d1d5db}.fb-bars i.b,.fb-leg i.b{background:#d97706}
 .fb-lab{display:flex;gap:3px;font-size:10px;color:var(--svag);margin-top:2px}.fb-lab span{flex:1;text-align:center}.fb-leg{font-size:12px;color:var(--svag);margin-top:6px}.fb-leg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin:0 4px 0 8px;vertical-align:-1px}
-.kuv{margin-top:12px;padding:0}.kuv-h{display:flex;gap:12px;flex-wrap:wrap;justify-content:space-between;align-items:baseline;padding:14px 18px}.kuv-g{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--linje);border-radius:0 0 14px 14px;overflow:hidden}.kuv-k{padding:14px 18px;background:var(--flade)}.kuv-k .s{font-size:26px;font-weight:800;margin:4px 0 2px}.kuv-k .s.neg{color:var(--fejl)}.kuv-k .pm{font-size:13px;color:var(--svag)}.kuv-k .tr{font-size:13px;margin-top:4px}.kuv-k .tr.op{color:var(--fejl)}.kuv-k .tr.ned{color:var(--ok)}.kuv-k .btn,.kuv-k .pk{margin-top:10px}
-@media(max-width:700px){.kuv-g{grid-template-columns:1fr 1fr}.kuv-k .s{font-size:22px}}
+.kuv{margin-top:12px;padding:0}.kuv-h{display:flex;gap:12px;flex-wrap:wrap;justify-content:space-between;align-items:baseline;padding:14px 18px}
+@media(max-width:700px){}
 .ms-r{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.ms-i{margin-top:12px;padding-top:12px;border-top:1px solid var(--linje);color:var(--svag)}.ms-i b{color:var(--tekst)}
 .sx-g.fold{cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding-bottom:0}.sx-g.fold span{font-size:18px;letter-spacing:0;color:var(--svag);line-height:1}.kh-se{padding:0 14px 10px}
 .kh-hist{padding:0 14px 10px;font-size:12.5px;color:var(--svag)}.kh-hist div{display:flex;justify-content:space-between;gap:10px;padding:3px 0}.kh-hist b{font-weight:600}
@@ -558,17 +536,14 @@ textarea.input{resize:vertical;font:inherit;line-height:1.4}
 .sf-top{background:#14143c;color:#fff;font-weight:700;margin:-16px -18px 12px;padding:10px 18px;border-radius:12px 12px 0 0}.sf-g{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;background:#e6e6e6;padding:4px}.sf-f{background:#fff;padding:10px 12px;display:flex;flex-direction:column;gap:4px;font-size:13px}.sf-f b{font-size:15px;color:#14143c;overflow-wrap:anywhere;hyphens:auto}.sf-f span{color:#333}.sf-fm{position:relative;outline:3px solid var(--adv);outline-offset:-3px}.sf-fm>i{position:absolute;right:8px;top:8px;width:20px;height:20px;border-radius:50%;background:var(--adv);color:#fff;font:700 12px/20px -apple-system,sans-serif;text-align:center;font-style:normal}@media (max-width:700px){.sf-g{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .td-frem{display:flex;gap:6px;margin:14px 0 4px}.td-frem i{flex:1;height:6px;border-radius:9px;background:var(--linje)}.td-frem i.f{background:var(--pl-brun)}.td-tn{font-size:13px;font-weight:700;color:var(--svag);margin-bottom:6px}.td-h{font-size:19px;margin:6px 0 4px}.td-op{margin-top:16px;border:2px dashed var(--linje);border-radius:14px;padding:18px;text-align:center;background:var(--flade);cursor:pointer;display:flex;flex-direction:column;gap:2px}.td-op span{color:var(--svag);font-size:14px}.td-op.over,.td-op:hover{border-color:var(--pl-brun)}.td-op.travl{opacity:.6;pointer-events:none}.td-op.ok{border:2px solid var(--pl-brun);background:var(--ok-blid);text-align:left;cursor:default}.td-op.ok b{color:var(--ok)}.td-skift{align-self:flex-start;background:none;border:0;padding:6px 0 0;color:var(--ok);font-weight:600;cursor:pointer}.td-bt{display:flex;justify-content:space-between;align-items:center;margin-top:16px;gap:10px}.guide a,.guide .tilbage{color:var(--ok)}.guide .g-nr{background:var(--pl-brun)}   /* Oscar 17/11: guidens links og numre i panelets brune, ikke blå */
 @media (max-width:700px){.ob-kilde{display:none}.ob-ud{padding:4px 12px 12px 12px}.ob-l>summary{padding:10px 12px}}
-.skat-konto{margin-top:14px;padding:14px 16px;border-radius:14px;background:var(--flade);border:1px solid var(--linje);border-left:6px solid var(--adv);display:grid;gap:10px}.skat-konto.rd{border-left-color:var(--fejl)}.skat-konto.g{border-left-color:var(--ok)}
-.kt-raekke{display:flex;gap:28px;flex-wrap:wrap}.kt b{display:block;font-size:24px;letter-spacing:-.02em;line-height:1.15}.kt span{font-size:12px;color:var(--svag)}.kt.rd b{color:var(--fejl)}.kt.g b{color:var(--ok)}
 .sk-fold{margin-top:8px;background:var(--flade);border:1px solid var(--linje);border-radius:12px}.sk-fold>summary{cursor:pointer;padding:11px 14px;font-weight:600}.sk-fold-ind{border-top:1px solid var(--linje);padding:4px 14px 14px}.sk-fold .kort2{border:0;padding:8px 0 0}.sk-fold-ind>div>.liste .l,.sk-fold-ind>div>div>.liste .l{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--linje)}.sk-fold-ind .liste .l:first-child{border-top:0}
-@media (max-width:700px){.kt-raekke{gap:16px}.kt b{font-size:19px}.skat-side .sk-k3{grid-template-columns:repeat(3,1fr);gap:6px}.skat-side .sk-k3 .sk-k{padding:10px 8px}.skat-side .sk-k3 .sk-k b{font-size:17px}}
+@media (max-width:700px){.skat-side .sk-k3{grid-template-columns:repeat(3,1fr);gap:6px}.skat-side .sk-k3 .sk-k{padding:10px 8px}.skat-side .sk-k3 .sk-k b{font-size:17px}}
 .skat-input{display:flex;gap:6px}.skat-input input{width:130px}.sk-navn{display:block;margin-top:6px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--svag)}
 .skat-side .sk-k.g b{color:var(--ok)}.skat-side .sk-k.rd b{color:var(--fejl)}.skat-side .sk-k.y b{color:var(--adv)}
 .r1{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .sk .sk-hoved{justify-content:space-between}
-.sk-titel{font-size:17px;font-weight:600}
 .sk-k4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px}
-.sg{margin-top:12px;padding:14px 18px}.sg-t{font-size:12px;color:var(--svag);font-weight:600}.sg-v{font-size:26px;font-weight:800;color:var(--fejl);line-height:1.2;letter-spacing:-.01em}.sg-v.ok{color:var(--ok)}.sg-u{font-size:13px;font-weight:600}
+.sg{margin-top:12px;padding:14px 18px}.sg-v{font-size:26px;font-weight:800;color:var(--fejl);line-height:1.2;letter-spacing:-.01em}.sg-v.ok{color:var(--ok)}.sg-u{font-size:13px;font-weight:600}
 .sg-mdr{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin:10px 0 6px}.sg-md{border-radius:8px;padding:6px 9px;background:var(--ok-blid)}.sg-md.rd{background:var(--fejl-blid)}.sg-md .n{font-size:12px;font-weight:600}.sg-md .s{font-size:12.5px;font-weight:700;color:var(--ok)}.sg-md.rd .s{color:var(--fejl)}.sg-md .f{font-size:11px;color:var(--svag)}
 details.sg-r{margin:0;border:0;border-top:1px solid var(--linje);border-radius:0;background:none}details.sg-r>summary{padding:8px 0;font-weight:400;font-size:13.5px;gap:4px}details.sg-r>summary::before{content:none}details.sg-r[open]>summary::before{content:none}details.sg-r>summary>b{margin-left:auto;white-space:nowrap}details.sg-r>summary>b::after{content:" ›";color:var(--svagere)}details.sg-r .rd-l{padding-left:0;padding-right:0}
 .bet-seddel{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px}
@@ -579,27 +554,18 @@ details.sg-r{margin:0;border:0;border-top:1px solid var(--linje);border-radius:0
 @media(max-width:700px){.mg-p{flex-basis:100%;justify-content:flex-start;padding-left:50px}}
 .sg-md.y{background:var(--adv-blid)}.sg-md.y .s{color:var(--adv)}.sg-md.fri{background:var(--flade2);border:1px solid var(--linje)}.sg-md.fri .s{color:var(--tekst)}.sg-v.y{color:var(--adv)}.sg-md .gem{font-weight:600}.sg-linjer{margin-top:12px;background:var(--flade);border:1px solid var(--linje);border-radius:14px;overflow:hidden}details.sg-l{margin:0;border:0;border-radius:0}.sg-linjer>details.sg-l+details.sg-l{border-top:1px solid var(--linje)}details.sg-l>summary{font-weight:400}details.sg-l>summary::before{content:none}details.sg-l[open]>summary::before{content:none}details.sg-l>summary::after{content:"›";margin-left:auto;color:var(--svagere)}details.sg-l[open]>summary::after{content:"⌄"}
 .sg-ind{padding:4px 12px 12px}.sg-h{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 4px;font-weight:600}.sg-h .sg-prik{margin-top:1px}.sg-ht{flex:1;min-width:180px}
-.sg-under{margin-top:6px;border:1px solid var(--linje);border-radius:10px;overflow:hidden}.sg-under>details.sg-l{border:0;border-radius:0}.sg-under>details.sg-l+details.sg-l{border-top:1px solid var(--linje)}.sg-ek{color:var(--svagere)}.sg-prik{width:8px;height:8px;border-radius:50%;flex:none;background:var(--fejl)}.sg-prik.y{background:var(--adv)}
+.sg-under{margin-top:6px;border:1px solid var(--linje);border-radius:10px;overflow:hidden}.sg-under>details.sg-l{border:0;border-radius:0}.sg-under>details.sg-l+details.sg-l{border-top:1px solid var(--linje)}.sg-prik{width:8px;height:8px;border-radius:50%;flex:none;background:var(--fejl)}.sg-prik.y{background:var(--adv)}
 .op-mk{font-size:12px;font-weight:600;padding:3px 9px;border-radius:99px;background:var(--ok-blid);color:var(--ok)}.op-mk.r{background:var(--fejl-blid);color:var(--fejl)}.op-mk.y{background:var(--adv-blid);color:var(--adv)}.mo-gl .sg-prik.rd,.mo-gl .sg-prik.y{visibility:hidden}
-@media(max-width:700px){.sg-mdr{grid-template-columns:repeat(3,1fr)}.sg-v{font-size:22px}.sg-m,.sg-ek{display:none}}
-.rd-top{margin-top:14px;background:var(--flade);border:1px solid var(--linje);border-radius:16px;padding:16px 18px}.rd-top .t{font-size:13px;color:var(--svag);font-weight:600}
-.rd-top .v{font-size:40px;font-weight:800;letter-spacing:-.02em;line-height:1.1}.rd-top .v.neg{color:var(--fejl)}.rd-loen{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
-.rd-loen>div{flex:1;min-width:140px;background:var(--bg);border-radius:10px;padding:8px 12px;color:var(--svag);font-size:13px}.rd-loen b{display:block;font-size:18px;color:var(--tekst)}
+@media(max-width:700px){.sg-mdr{grid-template-columns:repeat(3,1fr)}.sg-v{font-size:22px}.sg-m{display:none}}
 .rd-f{margin-top:8px;background:var(--flade);border:1px solid var(--linje);border-radius:14px;overflow:hidden}.rd-f>summary{display:flex;gap:10px;align-items:center;padding:11px 16px;font-weight:600;cursor:pointer;list-style:none}
 .rd-f>summary::-webkit-details-marker{display:none}.rd-f>summary::before{content:"▸";color:var(--svag)}.rd-f[open]>summary::before{content:"▾"}.rd-f>summary .v{margin-left:auto;font-weight:700}
 .rd-l{display:flex;justify-content:space-between;gap:10px;padding:7px 16px 7px 30px;border-top:1px solid var(--linje);font-size:14px}
 .ff-fold>summary{cursor:pointer;color:var(--acc);font-size:13px;margin-top:4px;list-style:none}.ff-fold>summary::before{content:"› "}.ff-ind{margin-top:6px;padding-left:12px;border-left:2px solid var(--linje)}.ff-ind div{padding:2px 0}
 .pl-l{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--linje);font-size:14px}.pl-l:first-child{border-top:0}
 .rd-tb{width:100%;border-collapse:collapse;font-size:13.5px}.rd-tb th,.rd-tb td{text-align:right;padding:6px 12px;border-top:1px solid var(--linje);white-space:nowrap}.rd-tb th{color:var(--svag);font-weight:600}
-.rd-tb th:first-child,.rd-tb td:first-child{text-align:left;padding-left:16px}.rd-tb .neg,.rd-l b.neg{color:var(--fejl);font-weight:700}.rd-bar{display:inline-block;height:8px;border-radius:99px;background:var(--accent);vertical-align:middle}
-.rd-behov{margin-top:12px;border-top:1px solid var(--linje);padding-top:10px}.rd-behov .v2{font-size:28px;font-weight:800;letter-spacing:-.02em}
-.rd-mdr{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:8px}.rd-md{background:var(--bg);border-radius:10px;padding:7px 8px;font-size:12px;color:var(--svag);border-bottom:4px solid var(--fejl)}
-.rd-md b{display:block;font-size:15px;color:var(--tekst)}.rd-md.g{border-bottom-color:var(--ok)}.rd-md.y{border-bottom-color:var(--adv)}.rd-md.b{border-bottom-color:transparent}.rd-md.aab{background:transparent;border:1px dashed var(--linje)}
-.rd-st{display:flex;height:8px;border-radius:99px;overflow:hidden;background:var(--linje);margin:5px 0 4px}.rd-st i{display:block}.rd-st .s1{background:var(--ok)}.rd-st .s2{background:var(--accent)}.rd-st .s3{background:#a78bfa}
-.rd-loen .ok b{color:var(--ok)}.md3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}.md3-k{border-radius:12px;padding:12px 14px;background:var(--ok-blid)}.md3-k.rd{background:var(--fejl-blid)}.md3-k .n{font-weight:600}.md3-k .s{font-size:20px;font-weight:800;margin-top:2px;color:var(--ok)}.md3-k.rd .s{color:var(--fejl)}.md3-k .f{font-size:13.5px;margin-top:2px}
-@media(max-width:700px){.md3{grid-template-columns:1fr}.md3-k{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}.md3-k .s{font-size:17px;margin:0}.md3-k .n{min-width:80px}}
-.rd-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.rd-chip{background:var(--bg);border-radius:99px;padding:5px 12px;font-size:13px;color:var(--svag)}.rd-chip b{color:var(--ok);font-weight:600}.rd-chip.rd b{color:var(--fejl)}
-@media (max-width:700px){.rd-mdr{grid-template-columns:repeat(3,1fr)}.rd-top .v{font-size:34px}.rd-tb .skjul{display:none}}
+.rd-tb th:first-child,.rd-tb td:first-child{text-align:left;padding-left:16px}.rd-tb .neg,.rd-l b.neg{color:var(--fejl);font-weight:700}
+@media(max-width:700px){}
+@media (max-width:700px){.rd-tb .skjul{display:none}}
 .sk-k{border-radius:12px;padding:12px 14px;background:var(--bg);border-left:5px solid var(--linje);min-width:0;overflow-wrap:anywhere}
 .sk-k b{display:block;font-size:24px;letter-spacing:-.02em;line-height:1.1}.sk-k span{font-size:11.5px;color:var(--svag)}
 .sk-k.g{border-left-color:var(--ok)}.sk-k.rd{border-left-color:var(--fejl)}.sk-k.y{border-left-color:#d97706}.sk-k.b{border-left-color:var(--accent)}
@@ -617,11 +583,6 @@ details.sg-r{margin:0;border:0;border-top:1px solid var(--linje);border-radius:0
 .ap-sub{font-size:13px;color:var(--svag);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ap-hoejre{flex:none;display:flex;align-items:center;gap:6px;font-size:13px;color:var(--svag)}.ap-hoejre.rød{color:var(--fejl);font-weight:600}
 .ap-chev{font-size:22px;line-height:1;color:var(--svagere);font-weight:300}
-.sk-md{display:flex;gap:22px;align-items:center}
-.sk-ring{width:120px;height:120px;border-radius:50%;display:grid;place-items:center;flex:none;background:var(--svagere)}
-.sk-ring.g{background:var(--ok)}.sk-ring.y{background:#d97706}.sk-ring.rd{background:var(--fejl)}
-.sk-ring>div{width:96px;height:96px;border-radius:50%;background:var(--flade);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
-.sk-ring b{font-size:21px;letter-spacing:-.02em;line-height:1}.sk-ring small{color:var(--svag);font-size:11px;margin-top:3px}
 .pill.g{background:var(--ok-blid);color:var(--ok)}.pill.y{background:var(--adv-blid);color:var(--adv)}.pill.rd{background:var(--fejl-blid);color:var(--fejl)}.pill.gr{background:var(--bg);color:var(--svag)}
 .sk-hz{display:flex;gap:6px}.sk-hz button{padding:5px 12px;border-radius:99px;border:1px solid var(--linje);background:none;font-size:12.5px;color:var(--svag)}.sk-hz button.aktiv{background:var(--tekst);color:var(--flade);border-color:var(--tekst)}
 .sk-graf{position:relative;height:200px;margin-top:22px}.sk-plot{position:absolute;left:0;right:0;top:16px;bottom:20px;border-bottom:1px solid var(--linje)}
@@ -644,7 +605,7 @@ details.sg-r{margin:0;border:0;border-top:1px solid var(--linje);border-radius:0
 @media (max-width:700px){.fs-tb td,.fs-tb th{padding:8px 10px}.fs-tb input{width:86px}}
 @media (max-width:600px){.fs-tb td,.fs-tb th{padding:8px 10px}.fs-tb td .f{display:none}}
 .sk-detalje{margin-top:14px;padding:12px 14px;background:var(--bg);border-radius:12px}.sk-detalje .liste .l{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--linje)}.sk-detalje .liste .l:first-child{border-top:0}
-@media (max-width:900px){.sk-k4{grid-template-columns:1fr 1fr}.sk-k3{grid-template-columns:1fr 1fr}.sk-k2{grid-template-columns:1fr 1fr}.sk-md{flex-direction:column;text-align:center}.sk-md .r1{justify-content:center}.sk-graf{height:160px}.sk-soejler{gap:3px}.sk-soejler em{font-size:9px}}
+@media (max-width:900px){.sk-k4{grid-template-columns:1fr 1fr}.sk-k3{grid-template-columns:1fr 1fr}.sk-k2{grid-template-columns:1fr 1fr}.sk-graf{height:160px}.sk-soejler{gap:3px}.sk-soejler em{font-size:9px}}
 /* telefon: ligger sidst, så reglerne vinder over grundreglerne ovenfor */
 @media (max-width:700px){
   /* telefon: berøringsflader mindst 40 px, og intet må være bredere end skærmen (ellers vokser visningen, og bundfanerne ryger ud af billedet) */
@@ -963,16 +924,23 @@ async function behandlet(id) {   // anmodningen er fjernet fra inbox/, når fabz
   for (let i = 0; i < 3; i++) { try { return (await laesFil(`inbox/${id}.json`)) === null; } catch (e) { if (!forbigående(e)) return false; await sleep(2000); } }
   return false;
 }
+const INTET_SVAR = "Intet svar efter 4 minutter.";
+// Venter på svaret fra fabz.py: hurtigt i starten, så roligere (ca. 40 % færre GitHub-kald). tik(ms) kaldes før hvert opslag.
+async function ventSvar(id, maxMs = 240000, tik) {
+  const start = Date.now();
+  let sv = null;
+  while (!sv && Date.now() - start < maxMs) {
+    const t = Date.now() - start;
+    await sleep(t < 30000 ? 1500 : t < 240000 ? 3000 : 5000);
+    if (tik) tik(Date.now() - start);
+    sv = await laesSvar(id);
+  }
+  return sv;
+}
 async function anmod(præfiks, krav, besked) {
   const id = nytId(præfiks);
   await skrivFil(`inbox/${id}.json`, krav, besked);
-  const start = Date.now();
-  while (Date.now() - start < 240000) {
-    await sleep(1500);
-    const sv = await laesSvar(id);
-    if (sv) return sv;
-  }
-  return null;
+  return await ventSvar(id);
 }
 
 // ---------- baggrund og beskeder ----------
@@ -1007,13 +975,10 @@ async function iBaggrunden(præfiks, krav, commit, {tekst, ok, fejl}) {
   (async () => {
     let sv = null;
     try {
-      const start = Date.now();
       let iKø = false;
-      while (!sv && Date.now() - start < 900000) {   // efter 4 min: "I kø", og der ventes op til 15 min, før det kaldes en fejl (29/10)
-        await sleep(Date.now() - start < 240000 ? 1500 : 5000);
-        if (!iKø && Date.now() - start >= 240000) { iKø = true; besked({id, klasse: "kø", titel: tekst + ": I kø, gemmes om lidt"}); }
-        sv = await laesSvar(id);
-      }
+      sv = await ventSvar(id, 900000, ms => {   // efter 4 min: "I kø", og der ventes op til 15 min, før det kaldes en fejl (29/10)
+        if (!iKø && ms >= 240000) { iKø = true; besked({id, klasse: "kø", titel: tekst + ": I kø, gemmes om lidt"}); }
+      });
     } catch (e) { sv = {status: "FEJL", fejl: e.message}; }
     if (!sv && await behandlet(id)) sv = {status: "OK", advarsler: [], info: ["Svaret kunne ikke læses fra GitHub, men anmodningen er behandlet."]};
     if (!sv) sv = {status: "FEJL", fejl: "Intet svar efter 15 minutter. Tjek Actions i fabz-data."};
@@ -1354,7 +1319,7 @@ function printDokBlok(j, st) {
       if (egen) { r.mangler = egen.mangler; hentNed(egen.bytes, egen.fil); }
       if (egen !== null) { r.arbejder = false; if (JH === st.key) tegn(); return; }
       const sv = await kørOgVent("job-dokumenter", [st.key]);
-      if (!sv || sv.status === "FEJL") r.fejl = sv?.fejl || "Intet svar efter 4 minutter.";
+      if (!sv || sv.status === "FEJL") r.fejl = sv?.fejl || INTET_SVAR;
       else {
         r.mangler = sv.mangler || [];
         const f = sv.pdf ? await laesFil(sv.pdf) : null;
@@ -2240,46 +2205,6 @@ function sætTransport(v) {   // fra toppen af listen eller fra sidste trin i "P
   S.transport = v; S.rørt = true;
   tegnVælger(); tegnListe();
 }
-// Kørelisten på sit eget ark, med sin egen printknap (Oscar 7/11)
-function koerelistePrint() {
-  if (!S?.job) return null;
-  return h("button", {class: "btn", type: "button", style: "width:100%;padding:12px", onclick: async () => {
-    const mig = S, sv = await kørOgVent("koereliste-pdf", [jobNøgle(S.job)]);
-    if (!sv || sv.status === "FEJL") { if (S === mig) sætSvar("fejl", "Ingen køreliste.", [sv?.fejl || "Intet svar efter 4 minutter."]); return; }
-    const r = sv.pdf ? await laesFil(sv.pdf) : null;
-    if (!r) { if (S === mig) sætSvar("fejl", "Kørelisten kunne ikke hentes.", []); return; }
-    const a = h("a", {href: URL.createObjectURL(new Blob([await r.arrayBuffer()], {type: "application/pdf"})), download: decodeURIComponent(sv.pdf.split("/").pop())});
-    document.body.append(a); a.click(); a.remove();
-  }}, "Køreliste (PDF)");
-}
-async function hentGodkendtPdf() {   // den PDF, der blev lavet til jobbet (pdf/<navn> - dd.mm.åååå.pdf). PDF'er slettes efter 3 dage: mangler filen, laves den igen fra den godkendte liste
-  if (optaget) return;
-  const mig = S, j = S.job, navn = (S.jobNavn || j.navn).trim();
-  let fil = `${navn} - ${j.dato.slice(8, 10)}.${j.dato.slice(5, 7)}.${j.dato.slice(0, 4)}.pdf`;
-  optaget = true;
-  tegnListe();
-  try {
-    let r = await laesFil("pdf/" + fil);
-    if (!r) {
-      sætSvar("", "Laver pakkelisten … det tager typisk 15-30 sekunder.");
-      const sv = await anmod("pakkeliste", pakkelisteKrav(navn), `Panel: pakkeliste ${navn}`);
-      if (!sv) { if (S === mig) sætSvar("fejl", "Intet svar efter 4 minutter.", ["Tjek kørslen under Actions i fabz-data. Anmodningen ligger stadig i inbox/."]); return; }
-      if (sv.status === "FEJL") { if (S === mig) sætSvar("fejl", "Fejl, ingen PDF.", [sv.fejl]); return; }
-      if (!sv.pdf) { if (S === mig) sætSvar("adv", "Listen er gemt, men der er ingen PDF.", sv.advarsler); return; }
-      fil = decodeURIComponent(sv.pdf.split("/").pop());
-      r = await laesFil(sv.pdf);
-      if (S === mig) sætSvar(sv.status === "ADVARSEL" ? "adv" : "ok", r ? "Pakkelisten er lavet" : "PDF'en kunne ikke hentes.", sv.advarsler.map(a => "Advarsel: " + a));
-      if (!r) return;
-    }
-    const a = h("a", {href: URL.createObjectURL(new Blob([await r.arrayBuffer()], {type: "application/pdf"})), download: fil});
-    document.body.append(a); a.click(); a.remove();
-  } catch (e) {
-    if (S === mig) sætSvar("fejl", "Det gik galt.", [e.message]);
-  } finally {
-    optaget = false;
-    if (S === mig) tegnListe();
-  }
-}
 const ANLEDNING = {bryllup: "Bryllup", privatfest: "Fest", erhverv: "Firmafest", efterskole: "Fest"};
 function gætAnledning(j) {
   const m = /jobtype\s*:\s*([^<\n\r]*)/i.exec(j.besk || "");
@@ -2319,7 +2244,7 @@ function festkortBlok(j, st, gentegn) {
       }
       if (egen !== null) { fk.arbejder = false; if (st.fk === fk) gentegn(); return; }
       const sv = await kørOgVent("festkort", args);
-      if (!sv) fk.svar = {klasse: "fejl", titel: "Intet svar efter 4 minutter."};
+      if (!sv) fk.svar = {klasse: "fejl", titel: INTET_SVAR};
       else if (sv.status === "FEJL") fk.svar = {klasse: "fejl", titel: "Kortene er ikke lavet", punkter: [sv.fejl]};
       else {
         const filer = await Promise.all((sv.pdfs || []).map(async p => ({navn: decodeURIComponent(p.split("/").pop()), link: await hentPdf(p)})));
@@ -2544,7 +2469,7 @@ function klubkortBlok(j, st, gentegn) {
       }
       if (egen !== null) { kk.arbejder = false; if (st.kk === kk) gentegn(); return; }
       const sv = await kørOgVent("klubkort", [`--dato=${j.dato}`, `--job=${j.navn}`, "--linjer", "@json"], json);
-      if (!sv) kk.svar = {klasse: "fejl", titel: "Intet svar efter 4 minutter."};
+      if (!sv) kk.svar = {klasse: "fejl", titel: INTET_SVAR};
       else if (sv.status === "FEJL") kk.svar = {klasse: "fejl", titel: "PDF'en er ikke lavet", punkter: [sv.fejl]};
       else {
         const filer = await Promise.all((sv.pdfs || []).map(async p => ({navn: decodeURIComponent(p.split("/").pop()), link: await hentPdf(p)})));
@@ -2979,11 +2904,6 @@ function pakkelisteSider(m, {job, dato, transport, linjer, praktisk}) {
   }
   return {n: R.length, adv};
 }
-async function lavPakkelistePdf(o) {
-  const m = await pdfMotor(), r = pakkelisteSider(m, o);
-  m.doc.setTitle(m.ren(o.titel || "Pakkeliste " + o.job));
-  return {bytes: await m.doc.save(), n: r.n, adv: r.adv};
-}
 
 // Kørelisten (pakkeliste_pdf.lav_koereliste: _tidsplan_side og _koereplan)
 const kortLink = adr => "https://www.google.com/maps/dir/?api=1&destination=" + encodeURIComponent(adr).replace(/[!'()*]/g, c => "%" + c.charCodeAt(0).toString(16).toUpperCase()).replace(/%2F/g, "/");   // som Pythons quote()
@@ -3201,11 +3121,10 @@ function jobNavnAfNøgle(nøgle) {   // som k_job_dokumenter/k_koereliste_pdf: k
   return (titel || pyTitle(navn)).replace(/^\s*(DJ|Bryllup|Privat|Erhverv)\s*:\s*/i, "").trim();
 }
 const pdfFilnavn = t => t.replace(/[^\p{L}\p{N}_ .,&()-]+/gu, "");
-const ddmmåå = d => `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}`;
 async function kørelistePdf(nøgle) {   // Kørsel-siden og pakkelisten: kørelisten til et job. Kaster en Error med samme tekst som fabz.py, hvis der ikke er nogen
   const dato = nøgle.slice(0, 10), job = jobNavnAfNøgle(nøgle), [tp, adv] = jobTidsplan(job, dato);
   if (!tp || !((tp.plan || []).length || (tp.tider || []).length)) throw Object.assign(new Error(`ingen kørselsplan eller tidsplan på '${nøgle}'. Beregn ruten først (Kørsel i panelet)`), {brugerfejl: true});
-  return {bytes: await lavKørelistePdf(job, dato, tp), fil: pdfFilnavn(`Køreliste ${job} - ${ddmmåå(dato)}.pdf`), adv: adv ? [adv] : []};
+  return {bytes: await lavKørelistePdf(job, dato, tp), fil: pdfFilnavn(`Køreliste ${job} - ${visDato(dato)}.pdf`), adv: adv ? [adv] : []};
 }
 async function jobDokumenterPdf(nøgle) {   // "Print dokumenter" (k_job_dokumenter): kørelisten og den godkendte pakkeliste i én PDF
   const dato = nøgle.slice(0, 10), job = jobNavnAfNøgle(nøgle), mangler = [];
@@ -3220,8 +3139,8 @@ async function jobDokumenterPdf(nøgle) {   // "Print dokumenter" (k_job_dokumen
     dele++;
   } else mangler.push(jp ? "Pakkeliste ikke godkendt" : "Pakkeliste mangler");
   if (!dele) throw Object.assign(new Error("der er intet at printe endnu: " + mangler.map(x => x.toLowerCase()).join(" og ")), {brugerfejl: true});
-  m.doc.setTitle(m.ren(`Dokumenter ${job} - ${ddmmåå(dato)}`));
-  return {bytes: await m.doc.save(), fil: pdfFilnavn(`Dokumenter ${job} - ${ddmmåå(dato)}.pdf`), mangler, adv: adv ? [adv] : []};
+  m.doc.setTitle(m.ren(`Dokumenter ${job} - ${visDato(dato)}`));
+  return {bytes: await m.doc.save(), fil: pdfFilnavn(`Dokumenter ${job} - ${visDato(dato)}.pdf`), mangler, adv: adv ? [adv] : []};
 }
 // QR-kode som Python-pakken qrcode 8.2 (festkort og klubkort): datablokke (optimize=20), version (best_fit), maskevalg efter standardreglerne (util.lost_point)
 const QRPY_TAB = {"L":{"ec":1,"blokke":[[[26,19]],[[44,34]],[[70,55]],[[100,80]],[[134,108]],[[86,68],[86,68]],[[98,78],[98,78]],[[121,97],[121,97]],[[146,116],[146,116]],[[86,68],[86,68],[87,69],[87,69]],[[101,81],[101,81],[101,81],[101,81]],[[116,92],[116,92],[117,93],[117,93]],[[133,107],[133,107],[133,107],[133,107]],[[145,115],[145,115],[145,115],[146,116]],[[109,87],[109,87],[109,87],[109,87],[109,87],[110,88]],[[122,98],[122,98],[122,98],[122,98],[122,98],[123,99]],[[135,107],[136,108],[136,108],[136,108],[136,108],[136,108]],[[150,120],[150,120],[150,120],[150,120],[150,120],[151,121]],[[141,113],[141,113],[141,113],[142,114],[142,114],[142,114],[142,114]],[[135,107],[135,107],[135,107],[136,108],[136,108],[136,108],[136,108],[136,108]],[[144,116],[144,116],[144,116],[144,116],[145,117],[145,117],[145,117],[145,117]],[[139,111],[139,111],[140,112],[140,112],[140,112],[140,112],[140,112],[140,112],[140,112]],[[151,121],[151,121],[151,121],[151,121],[152,122],[152,122],[152,122],[152,122],[152,122]],[[147,117],[147,117],[147,117],[147,117],[147,117],[147,117],[148,118],[148,118],[148,118],[148,118]],[[132,106],[132,106],[132,106],[132,106],[132,106],[132,106],[132,106],[132,106],[133,107],[133,107],[133,107],[133,107]],[[142,114],[142,114],[142,114],[142,114],[142,114],[142,114],[142,114],[142,114],[142,114],[142,114],[143,115],[143,115]],[[152,122],[152,122],[152,122],[152,122],[152,122],[152,122],[152,122],[152,122],[153,123],[153,123],[153,123],[153,123]],[[147,117],[147,117],[147,117],[148,118],[148,118],[148,118],[148,118],[148,118],[148,118],[148,118],[148,118],[148,118],[148,118]],[[146,116],[146,116],[146,116],[146,116],[146,116],[146,116],[146,116],[147,117],[147,117],[147,117],[147,117],[147,117],[147,117],[147,117]],[[145,115],[145,115],[145,115],[145,115],[145,115],[146,116],[146,116],[146,116],[146,116],[146,116],[146,116],[146,116],[146,116],[146,116],[146,116]],[[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[146,116],[146,116],[146,116]],[[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115]],[[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[146,116]],[[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[145,115],[146,116],[146,116],[146,116],[146,116],[146,116],[146,116]],[[151,121],[151,121],[151,121],[151,121],[151,121],[151,121],[151,121],[151,121],[151,121],[151,121],[151,121],[151,121],[152,122],[152,122],[152,122],[152,122],[152,122],[152,122],[152,122]],[[151,121],[151,121],[151,121],[151,121],[151,121],[151,121],[152,122],[152,122],[152,122],[152,122],[152,122],[152,122],[152,122],[152,122],[152,122],[152,122],[152,122],[152,122],[152,122],[152,122]],[[152,122],[152,122],[152,122],[152,122],[152,122],[152,122],[152,122],[152,122],[152,122],[152,122],[152,122],[152,122],[152,122],[152,122],[152,122],[152,122],[152,122],[153,123],[153,123],[153,123],[153,123]],[[152,122],[152,122],[152,122],[152,122],[153,123],[153,123],[153,123],[153,123],[153,123],[153,123],[153,123],[153,123],[153,123],[153,123],[153,123],[153,123],[153,123],[153,123],[153,123],[153,123],[153,123],[153,123]],[[147,117],[147,117],[147,117],[147,117],[147,117],[147,117],[147,117],[147,117],[147,117],[147,117],[147,117],[147,117],[147,117],[147,117],[147,117],[147,117],[147,117],[147,117],[147,117],[147,117],[148,118],[148,118],[148,118],[148,118]],[[148,118],[148,118],[148,118],[148,118],[148,118],[148,118],[148,118],[148,118],[148,118],[148,118],[148,118],[148,118],[148,118],[148,118],[148,118],[148,118],[148,118],[148,118],[148,118],[149,119],[149,119],[149,119],[149,119],[149,119],[149,119]]],"graense":[0,152,272,440,640,864,1088,1248,1552,1856,2192,2592,2960,3424,3688,4184,4712,5176,5768,6360,6888,7456,8048,8752,9392,10208,10960,11744,12248,13048,13880,14744,15640,16568,17528,18448,19472,20528,21616,22496,23648]},"M":{"ec":0,"blokke":[[[26,16]],[[44,28]],[[70,44]],[[50,32],[50,32]],[[67,43],[67,43]],[[43,27],[43,27],[43,27],[43,27]],[[49,31],[49,31],[49,31],[49,31]],[[60,38],[60,38],[61,39],[61,39]],[[58,36],[58,36],[58,36],[59,37],[59,37]],[[69,43],[69,43],[69,43],[69,43],[70,44]],[[80,50],[81,51],[81,51],[81,51],[81,51]],[[58,36],[58,36],[58,36],[58,36],[58,36],[58,36],[59,37],[59,37]],[[59,37],[59,37],[59,37],[59,37],[59,37],[59,37],[59,37],[59,37],[60,38]],[[64,40],[64,40],[64,40],[64,40],[65,41],[65,41],[65,41],[65,41],[65,41]],[[65,41],[65,41],[65,41],[65,41],[65,41],[66,42],[66,42],[66,42],[66,42],[66,42]],[[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[74,46],[74,46],[74,46]],[[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[75,47]],[[69,43],[69,43],[69,43],[69,43],[69,43],[69,43],[69,43],[69,43],[69,43],[70,44],[70,44],[70,44],[70,44]],[[70,44],[70,44],[70,44],[71,45],[71,45],[71,45],[71,45],[71,45],[71,45],[71,45],[71,45],[71,45],[71,45],[71,45]],[[67,41],[67,41],[67,41],[68,42],[68,42],[68,42],[68,42],[68,42],[68,42],[68,42],[68,42],[68,42],[68,42],[68,42],[68,42],[68,42]],[[68,42],[68,42],[68,42],[68,42],[68,42],[68,42],[68,42],[68,42],[68,42],[68,42],[68,42],[68,42],[68,42],[68,42],[68,42],[68,42],[68,42]],[[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46]],[[75,47],[75,47],[75,47],[75,47],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48]],[[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46]],[[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48]],[[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[75,47],[75,47],[75,47],[75,47]],[[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[74,46],[74,46],[74,46]],[[73,45],[73,45],[73,45],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46]],[[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[73,45],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46]],[[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48]],[[74,46],[74,46],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47]],[[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47]],[[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47]],[[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47]],[[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48]],[[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48]],[[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47]],[[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[74,46],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47]],[[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48]],[[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[75,47],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48],[76,48]]],"graense":[0,128,224,352,512,688,864,992,1232,1456,1728,2032,2320,2672,2920,3320,3624,4056,4504,5016,5352,5712,6256,6880,7312,8000,8496,9024,9544,10136,10984,11640,12328,13048,13800,14496,15312,15936,16816,17728,18672]}};
@@ -3639,7 +3558,7 @@ async function send(hvad) {   // "pdf": lav PDF (gemmer intet), "gem": gem som l
     sætSvar("", "Laver pakkelisten … det tager typisk 15-30 sekunder.");
     const sv = await anmod("pakkeliste", krav, `Panel: pakkeliste ${navn}`);
     if (S !== mig) return;
-    if (!sv) sætSvar("fejl", "Intet svar efter 4 minutter.", ["Tjek kørslen under Actions i fabz-data. Anmodningen ligger stadig i inbox/."]);
+    if (!sv) sætSvar("fejl", INTET_SVAR, ["Tjek kørslen under Actions i fabz-data. Anmodningen ligger stadig i inbox/."]);
     else if (sv.status === "FEJL") sætSvar("fejl", "Fejl, ingen PDF.", [sv.fejl]);
     else {
       const punkter = [...sv.advarsler.map(a => "Advarsel: " + a), ...sv.info];
@@ -4092,7 +4011,7 @@ function dinePenge() {
     if (!(b > 0)) return alert("Skriv beløbet i kr.");
     DP.venter = true; DP.svar = null; tegn();
     try { const sv = await kørOgVent("raad", [String(b), ...(F ? [`--d1=${Math.round(F.B)}`, `--husleje=${Math.round(F.saxo)}`] : [])]);
-      DP.svar = !sv ? {fejl: "Intet svar efter 4 minutter."} : sv.status === "FEJL" ? {fejl: sv.fejl} : {hvad: DP.hvad.trim(), kr: b, linjer: sv.info.filter(l => !/^OK/.test(l))};
+      DP.svar = !sv ? {fejl: INTET_SVAR} : sv.status === "FEJL" ? {fejl: sv.fejl} : {hvad: DP.hvad.trim(), kr: b, linjer: sv.info.filter(l => !/^OK/.test(l))};
     } catch (e) { DP.svar = {fejl: e.message}; }
     DP.venter = false; tegn(); };
   return h("div", {class: "kort2 dp"}, h("h2", {}, "Dine penge"), h("div", {class: "dp-g"}, rk),
@@ -5514,7 +5433,7 @@ function planlægPanel() {
       const sv = await kørOgVent("planlaeg-forslag", [OP.planDato, ...(OP.planFra ? [`--fra=${OP.planFra}`] : []), ...(OP.planDato === iDag() ? [`--trykket=${nuHHMM()}`] : []),   // planen starter 5 min efter trykket (Oscar 29/10)
         ...(OP.planStop ? [`--stop=${OP.planStop}`] : []),
         ...(OP.planFrokost === "ingen" ? ["--ingen-frokost"] : []), ...(tom ? ["--tom"] : [])]);
-      if (!sv) OP.planSvar = {klasse: "fejl", titel: "Intet svar efter 4 minutter."};
+      if (!sv) OP.planSvar = {klasse: "fejl", titel: INTET_SVAR};
       else if (sv.status === "FEJL") OP.planSvar = {klasse: "fejl", titel: "Forslaget kunne ikke laves", punkter: [sv.fejl]};
       else {   // stoptid ikke aftalt (Oscar 11/11): ingen gul boks, men et krav over Godkend
         const adv = sv.advarsler.filter(a => !/^stoptid ikke aftalt/i.test(a));
@@ -5532,7 +5451,7 @@ function planlægPanel() {
     try {
       const j = {...p, ...(p.stop_krav && OP.planStopOk ? {stoptid: OP.planStopOk} : {}), ...(p.salg_fravalg ? {salg_fravalg: p.salg_fravalg} : {}), foer_frokost: p.foer_frokost.map(rensPunkt), efter_frokost: p.efter_frokost.map(rensPunkt), hvis_tid: p.hvis_tid.map(rensPunkt)};
       const sv = await kørOgVent("plan", ["@json"], j);
-      if (!sv) OP.planSvar = {klasse: "fejl", titel: "Intet svar efter 4 minutter."};
+      if (!sv) OP.planSvar = {klasse: "fejl", titel: INTET_SVAR};
       else if (sv.status === "FEJL") OP.planSvar = {klasse: "fejl", titel: "Planen er ikke gemt", punkter: [sv.fejl]};
       else {
         OP.planSvar = {klasse: sv.status === "ADVARSEL" ? "adv" : "ok", titel: "Planen er gemt", punkter: [...sv.advarsler.map(a => "Advarsel: " + a), ...sv.info.filter(l => !l.startsWith("PDF:"))]};
@@ -5868,7 +5787,6 @@ function skubBoks(p, valgt) {
         h("input", {type: "checkbox", checked: !!k.ok, disabled: !!k.ok, onchange: () => kryds(i)}), h("span", {}, k.krav))))] : null);
 }
 const rensPunkt = x => ({tekst: x.tekst, ...(x.min != null && x.min !== "" ? {min: Number(x.min)} : {}), ...(x.id != null ? {id: x.id} : {}), ...(x.overskredet ? {overskredet: true} : {}), ...(x.smaating?.length ? {smaating: x.smaating} : {})});
-const dagNavnLang = iso => { const d = dag(iso); return `${DAGE[d.getDay()]} ${d.getDate()}. ${MDL[d.getMonth()]}`; };
 
 // ---------- Forespørgsler ----------
 const H_TYPER = ["Erhverv", "Bryllup", "Privatfest", "Efterskole", "Løb", "Klub", "Andet"];
@@ -5941,7 +5859,7 @@ function foreDagKort(påIDag = false) {
   const sætning = t => t.ny ? [t.x.type, t.x.eventdato ? kortDatoÅr(t.x.eventdato) : null, "send tilbud"].filter(Boolean).join(" · ")
     : `Tilbud sendt ${kortDato(t.x.status_dato || t.x.modtaget)} · ${(t.x.opfoelgninger || 0) >= FORE_OPF_MAKS ? "har de svaret?" : "spørg om de har besluttet sig"}`;
   const titel = [svar ? `svar ${svar}` : null, opf ? `følg op på ${opf}` : null].filter(Boolean).join(" og ");
-  const hoved = åbne.length ? [h("div", {class: "sd-top"}, h("h1", {}, titel[0].toUpperCase() + titel.slice(1)), h("span", {class: "muted"}, dagNavnLang(iDag()))),
+  const hoved = åbne.length ? [h("div", {class: "sd-top"}, h("h1", {}, titel[0].toUpperCase() + titel.slice(1)), h("span", {class: "muted"}, langDato(iDag()))),
       h("div", {class: "sd-bar"}, h("div", {style: `width:${Math.round(100 * (ting.length - åbne.length) / ting.length)}%`}))]
     : h("div", {class: "sd-faerdig"}, h("div", {class: "sd-f-t"}, "✓ Styr på forespørgslerne"));
   const række = t => h("div", {class: "sd-r" + (t.klaret ? " ok" : ""), "data-id": t.x.id}, h("span", {class: "sd-mk"}),
@@ -6837,13 +6755,13 @@ function koerelisteKnap(vedTidsplan) {   // Køreliste (PDF), eget ark (Oscar 26
           if (!json.linjer?.length || !json.stop.length) throw Object.assign(new Error("--json skal have stop og linjer fra en beregnet rute"), {brugerfejl: true});
           const jn = (json.titel || "").trim() || "Køreliste", dato = json.dato || iDag();
           const tp = {tider: [], plan: json.linjer, stop: json.stop.map(x => ({navn: x.navn || "", adresse: x.adresse || ""})), rute_gemt: nuIso()};
-          egen = {bytes: await lavKørelistePdf(jn, dato, tp), fil: pdfFilnavn(`Køreliste ${jn} - ${ddmmåå(dato)}.pdf`), adv: []};
+          egen = {bytes: await lavKørelistePdf(jn, dato, tp), fil: pdfFilnavn(`Køreliste ${jn} - ${visDato(dato)}.pdf`), adv: []};
         } else { await friskeJobdata(); egen = await kørelistePdf(r.job); }
       } catch (e) { if (e.brugerfejl) { r.pdf = {fejl: e.message}; egen = false; } else console.warn("PDF i browseren fejlede, fabz.py laver den", e); }
       if (egen) r.pdf = {link: URL.createObjectURL(new Blob([egen.bytes], {type: "application/pdf"})), navn: egen.fil, adv: egen.adv};
       if (egen !== null) { r.pdfArbejder = false; if (fane === "rute") tegn(); return; }
       const sv = d ? await kørOgVent("koereliste-pdf", ["--json", "@json"], json) : await kørOgVent("koereliste-pdf", [r.job]);   // uden "--": panelet lægger --mappe bagefter
-      if (!sv) r.pdf = {fejl: "Intet svar efter 4 minutter."};
+      if (!sv) r.pdf = {fejl: INTET_SVAR};
       else if (sv.status === "FEJL") r.pdf = {fejl: sv.fejl};
       else r.pdf = sv.pdf ? {link: await hentPdf(sv.pdf), navn: decodeURIComponent(sv.pdf.split("/").pop()), adv: sv.advarsler || []} : {fejl: "Ingen PDF kom tilbage."};
     } catch (e) { r.pdf = {fejl: e.message}; }
@@ -6869,7 +6787,7 @@ function visRute() {
     r.arbejder = true; r.svar = {klasse: "", titel: "Beregner ruten … typisk under et minut"}; tegn();
     try {
       const sv = await kørOgVent("rute", ["--json", "@json", ...(r.job ? ["--job", r.job] : [])], json);
-      if (!sv) r.svar = {klasse: "fejl", titel: "Intet svar efter 4 minutter."};
+      if (!sv) r.svar = {klasse: "fejl", titel: INTET_SVAR};
       else if (sv.status === "FEJL") r.svar = {klasse: "fejl", titel: "Ruten er ikke beregnet", fejl: sv.fejl};
       else {
         r.svar = {klasse: "ok", titel: "Ruten er beregnet", data: sv.data, info: sv.info || []};
@@ -7125,7 +7043,6 @@ const SP_PAUSE = "fabz-salg-pause";
 function spPause() { try { return JSON.parse(lager.get(SP_PAUSE) || "null") || {}; } catch { return {}; } }
 // Fra 16/11 står pausen på sprintet i data (salg-sprint-pause), så natkørslen kan lukke et sprint på pause som ikke færdiggjort. Browserens pause bruges kun til gamle sprints
 const spP = s => { if ("pause_ms" in s || "pause_fra" in s) return {start: s.start, pause_ms: s.pause_ms || 0, pause_fra: s.pause_fra || null}; const p = spPause(); return p.start === s.start ? p : null; };
-function pauseMs(s, nu = Date.now()) { return urPauseMs(spP(s), nu); }
 const sprintSlut = s => urSlut(s, spP(s));
 function spPauseSkift(s) {
   const række = (D.salgssprints || []).find(x => x.start === s.start), nu = Date.now(), før = spP(s) || {pause_ms: 0, pause_fra: null};
@@ -7258,7 +7175,7 @@ function salgDagKort(påIDag = false) {   // påIDag (Oscar 8/11: "jeg vil se de
     const kl = ok ? "ok" : d === idag ? "nu" : d > idag ? (mangler-- > 0 ? "" : "graa") : "";
     return h("div", {class: kl}, n + (ok ? " ✓" : ""));
   }));
-  return [h("div", {class: "sp-start"}, h("div", {}, h("h1", {}, `Sprint ${uge + 1} af ${mål}`, h("span", {class: "sp-lang"}, " denne uge")), h("span", {class: "muted"}, `${SPRINT_MIN} min salg · ${dagNavnLang(idag).toLowerCase()}`)),
+  return [h("div", {class: "sp-start"}, h("div", {}, h("h1", {}, `Sprint ${uge + 1} af ${mål}`, h("span", {class: "sp-lang"}, " denne uge")), h("span", {class: "muted"}, `${SPRINT_MIN} min salg · ${langDato(idag).toLowerCase()}`)),
       h("button", {class: "btn primaer", type: "button", onclick: () => startSprint(SPRINT_MIN)}, "Start 30 min")), dage, ting.length ? liste() : null];
 }
 // Ugens tragt under Cold call (Oscar 5/11, skitse 2): kun tal, til der er 50 opkald i alt. Derefter en konklusion: hvor flest falder fra, og bedste åbning.
@@ -7325,7 +7242,7 @@ function visPakker() {
     PK.arbejder = true; PK.svar = null; tegn();
     const sv = await kørOgVent("setup-gem", ["@json"], o).catch(e => ({status: "FEJL", fejl: e.message}));
     PK.arbejder = false;
-    if (!sv) PK.svar = {klasse: "fejl", titel: "Intet svar efter 4 minutter."};
+    if (!sv) PK.svar = {klasse: "fejl", titel: INTET_SVAR};
     else if (sv.status === "FEJL") PK.svar = {klasse: "fejl", titel: "Ikke gemt", fejl: sv.fejl};
     else { PK.svar = {klasse: "ok", titel: "Pakkerne er gemt", info: sv.advarsler || []}; const su = await laesFil("data/setups.json"); D.setups = su ? await su.json() : D.setups; PK.o = JSON.parse(JSON.stringify(D.setups)); }
     if (fane === "pakker") tegn();
@@ -7764,7 +7681,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     F.arbejder = true; F.svar = null; tegn();
     try {
       const sv = await kørOgVent("skat-forskud-opdateret", args);
-      if (!sv) F.svar = {fejl: "Intet svar efter 4 minutter. Prøv igen om lidt."};
+      if (!sv) F.svar = {fejl: INTET_SVAR + " Prøv igen om lidt."};
       else if (sv.status === "FEJL") F.svar = {fejl: sv.fejl};
       else if (sv.data && sv.data.gemt) {
         const n = x => Math.round(Number(s(x).replace(/\./g, "").replace(",", ".")));
@@ -8973,7 +8890,7 @@ function fase2Kort(s) {
     log.valg === "naeste" ? [h("input", {class: "input", style: "margin-top:8px", value: log.naeste, placeholder: "Næste skridt", oninput: e => { log.naeste = e.target.value; }}),
       h("div", {class: "chips", style: "margin-top:8px"}, [["I morgen", 1], ["+3 dage", 3], ["+1 uge", 7], ["+1 md.", 30]].map(([t, d]) => h("button", {type: "button", class: "chip opk-c" + (!log.dato && log.dage === d ? " aktiv" : ""), onclick: () => { log.dage = d; log.dato = ""; tegn(); }}, t)),
         datoChip(log.dato, (v, el) => { log.dato = v; if (!v) return tegn(); el.closest(".chips").querySelectorAll(".aktiv").forEach(x => x.classList.remove("aktiv")); el.classList.add("aktiv"); }, "opk-c"))]
-    : [h("div", {class: "etiket", style: "margin-top:12px"}, "Åbner igen"), h("div", {class: "s-aabner"}, dagNavnLang(planDato(f.planlaegger) || seksMdr(iDag()))),
+    : [h("div", {class: "etiket", style: "margin-top:12px"}, "Åbner igen"), h("div", {class: "s-aabner"}, langDato(planDato(f.planlaegger) || seksMdr(iDag()))),
       h("div", {class: "etiket", style: "margin-top:12px"}, "Hvorfor"),
       h("div", {class: "chips"}, ["Har en DJ", "Pris", "Ingen fest", "Ved ikke"].map(v => h("button", {type: "button", class: "chip opk-c" + (log.grund === v ? " aktiv" : ""), onclick: () => { log.grund = log.grund === v ? "" : v; tegn(); }}, v)))],
     h("button", {class: "btn primaer opk-gem", type: "button", onclick: gemLog}, "Gem"));
@@ -8989,10 +8906,10 @@ function fase2Kort(s) {
     h("div", {class: "s-pers"}, person ? h("span", {}, person) : null, nr ? h("a", {class: "s-link", href: "tel:" + nr.replace(/\s+/g, "")}, "Ring") : null, mail ? h("a", {class: "s-link", href: "mailto:" + mail}, "Mail") : null),
     tl,
     forløbBlok(s),
-    lukket ? h("div", {class: "s-næste"}, s.aldrig ? h("div", {class: "s-h"}, "Ring aldrig igen") : [h("div", {class: "s-h"}, "Lukket"), h("div", {class: "s-d"}, s.naeste_opfoelgning ? "Åbner igen " + dagNavnLang(s.naeste_opfoelgning) : "")],
+    lukket ? h("div", {class: "s-næste"}, s.aldrig ? h("div", {class: "s-h"}, "Ring aldrig igen") : [h("div", {class: "s-h"}, "Lukket"), h("div", {class: "s-d"}, s.naeste_opfoelgning ? "Åbner igen " + langDato(s.naeste_opfoelgning) : "")],
       h("button", {class: "btn", type: "button", style: "margin-top:12px", onclick: () => kør("salg-aabn", ["--", s.navn], {tekst: `${s.navn}: åbnet igen`, efter, med: () => { s.status = "Kontaktet"; s.naeste_opfoelgning = iDag(); delete s.aldrig; delete s.lukket; }})}, "Åbn igen"))
     : h("div", {class: "s-næste"}, s.svar ? h("div", {class: "s-svar-m"}, `${s.svar.person} har svaret`) : s.kom_igen ? h("div", {class: "s-svar-m"}, s.kom_igen.grund) : null,
-      h("div", {class: "s-h"}, s.naeste || (s.status === "Booket" ? "Booket" : "Intet næste skridt")), h("div", {class: "s-d"}, s.naeste_opfoelgning ? dagNavnLang(s.naeste_opfoelgning) : ""),
+      h("div", {class: "s-h"}, s.naeste || (s.status === "Booket" ? "Booket" : "Intet næste skridt")), h("div", {class: "s-d"}, s.naeste_opfoelgning ? langDato(s.naeste_opfoelgning) : ""),
       h("button", {class: "btn", type: "button", style: "margin-top:12px", onclick: () => { k.logÅben = !k.logÅben; tegn(); }}, "Log kontakt"), k.logÅben ? logForm() : null),
     lukket ? null : spm(), svarLinje.length ? h("div", {class: "s-svarene"}, svarLinje) : null,
     salgFolder(s));
@@ -9023,7 +8940,7 @@ function salgDetalje(s) {
   return h("div", {class: "kort2"},
     h("div", {class: "kh"}, h("h2", {}, s.navn), h("span", {class: "muted lille"}, s.type), h("div", {class: "spacer"}),
       h("button", {class: "x", type: "button", title: "Luk (Esc)", onclick: salgLuk}, "×")),
-    s.naeste_opfoelgning ? h("div", {class: "muted lille"}, dagNavnLang(s.naeste_opfoelgning)) : null,
+    s.naeste_opfoelgning ? h("div", {class: "muted lille"}, langDato(s.naeste_opfoelgning)) : null,
     s.kontakt || s.telefon ? h("div", {class: "info"}, h("div", {class: "etiket"}, "Kontaktperson"), h("div", {class: "pre"}, visKontakt(s)),
       ringKnap(s)) : null,
     indtilNu(s),
