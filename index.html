@@ -5757,9 +5757,44 @@ function robotForslag(p) {
     if (lag.length) ud.push({nøgle: "lager", ik: "⌂", titel: `På lageret ${dn(jd)}, når du henter til ${næsteJob.titel.replace(/^Lav pakkeliste:\s*|^Print pakkeliste:\s*/, "").replace(/\s+\d+\/\d+$/, "")}`,
       tekst: lag.map(o => o.titel.replace(/^Lager(?: \d+ min)?:\s*/, "")).join(", ") + `. ${lag.reduce((t, o) => t + (Number(o.estimat) || 15), 0)} min.`, dato: jd, ids: lag.map(o => o.id)});
   }
+  // Salg fordelt på sprintdagene (del 2, samme regel som salg_fordeling i fabz_dagsplan.py). Brug: fabz.py salg-fordel --gem
+  const sf = salgFordeling(fra);
+  if (sf.flyt.length) {
+    const pr = {}; sf.flyt.forEach(x => { (pr[x.til] ||= []).push(x.navn); });
+    ud.unshift({nøgle: "salg", ik: "☎", titel: `Salg: ${sf.bunke} opfølgninger står til ${dn(sf.d0)}, sprintet tager ${sf.loft}`,
+      tekst: "Varme før kolde, ældste først. " + Object.entries(pr).sort().map(([d, n]) => `${dn(d)}: ${n.map(kortFirma).join(", ")}`).join(" · "), salg: true, dato: sf.d0, ids: []});
+  }
+  sf.afvent.forEach(n => ud.push({nøgle: "afv" + n, ik: "…", titel: `${kortFirma(n)}: intet svar i 14 dage`, tekst: "Forslag: sæt leadet på Ikke nu. Det kan åbnes igen i Salg.", ikkeNu: n, ids: []}));
   return ud.filter(f => !(OP.rfBrugt || []).includes(f.nøgle));
 }
+function salgFordeling(dato) {
+  const m = salgMaal(), loft = Math.max(1, (Number(m.kontakter_dag) || 6) - 1), rut = (m.rutinedage || []).map(x => String(x).slice(0, 2));
+  const dage = []; for (let i = 0; i < 45; i++) { const d = plusDage(dato, i); if (rut.includes(["Sø", "Ma", "Ti", "On", "To", "Fr", "Lø"][dag(d).getDay()])) dage.push(d); }
+  const aktive = (D.salg || []).filter(s => s.naeste_opfoelgning && !["Booket", "Ikke nu"].includes(s.status) && !s.aldrig && !/^(?:Spørg G-kraft|G-kraft)/i.test(s.naeste || ""));
+  const grænse = plusDage(dato, -14);
+  const afvent = aktive.filter(s => /^\s*(?:afvent|vent)\b/i.test(s.naeste || "") && (s.senest_kontakt || "9") <= grænse && !s.svar);
+  const tom = {flyt: [], afvent: afvent.map(s => s.navn), loft, d0: dage[0], bunke: 0};
+  if (!dage.length) return tom;
+  const bunke = aktive.filter(s => s.naeste_opfoelgning <= dage[0] && !afvent.includes(s));
+  if (bunke.length <= loft) return tom;
+  const gruppe = s => s.svar || ["Booket", "Tilbud sendt"].includes(s.status) ? 0 : s.status === "Kontaktet" ? 1 : 2;
+  const bundt = {}; bunke.forEach(s => { const n = s.naeste || ""; (bundt[/^samlet besked/i.test(n) ? n : "lead:" + s.navn] ||= []).push(s); });
+  const række = Object.values(bundt).sort((a, b) => Math.min(...a.map(gruppe)) - Math.min(...b.map(gruppe))
+    || [...a.map(s => s.naeste_opfoelgning)].sort()[0].localeCompare([...b.map(s => s.naeste_opfoelgning)].sort()[0]) || a[0].navn.toLowerCase().localeCompare(b[0].navn.toLowerCase()));
+  const opt = {}; aktive.filter(s => !bunke.includes(s) && !afvent.includes(s)).forEach(s => { opt[s.naeste_opfoelgning] = (opt[s.naeste_opfoelgning] || 0) + 1; });
+  const flyt = [];
+  for (const b of række) {
+    const d = dage.find(d => (opt[d] || 0) + b.length <= loft) || dage.find(d => !opt[d]) || dage.at(-1);
+    opt[d] = (opt[d] || 0) + b.length;
+    b.forEach(s => { if (s.naeste_opfoelgning !== d) flyt.push({navn: s.navn, fra: s.naeste_opfoelgning, til: d}); });
+  }
+  return {flyt, afvent: afvent.map(s => s.navn), loft, d0: dage[0], bunke: bunke.length};
+}
 function brugRobotForslag(f) {
+  if (f.salg) return kør("salg-fordel", [`--dato=${f.dato}`, "--gem"], {tekst: "Salg fordelt på sprintdagene", efter: ["salg", "opgaver"], med: () => {
+    (OP.rfBrugt ||= []).push(f.nøgle); salgFordeling(f.dato).flyt.forEach(x => { const s = (D.salg || []).find(y => y.navn === x.navn); if (s) s.naeste_opfoelgning = x.til; }); }});
+  if (f.ikkeNu) return kør("salg-fordel", [`--ikke-nu=${f.ikkeNu}`], {tekst: `${f.ikkeNu}: Ikke nu`, efter: ["salg", "opgaver"], med: () => {
+    (OP.rfBrugt ||= []).push(f.nøgle); const s = (D.salg || []).find(y => y.navn === f.ikkeNu); if (s) s.status = "Ikke nu"; }});
   kør("planlaeg", [f.dato, ...f.ids.map(String)], {tekst: f.titel, efter: ["opgaver"], med: () => {
     (OP.rfBrugt ||= []).push(f.nøgle);
     f.ids.forEach(id => { const o = D.opgaver.find(x => x.id === id); if (o) { o.planlagt = f.dato; if (!(o.planlagt_historik ||= []).includes(f.dato)) o.planlagt_historik.push(f.dato); } }); }});
@@ -5769,10 +5804,10 @@ function robotForslagKort(p) {
   if (!l.length) return null;
   return h("div", {class: "over-kort rf-kort"},
     h("div", {class: "of-h"}, h("b", {}, "Robottens forslag"), h("span", {class: "muted lille"}, String(l.length)), h("span", {class: "spacer"}),
-      l.length > 1 ? h("button", {class: "pl-lb on", type: "button", onclick: () => l.forEach(brugRobotForslag)}, "Brug alle") : null),
+      l.filter(f => !f.ikkeNu).length > 1 ? h("button", {class: "pl-lb on", type: "button", onclick: () => l.filter(f => !f.ikkeNu).forEach(brugRobotForslag)}, "Brug alle") : null),   // Ikke nu kun ved eget tryk
     l.map(f => h("div", {class: "rf-r", "data-n": f.nøgle}, h("span", {class: "rf-ik"}, f.ik),
       h("div", {class: "rf-tx"}, h("b", {}, f.titel), h("div", {class: "muted lille"}, f.tekst)),
-      h("button", {class: "pl-lb on", type: "button", onclick: () => brugRobotForslag(f)}, "Brug"))));
+      h("button", {class: "pl-lb on", type: "button", onclick: () => brugRobotForslag(f)}, f.ikkeNu ? "Ikke nu" : "Brug"))));
 }
 function fristOrd(d, ref) {
   if (!d) return "";
