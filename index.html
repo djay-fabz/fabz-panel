@@ -833,8 +833,35 @@ let GQL = null;
 const DATAFILER = ["kalender", "udstyr", "pakkelister", "opgaver", "jobpakkelister", "henvendelser", "dagsplaner", "indtaegter", "typer", "salg", "festkort",
   "klubkort", "salgslog", "klubkort_tekster", "strategi", "jobrute", "jobtider", "salgjobs", "kortmaaling", "evalueringer", "salgslaering", "setups", "maanedsoversigt", "priser",
   "leads", "betalinger", "honorarsedler", "jobstatus", "fejl", "hov", "ugepakke", "mailoversigt", "vagter", "some", "linkedin", "mashups", "salgssprints", "varme", "varme_styring", "dinero", "skat"].map(x => `data/${x}.json`).concat(["tools/klubkort/kort.json"]);
+// N3 (17/11): data/panel.json (fabz.py samler datafilerne dér ved hver gemning) + mappelisten data/ (hver fils git-sha) i to kald, side om side. En fil, hvis sha er
+// ændret siden panel.json blev lavet (en robot gemte den uden om fabz.py), hentes for sig: den nyeste vinder, pr. fil. Mangler panel.json eller listen, eller er mere end
+// PJ_MAKS filer ændret, bruges GraphQL/REST som før. Samme kilder-hash (kildeHash) og samme data som enkeltfilerne: panel.json er en kopi af teksten, ikke en ny kilde.
+const PJ_MAKS = 8;
+async function hentPanelJson() {
+  try {
+    const t = Date.now(), [pj, li] = await Promise.all([gh(`/repos/${REPO}/contents/data/panel.json?ref=${BRANCH}&t=${t}`, {raw: true}), gh(`/repos/${REPO}/contents/data?ref=${BRANCH}&t=${t}`)]);
+    if (pj.status === 401 || li.status === 401) throw Object.assign(new Error("Tokenen blev afvist. Tjek at den ikke er udløbet, og skift den."), {token: true});
+    if (!pj.ok || !li.ok) return null;
+    const P = (await pj.json())?.filer, liste = await li.json();
+    if (!P || !Array.isArray(liste)) return null;
+    const sha = new Map(liste.map(x => [x.name, x.sha])), m = new Map();
+    let ændret = 0;
+    for (const p of DATAFILER) {
+      if (!p.startsWith("data/")) continue;
+      const n = p.slice(5, -5), e = P[n], s = sha.get(n + ".json");
+      if (e && typeof e.tekst === "string" && (s === undefined || s === e.sha)) m.set(p, e.tekst);   // samme sha (eller ingen liste-linje): panel.json har den nyeste
+      else if (!e && s === undefined) m.set(p, null);   // findes ingen steder (fx hov.json, før Hov bruges)
+      else ændret++;   // enkeltfilen er ændret efter panel.json: den hentes for sig
+    }
+    if (ændret > PJ_MAKS) return null;
+    console.info(`panel.json: ${m.size} filer fra ét opslag, ${ændret} hentes for sig`);
+    return m;
+  } catch (e) { if (e.token) throw e; return null; }
+}
 async function hentSamlet() {
   const t0 = performance.now();
+  const pj = await hentPanelJson();
+  if (pj) return pj;
   try {
     const q = `query{repository(owner:"${REPO.split("/")[0]}",name:"${REPO.split("/")[1]}"){` +
       DATAFILER.map((p, i) => `f${i}:object(expression:${JSON.stringify(BRANCH + ":" + p)}){...on Blob{text isTruncated}}`).join(" ") + "}}";
