@@ -1114,7 +1114,7 @@ function tegnTop() {
     top.replaceChildren(
       h("button", {class: "tilbage", type: "button", onclick: lukEditor}, "← Jobs"),
       h("div", {class: "spacer"}),
-      h("span", {class: "muted lille"}, S.job ? "PDF husker listen på jobbet. Godkend gør den færdig (grøn)" : "Ændringer gemmes, når du trykker Opdater"));
+      h("span", {class: "muted lille"}, S.job ? "PDF husker listen på jobbet. Godkend gør den færdig" : "Ændringer gemmes, når du trykker Opdater"));
     return;
   }
   const aktiv = v => fane === v || (v === "pakkelister" && (fane === "kort" || fane === "rute")) || (v === "salg" && fane === "foresp");
@@ -1254,12 +1254,14 @@ const jobStatus = j => {
     skilteRel: true,   // Oscar 25/10: skilte-status vises på alle jobs, så han kan se, hvor hvert job er i processen (før: kun klubjobs, jobs med skilte-opgave eller lavede skilte)
     dage, kørsel: !!(D.jobrute || {})[key], åbne: opg.filter(o => o.status !== "Færdig")};
 };
+const flertal = (n, ent, fler) => `${n} ${n === 1 ? ent : fler}`;   // ental/flertal: "1 linje", "2 linjer" (N1)
+const talFraTil = (a, b) => a === b ? `${a}` : `${a}-${b}`;   // "2" i stedet for "2-2"
 const jobTider = j => {   // linjerne under TIDER i bookingen (kun læsning)
   const t = (j.besk || "").replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "").split("\n").map(x => x.trim());
   const i = t.indexOf("TIDER");
   if (i < 0) return [];
   const ud = [];
-  for (const l of t.slice(i + 1)) { if (!l || l === l.toUpperCase() && /^[A-ZÆØÅ ]{3,}$/.test(l)) break; ud.push(l); }
+  for (const l of t.slice(i + 1)) { if (!l || l === l.toUpperCase() && /^[A-ZÆØÅ ]{3,}$/.test(l)) break; if (!/:\s*$/.test(l)) ud.push(l); }   // tomme felter ("Ankomst til opstilling:") vises ikke
   return ud;
 };
 const FILTRE = [["alle", "Alle jobs"], ["pak", "Pakkeliste mangler"], ["kort", "Skilte mangler"], ["koersel", "Kørsel mangler"], ["opg", "Har åbne opgaver"]];
@@ -1285,13 +1287,13 @@ function visJobs() {
   const vist = [...js.filter(ok), ...vagter].sort((a, b) => a.dato.localeCompare(b.dato) || (a.vagt ? 0 : 1) - (b.vagt ? 0 : 1));
   // grøn = klar, rød = mangler og jobbet er inden for 3 dage, gul = mangler, grå = intet at gøre endnu
   const chip = (t, god, dage) => h("span", {class: "pill" + (god ? " grøn" : dage == null ? "" : dage <= 3 ? " rød-pill" : " gul")}, t);
-  const nårTekst = n => n <= 0 ? "I dag" : n === 1 ? "I morgen" : `Om ${n} dage`;
+  const nårTekst = omTekst;
   $("rod").replaceChildren(h("div", {class: "side"},
     h("div", {style: "display:flex;align-items:center;gap:12px;flex-wrap:wrap"}, h("h1", {style: "margin:0"}, "Jobs"), h("div", {class: "spacer"}), hentJobsLinje()),
     h("div", {style: "display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px"},
       h("select", {class: "input", style: "max-width:260px", onchange: e => { JF = e.target.value; tegn(); }},
         FILTRE.map(([v, t]) => h("option", {value: v, selected: JF === v}, t))),
-      h("span", {class: "muted lille"}, `${vist.length - vagter.length} af ${js.length} jobs` + (vagter.length ? ` · ${vagter.length} ${vagter.length === 1 ? "vagt" : "vagter"}` : "")),
+      h("span", {class: "muted lille"}, `${vist.length - vagter.length} af ${flertal(js.length, "job", "jobs")}` + (vagter.length ? ` · ${vagter.length} ${vagter.length === 1 ? "vagt" : "vagter"}` : "")),
       h("div", {class: "spacer"}), utilgListe()),
     h("div", {class: "jobliste"},
       vist.length ? vist.map(j => {
@@ -1768,14 +1770,14 @@ function visBogfoering() {
           kør("ugepakke-svar", [`--uge=${pk.uge}`, `--id=${p.id}`, "--privat"], {tekst: `${p.titel}: privat`, efter}); }}, "Privat"))),
       p.beloeb != null ? h("div", {class: "kr"}, bfKr(p.beloeb, p.valuta)) : null); };
   const godkend = () => { const v = [...BF.valgte, ...ikke.map(p => p.id)].filter((x, i, a) => a.indexOf(x) === i);
-    if (!confirm(`Godkend ${v.length - ikke.length} ting${ikke.length ? ` (og skjul ${ikke.length} filer, der ikke er bilag)` : ""}? Robotten fylder kladderne ud i Dinero. Intet bliver bogført, før du trykker Bogfør.`)) return;
+    if (!confirm(`Godkend ${v.length - ikke.length} ting${ikke.length ? ` (og skjul ${flertal(ikke.length, "fil", "filer")}, der ikke er bilag)` : ""}? Robotten fylder kladderne ud i Dinero. Intet bliver bogført, før du trykker Bogfør.`)) return;
     kør("ugepakke-godkend", [`--uge=${pk.uge}`, `--valgte=${v.join(",")}`], {tekst: "Ugens bogføring godkendt", efter, med: () => { pk.status = "godkendt"; }}); };
   const minutter = Math.max(2, Math.round(åbne.reduce((a, p) => a + ((p.gruppe || "dinero") === "ja" ? 0.5 : p.gruppe === "selv" ? 3 : 1.5), 0)));   // et skøn: flueben ½ min., tjek 1½, bogfør selv 3
   $("rod").replaceChildren(h("div", {class: "side"}, bankUdenBogf(), kvBoks(pk),
     h("div", {class: "kort2"},
       h("div", {class: "kh"}, h("h1", {}, `Ugens bogføring · uge ${uge}`), h("span", {class: "pill " + status[0]}, status[1]), h("div", {class: "spacer"}),
         !klar ? h("button", {class: "btn lille", type: "button", onclick: async () => { await genindlæs(efter); tegn(); }}, "Hent igen") : null),
-      h("div", {class: "muted"}, klar ? `${sikre.length} ting klares med ét ja · ${åbne.length} kræver dig · ${ikke.length} filer skal ikke bruges` : `Robotten har udfyldt kladderne. Du bogfører med Bogfør og afstemmer banken i Dinero.`),
+      h("div", {class: "muted"}, klar ? `${sikre.length} ting klares med ét ja · ${åbne.length} kræver dig · ${ikke.length === 1 ? "1 fil skal" : ikke.length + " filer skal"} ikke bruges` : `Robotten har udfyldt kladderne. Du bogfører med Bogfør og afstemmer banken i Dinero.`),
       h("div", {class: "bf-tal"},
         h("div", {}, h("span", {}, "Klares med ét ja"), h("b", {}, `${valgteSikre.length} af ${sikre.length}`), h("span", {}, sumKr ? `${bfKr(sumKr)} i kroner` + (valgteSikre.some(p => p.valuta && p.valuta !== "DKK") ? " + valuta" : "") : "intet beløb")),
         h("div", {}, h("span", {}, "Kræver dig"), h("b", {}, String(åbne.length)), h("span", {}, åbne.length ? `ca. ${minutter} minutter` : "intet")),
@@ -1803,7 +1805,7 @@ function visBogfoering() {
         return ps.length ? [h("div", {class: "overskrift", style: "margin:14px 14px 2px"}, `${t} · ${tilbage ? tilbage : "alt klaret"}`), ps.map(g === "spoerg" ? spørgRække : kræverRække)] : null;
       })) : h("div", {class: "muted lille", style: "margin-top:6px"}, "Intet denne uge.")),
     h("div", {class: "gruppe"}, h("details", {class: "sk-fold"},
-      h("summary", {}, `Til orientering: ${ikke.length} filer skal ikke bruges (kopier og ikke bilag)` + ((pk.advarsler || []).length ? ` · ${pk.advarsler.length} advarsler` : "")),
+      h("summary", {}, `Til orientering: ${ikke.length === 1 ? "1 fil skal" : ikke.length + " filer skal"} ikke bruges (kopier og ikke bilag)` + ((pk.advarsler || []).length ? ` · ${flertal(pk.advarsler.length, "advarsel", "advarsler")}` : "")),
       h("div", {}, ikke.map(p => h("div", {class: "bf-r"}, h("div", {class: "t"}, h("b", {}, p.fil_navn || p.titel), h("span", {}, p.hvad || p.grund), resLinje(p)))),
         (pk.advarsler || []).map(a => h("div", {class: "bf-r"}, h("div", {class: "t"}, h("b", {}, "Advarsel"), h("span", {}, a))))))),
     pk.status === "udfoert" && !P.some(p => p.bogfoert || p.bogfoer) ? h("div", {class: "gruppe", style: "display:flex;gap:10px;align-items:center;flex-wrap:wrap"},   // bogført kan ikke fortrydes
@@ -1913,7 +1915,7 @@ function anlægGyldig(x, valgte = S.anlæg, antal = S.antal) {   // null = kan v
   const n = x.af ? antal[x.af] || 0 : g?.antal ? antal[g.navn] || 0 : antal[x.navn] || 0;
   if (x.fra != null || x.til != null) {
     if (!n && !x.antal) return x.af ? `Vælg antal ${x.af} først` : `Vælg antal ${g?.antal?.navn || ""} først`;
-    if ((x.fra != null && n < x.fra) || (x.til != null && n > x.til)) return `Kun ved ${x.fra ?? 1}-${x.til ?? "∞"} ${x.af || g?.antal?.navn || "stk"}`;
+    if ((x.fra != null && n < x.fra) || (x.til != null && n > x.til)) return `Kun ved ${talFraTil(x.fra ?? 1, x.til ?? "∞")} ${x.af || g?.antal?.navn || "stk"}`;
   } else if (g?.antal && !x.antal && !x.af && !(antal[g.navn] || 0) && (x.linjer || []).some(l => l.pr)) return `Vælg antal ${g.antal.navn} først`;
   return null;
 }
@@ -2022,9 +2024,9 @@ function anlægStribe() {   // trin for trin (Oscar 27/10): hvert valg låser og
   const kort = (x, pl) => {
     const frys = anlægGyldig(x), på = S.anlæg.includes(x.navn), n = x.antal ? S.antal[x.navn] || 0 : 0, anb = pl && pl.navn === x.navn;
     return h("div", {class: "anlw" + (på ? " aktiv" : "")},
-      h("button", {type: "button", class: "anl" + (på ? " aktiv" : "") + (frys && !på ? " frosset" : "") + (anb ? " plejer" : ""), disabled: !!frys && !på, title: frys || (anb ? pl.hvorfor : `${x.linjer.length} linjer`),
+      h("button", {type: "button", class: "anl" + (på ? " aktiv" : "") + (frys && !på ? " frosset" : "") + (anb ? " plejer" : ""), disabled: !!frys && !på, title: frys || (anb ? pl.hvorfor : flertal(x.linjer.length, "linje", "linjer")),
         "aria-pressed": på ? "true" : "false", onclick: () => sætAnlæg(x.navn)},
-        ikonEl(x.ikon), h("span", {class: "an"}, x.navn), h("span", {class: "as"}, frys && !på ? frys : x.antal && på ? `${n} stk` : x.antal ? `${x.antal.min}-${x.antal.max} stk` : `${x.linjer.length} linjer`)),
+        ikonEl(x.ikon), h("span", {class: "an"}, x.navn), h("span", {class: "as"}, frys && !på ? frys : x.antal && på ? `${n} stk` : x.antal ? `${talFraTil(x.antal.min, x.antal.max)} stk` : flertal(x.linjer.length, "linje", "linjer"))),
       x.antal && på ? h("div", {class: "asantal"}, stepper(n, d => sætAnlægAntal(x, d), x.navn)) : null,
       på && x.bemaerk && anlægTal(x, S.antal) >= (x.bemaerk_fra || 1) ? h("div", {class: "abem"}, "Bemærk: " + x.bemaerk) : null);
   };
@@ -2208,7 +2210,7 @@ function tegnListe() {
         onclick: () => { S.visGem = true; tegnListe(); }}, "Gem som liste til andre jobs …");
   const fod = h("div", {class: "lfod"},
     h("div", {class: "resume lille", style: advN ? "color:var(--adv)" : "color:var(--svag)"},
-      `${linjer.length} linjer · ${stk} stk` + (advN ? ` · ${advN} advarsler` : "") + (S.transport ? "" : " · vælg transport")),
+      `${flertal(linjer.length, "linje", "linjer")} · ${stk} stk` + (advN ? ` · ${flertal(advN, "advarsel", "advarsler")}` : "") + (S.transport ? "" : " · vælg transport")),
     // Oscar 11/11: pakkelisten godkendes her og printes fra jobbet (Print dokumenter). Ingen Hent PDF eller Køreliste her
     låst ? null
       : linjer.length && !S.transport && !optaget
@@ -2918,7 +2920,7 @@ function pakkelisteSider(m, {job, dato, transport, linjer, praktisk}) {
   const {R, adv} = pakkeRækker(linjer, D.udstyr || []);
   m.nySide();
   m.afsnit(`Pakkeliste: ${job}`, FB, 16, 20);
-  m.afsnit(`${plDato(dato)} ${transport || ""} ${R.length} linjer`, F, 10, 12);
+  m.afsnit(`${plDato(dato)} ${transport || ""} ${flertal(R.length, "linje", "linjer")}`, F, 10, 12);
   m.luft(5 * mm);
   const B = [27, 60, 13, 48, 17, 17].map(v => v * mm), TX = m.X0 + (m.BR - B.reduce((a, b) => a + b, 0)) / 2, CX = B.reduce((a, b, i) => [...a, a[i] + b], [TX]);
   const BOKS = 4.5 * mm;
@@ -4719,7 +4721,7 @@ function afslutDag(dato, nået, brugt, småK = () => []) {
     h("input", {class: "input", style: "margin-top:6px", value: st.note, placeholder: "Kort note (valgfrit)", oninput: e => { st.note = e.target.value; }}),
     h("button", {class: "btn", type: "button", style: "margin-top:10px", onclick: () => {
       const n = nået();
-      if (!confirm(`Følg op på dagen med ${n.length} punkter nået?`)) return;
+      if (!confirm(`Følg op på dagen med ${flertal(n.length, "punkt", "punkter")} nået?`)) return;
       const b = Object.entries(brugt()).map(([nr, m]) => `${nr}=${m}`);
       const iPlan = new Set((dp.plan_punkter || []).flatMap(p => (p.smaating || []).map(x => x.id))), sk = småK().filter(i => iPlan.has(i));
       if (st.score) privatSend({kommando: "humoer", slags: "dag", dato, score: st.score, note: st.note.trim()}, `Humør ${HUMOER[st.score - 1]}`);
@@ -5850,7 +5852,7 @@ function skubBoks(p, valgt) {
     knap("drop", "Opgiv den", "Opgiv")];
   const mandag = (() => { const d = dag(iDag()); return plusDage(iDag(), ((8 - d.getDay()) % 7) || 7); })();
   return h("div", {class: "skub"}, ok,
-    h("div", {class: "skub-top"}, h("b", {}, x.over ? `"${o.titel}" havde deadline ${kortDato(o.deadline)}` : x.glemt ? `Stadig aktuel? "${o.titel}" var planlagt ${kortDato(o.planlagt)}` : `"${o.titel}" er planlagt ${o.planlagt_historik.length} gange uden at blive lavet`),
+    h("div", {class: "skub-top"}, h("b", {}, x.over ? `"${o.titel}" havde deadline ${kortDato(o.deadline)}` : x.glemt ? `Stadig aktuel? "${o.titel}" var planlagt ${kortDato(o.planlagt)}` : `"${o.titel}" er planlagt ${flertal(o.planlagt_historik.length, "gang", "gange")} uden at blive lavet`),
       o.prioritet === "Høj" ? h("span", {class: "pill rød-pill"}, "Høj") : null, kø.length > 1 ? h("span", {class: "pill"}, `1 af ${kø.length}`) : null),
     h("div", {class: "skub-valg"}, knapper),
     st.valg === "ryk" ? h("div", {class: "r1 skub-ryk"},
@@ -6616,7 +6618,7 @@ function visMaaling() {
         const bedst = Object.entries(r.steder).sort((a, b) => b[1].scan / b[1].n - a[1].scan / a[1].n)[0];
         return [h("button", {type: "button", class: "mål-r", onclick: klik("k" + r.nr)}, h("span", {class: "mål-prik " + r.farve}),
           h("span", {class: "mål-n"}, h("b", {}, `Nr. ${r.nr} · ${r.tekst.replace(/\n/g, " ")}`),
-            h("span", {class: "muted lille"}, r.få ? "For få scanninger endnu" : bedst ? "Bedst: " + bedst[0] : `Hængt ${r.hængt} gange`)),
+            h("span", {class: "muted lille"}, r.få ? "For få scanninger endnu" : bedst ? "Bedst: " + bedst[0] : `Hængt ${flertal(r.hængt, "gang", "gange")}`)),
           h("span", {class: "mål-t"}, `${r.scan} · ${r.hængt}×`), pil("k" + r.nr)),
         åben === "k" + r.nr ? h("div", {class: "mål-det"}, h("div", {class: "pre", style: "font-size:15px"}, mdLinks(r.tekst)),
           Object.keys(r.steder).length ? h("div", {class: "chips", style: "margin-top:8px"}, Object.entries(r.steder).map(([k, v]) => h("span", {class: "chip"}, k + " ", h("b", {}, String(Math.round(v.scan / v.n))), " scan/kort"))) : null,
@@ -7175,6 +7177,8 @@ function startSprint(min) {
   lager.set(SPRINT_NØGLE, JSON.stringify(sp));
   kør("salg-sprint-start", [`--dato=${sp.dato}`, `--start=${sp.start}`, `--min=${min}`], {tekst: min === SPRINT_MIN ? "30 min salg startet" : "10 min mere startet", efter: ["salgssprints"]});
 }
+// "Om X dage" (Oscar 17/11: "få lavet dage til måneder over 30 dage"): over 30 dage står det i måneder
+const omTekst = n => n <= 0 ? "I dag" : n === 1 ? "I morgen" : n <= 30 ? `Om ${n} dage` : (m => `Om ca. ${m} ${m === 1 ? "måned" : "måneder"}`)(Math.max(1, Math.round(n / 30.44)));
 const mmss = ms => { const t = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`; };
 let sprintSidst = null;
 function sprintUr() {   // hvert sekund: uret og baren, en ny tegning når tiden er gået, og dagens salgsopgave lukkes (også hvis fanen var lukket imens)
@@ -7348,7 +7352,7 @@ function visPakker() {
       h("button", {class: "x", type: "button", title: "Fjern linjen", onclick: () => { x.linjer.splice(li, 1); tegn(); }}, "×"));
     return h("div", {class: "pkp" + (åben ? " aaben" : "")},
       h("div", {class: "r1"}, h("button", {type: "button", class: "btn ghost lille", onclick: () => { PK.aaben = åben ? null : x.navn; tegn(); }}, åben ? "▾" : "▸"),
-        ikonEl(x.ikon), h("b", {}, x.navn), h("span", {class: "muted lille"}, `${(x.linjer || []).length} linjer` + (x.antal ? ` · ${x.antal.min}-${x.antal.max} stk` : "") + (x.kraever?.length ? ` · kræver ${x.kraever.join(", ")}` : "") + (x.altid ? " · altid med" : "")),
+        ikonEl(x.ikon), h("b", {}, x.navn), h("span", {class: "muted lille"}, flertal((x.linjer || []).length, "linje", "linjer") + (x.antal ? ` · ${talFraTil(x.antal.min, x.antal.max)} stk` : "") + (x.kraever?.length ? ` · kræver ${x.kraever.join(", ")}` : "") + (x.altid ? " · altid med" : "")),
         h("div", {class: "spacer"}), h("button", {class: "x", type: "button", title: "Slet pakken", onclick: () => { if (confirm(`Slet pakken ${x.navn}?`)) { o.setups.splice(si, 1); tegn(); } }}, "×")),
       åben ? h("div", {class: "pkf"},
         h("div", {class: "felter3"},
@@ -7701,7 +7705,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     knap("Åbn jobbet →", () => visJobNøgle(`${x.dato}|${x.navn.toLowerCase()}`), true)));   // over "Frit at bruge", som i skitsen
   // strøm (Oscar 2/11, skitse panel-stroem): én gul bjælke, når over 25 % af strømmen to uger i træk lå kl. 17-21; kvartalet over kuverten El står i Overførsler
   const STa = P0.inbox ? P0.stroem : null;
-  if (STa?.gammel) gør.push(trin("y", [h("b", {}, `Strømdata er ikke hentet i ${STa.gammel} dage.`), " Eloverblik-tokenet er måske udløbet: lav et nyt på eloverblik.dk. Indtil da sparer El op efter de gamle regninger."]));   // revision 2/11
+  if (STa?.gammel) gør.push(trin("y", [h("b", {}, `Strømdata er ikke hentet i ${flertal(STa.gammel, "dag", "dage")}.`), " Eloverblik-tokenet er måske udløbet: lav et nyt på eloverblik.dk. Indtil da sparer El op efter de gamle regninger."]));   // revision 2/11
   // info-advarsel med "Forstået" (Oscar 3/11): væk resten af ugen, kommer igen, hvis en senere uge også er over grænsen
   const ugeNu = isoUge(iDag()), forstået = id => (P0.forstaaet || {})[id] === ugeNu;
   if (STa?.advarsel && !forstået("stroem-1721")) gør.push(trin("y", [h("b", {}, "I bruger meget strøm kl. 17-21."), ` ${STa.advarsel.andel} % af ugens strøm lå der, hvor den er dyrest.`
@@ -7730,7 +7734,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
         }, true))));
   });
   ub.liste.filter(u => u.dage_over > 0).forEach(u => gør.push(trin(u.dage_over > 14 ? "rd" : "y",
-    [h("b", {}, `Send rykker til ${u.kunde}`), ` for faktura ${u.nr}, ${krKort(u.kr)} kr. Den er ${u.dage_over} dage over forfald. Dinero → Salg → Fakturaer → Send påmindelse.`])));
+    [h("b", {}, `Send rykker til ${u.kunde}`), ` for faktura ${u.nr}, ${krKort(u.kr)} kr. Den er ${flertal(u.dage_over, "dag", "dage")} over forfald. Dinero → Salg → Fakturaer → Send påmindelse.`])));
   (mo.depositum || []).filter(j => j.status === "mangler").forEach(j => gør.push(trin("y",
     [h("b", {}, `${j.navn} ${kortDato(j.dato)} har ikke betalt depositum.`), " Send en faktura på depositum, eller skriv i kalenderen under ØKONOMI, at det er betalt."])));
   // Forskudsopgørelsen (Oscar 30/10): ét kort med felterne og én bjælke. fabz_skat afgør 210/221/425 samlet (skat af alle felterne mod grænsen,
@@ -7950,7 +7954,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   const sælgKort = sælg.length ? h("div", {class: "kort2 sg"},
     // rolig visning (Oscar 6/11, skitse panel-saelg-rolig): rød kun når pengene reelt ikke rækker, gul under SAELG_GUL_DAGE til en ikke-dækket måned, ellers neutral. Beløbene er de samme
     EH_?.status === "rod" ? [h("div", {class: "sg-v"}, `Mangler ${krKort(EH_.mangler)} kr. til ${kortDato(EH_.til)}`), h("div", {class: "sg-u"}, "Moms og regninger kan ikke betales uden mere salg eller penge fra Buffer.")]
-      : !hul ? h("div", {class: "sg-v ok"}, `✓ Dækket ${sælg.length} måneder frem`)
+      : !hul ? h("div", {class: "sg-v ok"}, `✓ Dækket ${flertal(sælg.length, "måned", "måneder")} frem`)
       : hulTæt ? [h("div", {class: "sg-v y"}, `Sælg for ${krKort(hul.mangler)} kr. inden ${hul.navn.toLowerCase()}`), h("div", {class: "sg-u"}, `Under ${SAELG_GUL_DAGE} dage til. Nu er det tid at ringe.`)]
       : [h("div", {class: "sg-v ok"}, `${antalDækket} ${antalDækket === 1 ? "måned" : "måneder"} dækket`), h("div", {class: "sg-u"}, "Næste mål: ", h("b", {}, `${krKort(hul.mangler)} kr.`), ` til ${hul.navn.toLowerCase()} `, h("span", {class: "muted"}, "· ekskl. moms"))],
     h("div", {class: "sg-mdr"}, sælg.map((x, k) => { const E_ = k === 0 ? EH_ : null, st_ = E_?.status, til_ = E_?.til ? kortDato(E_.til) : "", tæt = x.mangler > 0 && dageTilMd(x.ym) < SAELG_GUL_DAGE;   // Gem X (skitse panel-gem-x): denne måneds kort siger, hvad der skal blive stående, og om det er der
@@ -8290,7 +8294,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
     if (r && rd <= 10) ud.push([rd < 4 ? "rd" : "y", `Betal B-skat-rate ${krKort(r.beloeb)} kr. senest ${kortDato(r.frist)}`]);
     for (const f of fsRet) ud.push([FS.rater_tilbage && n > 2000 ? "rd" : "y", `Ret felt ${f.felt} til ${krKort(f.skal)} kr. (nu ${krKort(f.nu)})`]);
     if (!fsRet.length && n < -5000) ud.push(["y", `Sæt forskuddet ned: du betaler ca. ${krKort(-n)} kr. for meget`]);
-    if ((sk.eindkomst_alder || 0) > 30) ud.push(["y", `Hent eIndkomst igen (${sk.eindkomst_alder} dage gammel)`]);
+    if ((sk.eindkomst_alder || 0) > 30) ud.push(["y", `Hent eIndkomst igen (${flertal(sk.eindkomst_alder, "dag", "dage")} gammel)`]);
     return ud;
   })();
   const hRk = ([f, tekst, ekstra]) => h("div", {class: "sg-h"}, prik(f), h("span", {class: "sg-ht"}, tekst), ekstra || null);
@@ -8314,7 +8318,7 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   // kassen (Oscar 5/11, skitse panel-kasse-a): hvornår pengene reelt kommer, pr. job. Kontant er ude
   const kasseL = (D.jobstatus?.jobs || []).filter(j => j.status === "aaben" && !j.kommet && j.maade !== "kontant" && j.plan?.ekskl && j.forventet).sort((a, b) => a.forventet.localeCompare(b.forventet));
   const fkIndhold = fk ? [
-    fk.alder ? hRk([fk.alder, `Opdater kontoudtoget (${fk.gl} dage gammelt)`, knap("Opdater →", mål("guide:bank"))]) : null,
+    fk.alder ? hRk([fk.alder, `Opdater kontoudtoget (${flertal(fk.gl, "dag", "dage")} gammelt)`, knap("Opdater →", mål("guide:bank"))]) : null,
     h("div", {class: "rd-l"}, h("span", {}, "Saldo ", kilde("kontoudtog", RD.saldo_dato)), h("b", {}, `${krKort(RD.saldo)} kr.`)),
     h("div", {class: "sg-under"}, fk.poster.map(fkPost))] : [];
   $("rod").replaceChildren(h("div", {class: "side bred skat-side" + (moGl ? " mo-gl" : "")}, top, msKort, hovKort, d1Kort, ovKort0, bjælker, moGl ? null : sælgKort, moGl ? null : dinePenge() || udstyrsLinje(),   // Oscar 11/11: under "måneder dækket", ikke på I dag
@@ -8544,7 +8548,7 @@ function ugeKort() {
     h("div", {class: "r1 sk-hoved"}, h("div", {class: "overskrift", style: "margin:0"}, `Salg i denne uge · uge ${ugeNr}`),
       h("span", {class: "muted lille"}, "Mål pr. uge: " + sprintMål() + " sprints á 30 min, " + maal.samtaler_uge + " samtaler")),
     h("div", {class: "sk-k4 sk-k3"},   // tydelige tekster (Oscar 26/10): hvad tallet er, og hvad målet er
-      h("div", {class: "sk-k " + kl(ugeSprints(idag), sprintMål())}, h("b", {}, `${ugeSprints(idag)} af ${sprintMål()}`), h("span", {}, `sprints á 30 min i denne uge · ${uge.length} kontakter`)),   // ugemålet er sprints (Oscar 9/11), kontakterne tælles stadig
+      h("div", {class: "sk-k " + kl(ugeSprints(idag), sprintMål())}, h("b", {}, `${ugeSprints(idag)} af ${sprintMål()}`), h("span", {}, `sprints á 30 min i denne uge · ${flertal(uge.length, "kontakt", "kontakter")}`)),   // ugemålet er sprints (Oscar 9/11), kontakterne tælles stadig
       h("div", {class: "sk-k " + kl(uge.filter(samtale).length, maal.samtaler_uge)}, h("b", {}, `${uge.filter(samtale).length} af ${maal.samtaler_uge}`), h("span", {}, "rigtige samtaler i denne uge (telefon eller møde)")),
       h("div", {class: "sk-k " + (opf.length ? "b" : "")}, h("b", {}, opf.length), h("span", {}, opf.length ? `${opf.length === 1 ? "kunde" : "kunder"} du skal følge op på i dag` : "ingen opfølgninger i dag · " + tilbudMd + " tilbud sendt i md."))),
     h("div", {class: "overskrift", style: "margin-top:14px"}, "Kontakter pr. dag"),
@@ -8585,7 +8589,7 @@ function pengeListe() {   // Fakturaer og depositum (foldes ud på Økonomi og S
   const mangler = dep.filter(j => j.status === "mangler"), sendt = dep.filter(j => j.status === "sendt");
   // kun det, der skyldes, i samme skrift som rækkerne over (Oscar 10/11: "kunder skylder larmer sygt meget", skitse panel-for-ferien-og-oprydning)
   const linjer = ub.liste.map(u => h("div", {class: "pl-l"},
-    h("span", {}, `${u.kunde.replace(/\s+(aps|a\/s)$/i, "")} · nr. ${u.nr} `, u.dage_over ? h("span", {class: "pill rd"}, `${u.dage_over} dage over`) : h("span", {class: "muted"}, u.forfald ? `· forfalder ${kortDato(u.forfald)}` : "")),
+    h("span", {}, `${u.kunde.replace(/\s+(aps|a\/s)$/i, "")} · nr. ${u.nr} `, u.dage_over ? h("span", {class: "pill rd"}, `${flertal(u.dage_over, "dag", "dage")} over`) : h("span", {class: "muted"}, u.forfald ? `· forfalder ${kortDato(u.forfald)}` : "")),
     h("b", {}, `${krKort(u.kr)} kr.`)));
   const depBetalt = dep.filter(j => j.status === "betalt").length;
   const depLinjer = dep.filter(j => j.status === "mangler" || j.status === "sendt").map(j => {
@@ -8879,7 +8883,7 @@ function talKort() {
     ab.length < 20 ? h("div", {class: "muted lille"}, `For få opkald endnu (${ab.length} af 20)`)
       : h("div", {class: "sk-detalje"}, h("div", {class: "liste"}, [...new Set(ab.map(x => x.opkald.aabning))].map(v => { const l = ab.filter(x => x.opkald.aabning === v); return h("div", {class: "l"}, h("span", {}, v), h("b", {}, `${l.filter(ja).length} af ${l.length} ja`)); }))),
     forslag.map(([v, , n]) => h("div", {class: "svar adv", style: "margin-top:12px"}, h("b", {}, "Forslag til salgslæringen"),
-      h("div", {}, `"${LÆR_FORSLAG[v][1]}" er sagt ${n} gange. Svar: ${LÆR_FORSLAG[v][2]}`),
+      h("div", {}, `"${LÆR_FORSLAG[v][1]}" er sagt ${flertal(n, "gang", "gange")}. Svar: ${LÆR_FORSLAG[v][2]}`),
       h("button", {class: "btn lille", type: "button", style: "margin-top:6px", onclick: () => kør("laering-ny", [`--hvad=${LÆR_FORSLAG[v][1]}`, "--type=Indvending", "--segment=Alle", `--svar=${LÆR_FORSLAG[v][2]}`, "--kilde=Opkald i panelet"],
         {tekst: "Salgslæring tilføjet", efter: ["salgslaering"], med: () => { if (!Array.isArray(D.salgslaering)) D.salgslaering = []; D.salgslaering.push({hvad: LÆR_FORSLAG[v][1]}); }})}, "Tilføj"))));
 }
