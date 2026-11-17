@@ -411,7 +411,7 @@ body.bar-synlig .beskeder{bottom:84px}
 /* Over frist med forslag (klogere-forslag 17/11) */
 .over-kort{border:1px solid var(--linje);background:var(--flade);border-radius:12px;padding:10px 14px;margin-top:10px}.of-h{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
 .of-r{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--linje)}.of-t{flex:1;min-width:0;background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.of-r.aktiv .of-t{font-weight:600}.of-f{font-size:12.5px;color:var(--adv);white-space:nowrap}.over-kort .skub{margin-top:4px}
+.of-r.aktiv .of-t{font-weight:600}.rf-r{display:flex;gap:12px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--linje)}.rf-ik{width:24px;height:24px;border-radius:7px;background:var(--bg);display:flex;align-items:center;justify-content:center;flex:none;font-size:12px}.rf-tx{flex:1;min-width:0}.of-f{font-size:12.5px;color:var(--adv);white-space:nowrap}.over-kort .skub{margin-top:4px}
 /* Planlæg dag: én liste (skitse opgaver-plan-C) */
 .pl-lr{display:flex;align-items:center;gap:8px;padding:7px 14px;border-top:1px solid var(--linje)}.pl-lr:first-child{border-top:0}.pl-lr.i .pl-lt{color:var(--svag)}
 .pl-lt{flex:1;min-width:0;background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}
@@ -5566,6 +5566,7 @@ function planlægPanel() {
     !p ? h("div", {class: "muted lille", style: "margin-top:8px"}, "Foreslå en plan: panelet foreslår opgaver til tiden, og du kan rette bagefter. Lav selv: tom plan, du vælger opgaverne.") : null,
     p ? [
       p.dato > idag ? ikkeNåetBoks(p, idag) : null,
+      robotForslagKort(p),
       overFristKort(p),
       ...halvdele.map(([hv, navn]) => { const sum = p[hv].reduce((s, x) => s + (p.salg_fravalg && erSalgPunkt(x) ? 0 : Number(x.min) || 0), 0), led = hv === "foer_frokost" ? p.ledig_foer : hv === "efter_frokost" ? p.ledig_efter : null;
         return h("div", {class: "lg slip",
@@ -5724,6 +5725,54 @@ function overFristKort(p) {
           h("span", {class: "of-f"}, frist(x)),
           iPlan(o) ? h("span", {class: "muted lille"}, "I planen ✓") : h("button", {class: "pl-lb on", type: "button", onclick: () => brugForslag(o, f, p)}, f.tekst)),
         er ? skubBoks(p, o.id) : null]; }));
+}
+// ---------- Robottens forslag: saml samme møde, sted og job (Oscar 17/11 "5 ja", klogere forslag del 3) ----------
+// Brug sætter planlagt på opgaverne (fabz.py planlaeg). Planforslaget samler dem så til ét punkt den dag (saml_koe og G-kraft i fabz_dagsplan.py)
+const RF_LAGER = /^Lager\b|\blageret\b/i;
+function arbejdsdagFør(iso, n) { let d = iso; while (n > 0) { d = plusDage(d, -1); if (![0, 6].includes(dag(d).getDay())) n--; } return d; }
+function robotForslag(p) {
+  const fra = p.dato, ud = [], åben = o => !["Færdig", "Venter"].includes(o.status) && !(o.ikke_foer && o.ikke_foer > fra);
+  const ds = ["søn", "man", "tir", "ons", "tor", "fre", "lør"], dn = d => `${ds[dag(d).getDay()]} ${kortDato(d)}`;
+  const jobDag = o => /^\d{4}-\d{2}-\d{2}\|/.test(o.job_noegle || "") ? o.job_noegle.slice(0, 10) : null;
+  // G-kraft: én tur til fredagsmødet
+  const gk = D.opgaver.filter(o => åben(o) && /^Spørg G-kraft/i.test(o.titel || ""));
+  let fre = fra; while (dag(fre).getDay() !== 5) fre = plusDage(fre, 1);
+  const gkUd = gk.filter(o => o.planlagt !== fre);
+  if (gk.length > 1 && gkUd.length) ud.push({nøgle: "gk", ik: "◎", titel: `G-kraft ${dn(fre)}: ét punkt i stedet for ${gk.length}`,
+    tekst: "Spørg, hvem der kender nogen hos " + gk.map(o => (o.titel.match(/\(([^)]+)\)\s*$/) || [])[1]).filter(Boolean).join(", ") + ".", dato: fre, ids: gkUd.map(o => o.id)});
+  // Samme job: festkort og pakkeliste i én blok 2 arbejdsdage før
+  const job = {};
+  D.opgaver.filter(o => åben(o) && ["festkort", "pakkeliste"].includes(o.job_opgave) && jobDag(o)).forEach(o => { (job[o.job_noegle] ||= []).push(o); });
+  for (const [n, m] of Object.entries(job)) {
+    const jd = n.slice(0, 10), mål = arbejdsdagFør(jd, 2);
+    if (m.length < 2 || mål <= fra || m.every(o => o.planlagt === mål)) continue;
+    const navn = m[0].titel.replace(/^Lav (?:festkort|pakkeliste):\s*/, "");
+    ud.push({nøgle: "job" + n, ik: "▣", titel: `Forbered ${navn} i én blok: ${dn(mål)}`, tekst: m.map(o => o.job_opgave).join(" og ") + `, ${m.reduce((t, o) => t + (Number(o.estimat) || 0), 0)} min.`, dato: mål, ids: m.map(o => o.id)});
+  }
+  // Lageret: tag lageropgaverne med, når du alligevel henter til det næste job
+  const næsteJob = D.opgaver.filter(o => o.job_opgave === "pakkeliste" && jobDag(o) && jobDag(o) >= fra).sort((a, b) => jobDag(a).localeCompare(jobDag(b)))[0];
+  if (næsteJob) {
+    const jd = jobDag(næsteJob), lag = D.opgaver.filter(o => åben(o) && RF_LAGER.test(o.titel || "") && !/hent pakke/i.test(o.titel || "") && (Number(o.estimat) || 15) <= 30
+      && o.planlagt !== jd && (!o.deadline || o.deadline <= plusDage(jd, 14)) && !(o.deadline && o.deadline < fra));
+    if (lag.length) ud.push({nøgle: "lager", ik: "⌂", titel: `På lageret ${dn(jd)}, når du henter til ${næsteJob.titel.replace(/^Lav pakkeliste:\s*|^Print pakkeliste:\s*/, "").replace(/\s+\d+\/\d+$/, "")}`,
+      tekst: lag.map(o => o.titel.replace(/^Lager(?: \d+ min)?:\s*/, "")).join(", ") + `. ${lag.reduce((t, o) => t + (Number(o.estimat) || 15), 0)} min.`, dato: jd, ids: lag.map(o => o.id)});
+  }
+  return ud.filter(f => !(OP.rfBrugt || []).includes(f.nøgle));
+}
+function brugRobotForslag(f) {
+  kør("planlaeg", [f.dato, ...f.ids.map(String)], {tekst: f.titel, efter: ["opgaver"], med: () => {
+    (OP.rfBrugt ||= []).push(f.nøgle);
+    f.ids.forEach(id => { const o = D.opgaver.find(x => x.id === id); if (o) { o.planlagt = f.dato; if (!(o.planlagt_historik ||= []).includes(f.dato)) o.planlagt_historik.push(f.dato); } }); }});
+}
+function robotForslagKort(p) {
+  const l = robotForslag(p);
+  if (!l.length) return null;
+  return h("div", {class: "over-kort rf-kort"},
+    h("div", {class: "of-h"}, h("b", {}, "Robottens forslag"), h("span", {class: "muted lille"}, String(l.length)), h("span", {class: "spacer"}),
+      l.length > 1 ? h("button", {class: "pl-lb on", type: "button", onclick: () => l.forEach(brugRobotForslag)}, "Brug alle") : null),
+    l.map(f => h("div", {class: "rf-r", "data-n": f.nøgle}, h("span", {class: "rf-ik"}, f.ik),
+      h("div", {class: "rf-tx"}, h("b", {}, f.titel), h("div", {class: "muted lille"}, f.tekst)),
+      h("button", {class: "pl-lb on", type: "button", onclick: () => brugRobotForslag(f)}, "Brug"))));
 }
 function fristOrd(d, ref) {
   if (!d) return "";
