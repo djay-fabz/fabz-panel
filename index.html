@@ -8267,6 +8267,10 @@ function parseCsv(tekst) {   // ; som skilletegn, felter i "" kan have linjeskif
   if (f || cur.length) { cur.push(f); rk.push(cur.splice(0)); }
   return rk.filter(r => r.length > 1);
 }
+// Sikkerhed A1 (18/11): modtagerkontoen sendes kun, når den er Skattekontoen (samme som SKATTEKONTO i fabz_oekonomi.py). Andre kontonumre må aldrig i git
+const SKATTEKONTO_NR = "83014296", erSkattekonto = m => String(m || "").replace(/\D/g, "") === SKATTEKONTO_NR;
+// Afsender, besked og tekst kan også rumme et kontonummer: 10-14 cifre (også med mellemrum eller streg) bliver til "…". Fakturanumre og CVR er kortere og bliver
+const udenKontonr = t => String(t || "").replace(/\d(?:[ -]?\d){9,13}(?![\d])/g, m => m.replace(/\D/g, "").length >= 10 ? "…" : m);
 function læsUdtog(tekst) {   // -> {saldo, dato, poster: [{dato, tekst, beloeb}]}. Betalinger fra de sidste 13 måneder og indbetalinger fra de sidste 60 dage (ser, at en faktura er betalt, Oscar 5/11) sendes videre
   const rk = parseCsv(tekst), hd = (rk.shift() || []).map(x => x.trim().toLowerCase());
   const i = n => hd.indexOf(n), iD = i("dato"), iT = i("tekst"), iB = i("beløb"), iS = i("saldo"), iM = i("modtagerkonto"), iA = i("afsender"), iK = i("besked");
@@ -8278,7 +8282,7 @@ function læsUdtog(tekst) {   // -> {saldo, dato, poster: [{dato, tekst, beloeb}
   const s = rows.find(r => !isNaN(r.saldo));
   if (!s) throw new Error("Filen har ingen saldo.");
   const fra = plusDage(rows[0].dato, -400), fraInd = plusDage(rows[0].dato, -60);
-  return {saldo: s.saldo, dato: rows[0].dato, antal: rows.length, poster: rows.filter(r => r.beloeb < 0 ? r.dato >= fra : r.beloeb > 0 && r.dato >= fraInd).map(({dato, tekst, beloeb, modtager, afsender, besked}) => ({dato, tekst: tekst.slice(0, 80), beloeb, ...(modtager ? {modtager} : {}), ...(beloeb > 0 && afsender ? {afsender: afsender.slice(0, 80)} : {}), ...(beloeb > 0 && besked ? {besked: besked.slice(0, 80)} : {})}))};
+  return {saldo: s.saldo, dato: rows[0].dato, antal: rows.length, poster: rows.filter(r => r.beloeb < 0 ? r.dato >= fra : r.beloeb > 0 && r.dato >= fraInd).map(({dato, tekst, beloeb, modtager, afsender, besked}) => ({dato, tekst: udenKontonr(tekst).slice(0, 80), beloeb, ...(erSkattekonto(modtager) ? {modtager: SKATTEKONTO_NR} : {}), ...(beloeb > 0 && afsender ? {afsender: udenKontonr(afsender).slice(0, 80)} : {}), ...(beloeb > 0 && besked ? {besked: udenKontonr(besked).slice(0, 80)} : {})}))};
 }
 function visGuide(navn) {
   const sk = (D.mo || {}).skat || {}, ob = (D.mo || {}).overblik || {puljer: [], linjer: {}}, E = ob.linjer.erhverv || {};
