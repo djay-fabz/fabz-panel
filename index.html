@@ -2284,7 +2284,7 @@ function festkortBlok(j, st, gentegn) {
 // Arket tegnes med generatorens egne mål og tegnbredder (tools/klubkort/maal.json, lavet af klubkort.py --maal),
 // så linjeskift og skriftstørrelse er de samme som i PDF'en. test_klubkort.js tjekker det mod Python.
 const KK_MM = 72 / 25.4;
-const kkRens = t => String(t || "").replace(/\r/g, "").replace(/[ \t]+/g, " ").trim().replace(/\n{2,}/g, "\n").replace(/ ?\n ?/g, "\n");
+const kkRens = t => String(t || "").replace(/\r/g, "").replace(/[ \t]+/g, " ").trim().replace(/\n[ \t]*\n(?:[ \t]*\n)+/g, "\n\n").replace(/ ?\n ?/g, "\n");   // én tom linje bevares (Oscar 18/11)
 const kkSamme = t => String(t || "").split(/\s+/).filter(Boolean).join(" ").toLowerCase();
 const kkBredde = (t, f, s) => { let w = 0; for (const c of t) w += f.tegn[c] ?? f.std; return w * 0.001 * s / KK_MM; };
 function kkBryd(tekst, f, s, b) {
@@ -2305,7 +2305,7 @@ function kkJaevn(tekst, f, s, b) {   // som jaevn() i klubkort.py: færrest linj
   return kkBryd(flad, f, s, b);
 }
 function kkLinjer(tekst, f, s, b) {   // som linjer_til(): Oscars linjeskift bevares altid (Oscar 18/11); kun en linje, der er for lang, brydes jævnt for sig
-  const egne = String(tekst).replace(/\r/g, "").split("\n").map(l => l.trim()).filter(Boolean);
+  const egne = String(tekst).replace(/\r/g, "").split("\n").map(l => l.trim()).filter((l, i, a) => l || (i > 0 && i < a.length - 1 && a[i - 1]));
   return egne.flatMap(l => kkBredde(l, f, s) <= b ? [l] : kkJaevn(l, f, s, b));
 }
 function kkLayout(k, M) {   // samme regler som layout() i tools/klubkort/klubkort.py
@@ -2314,7 +2314,7 @@ function kkLayout(k, M) {   // samme regler som layout() i tools/klubkort/klubko
   let ss = M.SVAR_STR;
   while (svar && kkBredde(svar, M.popl, ss) > M.TEKST_B && ss > M.SVAR_MIN) ss -= 0.5;
   if (svar && kkBredde(svar, M.popl, ss) > M.TEKST_B) return "svar";
-  const egne = tekst.replace(/\r/g, "").split("\n").map(l => l.trim()).filter(Boolean);
+  const egne = tekst.replace(/\r/g, "").split("\n").map(l => l.trim()).filter((l, i, a) => l || (i > 0 && i < a.length - 1 && a[i - 1]));
   // Oscar 18/11: hans egne linjer først, også hvis skriften så bliver lidt mindre. Først når de ikke kan være der, brydes en for lang linje
   for (const streng of egne.length > 1 ? [true, false] : [false])
     for (let s = M.STR; s >= M.MIN_STR; s -= 0.5) {
@@ -3402,14 +3402,14 @@ function kkBryd(tekst, f, size, bredde) {
   return ud;
 }
 function kkJævn(tekst, f, size, bredde) { const flad = String(tekst).split(/\s+/).filter(Boolean).join(" "), n = kkBryd(flad, f, size, bredde).length; let b = bredde; while (b > 10 && kkBryd(flad, f, size, b - 1).length === n) b -= 1; return kkBryd(flad, f, size, b); }
-function kkLinjerTil(tekst, f, size, bredde) { const egne = String(tekst).replace(/\r/g, "").split("\n").map(l => l.trim()).filter(Boolean); return egne.flatMap(l => kkMål(l, f, size) <= bredde ? [l] : kkJævn(l, f, size, bredde)); }   // Oscars linjeskift bevares altid (18/11), kun en for lang linje brydes for sig
+function kkLinjerTil(tekst, f, size, bredde) { const egne = String(tekst).replace(/\r/g, "").split("\n").map(l => l.trim()).filter((l, i, a) => l || (i > 0 && i < a.length - 1 && a[i - 1])); return egne.flatMap(l => kkMål(l, f, size) <= bredde ? [l] : kkJævn(l, f, size, bredde)); }   // Oscars linjeskift bevares altid (18/11), kun en for lang linje brydes for sig
 function kkLayout(k) {
   const tekst = (k.tekst || "").trim(), svar = (k.svar || "").trim();
   if (!tekst) return null;
   let ss = KK.SVAR_STR;
   while (svar && kkMål(svar, "popl", ss) > KK.TEKST_B && ss > KK.SVAR_MIN) ss -= .5;
   if (svar && kkMål(svar, "popl", ss) > KK.TEKST_B) return "svar";
-  const egne = tekst.replace(/\r/g, "").split("\n").map(l => l.trim()).filter(Boolean);
+  const egne = tekst.replace(/\r/g, "").split("\n").map(l => l.trim()).filter((l, i, a) => l || (i > 0 && i < a.length - 1 && a[i - 1]));
   // Oscar 18/11 ("hvis man gør det derinde, så gør den det her"): hans egne linjer først, også hvis skriften så bliver lidt mindre. Først når de ikke kan være der, brydes en for lang linje
   for (const streng of egne.length > 1 ? [true, false] : [false])
     for (let s = KK.STR; s >= KK.MIN_STR; s -= .5) {
@@ -3493,7 +3493,7 @@ async function festkortIBrowser(j, navne, anl) {
 }
 const PY_WS = "\\t\\n\\v\\f\\r \\x1c-\\x1f\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000";   // Pythons str.split()/strip(): ikke BOM (JS's \\s tager BOM med, men ikke \\x85 og \\x1c-\\x1f)
 const pySplit = t => String(t ?? "").split(new RegExp(`[${PY_WS}]+`)).filter(Boolean), pyStrip = t => String(t ?? "").replace(new RegExp(`^[${PY_WS}]+|[${PY_WS}]+$`, "g"), "");
-const kkRensPy = t => pyStrip(String(t ?? "").replace(/\r/g, "").replace(/[ \t]+/g, " ")).replace(/\n{2,}/g, "\n").replace(/ ?\n ?/g, "\n");   // fabz_klubkort.rens
+const kkRensPy = t => pyStrip(String(t ?? "").replace(/\r/g, "").replace(/[ \t]+/g, " ")).replace(/\n[ \t]*\n(?:[ \t]*\n)+/g, "\n\n").replace(/ ?\n ?/g, "\n");   // fabz_klubkort.rens (én tom linje bevares, Oscar 18/11)
 const kkSlugPy = t => String(t ?? "").toLowerCase().replace(/æ/g, "ae").replace(/ø/g, "oe").replace(/å/g, "aa").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 30);
 function kkTilKort(linjer, alle) {   // fabz_klubkort.linjer_til_kort: arket, linjerne der gemmes, og nye tekster med nye numre
   const fejl = t => { throw Object.assign(new Error(t), {brugerfejl: true}); };
@@ -7709,7 +7709,8 @@ function visSkat() {   // Økonomi og Skat (Oscar 28/10, skitse 3c): bjælker me
   if (sk.rate && t.dageTil <= 10) gør.push(trin(t.rate.f,
     [h("b", {}, `Betal B-skat ${krKort(sk.rate.beloeb)} kr. ${t.dageTil < 0 ? "nu, fristen var" : "senest"} ${kortDato(sk.rate.frist)}.`), " På skat.dk: TastSelv → Betal skat. Betal fra Skat-puljen."],
     knap("✓ Jeg har betalt", () => kør("skat-betalt", [String(sk.rate.rate)], {tekst: `B-skat rate ${sk.rate.rate} betalt`, efter: ["mo", "opgaver"]}))));
-  const bt = sk.b_tjek || {}, mdNavn = ym => ym ? MDL[Number(ym.slice(5, 7)) - 1] : "";
+  // Tal-dagen er færdig, så snart opgaven er Færdig (Oscar 18/11: banneret stod efter "✓ Tal-dag færdig", fordi maanedsoversigt først regnes igen næste kørsel)
+  const bt0 = sk.b_tjek || {}, bt = {...bt0, faerdig: bt0.faerdig || (D.opgaver || []).some(o => o.id === bt0.id && o.status === "Færdig")}, mdNavn = ym => ym ? MDL[Number(ym.slice(5, 7)) - 1] : "";
   const bUkendt = (sk.b_linjer || []).filter(x => x.kr == null);
   bUkendt.forEach(x => gør.push(trin("y", [h("b", {}, `Skriv beløbet for ${x.navn} ${kortDato(x.dato)}.`), " Prisen stod ikke i kalenderen. Brug Registrér B-indkomst herunder."])));
   if (bt.id && !bt.faerdig && bt.deadline && bt.deadline <= plusDage(iDag(), 2)) gør.push(trin(bt.deadline < iDag() ? "rd" : "y",
